@@ -123,7 +123,7 @@ gh issue create \
 --body-file .claude/tmp/issue-body.md
 ```
 
-If the user provided an assignee, either include it at creation time or assign it immediately after:
+If the user asked to assign the issue to themselves, resolve their login with `gh api user --jq .login` rather than guessing. If the user provided an explicit assignee, either include it at creation time or assign it immediately after:
 
 ```bash
 gh issue edit <issue-number> \
@@ -143,7 +143,7 @@ Fetch project field metadata when needed:
 gh project field-list 3 --owner grabartley --format json
 ```
 
-Current project metadata for fast use:
+Current project metadata, baked in for speed. If any GraphQL or `gh project` call returns a "field not found", "could not resolve", or similar error, the board was likely recreated: refresh the ids with `gh project field-list 3 --owner grabartley --format json` and update this file before retrying.
 - Project id: `PVT_kwHOAQYbq84BbEMc`
 - Status field id: `PVTSSF_lAHOAQYbq84BbEMczhV3XaE`
 - `Backlog` option id: `f75ad846`

@@ -1,4 +1,5 @@
 ---
+name: run-game-client
 description: Runs the RuneLite dev client locally with the plugin for manual testing. Use when asked to launch, run, or start the game client for testing.
 ---
 
@@ -19,7 +20,13 @@ The entry point is `com.grahambartley.TTSDialoguePluginTest`, which calls `Exter
 
 ## TTS Server Dependency
 
-The plugin speaks dialogue by calling a local TTS voice server. For manual voice playback to work, the local TTS server must be running and reachable on `localhost`. If no server is up, dialogue capture still works but no audio is produced.
+The plugin speaks dialogue by calling a local TTS voice server. For manual voice playback to work, that server must be running and reachable on `localhost`. If no server is up, dialogue capture still works but no audio is produced.
+
+Start the server before launching the client. Two paths exist:
+- In-repo Docker voice servers: `./setup-voices.sh start` (and `./setup-voices.sh status` to verify, `./setup-voices.sh stop` to tear down).
+- The companion `runelite-tts-server` repo, run per its own README, when iterating on the server itself.
+
+The TTS delivery architecture is under active rework, so confirm the current launch command against the repo `README.md` if `setup-voices.sh` has changed.
 
 ## Testing Flow
 

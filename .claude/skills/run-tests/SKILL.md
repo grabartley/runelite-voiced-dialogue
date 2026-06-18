@@ -1,4 +1,5 @@
 ---
+name: run-tests
 description: Run and write tests for the TTS Dialogue RuneLite plugin (unit tests, manual testing). Use when asked to test, run tests, write tests, or verify changes.
 ---
 
