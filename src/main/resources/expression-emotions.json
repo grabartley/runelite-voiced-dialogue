@@ -1,0 +1,9 @@
+{
+  "_meta": "UNVERIFIED SEED. These animationId -> Emotion entries are model-relative to the human/standard dialogue chat-head only and are seeded from public sources, not yet confirmed against the live OSRS cache. Non-human heads (trolls, ogres, children, monsters) use different ids and currently fall through to NEUTRAL. Confirm and correct each id via the debugMode chat-head dump described in expression-emotions.README.md. Any animationId absent from this map, and -1, resolves to NEUTRAL.",
+  "9760": "NEUTRAL",
+  "9764": "SAD",
+  "9780": "SCARED",
+  "9788": "ANGRY",
+  "9808": "NEUTRAL",
+  "9851": "HAPPY"
+}

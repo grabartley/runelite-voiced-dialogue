@@ -18,6 +18,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.RuneLite;
@@ -136,6 +137,27 @@ public class TTSDialoguePlugin extends Plugin {
     return raw.replaceAll("<[^>]+>", "").trim();
   }
 
+  /**
+   * Debug-only chat-head expression dump used to derive the {@code animationId -> Emotion} table
+   * (#25). When {@code debugMode} is on, logs the speaker's chat-head expression animation id
+   * alongside the speaker name and line text so a human running the dev client can read the real
+   * ids that OSRS emits for each observed expression. Reads {@code InterfaceID.ChatLeft.HEAD} for
+   * NPC lines and {@code InterfaceID.ChatRight.HEAD} for player lines and calls {@link
+   * Widget#getAnimationId()}; sprite/objectbox dialogues have no head widget, so the head is
+   * null-guarded and reported as {@code -1}. Does nothing and reads nothing when {@code debugMode}
+   * is off, so there is zero behaviour change for normal users. The lookup is a single cheap widget
+   * read and a log line; it never blocks the game thread.
+   */
+  private void dumpExpression(String speaker, String text, boolean player) {
+    if (!config.debugMode()) {
+      return;
+    }
+    int headComponentId = player ? InterfaceID.ChatRight.HEAD : InterfaceID.ChatLeft.HEAD;
+    Widget head = client.getWidget(headComponentId);
+    int animationId = head != null ? head.getAnimationId() : -1;
+    log.info("[expression-dump] speaker={} headAnimId={} text=\"{}\"", speaker, animationId, text);
+  }
+
   /** Extracts NPC name from dialogue widget or uses current interacting NPC. */
   private String getCurrentNPCName() {
     // Try to get NPC name from dialogue name widget
@@ -168,6 +190,7 @@ public class TTSDialoguePlugin extends Plugin {
         lastSpoken = text;
         String cleaned = cleanDialogueText(text);
         String npcName = getCurrentNPCName();
+        dumpExpression(npcName, cleaned, false);
         speakWithTTS(cleaned, "npc", npcName);
       }
     }
@@ -178,6 +201,7 @@ public class TTSDialoguePlugin extends Plugin {
       if (text != null && !text.isEmpty() && !text.equals(lastSpoken)) {
         lastSpoken = text;
         String cleaned = cleanDialogueText(text);
+        dumpExpression("player", cleaned, true);
         speakWithTTS(cleaned, "player", null); // No NPC name needed for player
       }
     }
