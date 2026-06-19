@@ -1,14 +1,11 @@
 package com.grahambartley;
 
 import com.google.inject.Provides;
-import com.grahambartley.tts.KokoroAudio;
+import com.grahambartley.tts.AudioPlayer;
+import com.grahambartley.tts.DialogueAudioService;
 import com.grahambartley.tts.KokoroTtsEngine;
 import java.nio.file.Path;
 import javax.inject.Inject;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.FloatControl;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.events.GameTick;
@@ -23,18 +20,24 @@ import net.runelite.client.plugins.PluginDescriptor;
 @Slf4j
 @PluginDescriptor(name = "TTSDialogue")
 public class TTSDialoguePlugin extends Plugin {
+
+  /** Cache enough recent lines that loops of NPC chatter replay instantly without re-synthesis. */
+  private static final int CACHE_SIZE = 64;
+
+  /** Tiny backlog so a burst of dialogue ticks never blocks the game thread on enqueue. */
+  private static final int QUEUE_CAPACITY = 4;
+
   @Inject private Client client;
 
   @Inject private TTSDialogueConfig config;
 
   private String lastSpoken = "";
 
-  private Clip currentClip;
-  private final Object audioLock = new Object();
-
   private VoiceManager voiceManager;
 
   private KokoroTtsEngine ttsEngine;
+
+  private DialogueAudioService audioService;
 
   @Override
   protected void startUp() {
@@ -42,14 +45,21 @@ public class TTSDialoguePlugin extends Plugin {
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("tts-dialogue");
     ttsEngine = new KokoroTtsEngine(ttsDir);
-    // Warm the model on a background thread so the first line is not the one that pays the load.
-    ttsEngine.prewarm();
+    audioService =
+        new DialogueAudioService(
+            ttsEngine, new AudioPlayer(), CACHE_SIZE, QUEUE_CAPACITY, config::volume);
+    // Warm the model on the pipeline thread so the first line is not the one that pays the load.
+    audioService.prewarm(ttsEngine::load);
 
     log.info("TTSDialogue started");
   }
 
   @Override
   protected void shutDown() {
+    if (audioService != null) {
+      audioService.close();
+      audioService = null;
+    }
     if (ttsEngine != null) {
       ttsEngine.close();
       ttsEngine = null;
@@ -57,60 +67,13 @@ public class TTSDialoguePlugin extends Plugin {
     log.info("TTS Plugin stopped");
   }
 
-  /** Synthesizes the line in-process with Kokoro, off the game thread, then plays it back. */
+  /** Hands the line to the off-thread synth + playback pipeline; never blocks the game thread. */
   private void speakWithTTS(String text, String speaker, String npcName) {
-    if (ttsEngine == null || ttsEngine.isFailed()) {
+    if (audioService == null || ttsEngine == null || ttsEngine.isFailed()) {
       return;
     }
     int speakerId = voiceManager.getSpeakerId(speaker, npcName);
-    long requestedAtNanos = System.nanoTime();
-    ttsEngine.speak(
-        text,
-        speakerId,
-        pcm -> {
-          long latencyMs = (System.nanoTime() - requestedAtNanos) / 1_000_000L;
-          log.info(
-              "In-process TTS end-to-end latency: {} ms for \"{}\"", latencyMs, abbreviate(text));
-          playAudio(KokoroAudio.toAudioInputStream(pcm.getSamples(), pcm.getSampleRate()));
-        });
-  }
-
-  private static String abbreviate(String text) {
-    return text.length() <= 40 ? text : text.substring(0, 40) + "...";
-  }
-
-  private void playAudio(AudioInputStream audioStream) {
-    // Playback is triggered from the TTS background thread, and onGameTick stops the clip on
-    // skipped dialogue, so guard the shared clip.
-    synchronized (audioLock) {
-      try {
-        if (currentClip != null && currentClip.isRunning()) {
-          currentClip.stop();
-          currentClip.close();
-        }
-
-        Clip clip = AudioSystem.getClip();
-        clip.open(audioStream);
-        currentClip = clip;
-        float volume = Math.max(0, Math.min(100, config.volume()));
-        FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-        if (volume == 0) {
-          gainControl.setValue(gainControl.getMinimum());
-        } else {
-          float gain = (float) (20f * Math.log10(volume / 100.0));
-          gainControl.setValue(gain);
-        }
-        clip.start();
-      } catch (Exception e) {
-        log.warn("Audio playback failed: " + e.getMessage());
-      } finally {
-        try {
-          audioStream.close();
-        } catch (Exception ignored) {
-          // nothing to do on close failure
-        }
-      }
-    }
+    audioService.speak(text, speakerId);
   }
 
   private String cleanDialogueText(String raw) {
@@ -165,14 +128,8 @@ public class TTSDialoguePlugin extends Plugin {
 
     if ((npcDialogue == null || npcDialogue.isHidden())
         && (playerDialogue == null || playerDialogue.isHidden())) {
-      if (ttsEngine != null) {
-        ttsEngine.interrupt();
-      }
-      synchronized (audioLock) {
-        if (currentClip != null && currentClip.isRunning()) {
-          currentClip.stop();
-          currentClip.close();
-        }
+      if (audioService != null) {
+        audioService.interrupt();
       }
       lastSpoken = "";
     }
