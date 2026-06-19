@@ -65,7 +65,7 @@ python3 tools/generate_npc_voices.py
 ```
 
 - `tools/generate_npc_voices.py` is the offline generator that builds the bundled table ahead of time. It classifies race and gender from a static OSRSBox monster dump with a deterministic, conservative keyword classifier, then merges authoritative overrides on top.
-- `tools/overrides.json` holds hand-curated, authoritative `npcId -> {race, gender}` entries that always win. **Fix mistakes and add important peaceful NPCs here**, then regenerate. See `tools/README.md` for details.
+- `tools/overrides.json` holds hand-curated, authoritative `npcId -> {race, gender}` entries that always win. **Fix mistakes and add important peaceful NPCs here**, then regenerate. See `docs/npc-voice-tooling.md` for details.
 
 ## Dev Setup
 
@@ -164,7 +164,7 @@ Windows SmartScreen may warn on an unsigned bundle; choose **More info -> Run an
 - **Enable Automatic NPC Voices** picks a Kokoro voice per NPC from the static race/gender table. When off, every NPC uses the default Human voice.
 - **Player Voice** chooses which Kokoro voice the player character uses.
 - **Enable Voice Fallbacks** falls back to a gender-appropriate human voice when an NPC is missing from the table. When off, those NPCs use the single default voice.
-- **Debug Mode** logs detailed NPC race/gender resolution.
+- **Debug Mode** logs detailed NPC race/gender resolution and the chosen Kokoro voice per NPC for troubleshooting.
 - **Voice Backend** selects the synthesis engine. `Local` is the offline, in-process Kokoro voice (default). `Cloud` routes synthesis through Microsoft Azure Neural TTS for emotional delivery.
 - **Azure Subscription Key** / **Azure Region** configure the Cloud backend (for example `eastus`). These are required only when **Voice Backend** is `Cloud`; the key is stored locally and never bundled with the plugin.
 

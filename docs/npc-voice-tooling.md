@@ -7,10 +7,10 @@ so there are no network calls or large downloads when choosing a voice.
 
 ## Files
 
-- `generate_npc_voices.py` - the generator. Builds the table from a static
+- `tools/generate_npc_voices.py` - the generator. Builds the table from a static
   OSRSBox monster dump plus the curated overrides, then writes the bundled
   resource.
-- `overrides.json` - hand-curated, **authoritative** `npcId → {race, gender}`
+- `tools/overrides.json` - hand-curated, **authoritative** `npcId -> {race, gender}`
   entries. These always win over anything the generator infers, and they cover
   peaceful NPCs (shopkeepers, quest givers) that the monster dump omits.
 
@@ -44,7 +44,7 @@ overrides changes.
 ## How classification works
 
 1. **Static source.** A static OSRSBox monster dump provides real
-   `npcId → name/examine` data (downloaded from the osrsbox-db GitHub mirror by
+   `npcId -> name/examine` data (downloaded from the osrsbox-db GitHub mirror by
    default). The dump only covers attackable NPCs.
 2. **Deterministic classifier.** A conservative, word-aware keyword classifier
    assigns a race (Human, Elf, Dwarf, Goblin, Troll, Undead, Demon, Wizard) and
