@@ -2,7 +2,6 @@ package com.grahambartley.synthesis;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -11,17 +10,18 @@ import org.junit.Test;
 
 /**
  * Verifies the {@link ExpressionEmotionTable} loader and the documented default contract that #26's
- * resolver and the backends depend on: a mapped human-head id returns its seeded {@link Emotion},
- * while any unmapped id and {@code -1} resolve to {@link Emotion#NEUTRAL}.
+ * resolver and the backends depend on: a documented expression id returns its mapped {@link
+ * Emotion}, while any unmapped id and {@code -1} resolve to {@link Emotion#NEUTRAL}.
  */
 public class ExpressionEmotionTableTest {
 
   @Test
-  public void mappedSeedIdsResolveToTheirEmotion() {
+  public void documentedIdsResolveToTheirEmotion() {
     ExpressionEmotionTable table = ExpressionEmotionTable.load();
-    assertTrue("seed table must load at least one id", table.size() > 0);
+    // Full documented expression enum (9760-9862), every id present.
+    assertEquals("full documented table is expected", 27, table.size());
 
-    // Seed entries from expression-emotions.json (human/standard head).
+    // Representative entries from the documented mapping.
     assertEquals(Emotion.NEUTRAL, table.resolve(9760));
     assertEquals(Emotion.SAD, table.resolve(9764));
     assertEquals(Emotion.SCARED, table.resolve(9780));
@@ -33,7 +33,8 @@ public class ExpressionEmotionTableTest {
   @Test
   public void unmappedIdResolvesToNeutral() {
     ExpressionEmotionTable table = ExpressionEmotionTable.load();
-    // An id absent from the seed (e.g. a non-human head expression) is the default-NEUTRAL case.
+    // An id outside the documented set (e.g. a non-human head expression) is the default-NEUTRAL
+    // case.
     assertEquals(Emotion.NEUTRAL, table.resolve(123456));
   }
 

@@ -1,5 +1,6 @@
 package com.grahambartley.synthesis;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -13,17 +14,18 @@ import java.util.Map;
 import org.junit.Test;
 
 /**
- * Pins the shape of the bundled {@code expression-emotions.json} seed (#25). Detection (#26) and
+ * Pins the shape of the bundled {@code expression-emotions.json} table (#25). Detection (#26) and
  * the backends depend on this resource parsing cleanly: every non-documentation key must be an
- * integer animation id and every value must name a valid {@link Emotion}. Documentation keys (those
- * starting with {@code _}, e.g. the {@code _meta} unverified-seed note) are allowed and skipped.
+ * integer animation id inside the documented expression range (9760-9862) and every value must name
+ * a valid {@link Emotion}. Documentation keys (those starting with {@code _}, e.g. the {@code
+ * _meta} note) are allowed and skipped.
  */
 public class ExpressionEmotionsResourceTest {
 
   private static final String RESOURCE = "/expression-emotions.json";
 
   @Test
-  public void resourceParsesWithIntegerKeysAndValidEmotionValues() throws Exception {
+  public void resourceParsesWithIntegerKeysInRangeAndValidEmotionValues() throws Exception {
     JsonObject root = load();
 
     boolean sawAtLeastOneId = false;
@@ -33,20 +35,32 @@ public class ExpressionEmotionsResourceTest {
         // Documentation key (e.g. _meta); not an id.
         continue;
       }
-      // Key must parse as an integer animation id.
-      Integer.parseInt(key);
+      // Key must parse as an integer animation id inside the documented expression enum range.
+      int id = Integer.parseInt(key);
+      assertTrue(
+          "documented expression id must fall in 9760-9862, was " + id, id >= 9760 && id <= 9862);
       // Value must be a valid Emotion enum constant.
       Emotion.valueOf(entry.getValue().getAsString());
       sawAtLeastOneId = true;
     }
 
-    assertTrue("seed must contain at least one animationId -> Emotion entry", sawAtLeastOneId);
+    assertTrue("table must contain at least one animationId -> Emotion entry", sawAtLeastOneId);
   }
 
   @Test
-  public void resourceCarriesTheUnverifiedSeedNote() throws Exception {
+  public void representativeIdsMapToExpectedEmotions() throws Exception {
     JsonObject root = load();
-    assertTrue("seed must carry a _meta documentation key", root.has("_meta"));
+    assertEquals("NEUTRAL", root.get("9760").getAsString());
+    assertEquals("SAD", root.get("9764").getAsString());
+    assertEquals("SCARED", root.get("9780").getAsString());
+    assertEquals("ANGRY", root.get("9788").getAsString());
+    assertEquals("HAPPY", root.get("9851").getAsString());
+  }
+
+  @Test
+  public void resourceCarriesTheMetaNote() throws Exception {
+    JsonObject root = load();
+    assertTrue("table must carry a _meta documentation key", root.has("_meta"));
     String meta = root.get("_meta").getAsString();
     assertFalse("_meta note must not be empty", meta.isEmpty());
   }
