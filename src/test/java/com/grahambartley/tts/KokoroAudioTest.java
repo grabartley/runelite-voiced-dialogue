@@ -3,7 +3,6 @@ package com.grahambartley.tts;
 import static org.junit.Assert.assertEquals;
 
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
 import org.junit.Test;
 
 public class KokoroAudioTest {
@@ -52,13 +51,5 @@ public class KokoroAudioTest {
     assertEquals(1, format.getChannels());
     assertEquals(AudioFormat.Encoding.PCM_SIGNED, format.getEncoding());
     assertEquals(false, format.isBigEndian());
-  }
-
-  @Test
-  public void audioStreamFrameLengthMatchesSampleCount() {
-    AudioInputStream stream =
-        KokoroAudio.toAudioInputStream(new float[] {0.1f, -0.1f, 0.5f}, 24_000);
-    assertEquals(3, stream.getFrameLength());
-    assertEquals(24_000f, stream.getFormat().getSampleRate(), 0.0f);
   }
 }

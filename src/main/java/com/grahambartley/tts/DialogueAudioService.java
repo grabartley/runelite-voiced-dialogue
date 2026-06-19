@@ -22,10 +22,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class DialogueAudioService {
 
+  /** Identifies a synthesized line: distinct text or distinct voice is a distinct entry. */
+  private record CacheKey(int speakerId, String text) {}
+
   private final Synthesizer synth;
   private final AudioOutput output;
   private final Executor executor;
-  private final LruCache<String, Pcm> cache;
+  private final LruCache<CacheKey, Pcm> cache;
   private final IntSupplier volume;
   private final AtomicLong epoch = new AtomicLong();
 
@@ -59,8 +62,8 @@ public final class DialogueAudioService {
     }
     long mine = epoch.incrementAndGet();
     output.stop();
-    String key = speakerId + "|" + text;
-    submit(() -> run(mine, key, text, speakerId));
+    CacheKey key = new CacheKey(speakerId, text);
+    submit(() -> run(mine, key));
   }
 
   /** Stops current playback and drops any queued lines for the now-stale dialogue. */
@@ -72,25 +75,31 @@ public final class DialogueAudioService {
   public void close() {
     epoch.incrementAndGet();
     output.stop();
-    if (executor instanceof ExecutorService) {
-      ((ExecutorService) executor).shutdownNow();
+    if (executor instanceof ExecutorService es) {
+      es.shutdownNow();
+      try {
+        // Give an in-flight synth a brief window to unwind so a plugin reload does not orphan it.
+        es.awaitTermination(2, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
     output.close();
   }
 
-  private void run(long mine, String key, String text, int speakerId) {
+  private void run(long mine, CacheKey key) {
     if (epoch.get() != mine) {
       return;
     }
     Pcm pcm = cache.get(key);
     if (pcm == null) {
-      pcm = synth.synthesize(text, speakerId);
+      pcm = synth.synthesize(key.text(), key.speakerId());
       if (pcm == null) {
         return;
       }
       cache.put(key, pcm);
     } else {
-      log.debug("Serving \"{}\" (sid {}) from cache", abbreviate(text), speakerId);
+      log.debug("Serving \"{}\" (sid {}) from cache", abbreviate(key.text()), key.speakerId());
     }
     // Re-check after the (possibly slow) synth: the line may have been skipped meanwhile.
     if (epoch.get() != mine) {
@@ -119,7 +128,12 @@ public final class DialogueAudioService {
           t.setDaemon(true);
           return t;
         },
-        new ThreadPoolExecutor.DiscardOldestPolicy());
+        // Drop the oldest queued line under backpressure (newer dialogue supersedes it), but log it
+        // so QA can tell whether the queue is actually saturating in practice.
+        (r, exec) -> {
+          log.debug("Dialogue audio queue saturated; dropping oldest queued line");
+          new ThreadPoolExecutor.DiscardOldestPolicy().rejectedExecution(r, exec);
+        });
   }
 
   private static String abbreviate(String text) {
