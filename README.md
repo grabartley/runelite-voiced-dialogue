@@ -1,55 +1,59 @@
-# 🗣️ RuneLite TTS Dialogue Plugin
+# RuneLite TTS Dialogue Plugin
 
-Bring your RuneScape adventures to **life** with full voice acting!  
-This plugin reads **in-game dialogue out loud** using different AI voices for NPCs and the player character. Experience immersive conversations with unique voices for every race and gender! 🎧🧙‍♂️
+<p align="center">
+<a href="https://github.com/grabartley/tts-dialogue-runelite/stargazers"><img src="https://img.shields.io/github/stars/grabartley/tts-dialogue-runelite?logo=github&label=Stars&color=4078c0" alt="GitHub stars"></a>
+<a href="https://github.com/grabartley/tts-dialogue-runelite/actions/workflows/cicd.yml"><img src="https://github.com/grabartley/tts-dialogue-runelite/actions/workflows/cicd.yml/badge.svg" alt="Build"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="License: MIT"></a>
+<a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
+</p>
 
-> Powered by 🧠 [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) + 🎮 RuneLite
+**Gielinor, out loud.** This plugin voices in-game dialogue in real time, giving NPCs and your own character distinct AI voices so every conversation actually speaks to you.
 
----
+It runs entirely on your machine. No accounts, no cloud calls, no per-line API bills. The first time you talk to someone the plugin pulls down the voice model, and after that every line is synthesized locally, on-device.
 
-## 🧩 TTS Engine
+> Powered by [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), running inside RuneLite.
 
-The plugin synthesizes dialogue **in-process** with the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model running on CPU through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). On first use the plugin downloads the Kokoro model bundle (~349 MB) once into `~/.runelite/tts-dialogue/` and caches it; every line after that is generated locally on-device.
+## How The TTS Engine Works
 
-Model load, synthesis, and playback all run off the game thread on a single background pipeline fed by a small bounded queue, so the game stays responsive even under rapid dialogue advancement. Audio is streamed through a `SourceDataLine` straight from memory, and a small LRU cache keyed on `(text, voice)` replays repeated NPC lines instantly from the cached audio. On Apple Silicon a typical line synthesizes in roughly 1.3–1.8 s of CPU time; cached lines are immediate.
+The plugin synthesizes dialogue **in-process** with the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model running on CPU through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). On first use it downloads the Kokoro model bundle (~349 MB) once into `~/.runelite/tts-dialogue/` and caches it. Every line after that is generated locally on-device.
 
-Every voice is a real, distinct Kokoro speaker, and the audio you hear is the clean neural output as-is. Character differences between races come from picking genuinely different speakers (accent, timbre, pitch).
+Model load, synthesis, and playback all run off the game thread on a single background pipeline fed by a small bounded queue, so the game stays responsive even when you mash through dialogue. Audio streams through a `SourceDataLine` straight from memory, and a small LRU cache keyed on `(text, voice)` replays repeated NPC lines instantly. On Apple Silicon a typical line synthesizes in roughly 1.3 to 1.8 seconds of CPU time; cached lines are immediate.
 
-> The native sherpa-onnx library ships per-platform. `build.gradle` bundles the macOS Apple Silicon native jar by default; swap the `sherpa-onnx-native-lib-*` line for your platform when building elsewhere.
+Every voice is a real, distinct Kokoro speaker, and what you hear is the clean neural output as-is. The differences between races come from picking genuinely different speakers: accent, timbre, and pitch.
 
----
+> The native sherpa-onnx library ships per-platform. `build.gradle` bundles the macOS Apple Silicon native jar by default. Swap the `sherpa-onnx-native-lib-*` line for your platform when building elsewhere.
 
-## ✨ Features
+## Features
 
-- 🧠 **In-process Kokoro TTS** - offline, on-device synthesis
-- 🔊 **Text-to-Speech for all dialogue** (NPC & Player)
-- 🎭 **Race/Gender Voice Matrix** - 8 races × 2 genders plus player voices, each mapped to a distinct Kokoro speaker
-- 🤖 **Static NPC Voice Table** - Race and gender resolve from a precomputed `npcId → {race, gender}` table baked into the plugin via a single in-memory lookup
-- ⏩ **Smart Playback** - Off-thread streaming playback that cancels instantly on skipped dialogue, with an LRU cache for instant replay of repeated lines
-- 🔄 **Sensible Fallbacks** - NPCs missing from the table fall back to a gender-appropriate human voice
-- 🐛 **Debug Mode** - Detailed NPC voice resolution logging for troubleshooting
+- **In-process Kokoro TTS** for offline, on-device synthesis with nothing leaving your machine.
+- **Voice for all dialogue**, covering both NPCs and the player character.
+- **Race and gender voice matrix** spanning 8 races times 2 genders plus player voices, each mapped to a distinct Kokoro speaker.
+- **Static NPC voice table** where race and gender resolve from a precomputed `npcId -> {race, gender}` table baked into the plugin via a single in-memory lookup.
+- **Smart playback** that streams off-thread, cancels instantly when you skip a line, and replays repeated lines from an LRU cache.
+- **Sensible fallbacks** so NPCs missing from the table still get a gender-appropriate human voice.
+- **Debug mode** with detailed NPC voice resolution logging for troubleshooting.
 
-### 🎙️ Voice Matrix
+### Voice Matrix
 
 Voices are drawn from the English speakers of the `kokoro-multi-lang-v1_0` bank (American `af_/am_`, British `bf_/bm_`). Each category maps to a unique speaker id, so every category sounds distinct.
 
 | Category | Male | Female |
 |----------|------|--------|
-| 👤 **Player** | `am_michael` (16) | `af_heart` (3) |
-| 👥 **Human** | `am_fenrir` (14) | `af_bella` (2) |
-| 🧝 **Elf** | `bm_george` (26) | `bf_emma` (21) |
-| ⛏️ **Dwarf** | `bm_lewis` (27) | `bf_isabella` (22) |
-| 👺 **Goblin** | `am_puck` (18) | `af_sky` (10) |
-| 🏔️ **Troll** | `am_onyx` (17) | `af_sarah` (9) |
-| 💀 **Undead** | `am_echo` (12) | `af_nicole` (6) |
-| 😈 **Demon** | `bm_daniel` (24) | `af_river` (8) |
-| 🧙 **Wizard** | `bm_fable` (25) | `af_alloy` (0) |
+| **Player** | `am_michael` (16) | `af_heart` (3) |
+| **Human** | `am_fenrir` (14) | `af_bella` (2) |
+| **Elf** | `bm_george` (26) | `bf_emma` (21) |
+| **Dwarf** | `bm_lewis` (27) | `bf_isabella` (22) |
+| **Goblin** | `am_puck` (18) | `af_sky` (10) |
+| **Troll** | `am_onyx` (17) | `af_sarah` (9) |
+| **Undead** | `am_echo` (12) | `af_nicole` (6) |
+| **Demon** | `bm_daniel` (24) | `af_river` (8) |
+| **Wizard** | `bm_fable` (25) | `af_alloy` (0) |
 
 The **Human** voices double as the fallback for any NPC missing from the table, and as the default for every NPC when **Automatic NPC Voices** is turned off.
 
-### 🗂️ NPC Voice Table
+### NPC Voice Table
 
-Each NPC's race and gender come from a static, precomputed table bundled at `src/main/resources/npc-voices.json` (a flat `npcId → {race, gender}` map). At runtime, choosing a voice is a **single in-memory lookup keyed by NPC id**, kept entirely local to the hot path. Ids not in the table fall back deterministically to Human/Male (or a gender-appropriate human voice when fallbacks are on).
+Each NPC's race and gender come from a static, precomputed table bundled at `src/main/resources/npc-voices.json` (a flat `npcId -> {race, gender}` map). At runtime, choosing a voice is a **single in-memory lookup keyed by NPC id**, kept entirely local to the hot path. Ids not in the table fall back deterministically to Human/Male, or to a gender-appropriate human voice when fallbacks are on.
 
 The table is generated **offline** and can be regenerated and expanded over time:
 
@@ -59,17 +63,15 @@ The table is generated **offline** and can be regenerated and expanded over time
 python3 tools/generate_npc_voices.py
 ```
 
-- `tools/generate_npc_voices.py` - the offline generator that builds the bundled table ahead of time. It classifies race/gender from a static OSRSBox monster dump with a deterministic, conservative keyword classifier, then merges authoritative overrides on top.
-- `tools/overrides.json` - hand-curated, authoritative `npcId → {race, gender}` entries that always win. **Fix mistakes and add important peaceful NPCs here**, then regenerate. See `tools/README.md` for details.
+- `tools/generate_npc_voices.py` is the offline generator that builds the bundled table ahead of time. It classifies race and gender from a static OSRSBox monster dump with a deterministic, conservative keyword classifier, then merges authoritative overrides on top.
+- `tools/overrides.json` holds hand-curated, authoritative `npcId -> {race, gender}` entries that always win. **Fix mistakes and add important peaceful NPCs here**, then regenerate. See `tools/README.md` for details.
 
----
-
-## 🔧 Dev Setup
+## Dev Setup
 
 ### Requirements
 
-- ✅ Java 17
-- 🛠️ Gradle (wrapper included)
+- Java 17
+- Gradle (wrapper included)
 
 ### Clone the repo
 
@@ -86,7 +88,7 @@ The Kokoro bundle downloads itself on first run, so cloning the repo is the only
 ./gradlew build
 ```
 
-### Run in test client
+### Run in the test client
 
 To test the plugin in a standalone RuneLite client, run the `com.grahambartley.TTSDialoguePluginTest` class with the following VM options:
 
@@ -94,67 +96,55 @@ To test the plugin in a standalone RuneLite client, run the `com.grahambartley.T
 -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED
 ```
 
-You can run it directly from your IDE (like IntelliJ) or configure it in `build.gradle` for CLI use.
+You can run it directly from your IDE (such as IntelliJ) or configure it in `build.gradle` for CLI use.
 
-Drop the built `.jar` into your RuneLite `plugins` folder or use RuneLite's External Plugin Manager if you know the vibes 🔌
+Drop the built `.jar` into your RuneLite `plugins` folder, or load it through RuneLite's External Plugin Manager.
 
----
+## Configuration
 
-## ⚙️ Configuration
+- **Dialogue Volume** sets the volume of the spoken dialogue (0 to 100).
+- **Enable Automatic NPC Voices** picks a Kokoro voice per NPC from the static race/gender table. When off, every NPC uses the default Human voice.
+- **Player Voice** chooses which Kokoro voice the player character uses.
+- **Enable Voice Fallbacks** falls back to a gender-appropriate human voice when an NPC is missing from the table. When off, those NPCs use the single default voice.
+- **Debug Mode** logs detailed NPC race/gender resolution.
 
-- **Dialogue Volume** - Volume of the spoken dialogue (0–100)
-- **Enable Automatic NPC Voices** - Pick a Kokoro voice per NPC from the static race/gender table. When off, every NPC uses the default Human voice.
-- **Player Voice** - Which Kokoro voice the player character uses
-- **Enable Voice Fallbacks** - When an NPC is missing from the table, fall back to a gender-appropriate human voice. When off, those NPCs use the single default voice.
-- **Debug Mode** - Detailed NPC race/gender resolution logging
+## Troubleshooting
 
----
-
-## 🚑 Troubleshooting
-
-**🐢 First line is slow or silent:**
+**First line is slow or silent:**
 - The model downloads (~349 MB) and loads on first use. Give it a moment; later lines are fast.
 - Check RuneLite logs for `Downloading Kokoro model bundle` and `Kokoro model loaded` messages.
 
-**🔊 No audio output:**
-- Check system audio is working and not muted.
-- Confirm the model finished loading (look for `Kokoro model loaded in … ms` in the logs).
+**No audio output:**
+- Check that system audio is working and not muted.
+- Confirm the model finished loading (look for `Kokoro model loaded in ... ms` in the logs).
 
-**🎭 Wrong or unexpected voice:**
+**Wrong or unexpected voice:**
 - Enable **Debug Mode** to log the detected race/gender and the chosen Kokoro voice per NPC.
 - Undetected NPCs intentionally fall back to the Human voice; toggle **Enable Voice Fallbacks** to change that behavior.
 
-**💥 Native library errors on startup:**
+**Native library errors on startup:**
 - `build.gradle` bundles the macOS Apple Silicon sherpa-onnx native jar by default. On other platforms, swap the `sherpa-onnx-native-lib-*` dependency for your OS/arch.
 
----
+## Tech Stack
 
-## 🧠 Tech Stack
+- Java
+- Kokoro-82M for text-to-speech
+- sherpa-onnx for ONNX inference
+- RuneLite plugin framework
 
-- Java 🥃
-- Kokoro-82M (TTS) 🎙️
-- sherpa-onnx (ONNX inference) 🧠
-- RuneLite Plugin Framework 🧩
+## Future Ideas
 
----
+- Custom voice overrides for specific NPCs.
+- Optional per-category speed tuning via sherpa-onnx's native speed parameter.
 
-## 🎯 Future Ideas
+## Shoutout
 
-- Custom voice overrides for specific NPCs 😈
-- Optional per-category speed tuning via sherpa-onnx's native speed parameter
+Big thanks to [hexgrad](https://huggingface.co/hexgrad/Kokoro-82M) for Kokoro, the [k2-fsa](https://github.com/k2-fsa/sherpa-onnx) team for sherpa-onnx, and the RuneLite devs for making plugin development genuinely fun.
 
----
+## Contribute
 
-## 🙌 Shoutout
+Got ideas or found a bug? Open an issue and let's talk.
 
-Big love to [hexgrad](https://huggingface.co/hexgrad/Kokoro-82M) for Kokoro, the [k2-fsa](https://github.com/k2-fsa/sherpa-onnx) team for sherpa-onnx, and the RuneLite devs for making plugin dev actually fun.
+## License
 
----
-
-## 📬 Contribute
-
-Got ideas? Found a bug? Shout in the issues 💥
-
----
-
-**Made with love in Gielinor** 💖
+Released under the [MIT License](LICENSE).
