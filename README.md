@@ -11,7 +11,7 @@ This plugin reads **in-game dialogue out loud** using different AI voices for NP
 
 The plugin synthesizes dialogue **in-process** with the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model running on CPU through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). There is no Docker, no local HTTP server, and no network call at synthesis time. On first use the plugin downloads the Kokoro model bundle (~349 MB) once into `~/.runelite/tts-dialogue/` and caches it; every line after that is generated locally.
 
-Model load and synthesis run on a dedicated background thread, so the game never stalls on the first line or on repeated dialogue. On Apple Silicon a typical line synthesizes in roughly 1.3–1.8 s of CPU time.
+Model load, synthesis, and playback all run off the game thread on a single background pipeline fed by a small bounded queue, so the game never stalls even under rapid dialogue advancement. Audio is streamed through a `SourceDataLine` straight from memory (no temp WAV files ever hit disk), and a small LRU cache keyed on `(text, voice)` replays repeated NPC lines instantly without re-synthesizing. On Apple Silicon a typical line synthesizes in roughly 1.3–1.8 s of CPU time; cached lines are immediate.
 
 Every voice is a real, distinct Kokoro speaker. The audio you hear is the clean neural output as-is: no resampling pitch shift, no reverb, and no distortion. Character differences between races come from picking genuinely different speakers (accent, timbre, pitch), never from post-processing.
 
@@ -25,7 +25,7 @@ Every voice is a real, distinct Kokoro speaker. The audio you hear is the clean 
 - 🔊 **Text-to-Speech for all dialogue** (NPC & Player)
 - 🎭 **Race/Gender Voice Matrix** - 8 races × 2 genders plus player voices, each mapped to a distinct Kokoro speaker
 - 🤖 **Static NPC Voice Table** - Race and gender resolve from a precomputed `npcId → {race, gender}` table baked into the plugin: one in-memory lookup, no network calls or downloads
-- ⏩ **Smart Playback** - Cancels audio on skipped dialogue
+- ⏩ **Smart Playback** - Off-thread streaming playback that cancels instantly on skipped dialogue, with an LRU cache for instant replay of repeated lines
 - 🔄 **Sensible Fallbacks** - NPCs missing from the table fall back to a gender-appropriate human voice
 - 🐛 **Debug Mode** - Detailed NPC voice resolution logging for troubleshooting
 

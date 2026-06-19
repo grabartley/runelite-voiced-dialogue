@@ -1,8 +1,6 @@
 package com.grahambartley.tts;
 
-import java.io.ByteArrayInputStream;
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
 
 /**
  * Pure conversion helpers for Kokoro audio output.
@@ -30,11 +28,5 @@ public final class KokoroAudio {
   /** Audio format for Kokoro PCM at the given sample rate: 16-bit, mono, signed, little-endian. */
   public static AudioFormat format(int sampleRate) {
     return new AudioFormat(sampleRate, 16, 1, true, false);
-  }
-
-  /** Wraps the float samples as a playable {@link AudioInputStream}. */
-  public static AudioInputStream toAudioInputStream(float[] samples, int sampleRate) {
-    byte[] pcm = toPcm16LE(samples);
-    return new AudioInputStream(new ByteArrayInputStream(pcm), format(sampleRate), samples.length);
   }
 }
