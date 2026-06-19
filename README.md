@@ -65,7 +65,7 @@ python3 tools/generate_npc_voices.py
 ```
 
 - `tools/generate_npc_voices.py` is the offline generator that builds the bundled table ahead of time. It classifies race and gender from a static OSRSBox monster dump with a deterministic, conservative keyword classifier, then merges authoritative overrides on top.
-- `tools/overrides.json` holds hand-curated, authoritative `npcId -> {race, gender}` entries that always win. **Fix mistakes and add important peaceful NPCs here**, then regenerate. See `tools/README.md` for details.
+- `tools/overrides.json` holds hand-curated, authoritative `npcId -> {race, gender}` entries that always win. **Fix mistakes and add important peaceful NPCs here**, then regenerate. See `docs/npc-voice-tooling.md` for details.
 
 ## Dev Setup
 

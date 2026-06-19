@@ -1,5 +1,5 @@
 {
-  "_meta": "Maps the publicly documented RuneScape chathead expression animation enum (ids 9760-9862) to the nearest of the five canonical com.grahambartley.synthesis.Emotion values (NEUTRAL, HAPPY, SAD, ANGRY, SCARED). Derived from the documented named-expression enum, not observed live. Five ids are ambiguous and mapped to the nearest emotion: 9800 MANIC_FACE -> ANGRY, 9812 LOOK_DOWN -> SAD, 9816 WHAT_THE -> NEUTRAL, 9820 WHAT_THE_TWO -> NEUTRAL, 9824 EYES_WIDE -> SCARED (we have no SURPRISE category). Non-human heads may emit ids outside this set; any animationId absent from this map, and -1, falls through to NEUTRAL. Expression names per id: 9760 NO_EXPRESSION, 9764 SAD, 9768 SAD_TWO, 9772 NO_EXPRESSION_TWO, 9776 WHY, 9780 SCARED, 9784 MILDLY_ANGRY, 9788 ANGRY, 9792 VERY_ANGRY, 9796 ANGRY_TWO, 9800 MANIC_FACE, 9804 JUST_LISTEN, 9808 PLAIN_TALKING, 9812 LOOK_DOWN, 9816 WHAT_THE, 9820 WHAT_THE_TWO, 9824 EYES_WIDE, 9828 CROOKED_HEAD, 9832 GLANCE_DOWN, 9836 UNSURE, 9840 LISTEN_LAUGH, 9844 TALK_SWING, 9847 NORMAL, 9851 GOOFY_LAUGH, 9855 NORMAL_STILL, 9859 THINKING_STILL, 9862 LOOKING_UP.",
+  "_meta": "Maps the documented RuneScape chathead expression animation enum (ids 9760-9862) to com.grahambartley.synthesis.Emotion names; see docs/expression-emotions.md.",
   "9760": "NEUTRAL",
   "9764": "SAD",
   "9768": "SAD",
