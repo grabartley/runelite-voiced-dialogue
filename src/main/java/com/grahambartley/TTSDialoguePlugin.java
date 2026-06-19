@@ -5,6 +5,7 @@ import com.google.inject.Provides;
 import com.grahambartley.synthesis.AzureTtsBackend;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
+import com.grahambartley.synthesis.ExpressionEmotionTable;
 import com.grahambartley.synthesis.LocalKokoroBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import com.grahambartley.synthesis.VoiceSpec;
@@ -18,6 +19,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.RuneLite;
@@ -50,7 +52,20 @@ public class TTSDialoguePlugin extends Plugin {
 
   private String lastSpoken = "";
 
+  /**
+   * Sentinel head-animation id meaning "no detectable expression" - a missing head widget (sprite /
+   * objectbox dialogue) or the one-tick race where the head animation lags the text. Resolves to
+   * {@link Emotion#NEUTRAL}, matching the engine's own {@code -1} for an idle head.
+   */
+  private static final int NO_EXPRESSION = -1;
+
   private VoiceManager voiceManager;
+
+  /**
+   * The bundled chathead-expression -> {@link Emotion} table (#25). Loaded once on start-up and
+   * reused for every line; owns the {@code -1}/unmapped -> NEUTRAL contract.
+   */
+  private final ExpressionEmotionTable expressionEmotions = ExpressionEmotionTable.load();
 
   private BackendProvider backendProvider;
 
@@ -120,16 +135,50 @@ public class TTSDialoguePlugin extends Plugin {
     log.warn(message);
   }
 
-  /** Hands the line to the off-thread synth + playback pipeline; never blocks the game thread. */
-  private void speakWithTTS(String text, String speaker, String npcName) {
+  /**
+   * Hands the line to the off-thread synth + playback pipeline; never blocks the game thread. The
+   * caller passes the speaker's chat-head expression animation id (or {@link #NO_EXPRESSION} when
+   * there is no head); it is resolved to an {@link Emotion} here and ridden into the request.
+   */
+  private void speakWithTTS(String text, String speaker, String npcName, int headAnimationId) {
     if (audioService == null || !backendProvider.active().isAvailable()) {
       return;
     }
     VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
-    // Emotion detection (#26) is not wired yet, and it is suppressed entirely when disabled in
-    // config; for now every line is neutral.
-    Emotion emotion = Emotion.NEUTRAL;
+    Emotion emotion = resolveLineEmotion(headAnimationId, config.enableEmotion());
+    if (config.debugMode()) {
+      log.debug("Resolved emotion {} for head animation {}", emotion, headAnimationId);
+    }
     audioService.speak(new SynthesisRequest(text, voice, emotion));
+  }
+
+  /**
+   * Pure decision logic for a line's emotion, factored out of the widget read so it is
+   * unit-testable without a live client. Returns {@link Emotion#NEUTRAL} when emotion is disabled
+   * in config or the animation id is {@code -1}/unmapped (missing head, sprite dialogue, non-human
+   * head, or the one-tick race); otherwise the table's mapped emotion. Never returns {@code null}
+   * and never throws.
+   */
+  Emotion resolveLineEmotion(int headAnimationId, boolean enableEmotion) {
+    if (!enableEmotion) {
+      return Emotion.NEUTRAL;
+    }
+    return expressionEmotions.resolve(headAnimationId);
+  }
+
+  /**
+   * Reads the chat-head expression animation id from the given dialogue head widget id ({@code
+   * InterfaceID.ChatLeft.HEAD} for NPC lines, {@code InterfaceID.ChatRight.HEAD} for player lines).
+   * Returns {@link #NO_EXPRESSION} when the head widget is absent (sprite/objectbox dialogues have
+   * no head), so the caller resolves NEUTRAL. Only touches the client on the game thread; never
+   * throws.
+   */
+  private int readHeadAnimationId(int headWidgetId) {
+    Widget head = client.getWidget(headWidgetId);
+    if (head == null) {
+      return NO_EXPRESSION;
+    }
+    return head.getAnimationId();
   }
 
   private String cleanDialogueText(String raw) {
@@ -168,7 +217,8 @@ public class TTSDialoguePlugin extends Plugin {
         lastSpoken = text;
         String cleaned = cleanDialogueText(text);
         String npcName = getCurrentNPCName();
-        speakWithTTS(cleaned, "npc", npcName);
+        int headAnimationId = readHeadAnimationId(InterfaceID.ChatLeft.HEAD);
+        speakWithTTS(cleaned, "npc", npcName, headAnimationId);
       }
     }
 
@@ -178,7 +228,9 @@ public class TTSDialoguePlugin extends Plugin {
       if (text != null && !text.isEmpty() && !text.equals(lastSpoken)) {
         lastSpoken = text;
         String cleaned = cleanDialogueText(text);
-        speakWithTTS(cleaned, "player", null); // No NPC name needed for player
+        int headAnimationId = readHeadAnimationId(InterfaceID.ChatRight.HEAD);
+        // No NPC name needed for player lines.
+        speakWithTTS(cleaned, "player", null, headAnimationId);
       }
     }
 
