@@ -166,7 +166,12 @@ Windows SmartScreen may warn on an unsigned bundle; choose **More info -> Run an
 - **Enable Voice Fallbacks** falls back to a gender-appropriate human voice when an NPC is missing from the table. When off, those NPCs use the single default voice.
 - **Debug Mode** logs detailed NPC race/gender resolution and the chosen Kokoro voice per NPC for troubleshooting.
 - **Voice Backend** selects the synthesis engine. `Local` is the offline, in-process Kokoro voice (default). `Cloud` routes synthesis through Microsoft Azure Neural TTS for emotional delivery.
+- **Enable Emotion** carries the emotion detected from each speaker's chat-head animation through to synthesis. When off, every line is voiced as Neutral. Because the default Local (Kokoro) backend is neutral-only by design, this only changes how a line *sounds* on an emotional backend (Cloud/Azure); detection still runs either way.
 - **Azure Subscription Key** / **Azure Region** configure the Cloud backend (for example `eastus`). These are required only when **Voice Backend** is `Cloud`; the key is stored locally and never bundled with the plugin.
+
+### Emotion detection
+
+Each new dialogue line's emotion is read from the speaker's chat-head expression animation: the NPC head for NPC lines, the player head for player lines. The animation id is mapped to an emotion via the bundled expression table; a missing head (sprite/objectbox dialogues), an idle head, or the one-tick race where the head animation lags the text all resolve to Neutral. The detection runs on the game thread as a cheap widget read and never blocks or throws. The resolved emotion rides in the synthesis request, but the active backend may downgrade it: the Local (Kokoro) backend is neutral-only, so emotion is only audible on the Cloud (Azure) backend.
 
 ### Cloud (Azure) backend
 
