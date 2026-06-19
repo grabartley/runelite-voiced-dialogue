@@ -1,14 +1,16 @@
 package com.grahambartley;
 
+import com.google.gson.Gson;
 import com.google.inject.Provides;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.LocalKokoroBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import com.grahambartley.synthesis.VoiceSpec;
+import com.grahambartley.synthesis.engine.EngineInstaller;
+import com.grahambartley.synthesis.engine.ExternalEngineClient;
 import com.grahambartley.tts.AudioPlayer;
 import com.grahambartley.tts.DialogueAudioService;
-import com.grahambartley.tts.KokoroTtsEngine;
 import java.nio.file.Path;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import okhttp3.OkHttpClient;
 
 @Slf4j
 @PluginDescriptor(name = "TTSDialogue")
@@ -36,11 +39,16 @@ public class TTSDialoguePlugin extends Plugin {
 
   @Inject private TTSDialogueConfig config;
 
+  /**
+   * Injected per Hub rules: never {@code new OkHttpClient()} / {@code new Gson()} in plugin code.
+   */
+  @Inject private OkHttpClient okHttpClient;
+
+  @Inject private Gson gson;
+
   private String lastSpoken = "";
 
   private VoiceManager voiceManager;
-
-  private KokoroTtsEngine ttsEngine;
 
   private BackendProvider backendProvider;
 
@@ -51,14 +59,19 @@ public class TTSDialoguePlugin extends Plugin {
     voiceManager = new VoiceManager(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("tts-dialogue");
-    ttsEngine = new KokoroTtsEngine(ttsDir);
-    // The in-JVM Kokoro engine is wrapped as the first (and currently only) synthesis backend; the
-    // provider routes every line through it until the GPU and cloud backends ship.
-    backendProvider = new BackendProvider(config, new LocalKokoroBackend(ttsEngine, voiceManager));
+    // The local Kokoro backend now runs the engine as an external --stdio process. The installer
+    // resolves the per-OS bundle from the bundled manifest and downloads it (off the game thread,
+    // lazily on warm-up); the client spawns and drives that process. No model or native libs ship
+    // in the plugin jar.
+    EngineInstaller installer = new EngineInstaller(okHttpClient, gson, ttsDir.resolve("engines"));
+    LocalKokoroBackend localKokoro =
+        new LocalKokoroBackend(installer, launcher -> new ExternalEngineClient(launcher, gson));
+    backendProvider = new BackendProvider(config, localKokoro);
     audioService =
         new DialogueAudioService(
             backendProvider, new AudioPlayer(), CACHE_SIZE, QUEUE_CAPACITY, config::volume);
-    // Warm the model on the pipeline thread so the first line is not the one that pays the load.
+    // Install + spawn the engine on the pipeline thread so the first line is not the one that pays
+    // the download/launch cost, and the game thread never blocks on it.
     audioService.prewarm(backendProvider::warmUpLocal);
 
     log.info("TTSDialogue started");
@@ -74,7 +87,6 @@ public class TTSDialoguePlugin extends Plugin {
       backendProvider.close();
       backendProvider = null;
     }
-    ttsEngine = null;
     log.info("TTS Plugin stopped");
   }
 

@@ -1,0 +1,341 @@
+package com.grahambartley.synthesis.engine;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.security.MessageDigest;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+
+/**
+ * Resolves, downloads, verifies, and extracts the per-OS external engine bundle the {@link
+ * ExternalEngineClient} launches.
+ *
+ * <p>It reads the bundled {@code /engine-manifest.json} resource (produced by issue #36) with the
+ * injected {@link Gson}, resolves the current OS/arch to one of the four platform ids ({@code
+ * osx-aarch64 | osx-x64 | linux-x64 | win-x64}), downloads that artifact from its manifest {@code
+ * url} with the injected {@link OkHttpClient} (Hub rule: never {@code new OkHttpClient()}),
+ * verifies its sha256 against the manifest, and extracts it under {@code
+ * ~/.runelite/tts-dialogue/engines/<engine>-<version>/}. On macOS it clears the {@code
+ * com.apple.quarantine} xattr on the extracted files so Gatekeeper does not block an
+ * unsigned/non-notarized binary.
+ *
+ * <p>It is idempotent: a bundle already extracted with a present launcher is reused without a
+ * re-download. The dev manifest ships empty urls/sha256 (a real release has not been published
+ * yet); that case is treated as "no installable engine" and surfaces as {@link #install()}
+ * returning {@code null}, never a crash. All of this is blocking I/O and is expected to run off the
+ * game thread (the pipeline executor, via the backend's {@code warmUp}).
+ */
+@Slf4j
+public class EngineInstaller {
+
+  private static final String MANIFEST_RESOURCE = "/engine-manifest.json";
+
+  private final OkHttpClient httpClient;
+  private final Gson gson;
+  private final Path enginesRoot;
+
+  /** Result of a successful install: the resolved launcher path and the engine/version it backs. */
+  public static final class Installed {
+    private final Path launcher;
+    private final String engine;
+    private final String version;
+
+    public Installed(Path launcher, String engine, String version) {
+      this.launcher = launcher;
+      this.engine = engine;
+      this.version = version;
+    }
+
+    public Path launcher() {
+      return launcher;
+    }
+
+    public String engine() {
+      return engine;
+    }
+
+    public String version() {
+      return version;
+    }
+  }
+
+  /**
+   * @param httpClient the injected OkHttp client (Hub rule: never {@code new OkHttpClient()})
+   * @param gson the injected Gson
+   * @param enginesRoot base dir, typically {@code ~/.runelite/tts-dialogue/engines}
+   */
+  public EngineInstaller(OkHttpClient httpClient, Gson gson, Path enginesRoot) {
+    this.httpClient = httpClient;
+    this.gson = gson;
+    this.enginesRoot = enginesRoot;
+  }
+
+  /**
+   * Ensures the engine for the current platform is installed and returns its launcher, or {@code
+   * null} when no installable engine is available (dev/empty manifest, unsupported platform, or a
+   * download/verify failure). Idempotent.
+   */
+  public Installed install() {
+    JsonObject manifest = readManifest();
+    if (manifest == null) {
+      return null;
+    }
+    String engine = optString(manifest, "engine", "engine");
+    String version = optString(manifest, "version", "0.0.0-dev");
+
+    String platform = currentPlatformId();
+    if (platform == null) {
+      log.info("No external engine build for this OS/arch; local backend unavailable.");
+      return null;
+    }
+
+    JsonObject artifacts =
+        manifest.has("artifacts") && manifest.get("artifacts").isJsonObject()
+            ? manifest.getAsJsonObject("artifacts")
+            : null;
+    if (artifacts == null || !artifacts.has(platform) || !artifacts.get(platform).isJsonObject()) {
+      log.info(
+          "Engine manifest has no artifact for platform '{}'; local backend unavailable.",
+          platform);
+      return null;
+    }
+    JsonObject entry = artifacts.getAsJsonObject(platform);
+    String url = optString(entry, "url", "");
+    String sha256 = optString(entry, "sha256", "");
+    String launcherName = optString(entry, "launcher", null);
+
+    if (url.isEmpty() || sha256.isEmpty() || launcherName == null) {
+      // Dev manifest placeholder: no release published yet. Not an error, just "nothing to
+      // install".
+      log.info(
+          "Engine manifest is the dev placeholder (empty url/sha256 for '{}'); no engine release"
+              + " published yet, local backend unavailable.",
+          platform);
+      return null;
+    }
+
+    Path installDir = enginesRoot.resolve(engine + "-" + version);
+    Path launcher = installDir.resolve(launcherName);
+
+    try {
+      if (Files.isRegularFile(launcher)) {
+        log.debug("External engine already installed at {}", launcher);
+        makeExecutable(launcher);
+        return new Installed(launcher, engine, version);
+      }
+
+      Files.createDirectories(installDir);
+      Path archive = Files.createTempFile(enginesRoot, engine + "-" + version, ".zip");
+      try {
+        download(url, archive);
+        verifySha256(archive, sha256);
+        extractZip(archive, installDir);
+      } finally {
+        Files.deleteIfExists(archive);
+      }
+
+      if (!Files.isRegularFile(launcher)) {
+        log.warn(
+            "Engine bundle extracted but launcher '{}' is missing under {}",
+            launcherName,
+            installDir);
+        return null;
+      }
+      makeExecutable(launcher);
+      if (isMac()) {
+        clearQuarantine(installDir);
+      }
+      log.info("Installed external engine {} {} for {} at {}", engine, version, platform, launcher);
+      return new Installed(launcher, engine, version);
+    } catch (IOException e) {
+      log.warn("Failed to install external engine for {}: {}", platform, e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Reads and parses the bundled {@code /engine-manifest.json} resource, or {@code null} if
+   * absent/unparseable. Overridable so tests can supply a synthetic manifest without touching the
+   * committed dev resource.
+   */
+  protected JsonObject readManifest() {
+    try (InputStream in = EngineInstaller.class.getResourceAsStream(MANIFEST_RESOURCE)) {
+      if (in == null) {
+        log.warn("engine-manifest.json resource not found on classpath");
+        return null;
+      }
+      try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+        return gson.fromJson(reader, JsonObject.class);
+      }
+    } catch (IOException | RuntimeException e) {
+      log.warn("Could not read engine-manifest.json: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  /** Downloads {@code url} to {@code target} using the injected OkHttp client. */
+  private void download(String url, Path target) throws IOException {
+    log.info("Downloading external engine bundle (one time): {}", url);
+    Request request = new Request.Builder().url(url).build();
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException("HTTP " + response.code() + " downloading " + url);
+      }
+      ResponseBody body = response.body();
+      if (body == null) {
+        throw new IOException("empty response body for " + url);
+      }
+      try (InputStream in = body.byteStream()) {
+        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+      }
+    }
+    log.info("Engine bundle download complete");
+  }
+
+  /** Verifies the file's sha256 hex digest against the expected value (case-insensitive). */
+  private void verifySha256(Path file, String expectedHex) throws IOException {
+    String actual = sha256Hex(file);
+    if (!actual.equalsIgnoreCase(expectedHex.trim())) {
+      throw new IOException(
+          "sha256 mismatch for engine bundle: expected " + expectedHex + " but got " + actual);
+    }
+  }
+
+  static String sha256Hex(Path file) throws IOException {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      try (InputStream in = Files.newInputStream(file)) {
+        byte[] buffer = new byte[64 * 1024];
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+          digest.update(buffer, 0, read);
+        }
+      }
+      StringBuilder sb = new StringBuilder();
+      for (byte b : digest.digest()) {
+        sb.append(Character.forDigit((b >> 4) & 0xf, 16));
+        sb.append(Character.forDigit(b & 0xf, 16));
+      }
+      return sb.toString();
+    } catch (java.security.NoSuchAlgorithmException e) {
+      throw new IOException("SHA-256 not available", e);
+    }
+  }
+
+  /** Extracts a zip into {@code destDir}, guarding against path-traversal entries. */
+  static void extractZip(Path archive, Path destDir) throws IOException {
+    Path normalizedDest = destDir.normalize();
+    try (InputStream fin = Files.newInputStream(archive);
+        ZipInputStream zip = new ZipInputStream(fin)) {
+      ZipEntry entry;
+      while ((entry = zip.getNextEntry()) != null) {
+        Path resolved = normalizedDest.resolve(entry.getName()).normalize();
+        if (!resolved.startsWith(normalizedDest)) {
+          throw new IOException("Refusing to extract entry outside target dir: " + entry.getName());
+        }
+        if (entry.isDirectory()) {
+          Files.createDirectories(resolved);
+        } else {
+          Files.createDirectories(resolved.getParent());
+          Files.copy(zip, resolved, StandardCopyOption.REPLACE_EXISTING);
+        }
+        zip.closeEntry();
+      }
+    }
+  }
+
+  /** Marks the launcher executable on POSIX systems so it can be spawned directly. */
+  private static void makeExecutable(Path file) {
+    try {
+      Set<PosixFilePermission> perms = new HashSet<>(Files.getPosixFilePermissions(file));
+      perms.add(PosixFilePermission.OWNER_EXECUTE);
+      perms.add(PosixFilePermission.GROUP_EXECUTE);
+      perms.add(PosixFilePermission.OTHERS_EXECUTE);
+      Files.setPosixFilePermissions(file, perms);
+    } catch (UnsupportedOperationException | IOException ignored) {
+      // Non-POSIX (Windows) or unreadable perms: nothing to do.
+    }
+  }
+
+  /**
+   * Clears the {@code com.apple.quarantine} xattr recursively on the extracted bundle so Gatekeeper
+   * does not block the unsigned/non-notarized engine binary and dylibs on first launch.
+   * Best-effort: a failure here is logged, not fatal.
+   */
+  private static void clearQuarantine(Path dir) {
+    try {
+      Process p =
+          new ProcessBuilder("xattr", "-dr", "com.apple.quarantine", dir.toString())
+              .redirectErrorStream(true)
+              .start();
+      // Drain output so the process can exit, then wait briefly.
+      try (InputStream in = p.getInputStream()) {
+        byte[] buf = new byte[1024];
+        while (in.read(buf) != -1) {
+          // discard
+        }
+      }
+      p.waitFor();
+    } catch (IOException e) {
+      log.debug("Could not clear quarantine xattr on {}: {}", dir, e.getMessage());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  /**
+   * Resolves the current OS/arch to a manifest platform id, or {@code null} if unsupported. Public
+   * for unit testing.
+   */
+  static String currentPlatformId() {
+    return platformId(System.getProperty("os.name"), System.getProperty("os.arch"));
+  }
+
+  /**
+   * Pure mapping of (os.name, os.arch) to a manifest platform id; {@code null} when unsupported.
+   */
+  static String platformId(String osName, String osArch) {
+    String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
+    String arch = osArch == null ? "" : osArch.toLowerCase(Locale.ROOT);
+    boolean aarch64 = arch.contains("aarch64") || arch.contains("arm64") || arch.contains("arm");
+    boolean x64 = arch.contains("amd64") || arch.contains("x86_64") || arch.equals("x64");
+    if (os.contains("mac") || os.contains("darwin") || os.contains("osx")) {
+      return aarch64 ? "osx-aarch64" : "osx-x64";
+    }
+    if (os.contains("win")) {
+      return x64 ? "win-x64" : null;
+    }
+    if (os.contains("linux")) {
+      return x64 ? "linux-x64" : null;
+    }
+    return null;
+  }
+
+  private static boolean isMac() {
+    String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+    return os.contains("mac") || os.contains("darwin") || os.contains("osx");
+  }
+
+  private static String optString(JsonObject obj, String key, String fallback) {
+    return obj != null && obj.has(key) && !obj.get(key).isJsonNull()
+        ? obj.get(key).getAsString()
+        : fallback;
+  }
+}
