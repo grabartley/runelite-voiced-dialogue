@@ -36,9 +36,11 @@ import okhttp3.ResponseBody;
  * linux-x64 | win-x64} are the built targets), downloads that artifact from its manifest {@code
  * url} with the injected {@link OkHttpClient} (Hub rule: never {@code new OkHttpClient()}),
  * verifies its sha256 against the manifest, and extracts it under {@code
- * ~/.runelite/tts-dialogue/engines/<engine>-<version>/}. On macOS it clears the {@code
- * com.apple.quarantine} xattr on the extracted files so Gatekeeper does not block an
- * unsigned/non-notarized binary.
+ * ~/.runelite/tts-dialogue/engines/<engine>-<version>/}. The archive format is inferred from the
+ * artifact filename: win-x64 bundles are {@code .zip} (extracted with {@link ZipInputStream}) and
+ * osx-aarch64/linux-x64 bundles are {@code .tar.gz} (extracted with the system {@code tar}). On
+ * macOS it clears the {@code com.apple.quarantine} xattr on the extracted files so Gatekeeper does
+ * not block an unsigned/non-notarized binary.
  *
  * <p>A platform entry is one of two shapes, distinguished by the presence of a {@code parts} array
  * (issue #60). A single-file entry carries {@code url}/{@code sha256} and is downloaded, verified,
@@ -165,6 +167,14 @@ public class EngineInstaller {
     String url = optString(entry, "url", "");
     String sha256 = optString(entry, "sha256", "");
 
+    // The archive format is inferred from the artifact filename: a single-file entry's url, or a
+    // split entry's `archive` field name (the parts have no usable extension). The engine release
+    // pipeline packages win-x64 as a .zip and osx-aarch64/linux-x64 as a .tar.gz, so this must
+    // dispatch to the right extractor (see #66: extracting a tar.gz as a zip silently extracts
+    // nothing).
+    String archiveName = split ? optString(entry, "archive", "") : url;
+    boolean tarGz = isTarGz(archiveName);
+
     if (launcherName == null || sha256.isEmpty() || (!split && url.isEmpty())) {
       // Dev manifest placeholder: no release published yet. Not an error, just "nothing to
       // install".
@@ -186,7 +196,8 @@ public class EngineInstaller {
       }
 
       Files.createDirectories(installDir);
-      Path archive = Files.createTempFile(enginesRoot, engine + "-" + version, ".zip");
+      Path archive =
+          Files.createTempFile(enginesRoot, engine + "-" + version, tarGz ? ".tar.gz" : ".zip");
       try {
         if (split) {
           assembleParts(parts, archive);
@@ -194,7 +205,11 @@ public class EngineInstaller {
           download(url, archive);
         }
         verifySha256(archive, sha256);
-        extractZip(archive, installDir);
+        if (tarGz) {
+          extractTarGz(archive, installDir);
+        } else {
+          extractZip(archive, installDir);
+        }
       } finally {
         Files.deleteIfExists(archive);
       }
@@ -357,6 +372,56 @@ public class EngineInstaller {
         }
         zip.closeEntry();
       }
+    }
+  }
+
+  /**
+   * Returns true if the artifact filename names a gzip-compressed tarball ({@code .tar.gz} or
+   * {@code .tgz}), case-insensitively. Anything else (including a {@code .zip}) is treated as a
+   * zip.
+   */
+  static boolean isTarGz(String name) {
+    if (name == null) {
+      return false;
+    }
+    String lower = name.toLowerCase(Locale.ROOT);
+    return lower.endsWith(".tar.gz") || lower.endsWith(".tgz");
+  }
+
+  /**
+   * Extracts a gzip-compressed tarball into {@code destDir} by shelling out to the system {@code
+   * tar} ({@code tar -xzf <archive> -C <destDir>}). The osx-aarch64/linux-x64 engine bundles ship
+   * as {@code .tar.gz} (win-x64 ships as {@code .zip} and never reaches here), and {@code tar} is
+   * always present on macOS and Linux. Output is drained so the process can exit; a non-zero exit
+   * or a timeout throws {@link IOException}, which the caller turns into a clean {@code null}
+   * (backend unavailable). The bundles are flat, so the launcher lands directly under {@code
+   * destDir}.
+   */
+  static void extractTarGz(Path archive, Path destDir) throws IOException {
+    try {
+      Process p =
+          new ProcessBuilder(
+                  "tar", "-xzf", archive.toString(), "-C", destDir.normalize().toString())
+              .redirectErrorStream(true)
+              .start();
+      // Drain output so the process can exit, then wait with a bounded timeout.
+      try (InputStream in = p.getInputStream()) {
+        byte[] buf = new byte[64 * 1024];
+        while (in.read(buf) != -1) {
+          // discard
+        }
+      }
+      if (!p.waitFor(5, java.util.concurrent.TimeUnit.MINUTES)) {
+        p.destroyForcibly();
+        throw new IOException("tar extraction timed out for " + archive);
+      }
+      int exit = p.exitValue();
+      if (exit != 0) {
+        throw new IOException("tar exited with status " + exit + " extracting " + archive);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while extracting " + archive, e);
     }
   }
 
