@@ -82,7 +82,7 @@ public interface TTSDialogueConfig extends Config {
 
   @ConfigItem(
       keyName = "playerVoiceClipPath",
-      name = "Player Voice Clip",
+      name = "Player Voice Clip (file path)",
       description =
           "Optional path to a local .wav file used to clone YOUR character's voice. Applies only to"
               + " the Local (GPU) Zonos backend and only to the player voice; it is ignored for the"
