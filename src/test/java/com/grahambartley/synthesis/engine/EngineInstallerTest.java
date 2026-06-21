@@ -23,10 +23,10 @@ import org.junit.rules.TemporaryFolder;
 
 /**
  * Unit tests for {@link EngineInstaller}: pure OS/arch -> platform-id resolution, sha256
- * verification, zip extraction, and the full download path served by a local HTTP server with a
- * fake artifact (no real GitHub release exists yet, so this proves the manifest-driven flow
- * end-to-end with a stand-in URL). The bundled dev manifest (empty url/sha256) is also exercised to
- * confirm it degrades to "no engine" rather than crashing.
+ * verification, zip and tar.gz extraction, and the full download path served by a local HTTP server
+ * with a fake artifact (proving the manifest-driven flow end-to-end with a stand-in URL for both
+ * archive formats). An empty manifest entry is exercised to confirm it degrades to "no engine"
+ * rather than crashing, and the committed Kokoro manifest resource is checked for shape.
  */
 public class EngineInstallerTest {
 
@@ -68,6 +68,36 @@ public class EngineInstallerTest {
     assertEquals(
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
         EngineInstaller.sha256Hex(f));
+  }
+
+  @Test
+  public void isTarGzDetectsGzippedTarballsOnly() {
+    assertTrue(EngineInstaller.isTarGz("kokoro-engine-v0.1.0-osx-aarch64.tar.gz"));
+    assertTrue(EngineInstaller.isTarGz("bundle.TGZ"));
+    assertTrue(
+        EngineInstaller.isTarGz(
+            "https://example.com/releases/v0.1.0/kokoro-engine-v0.1.0-linux-x64.tar.gz"));
+    assertTrue(
+        "a zip (win-x64, Zonos split) must NOT be tar.gz", !EngineInstaller.isTarGz("x.zip"));
+    assertTrue(!EngineInstaller.isTarGz("zonos-engine-v0.1.0-win-x64.zip"));
+    assertTrue(!EngineInstaller.isTarGz(""));
+    assertTrue(!EngineInstaller.isTarGz(null));
+  }
+
+  @Test
+  public void extractTarGzWritesEntries() throws Exception {
+    // Build a real flat .tar.gz with the launcher at top level, mirroring the engine bundles.
+    Path src = tmp.newFolder("tar-src").toPath();
+    Files.write(src.resolve("kokoro-engine"), "#!/bin/sh\n".getBytes(StandardCharsets.UTF_8));
+    Files.createDirectories(src.resolve("lib"));
+    Files.write(src.resolve("lib/engine.jar"), new byte[] {1, 2, 3});
+    Path tarGz = tmp.newFile("bundle.tar.gz").toPath();
+    tarCzf(src, tarGz);
+
+    Path dest = tmp.newFolder("tar-out").toPath();
+    EngineInstaller.extractTarGz(tarGz, dest);
+    assertTrue(Files.isRegularFile(dest.resolve("kokoro-engine")));
+    assertTrue(Files.isRegularFile(dest.resolve("lib/engine.jar")));
   }
 
   @Test
@@ -115,6 +145,39 @@ public class EngineInstallerTest {
     EngineInstaller.Installed second = installer.install();
     assertNotNull("second install should reuse the extracted bundle", second);
     assertEquals(first.launcher(), second.launcher());
+  }
+
+  // --- full install of a .tar.gz bundle (osx-aarch64 / linux-x64)
+  // -------------------------------
+
+  @Test
+  public void installExtractsTarGzBundleForUnixPlatforms() throws Exception {
+    // The osx-aarch64/linux-x64 engine bundles are published as .tar.gz, not .zip. The installer
+    // must infer the format from the artifact url and extract via the system tar, placing the flat
+    // launcher directly under installDir. (Reproduces and guards #66.)
+    String launcherName = "kokoro-engine";
+    Path src = tmp.newFolder("targz-src").toPath();
+    Files.write(src.resolve(launcherName), "launcher".getBytes(StandardCharsets.UTF_8));
+    Files.createDirectories(src.resolve("lib"));
+    Files.write(src.resolve("lib/engine.jar"), new byte[] {9, 8, 7});
+    Path tarGz = tmp.newFile("kokoro.tar.gz").toPath();
+    tarCzf(src, tarGz);
+    byte[] tarBytes = Files.readAllBytes(tarGz);
+    String sha = sha256HexOf(tarBytes);
+    // The served path ends in .tar.gz so isTarGz keys off the url, as it does for a real manifest.
+    String url = serve("/kokoro-engine-osx-aarch64.tar.gz", tarBytes);
+
+    Path enginesRoot = tmp.newFolder("engines").toPath();
+    String platform = EngineInstaller.currentPlatformId();
+    EngineInstaller installer =
+        installerWithManifest(enginesRoot, manifest(platform, url, sha, launcherName));
+
+    EngineInstaller.Installed installed = installer.install();
+    assertNotNull("tar.gz install should resolve a launcher", installed);
+    assertEquals(launcherName, installed.launcher().getFileName().toString());
+    assertTrue(Files.isRegularFile(installed.launcher()));
+    assertTrue(Files.isRegularFile(installed.launcher().getParent().resolve("lib/engine.jar")));
+    assertEquals("kokoro", installed.engine());
   }
 
   // --- split (multi-part) install
@@ -245,16 +308,34 @@ public class EngineInstallerTest {
   }
 
   @Test
-  public void bundledDevManifestResourceYieldsNull() {
-    // The real committed /engine-manifest.json resource has empty urls -> no installable engine.
-    Path enginesRoot;
-    try {
-      enginesRoot = tmp.newFolder("engines-bundled").toPath();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+  public void bundledKokoroManifestResourceIsWellFormedForBuiltTargets() {
+    // The committed /engine-manifest.json now points at the published Kokoro v0.1.0 release (#61),
+    // so it is no longer a dev placeholder. Assert the resource parses and carries a real artifact
+    // (url + sha256 + launcher) for each built target, and that the osx-aarch64/linux-x64 urls are
+    // .tar.gz while win-x64 is .zip -- the exact distinction the installer must dispatch on (#66).
+    // This stays offline: it inspects the manifest rather than running a real ~385 MB install.
+    com.google.gson.JsonObject manifest =
+        gson.fromJson(
+            new java.io.InputStreamReader(
+                EngineInstaller.class.getResourceAsStream(EngineInstaller.KOKORO_MANIFEST_RESOURCE),
+                StandardCharsets.UTF_8),
+            com.google.gson.JsonObject.class);
+    com.google.gson.JsonObject artifacts = manifest.getAsJsonObject("artifacts");
+    for (String target : new String[] {"osx-aarch64", "linux-x64", "win-x64"}) {
+      com.google.gson.JsonObject entry = artifacts.getAsJsonObject(target);
+      assertTrue(
+          target + " must have a non-empty url", entry.get("url").getAsString().length() > 0);
+      assertTrue(
+          target + " must have a non-empty sha256", entry.get("sha256").getAsString().length() > 0);
+      assertTrue(
+          target + " must declare a launcher",
+          entry.has("launcher") && entry.get("launcher").getAsString().length() > 0);
+      boolean expectTarGz = !target.startsWith("win");
+      assertEquals(
+          target + " archive format",
+          expectTarGz,
+          EngineInstaller.isTarGz(entry.get("url").getAsString()));
     }
-    EngineInstaller installer = new EngineInstaller(new OkHttpClient(), gson, enginesRoot);
-    assertNull("dev manifest resource must degrade to no-engine", installer.install());
   }
 
   @Test
@@ -343,6 +424,29 @@ public class EngineInstallerTest {
 
   private String baseUrl() {
     return "http://127.0.0.1:" + server.getAddress().getPort();
+  }
+
+  /**
+   * Creates a flat {@code .tar.gz} of {@code srcDir}'s contents (the {@code -C srcDir .} form the
+   * release pipeline uses) via the system {@code tar}, the same tool the installer extracts with.
+   * Skips the test on Windows, where the bundles are {@code .zip} and {@code tar} is not assumed.
+   */
+  private static void tarCzf(Path srcDir, Path tarGz) throws Exception {
+    org.junit.Assume.assumeFalse(
+        "tar.gz packaging/extraction is a macOS/Linux concern; Windows uses .zip",
+        System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win"));
+    Process p =
+        new ProcessBuilder("tar", "-czf", tarGz.toString(), "-C", srcDir.toString(), ".")
+            .redirectErrorStream(true)
+            .start();
+    try (java.io.InputStream in = p.getInputStream()) {
+      byte[] buf = new byte[8192];
+      while (in.read(buf) != -1) {
+        // discard
+      }
+    }
+    assertTrue("tar -czf must succeed", p.waitFor(1, java.util.concurrent.TimeUnit.MINUTES));
+    assertEquals("tar -czf exit status", 0, p.exitValue());
   }
 
   private byte[] buildBundleZip() throws IOException {
