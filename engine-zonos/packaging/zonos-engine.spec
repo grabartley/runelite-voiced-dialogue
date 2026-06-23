@@ -56,7 +56,15 @@ try:
 
     # zonos + phonemizer: collect everything (code, data, binaries) -- these have no dedicated hook
     # that would duplicate their contents, so collect_all is safe and needed for self-containment.
-    for pkg in ("zonos", "phonemizer"):
+    #
+    # numpy MUST be collected COMPLETELY here too. Left to transitive collection it is only partially
+    # bundled, so numpy's _core dispatcher (multiarray_umath) initializes a second time in the frozen
+    # process and raises "CPU dispatcher tracer already initlized" (numpy 2.3) / "cannot load module
+    # more than once per process" (numpy 2.4+), which made the GPU probe report no usable GPU on a
+    # real NVIDIA box. Unlike torch, numpy has no dedicated hook collecting its extension, so this is
+    # the right place. The smoke test (zonos-smoke-test.yml) confirmed numpy<2.4 + collect_all("numpy")
+    # imports torch cleanly in a frozen build; this applies that same, validated collection here.
+    for pkg in ("zonos", "phonemizer", "numpy"):
         d, b, h = collect_all(pkg)
         datas += d
         binaries += b
