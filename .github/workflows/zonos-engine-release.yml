@@ -43,11 +43,95 @@ permissions:
   pull-requests: write
 
 jobs:
+  # HARD PRE-BUILD GATE (issue #103). Before the expensive ~2.9 GB PyInstaller build + weight
+  # download, freeze the engine's FULL module graph on a GPU-less runner and run `import torch` +
+  # `import zonos` + the engine's cuda_available(). The recurring Zonos failure
+  # (`cannot load module more than once per process` / `CPU dispatcher tracer already initlized`) is a
+  # numpy IMPORT-TIME double-init that fires before any GPU call, so a CPU runner reproduces (or
+  # clears) it with full fidelity. This freeze uses the SAME shared collection recipe
+  # (packaging/_collect.py) as the real zonos-engine.spec, so a clean smoke proves the import recipe
+  # that the release is about to bake into 2.9 GB. If it fails the `build` job never runs: no release,
+  # no asset upload. (The standalone PR check zonos-smoke-test.yml runs this same freeze on PRs.)
+  smoke:
+    name: Frozen full-graph import gate (no GPU)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Match the real build's interpreter (torch 2.4.1 ships cp38..cp312) so the frozen graph
+          # matches production.
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-suffix: zonos-smoke
+          cache-dependency-glob: engine-zonos/packaging/requirements.txt
+
+      - name: Create venv + install the FULL frozen-import graph (CPU torch)
+        shell: bash
+        working-directory: engine-zonos
+        run: |
+          set -euo pipefail
+          # Same runtime deps as the real bundle (packaging/requirements.txt) PLUS zonos from git --
+          # the full graph the release freezes -- but from the CPU torch index, not cu124. The
+          # import-time double-init is GPU-independent, so CPU wheels reproduce it faithfully while the
+          # gate stays cheap (single-digit minutes) ahead of the ~2.9 GB cu124 build below.
+          uv venv .smoke-venv --python 3.12
+          uv pip install --python .smoke-venv \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r packaging/requirements.txt
+          uv pip install --python .smoke-venv "git+https://github.com/Zyphra/Zonos.git@${{ inputs.zonos_ref }}"
+
+      - name: PyInstaller-freeze the FULL-GRAPH import probe
+        shell: bash
+        working-directory: engine-zonos
+        run: |
+          set -euo pipefail
+          .smoke-venv/Scripts/python -m PyInstaller \
+            --noconfirm --clean \
+            --distpath build/smoke-dist \
+            --workpath build/smoke-work \
+            packaging/smoke-import.spec
+
+      - name: Run the frozen import probe and FAIL the release on a double-load
+        shell: bash
+        working-directory: engine-zonos
+        run: |
+          set -euo pipefail
+          EXE="build/smoke-dist/smoke-import/smoke-import.exe"
+          test -f "$EXE" || { echo "::error::frozen smoke exe not found at $EXE"; exit 1; }
+          set +e
+          OUT=$("$EXE" 2>&1)
+          CODE=$?
+          set -e
+          echo "===== frozen smoke-import output (exit=$CODE) ====="
+          echo "$OUT"
+          echo "=================================================="
+          if echo "$OUT" | grep -qE "cannot load module more than once per process|CPU dispatcher tracer already initlized"; then
+            echo "::error::RELEASE GATE FAILED: numpy import-time double-init in the full module graph. Aborting before the 2.9 GB build."
+            exit 1
+          fi
+          if [ "$CODE" -ne 0 ]; then
+            echo "::error::RELEASE GATE FAILED: frozen smoke exited non-zero ($CODE); see output above. Aborting before the 2.9 GB build."
+            exit 1
+          fi
+          echo "GATE PASS: frozen full-graph import is clean; proceeding to the full build."
+
   # One job per CUDA-capable target. Windows x64 is the primary gaming-PC target for v1; linux-x64 is
   # wired here behind a flag for a later follow-up. macOS is intentionally absent: Zonos targets
   # CUDA/NVIDIA, so there is no Apple-GPU bundle and the plugin correctly falls back to Kokoro there.
   build:
     name: Build ${{ matrix.platform }}
+    # Hard gate: the expensive build + weight download only runs after the import recipe is CI-proven
+    # clean on a CPU runner (issue #103). A failing smoke aborts here -> no release, no asset upload.
+    needs: smoke
     strategy:
       fail-fast: false
       matrix:

@@ -1,65 +1,59 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for the cheap torch/numpy frozen-import smoke test (smoke_import.py).
+"""PyInstaller spec for the FULL-GRAPH frozen-import smoke test (smoke_import.py).
 
-This mirrors the torch-handling half of the real engine spec (zonos-engine.spec) so the FROZEN
-import path is faithful to production, but stays minimal: it freezes ONLY smoke_import.py, torch, and
-a COMPLETE numpy. It deliberately does NOT collect zonos / phonemizer / the engine package, because
-the bug under test -- numpy 2.4+'s "cannot load module more than once per process" raised when
-PyInstaller's bootstrap removes numpy and torch re-imports it -- happens purely on the
-``import torch`` path and needs none of those heavyweight deps. Skipping them is what makes the smoke
-test cheap.
+WHY THIS IS A FULL-GRAPH SMOKE (issue #103)
+-------------------------------------------
+The earlier smoke (#99) froze only ``smoke_import.py`` + torch + numpy and deliberately EXCLUDED
+zonos / phonemizer / the engine package. That validated a *different* bundle than the one shipped:
+green smoke, broken release. The residual untested risk -- does ``collect_all("zonos")`` /
+``collect_all("phonemizer")`` re-collecting numpy transitively re-trigger the import-time double-init
+even with an explicit ``collect_all("numpy")``? -- is exactly what a stripped graph cannot answer.
 
-CRITICAL (issue #77): torch is NOT listed in hiddenimports and is NOT passed to collect_all here.
-PyInstaller's built-in torch hook already collects torch's compiled C-extensions (.pyd/.so) and the
-bundled CUDA runtime exactly once. Doing collect_all("torch") on top of that hook bundles torch's
-native extension under two resolvable paths and is itself a trigger for the double-load. We take only
-torch's non-binary data files + dist metadata (exactly as the real spec does) and let the hook own the
-binaries. torch is pulled in because smoke_import.py imports it, so its hook fires regardless.
+This spec freezes the SAME module graph as the real engine (``zonos-engine.spec``) by calling the
+SAME shared recipe, ``_collect.collect_engine_deps()`` (collect_all over zonos/phonemizer/numpy +
+torch/torchaudio data-only). The smoke and the shipped bundle are therefore physically incapable of
+diverging on the collection graph: any recipe change lives in ``_collect.py`` and both specs consume
+it. The only difference from the real spec is the entry point (the cheap probe ``smoke_import.py``
+instead of the full ``zonos_engine_cli.py``); the frozen dependency bundle is identical.
 
-numpy IS collected in full via collect_all("numpy"). In the real bundle numpy arrives complete as a
-transitive dep of collect_all("zonos") + the torchaudio hook; this minimal spec installs none of
-those, so without an explicit numpy collection the frozen exe is missing numpy's ``_core`` submodules
-(e.g. ``numpy._core._exceptions``) and numpy -- and therefore torch -- cannot import at all, masking
-the actual double-load test. collect_all("numpy") reproduces the real bundle's complete-numpy state.
-Unlike torch, numpy has no dedicated PyInstaller hook that already owns its binaries, so collect_all
-is the right (non-duplicating) way to bundle it whole -- the same reason the real spec uses
-collect_all for zonos/phonemizer.
+The torch-data-only handling (never torch's binaries -- the hook owns those, issue #77) lives in
+``_collect.py`` and is inherited here unchanged, so the frozen import path the smoke exercises matches
+production. Run on a plain CPU runner: the double-init surfaces at ``import torch`` BEFORE any CUDA
+call, so no GPU is needed to reproduce (or clear) the entire bug class with full fidelity.
 """
 
 import os
+import sys
 
 block_cipher = None
 
+# Invoked from the engine-zonos dir (same as the real build), so the engine package + entry resolve
+# relative to cwd exactly as zonos-engine.spec does.
 HERE = os.path.abspath(os.getcwd())
 ENTRY = os.path.join(HERE, "packaging", "smoke_import.py")
 
-hiddenimports = []
-datas = []
-binaries = []
+# Make packaging/_collect.py importable. SPECPATH is this spec's directory (packaging/), injected by
+# PyInstaller; fall back to HERE/packaging for plain linting without PyInstaller.
+_PACKAGING_DIR = globals().get("SPECPATH") or os.path.join(HERE, "packaging")
+if _PACKAGING_DIR not in sys.path:
+    sys.path.insert(0, _PACKAGING_DIR)
 
-try:
-    from PyInstaller.utils.hooks import collect_all, collect_data_files, copy_metadata
+from _collect import collect_engine_deps  # noqa: E402 - import after sys.path is primed above
 
-    # numpy: collect EVERYTHING (code, data, binaries) so the frozen numpy is complete. numpy has no
-    # built-in hook that would duplicate its contents, so collect_all is safe and needed -- exactly
-    # how the real spec collects zonos/phonemizer. Without this the frozen exe lacks numpy._core and
-    # cannot import numpy at all, which masks the torch double-load this test exists to detect.
-    np_datas, np_binaries, np_hidden = collect_all("numpy")
-    datas += np_datas
-    binaries += np_binaries
-    hiddenimports += np_hidden
+# Freeze the engine's full dependency graph + the engine package itself, so the smoke imports zonos
+# and calls the real cuda_available() against the same frozen bundle the release ships.
+hiddenimports = [
+    "zonos_engine",
+    "zonos_engine.synthesizer",
+    "zonos",
+    "zonos.model",
+    "zonos.conditioning",
+    "phonemizer",
+]
 
-    # torch: ONLY non-binary data files + dist metadata, never its binaries (the hook owns those).
-    # This is the same collection the real engine spec uses for torch, so the frozen import path the
-    # smoke test exercises matches production.
-    for pkg in ("torch",):
-        datas += collect_data_files(pkg)
-        try:
-            datas += copy_metadata(pkg)
-        except Exception:  # pragma: no cover - metadata is optional
-            pass
-except Exception:  # pragma: no cover - only exercised inside a PyInstaller run
-    pass
+# THE shared recipe -- identical call to zonos-engine.spec. This is what makes the smoke faithful.
+datas, binaries, _hidden = collect_engine_deps()
+hiddenimports += _hidden
 
 
 a = Analysis(

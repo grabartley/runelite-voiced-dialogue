@@ -11,31 +11,36 @@ Run via ``pyinstaller packaging/zonos-engine.spec`` from the ``engine-zonos`` di
 script ``packaging/build_bundle.py`` does this). ``--onedir`` (the default for a spec) is used, not
 ``--onefile``, so the large CUDA runtime libraries are not unpacked to a temp dir on every launch:
 the plugin already extracts the bundle to a stable directory.
+
+DEPENDENCY-COLLECTION RECIPE: this spec does NOT hand-roll its ``collect_all`` / torch-data-only
+recipe. It imports ``packaging/_collect.py`` and calls ``collect_engine_deps()``. The frozen-import
+smoke (``smoke-import.spec``) imports the SAME function, so the smoke and the shipped bundle freeze
+the same module graph by construction and cannot drift apart. Change the recipe in ``_collect.py``
+once and both are updated; the smoke then re-proves it on a CPU runner before any release build runs.
 """
 
 import os
+import sys
 
 block_cipher = None
 
 # Repo paths are relative to the engine-zonos dir PyInstaller is invoked from.
 HERE = os.path.abspath(os.getcwd())
+
+# Make packaging/_collect.py importable. SPECPATH is the directory of this spec (packaging/), which
+# PyInstaller injects into the spec's namespace; fall back to HERE/packaging for plain linting.
+_PACKAGING_DIR = globals().get("SPECPATH") or os.path.join(HERE, "packaging")
+if _PACKAGING_DIR not in sys.path:
+    sys.path.insert(0, _PACKAGING_DIR)
 # Freeze the top-level runner, NOT zonos_engine/engine.py directly: PyInstaller runs the entry as
 # __main__ with no package context, so freezing engine.py directly breaks its package-relative
 # imports ("attempted relative import with no known parent package"). zonos_engine_cli.py imports
 # the package by absolute name, so the package's internal relative imports resolve in the bundle.
 ENTRY = os.path.join(HERE, "zonos_engine_cli.py")
 
-# Collect the data/metadata torch + zonos + phonemizer need at runtime. These hidden imports and
-# collected packages are what make the frozen exe actually self-contained.
-#
-# IMPORTANT (issue #77): torch/torchaudio are NOT in hiddenimports and are NOT passed to collect_all
-# below. PyInstaller ships dedicated hooks for torch and torchaudio that already collect their
-# compiled C-extensions (.pyd/.so) and the bundled CUDA runtime libs exactly once. Listing torch in
-# hiddenimports AND running collect_all("torch") on top of those hooks bundles torch's native
-# extension under two resolvable paths; at runtime CPython then raises "cannot load module more than
-# once per process" the second time the extension's module-init runs, which made the GPU probe
-# report no usable GPU on a real NVIDIA box. torch is still pulled in transitively (zonos and the
-# synthesizer import it), so its hook fires and its binaries travel with the exe -- just once.
+# The engine package's own hidden imports. The torch + zonos + phonemizer + numpy collection comes
+# from the SHARED recipe (_collect.collect_engine_deps) below, so this spec and the smoke spec freeze
+# the same module graph by construction. See _collect.py for the torch-data-only rationale (issue #77).
 hiddenimports = [
     "zonos_engine",
     "zonos_engine.protocol",
@@ -48,33 +53,14 @@ hiddenimports = [
     "phonemizer",
 ]
 
-datas = []
-binaries = []
+from _collect import collect_engine_deps  # noqa: E402 - import after sys.path is primed above
 
-try:
-    from PyInstaller.utils.hooks import collect_all, collect_data_files, copy_metadata
-
-    # zonos + phonemizer: collect everything (code, data, binaries) -- these have no dedicated hook
-    # that would duplicate their contents, so collect_all is safe and needed for self-containment.
-    for pkg in ("zonos", "phonemizer"):
-        d, b, h = collect_all(pkg)
-        datas += d
-        binaries += b
-        hiddenimports += h
-
-    # torch/torchaudio: take ONLY non-binary data files + dist metadata, never their binaries. The
-    # built-in torch/torchaudio hooks own the compiled extensions + CUDA runtime; duplicating those
-    # is exactly what triggered the double-load (issue #77). collect_data_files(...) returns data
-    # (e.g. version files, configs) without the .pyd/.so the hook already collects.
-    for pkg in ("torch", "torchaudio"):
-        datas += collect_data_files(pkg)
-        try:
-            datas += copy_metadata(pkg)
-        except Exception:  # pragma: no cover - metadata is optional
-            pass
-except Exception:  # pragma: no cover - only exercised inside the build env
-    # collect_all is unavailable outside a PyInstaller run; the spec is still importable for linting.
-    pass
+# Shared collection recipe: collect_all over zonos/phonemizer/numpy + torch/torchaudio data-only.
+# Identical call in smoke-import.spec, so the smoke cannot validate a different bundle than ships.
+_datas, _binaries, _hidden = collect_engine_deps()
+datas = _datas
+binaries = _binaries
+hiddenimports += _hidden
 
 
 a = Analysis(
