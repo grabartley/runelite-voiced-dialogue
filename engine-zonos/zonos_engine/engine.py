@@ -40,6 +40,8 @@ def main(argv: Optional[list] = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    _configure_espeak()
+
     if args.check_imports:
         return _run_check_imports()
 
@@ -53,18 +55,36 @@ def main(argv: Optional[list] = None) -> int:
     return 2
 
 
+def _configure_espeak() -> None:
+    # Point phonemizer at the bundled espeak-ng (espeakng_loader) so the user box needs no system
+    # install. No-op if espeakng_loader is absent (dev machines fall back to a system espeak-ng).
+    try:
+        import espeakng_loader
+        from phonemizer.backend.espeak.wrapper import EspeakWrapper
+
+        EspeakWrapper.set_library(espeakng_loader.get_library_path())
+        os.environ.setdefault("ESPEAK_DATA_PATH", espeakng_loader.get_data_path())
+    except Exception:  # noqa: BLE001 - dev fallback to system espeak-ng
+        pass
+
+
 def _run_check_imports() -> int:
-    # Build/packaging guard. Importing zonos.model pulls in zonos.backbone and transformers' lazily
-    # resolved submodules; frozen, this fails if the bundle dropped either (which lets the engine warm
-    # up but never synthesize). No weights, no GPU, so it runs on any runner.
+    # Build/packaging guard, run on the frozen exe with no weights or GPU. Importing zonos.model pulls
+    # in zonos.backbone and transformers' lazy submodules; the phonemize call exercises the bundled
+    # espeak-ng. Frozen, this fails if the bundle dropped any of them (engine would warm up but never
+    # synthesize).
     try:
         from zonos.model import Zonos  # noqa: F401
         from zonos.conditioning import make_cond_dict  # noqa: F401
-    except BaseException:  # noqa: BLE001 - any import failure is a packaging failure
-        print("FAILURE: synthesis-path imports did not resolve:", file=sys.stderr)
+        from phonemizer import phonemize
+
+        if not phonemize("zonos check", language="en-us", backend="espeak").strip():
+            raise RuntimeError("espeak produced no phonemes")
+    except BaseException:  # noqa: BLE001 - any failure here is a packaging failure
+        print("FAILURE: synthesis-path imports/espeak did not resolve:", file=sys.stderr)
         traceback.print_exc()
         return 1
-    print("check-imports OK: zonos.model + zonos.conditioning resolved.")
+    print("check-imports OK: zonos + transformers + phonemizer/espeak resolved.")
     return 0
 
 

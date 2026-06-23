@@ -40,5 +40,9 @@ transformers==4.48.1
 # Phonemizer backend Zonos uses for text normalization.
 phonemizer==3.3.0
 
+# Bundles the espeak-ng shared library + data per-OS (including Windows), so a user box needs no
+# system espeak-ng install. The engine points phonemizer at it (see engine._configure_espeak).
+espeakng-loader==0.2.4
+
 # PyInstaller is a build-time tool, not a runtime dep, but pinned here so the build env is one file.
 pyinstaller==6.10.0

@@ -61,7 +61,9 @@ try:
     #   transformers _LazyModule resolves transformers.models.* on demand, missing from the bundle
     #                otherwise (pinned <5; 5.x scans the filesystem and cannot be frozen at all).
     #   language_tags/csvw/segments  phonemizer's segments backend loads JSON data files at import.
-    for pkg in ("zonos", "phonemizer", "numpy", "transformers", "language_tags", "csvw", "segments"):
+    #   espeakng_loader  ships the espeak-ng shared library + data the engine points phonemizer at.
+    for pkg in ("zonos", "phonemizer", "numpy", "transformers",
+                "language_tags", "csvw", "segments", "espeakng_loader"):
         d, b, h = collect_all(pkg)
         datas += d
         binaries += b
