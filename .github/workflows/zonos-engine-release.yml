@@ -25,7 +25,11 @@ on:
       zonos_ref:
         description: "Zonos upstream git ref (sha or tag) to pin for a reproducible bundle"
         required: false
-        default: "main"
+        # Pinned commit, NOT 'main'. Building from main moved Zonos's torch floor to >=2.5.1 and
+        # downgraded the pinned cu124 torch to a CPU wheel (v0.1.3 shipped torch 2.12.1+cpu, no GPU).
+        # This must match the ref the deps-check (zonos-deps-check.yml) validated, or that check is not
+        # a valid proxy for the release. Bump deliberately, re-running the deps check afterwards.
+        default: "bc40d98e1e1ab54fc65c483be127a90e3c7c0645"
         type: string
       torch_index:
         description: "PyTorch CUDA wheel index URL"
