@@ -54,17 +54,14 @@ binaries = []
 try:
     from PyInstaller.utils.hooks import collect_all, collect_data_files, copy_metadata
 
-    # zonos + phonemizer: collect everything (code, data, binaries) -- these have no dedicated hook
-    # that would duplicate their contents, so collect_all is safe and needed for self-containment.
-    #
-    # numpy MUST be collected COMPLETELY here too. Left to transitive collection it is only partially
-    # bundled, so numpy's _core dispatcher (multiarray_umath) initializes a second time in the frozen
-    # process and raises "CPU dispatcher tracer already initlized" (numpy 2.3) / "cannot load module
-    # more than once per process" (numpy 2.4+), which made the GPU probe report no usable GPU on a
-    # real NVIDIA box. Unlike torch, numpy has no dedicated hook collecting its extension, so this is
-    # the right place. The smoke test (zonos-smoke-test.yml) confirmed numpy<2.4 + collect_all("numpy")
-    # imports torch cleanly in a frozen build; this applies that same, validated collection here.
-    for pkg in ("zonos", "phonemizer", "numpy"):
+    # collect_all (code + data + binaries) for packages with no dedicated hook. Each is here for a
+    # frozen-only reason transitive collection does not cover:
+    #   numpy        partial collection re-inits its _core dispatcher ("CPU dispatcher tracer already
+    #                initlized" / "cannot load module more than once"); also needs numpy<2.4.
+    #   transformers _LazyModule resolves transformers.models.* on demand, missing from the bundle
+    #                otherwise (pinned <5; 5.x scans the filesystem and cannot be frozen at all).
+    #   language_tags/csvw/segments  phonemizer's segments backend loads JSON data files at import.
+    for pkg in ("zonos", "phonemizer", "numpy", "transformers", "language_tags", "csvw", "segments"):
         d, b, h = collect_all(pkg)
         datas += d
         binaries += b
@@ -85,6 +82,10 @@ except Exception:  # pragma: no cover - only exercised inside the build env
     pass
 
 
+# optimize=1 compiles the bundle with __debug__ False. inflect decorates with typeguard's
+# @typechecked, which calls inspect.getsource() at import -- there is no source in a frozen bundle, so
+# it raised "OSError: could not get source code" and broke synthesis. typeguard documents that
+# @typechecked is a no-op under optimized mode, so this disables it the way typeguard intends.
 a = Analysis(
     [ENTRY],
     pathex=[HERE],
@@ -96,6 +97,7 @@ a = Analysis(
     excludes=["tkinter", "matplotlib"],
     cipher=block_cipher,
     noarchive=False,
+    optimize=1,
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)

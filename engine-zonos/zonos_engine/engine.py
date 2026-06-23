@@ -1,28 +1,18 @@
 """Entry point for the standalone Zonos GPU TTS engine.
 
-This is the Python counterpart of the Kokoro engine's ``KokoroEngineMain``. It speaks the exact same
-``--stdio`` line protocol the plugin's ``ExternalEngineClient`` drives, plus the ``{ok, gpu}`` health
-handshake that ``LocalZonosBackend.isAvailable()`` gates on.
-
-Modes::
-
-    zonos-engine --stdio      line protocol: JSON request on stdin -> JSON header + f32le PCM on
-                              stdout; also answers {"op":"health"} handshake lines. Loops until
-                              stdin closes.
-    zonos-engine --selftest   load the model and synthesize a fixed phrase, printing sampleRate +
-                              sampleCount; optionally write a wav (--wav PATH) to listen.
-    zonos-engine --mock       force the mock tone synthesizer (framing validation only, no GPU);
-                              combine with --stdio or --selftest. Never the shipped synthesis path.
-
-stdout is a clean binary channel (header line + PCM, or a single JSON line for health/error).
-Everything human-readable goes to stderr, matching the Java engine.
+Speaks the same ``--stdio`` line protocol and ``{ok, gpu}`` health handshake the plugin's
+``ExternalEngineClient`` / ``LocalZonosBackend`` drive. stdout is a binary channel (header line + PCM,
+or one JSON line for health/error); everything human-readable goes to stderr.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import struct
 import sys
+import traceback
+import wave
 from typing import Optional
 
 from . import protocol
@@ -30,39 +20,30 @@ from .synthesizer import Synthesizer, build_synthesizer
 
 
 def _bundle_root() -> str:
-    """The directory the bundle is extracted into: the parent of this package at runtime.
-
-    When frozen by PyInstaller, resources live next to the executable (``sys._MEIPASS`` or the exe
-    dir). When run from source, the bundle root is the ``engine-zonos`` dir (two levels up from this
-    file), so ``voices/`` resolves in both cases.
-    """
     frozen = getattr(sys, "_MEIPASS", None)
     if frozen:
         return frozen
-    env = os.environ.get("ZONOS_BUNDLE_ROOT")
-    if env:
-        return env
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.environ.get("ZONOS_BUNDLE_ROOT") or os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
 
 
 def main(argv: Optional[list] = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(prog="zonos-engine", add_help=True)
     parser.add_argument("--stdio", action="store_true", help="run the stdin/stdout line protocol")
-    parser.add_argument(
-        "--selftest", action="store_true", help="synthesize a fixed phrase and report rate/samples"
-    )
-    parser.add_argument(
-        "--mock",
-        action="store_true",
-        help="use the mock tone synthesizer (framing only, no GPU, not real speech)",
-    )
+    parser.add_argument("--selftest", action="store_true", help="synthesize a fixed phrase")
+    parser.add_argument("--mock", action="store_true", help="mock tone synthesizer (framing only)")
     parser.add_argument("--wav", default=None, help="(--selftest) write the audio to this wav path")
+    parser.add_argument(
+        "--check-imports", action="store_true", help="import the synthesis modules and exit"
+    )
     args = parser.parse_args(argv)
 
-    bundle_root = _bundle_root()
-    synth = build_synthesizer(bundle_root, mock=args.mock)
+    if args.check_imports:
+        return _run_check_imports()
 
+    synth = build_synthesizer(_bundle_root(), mock=args.mock)
     if args.stdio:
         return _run_stdio(synth)
     if args.selftest:
@@ -72,18 +53,24 @@ def main(argv: Optional[list] = None) -> int:
     return 2
 
 
+def _run_check_imports() -> int:
+    # Build/packaging guard. Importing zonos.model pulls in zonos.backbone and transformers' lazily
+    # resolved submodules; frozen, this fails if the bundle dropped either (which lets the engine warm
+    # up but never synthesize). No weights, no GPU, so it runs on any runner.
+    try:
+        from zonos.model import Zonos  # noqa: F401
+        from zonos.conditioning import make_cond_dict  # noqa: F401
+    except BaseException:  # noqa: BLE001 - any import failure is a packaging failure
+        print("FAILURE: synthesis-path imports did not resolve:", file=sys.stderr)
+        traceback.print_exc()
+        return 1
+    print("check-imports OK: zonos.model + zonos.conditioning resolved.")
+    return 0
+
+
 def _run_stdio(synth: Synthesizer) -> int:
-    """Read request lines from stdin until EOF, answering each on the binary stdout channel.
-
-    A ``{"op":"health"}`` line gets a single ``{ok, gpu, detail}`` JSON line. A synthesis line gets
-    a header line + PCM frame, or an ``{"error":...}`` line on failure so the plugin recovers
-    without a hung pipe (mirrors KokoroEngineMain.runStdio)."""
     out = sys.stdout.buffer
-    # Read stdin as text lines; decode is handled per line. Use the underlying buffer so we control
-    # newline handling and never let text-mode buffering touch stdout.
-    stdin = sys.stdin
-
-    for line in stdin:
+    for line in sys.stdin:
         line = line.strip()
         if not line:
             continue
@@ -119,12 +106,8 @@ def _run_stdio(synth: Synthesizer) -> int:
 
 
 def _answer_health(out, synth: Synthesizer) -> None:
-    """Answer a health handshake. ``ok`` is true once the engine is up and can probe the GPU; ``gpu``
-    is true only when a usable CUDA device is present, which is exactly what the plugin gates on."""
     try:
-        gpu = synth.cuda_available()
-        detail = synth.gpu_detail()
-        protocol.write_line(out, protocol.health_line(True, gpu, detail))
+        protocol.write_line(out, protocol.health_line(True, synth.cuda_available(), synth.gpu_detail()))
     except Exception as exc:  # noqa: BLE001 - never crash the handshake
         protocol.write_line(
             out, protocol.health_line(False, False, "health probe failed: {}".format(exc))
@@ -132,13 +115,8 @@ def _answer_health(out, synth: Synthesizer) -> None:
 
 
 def _run_selftest(synth: Synthesizer, wav_path: Optional[str]) -> int:
-    """Synthesize a fixed phrase and report sampleRate + sampleCount on stdout (human-readable).
-
-    Unlike ``--stdio`` this prints to normal stdout because no binary frame is involved; it is the
-    standalone GPU smoke test a user runs after downloading the bundle, no game client needed."""
-    text = "Zonos self test. The emotional voice engine is alive."
     sample_rate, samples = synth.synthesize(
-        text,
+        "Zonos self test. The emotional voice engine is alive.",
         player=False,
         race="HUMAN",
         gender="MALE",
@@ -160,11 +138,6 @@ def _run_selftest(synth: Synthesizer, wav_path: Optional[str]) -> int:
 
 
 def _write_wav(path: str, sample_rate: int, samples) -> None:
-    """Write mono float samples to a 16-bit PCM wav using only the stdlib, so the self-test can
-    produce a listenable file without pulling in soundfile/torchaudio for the wav step."""
-    import struct
-    import wave
-
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)

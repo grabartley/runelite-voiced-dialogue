@@ -25,6 +25,12 @@ torchaudio==2.5.1
 # deliberately once numpy/PyInstaller resolve the double-load, and re-test --selftest on a GPU box.
 numpy<2.4
 
+# transformers 5.x resolves submodules by scanning the filesystem (create_import_structure_from_path
+# -> os.scandir), which fails in a frozen PyInstaller bundle where modules live in the archive, not on
+# disk: synthesis died with FileNotFoundError on transformers/models/__init__.pyc. 4.x uses static
+# _import_structure dicts and freezes correctly. Zonos requires >=4.48.1.
+transformers==4.48.1
+
 # Zonos-v0.1 (Apache-2.0) and its synthesis dependencies. Installed from the upstream repo at a
 # pinned commit by build_bundle.py so the model API the engine calls (make_cond_dict,
 # prepare_conditioning, generate, autoencoder.decode, make_speaker_embedding) is stable.

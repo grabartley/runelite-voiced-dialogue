@@ -52,6 +52,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE_DIR = os.path.dirname(HERE)  # engine-zonos/
 
 ZONOS_GIT = "git+https://github.com/Zyphra/Zonos.git"
+ZONOS_GIT_URL = "https://github.com/Zyphra/Zonos.git"  # plain URL for `git clone` (see build_venv)
 # Pin Zonos to a specific commit, NOT "main". Building from main is what broke v0.1.3: Zonos main
 # moved its dependency floor to torch>=2.5.1, so the install upgraded torch off the pinned cu124 build
 # to a CPU wheel. A pinned sha keeps the dependency surface (and thus the required torch version)
@@ -78,55 +79,58 @@ def venv_python(venv_dir: str) -> str:
 
 
 def build_venv(venv_dir: str, torch_index: str, zonos_ref: str) -> str:
-    """Create the build venv and install runtime deps + Zonos with uv. Returns the venv python path.
-
-    uv (the Astral installer/resolver) replaces ``python -m venv`` + ``pip``: it resolves and installs
-    in parallel from a shared on-disk cache, which is markedly faster than serial pip for the multi-GB
-    torch CUDA wheels. The packages, versions, and index URLs are byte-for-byte identical to the pip
-    path; ``uv pip install`` reads the same ``requirements.txt`` and honours the same extra index, so
-    the resulting bundle contents are unchanged -- only the install is faster.
-
-    Python 3.12 is pinned because torch 2.5.1 + cu124 only ships wheels for cp39..cp312 (no cp313/14
-    wheel exists); ``uv venv --python 3.12`` makes the interpreter explicit so the build never silently
-    picks a newer Python with no matching torch wheel.
-    """
+    # Python 3.12: torch 2.5.1 + cu124 only ships cp39..cp312 wheels.
     run(["uv", "venv", venv_dir, "--python", "3.12"])
     py = venv_python(venv_dir)
-    # Install torch CUDA + the rest of requirements from the CUDA index so the bundle carries CUDA
-    # runtime libs. --python targets the venv we just created; uv resolves the whole set in parallel.
-    run(
-        [
-            "uv", "pip", "install",
-            "--python", py,
-            "--extra-index-url", torch_index,
-            "-r", os.path.join(HERE, "requirements.txt"),
-        ]
-    )
-    # Zonos is not on PyPI; install it from git at the pinned ref into the same venv. CRITICAL: pass
-    # the SAME cu124 index AND constrain torch/torchaudio to the requirements.txt pins. Zonos declares
-    # an UNPINNED torch dependency, so without these uv re-resolves it and silently REPLACES the
-    # carefully-installed cu124 build with the latest CPU wheel from PyPI -- v0.1.3 shipped
-    # torch 2.12.1+cpu exactly this way, which reports no usable GPU on every box (including a real
-    # 4070 Ti). -c applies requirements.txt as a constraints file (pins versions if a package is
-    # pulled, installs nothing on its own), so torch stays ==2.4.1 and --extra-index-url keeps it +cu124.
+    run([
+        "uv", "pip", "install", "--python", py,
+        "--extra-index-url", torch_index,
+        "-r", os.path.join(HERE, "requirements.txt"),
+    ])
+    _install_zonos(py, zonos_ref, torch_index, os.path.dirname(venv_dir))
+    _assert_cuda_torch(py)
+    _assert_zonos_complete(py)
+    return py
+
+
+def _install_zonos(py: str, zonos_ref: str, torch_index: str, work_root: str) -> None:
+    # Zonos's pyproject `include = ["zonos"]` drops subpackages (zonos.backbone) from a wheel build, so
+    # install from a clone with discovery corrected to `["zonos*"]`. The cu124 index + requirements
+    # constraint stop Zonos's unpinned torch dependency from re-resolving onto a CPU wheel.
+    src = os.path.join(work_root, "zonos-src")
+    if os.path.isdir(src):
+        shutil.rmtree(src)
+    run(["git", "clone", "--quiet", ZONOS_GIT_URL, src])
+    run(["git", "-C", src, "checkout", "--quiet", zonos_ref])
+    pyproject = os.path.join(src, "pyproject.toml")
+    with open(pyproject, encoding="utf-8") as f:
+        original = f.read()
+    patched = original.replace('include = ["zonos"]', 'include = ["zonos*"]')
+    if patched == original:
+        raise SystemExit(
+            'Zonos pyproject no longer contains `include = ["zonos"]`; the subpackage fix needs review.'
+        )
+    with open(pyproject, "w", encoding="utf-8") as f:
+        f.write(patched)
     run([
         "uv", "pip", "install", "--python", py,
         "--extra-index-url", torch_index,
         "-c", os.path.join(HERE, "requirements.txt"),
-        "{}@{}".format(ZONOS_GIT, zonos_ref),
+        src,
     ])
-    # GPU-capability guard. Fail the build NOW -- seconds after install, before the ~40-min PyInstaller
-    # freeze + multi-GB weight download -- if torch is not the CUDA build. A CPU torch (+cpu, or
-    # torch.version.cuda is None) can never report a usable GPU, so such a bundle is never shippable;
-    # catching it here turns a 50-min wasted build + a user's 2.9 GB download into a sub-5-min failure.
-    # This is the capability check the import-only smoke (CPU torch by design) structurally cannot give.
+
+
+def _assert_cuda_torch(py: str) -> None:
+    # Fail before the ~40-min freeze if torch is not a CUDA build (a CPU torch can never report a GPU).
     run([
         py, "-c",
         "import torch, sys; v = torch.__version__; c = torch.version.cuda; "
-        "print('GPU-capability guard: resolved torch', v, '/ cuda', c); "
-        "sys.exit(0 if (c and '+cu' in v) else 1)",
+        "print('resolved torch', v, '/ cuda', c); sys.exit(0 if (c and '+cu' in v) else 1)",
     ])
-    return py
+
+
+def _assert_zonos_complete(py: str) -> None:
+    run([py, "-c", "import zonos.backbone, zonos.model, zonos.conditioning"])
 
 
 def fetch_weights(py: str, model_dir: str, model_id: str) -> None:
@@ -175,6 +179,13 @@ def run_pyinstaller(py: str, work_dir: str, dist_dir: str) -> str:
         cwd=ENGINE_DIR,
     )
     return os.path.join(dist_dir, "zonos-engine")
+
+
+def _assert_frozen_imports(runtime_src: str, platform: str) -> None:
+    # Run the frozen exe's import guard: catches frozen-only packaging gaps (e.g. transformers' submodule
+    # resolution) that the unfrozen install guards cannot, before assembling and shipping the bundle.
+    exe = "zonos-engine.exe" if platform.startswith("win") else "zonos-engine"
+    run([os.path.join(runtime_src, exe), "--check-imports"])
 
 
 def assemble_tree(platform: str, version: str, runtime_src: str, staging: str,
@@ -259,22 +270,16 @@ def main() -> int:
 
     py = build_venv(venv_dir, args.torch_index, args.zonos_ref)
 
-    # Cheap pre-flight: build_venv has already installed the full dependency set (including the Zonos
-    # git ref) and run the cu124 capability guard. If we only wanted to verify the dependency
-    # resolution -- that Zonos installs without yanking torch off the cu124 build -- stop here, before
-    # the expensive freeze + weight download (and before the voice-bank check, which needs generated
-    # .wav files a bare deps-check checkout does not have). A green --check-deps means a full build
-    # will ship a real GPU torch; iterate on this ~5-min loop, not the ~50-min one.
+    # --check-deps stops after install + the cu124/completeness guards: the ~5-min loop that proves the
+    # dependency resolution before paying for the freeze. (It runs before assert_voice_bank, which needs
+    # generated .wav files a bare deps-check checkout lacks.)
     if args.check_deps:
         print("--check-deps OK: dependencies resolved with a cu124 torch build.", flush=True)
         return 0
 
     assert_voice_bank()
 
-    # The weight download (network-bound, ~1.6 GB into model/) and the PyInstaller freeze (CPU/disk
-    # into runtime/) touch disjoint outputs, so overlap them: kick the snapshot download off on a
-    # background thread and let it run while PyInstaller freezes, then join before assembling. Any
-    # error in the download is re-raised on the main thread so the build still fails loudly.
+    # Weight download and the freeze touch disjoint outputs, so overlap them on a background thread.
     weights_error = []
     weights_thread = None
     if not args.skip_weights:
@@ -289,6 +294,7 @@ def main() -> int:
         weights_thread.start()
 
     runtime_src = run_pyinstaller(py, work_dir, pyi_dist)
+    _assert_frozen_imports(runtime_src, args.platform)
 
     if weights_thread is not None:
         weights_thread.join()
