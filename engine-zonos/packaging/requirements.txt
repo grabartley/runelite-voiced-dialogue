@@ -9,16 +9,20 @@
 # before publishing.
 
 # Deep-learning runtime (CUDA build resolved via the cu124 extra index in the build step).
-torch==2.4.1
-torchaudio==2.4.1
+# MUST satisfy Zonos's own dependency floor (Zonos main requires torch>=2.5.1 / torchaudio>=2.5.1).
+# When this was pinned to 2.4.1, the Zonos git install upgraded torch to satisfy its >=2.5.1 floor and
+# -- because that install lacked the cu124 index -- pulled the CPU wheel (torch 2.12.1+cpu), shipping a
+# bundle that reported no usable GPU on every box. 2.5.1+cu124 has cp312 wheels and satisfies Zonos.
+torch==2.5.1
+torchaudio==2.5.1
 
 # Pin numpy below 2.4. numpy 2.4 added a guard that raises
 # "cannot load module more than once per process" when its C extension is initialized twice, which
 # the frozen PyInstaller bootstrap does (it removes numpy in cleanup_loaded_modules, then torch
 # re-imports it). Unpinned, the build pulled numpy >=2.4 and the GPU probe failed with that exact
-# error and reported no GPU on every box (the failure was misattributed to torch in #77). torch
-# 2.4.1 supports numpy 2.0-2.3, so this stays compatible. Bump deliberately once numpy/PyInstaller
-# resolve the double-load, and re-test --selftest on a GPU box.
+# error and reported no GPU on every box (the failure was misattributed to torch in #77). The range
+# [2.2.2, 2.4) satisfies both Zonos (numpy>=2.2.2) and torch 2.5.1, so this stays compatible. Bump
+# deliberately once numpy/PyInstaller resolve the double-load, and re-test --selftest on a GPU box.
 numpy<2.4
 
 # Zonos-v0.1 (Apache-2.0) and its synthesis dependencies. Installed from the upstream repo at a

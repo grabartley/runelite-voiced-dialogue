@@ -52,7 +52,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE_DIR = os.path.dirname(HERE)  # engine-zonos/
 
 ZONOS_GIT = "git+https://github.com/Zyphra/Zonos.git"
-DEFAULT_ZONOS_REF = "main"  # pin to a sha/tag via --zonos-ref for reproducible bundles
+# Pin Zonos to a specific commit, NOT "main". Building from main is what broke v0.1.3: Zonos main
+# moved its dependency floor to torch>=2.5.1, so the install upgraded torch off the pinned cu124 build
+# to a CPU wheel. A pinned sha keeps the dependency surface (and thus the required torch version)
+# reproducible. Bump deliberately, re-running the deps check + --selftest on a GPU box afterwards.
+DEFAULT_ZONOS_REF = "bc40d98e1e1ab54fc65c483be127a90e3c7c0645"
 DEFAULT_TORCH_INDEX = "https://download.pytorch.org/whl/cu124"
 DEFAULT_MODEL_ID = "Zyphra/Zonos-v0.1-transformer"
 
@@ -82,7 +86,7 @@ def build_venv(venv_dir: str, torch_index: str, zonos_ref: str) -> str:
     path; ``uv pip install`` reads the same ``requirements.txt`` and honours the same extra index, so
     the resulting bundle contents are unchanged -- only the install is faster.
 
-    Python 3.12 is pinned because torch 2.4.1 + cu124 only ships wheels for cp38..cp312 (no cp313/14
+    Python 3.12 is pinned because torch 2.5.1 + cu124 only ships wheels for cp39..cp312 (no cp313/14
     wheel exists); ``uv venv --python 3.12`` makes the interpreter explicit so the build never silently
     picks a newer Python with no matching torch wheel.
     """
@@ -98,8 +102,30 @@ def build_venv(venv_dir: str, torch_index: str, zonos_ref: str) -> str:
             "-r", os.path.join(HERE, "requirements.txt"),
         ]
     )
-    # Zonos is not on PyPI; install it from git at the pinned ref into the same venv.
-    run(["uv", "pip", "install", "--python", py, "{}@{}".format(ZONOS_GIT, zonos_ref)])
+    # Zonos is not on PyPI; install it from git at the pinned ref into the same venv. CRITICAL: pass
+    # the SAME cu124 index AND constrain torch/torchaudio to the requirements.txt pins. Zonos declares
+    # an UNPINNED torch dependency, so without these uv re-resolves it and silently REPLACES the
+    # carefully-installed cu124 build with the latest CPU wheel from PyPI -- v0.1.3 shipped
+    # torch 2.12.1+cpu exactly this way, which reports no usable GPU on every box (including a real
+    # 4070 Ti). -c applies requirements.txt as a constraints file (pins versions if a package is
+    # pulled, installs nothing on its own), so torch stays ==2.4.1 and --extra-index-url keeps it +cu124.
+    run([
+        "uv", "pip", "install", "--python", py,
+        "--extra-index-url", torch_index,
+        "-c", os.path.join(HERE, "requirements.txt"),
+        "{}@{}".format(ZONOS_GIT, zonos_ref),
+    ])
+    # GPU-capability guard. Fail the build NOW -- seconds after install, before the ~40-min PyInstaller
+    # freeze + multi-GB weight download -- if torch is not the CUDA build. A CPU torch (+cpu, or
+    # torch.version.cuda is None) can never report a usable GPU, so such a bundle is never shippable;
+    # catching it here turns a 50-min wasted build + a user's 2.9 GB download into a sub-5-min failure.
+    # This is the capability check the import-only smoke (CPU torch by design) structurally cannot give.
+    run([
+        py, "-c",
+        "import torch, sys; v = torch.__version__; c = torch.version.cuda; "
+        "print('GPU-capability guard: resolved torch', v, '/ cuda', c); "
+        "sys.exit(0 if (c and '+cu' in v) else 1)",
+    ])
     return py
 
 
@@ -218,6 +244,10 @@ def main() -> int:
     ap.add_argument("--model-id", default=DEFAULT_MODEL_ID)
     ap.add_argument("--skip-weights", action="store_true",
                     help="do not embed weights (engine fetches on first run); smaller bundle")
+    ap.add_argument("--check-deps", action="store_true",
+                    help="resolve+install the deps and assert torch is a cu124 build, then exit. "
+                         "The cheap (~5 min) pre-flight: no PyInstaller freeze, no weight download. "
+                         "Catches a CPU-torch downgrade or a version conflict before a full build.")
     args = ap.parse_args()
 
     build_root = os.path.join(ENGINE_DIR, "build")
@@ -227,9 +257,19 @@ def main() -> int:
     staging = os.path.join(build_root, "staging")
     model_dir = os.path.join(ENGINE_DIR, "model")
 
-    assert_voice_bank()
-
     py = build_venv(venv_dir, args.torch_index, args.zonos_ref)
+
+    # Cheap pre-flight: build_venv has already installed the full dependency set (including the Zonos
+    # git ref) and run the cu124 capability guard. If we only wanted to verify the dependency
+    # resolution -- that Zonos installs without yanking torch off the cu124 build -- stop here, before
+    # the expensive freeze + weight download (and before the voice-bank check, which needs generated
+    # .wav files a bare deps-check checkout does not have). A green --check-deps means a full build
+    # will ship a real GPU torch; iterate on this ~5-min loop, not the ~50-min one.
+    if args.check_deps:
+        print("--check-deps OK: dependencies resolved with a cu124 torch build.", flush=True)
+        return 0
+
+    assert_voice_bank()
 
     # The weight download (network-bound, ~1.6 GB into model/) and the PyInstaller freeze (CPU/disk
     # into runtime/) touch disjoint outputs, so overlap them: kick the snapshot download off on a

@@ -1,0 +1,48 @@
+name: Zonos Deps Check (cu124 torch)
+
+# CHEAP pre-flight for the Zonos engine's dependency resolution (~5 min, no PyInstaller freeze, no
+# weight download). It exists because v0.1.3 shipped a CPU torch: the Zonos git install upgraded torch
+# off the pinned cu124 build to the latest CPU wheel (torch 2.12.1+cpu), so the bundle reported no GPU
+# on every box. A full release build takes ~50 min and ~2.9 GB to discover that; this check finds it
+# in single-digit minutes by running the REAL install path (build_bundle.py --check-deps) and asserting
+# torch is a cu124 build.
+#
+# It runs the same uv + Python 3.12 + cu124 install build_bundle.py.build_venv() runs for a release,
+# then the cu124 capability guard, then exits before the freeze. A CPU runner is fine: the guard checks
+# the torch WHEEL is a CUDA build (torch.version.cuda set, version ends +cuNNN), not that a GPU exists.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - engine-zonos/packaging/requirements.txt
+      - engine-zonos/packaging/build_bundle.py
+      - .github/workflows/zonos-deps-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deps-check:
+    name: Resolve deps + assert cu124 torch (win-x64)
+    runs-on: windows-latest
+    # Install of the cu124 torch wheel (~2.3 GB) + Zonos from git; minutes, not the ~50-min full build.
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-suffix: zonos-deps-check
+          cache-dependency-glob: engine-zonos/packaging/requirements.txt
+
+      - name: Resolve deps and assert torch is a cu124 build
+        working-directory: engine-zonos
+        run: python packaging/build_bundle.py --platform win-x64 --version deps-check --check-deps
