@@ -5,6 +5,9 @@ import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -28,6 +31,10 @@ import lombok.extern.slf4j.Slf4j;
  * synthesize, writing through to both tiers on a synth and promoting disk hits into memory. An
  * epoch counter makes interruption clean: bumping it on every new line and on {@link #interrupt}
  * causes any queued or in-flight work for a now-stale line to drop instead of playing.
+ *
+ * <p>A small in-flight registry de-duplicates concurrent synthesis: if two tasks reach the synth
+ * step for the same {@code CacheKey} at once, only the first calls the backend and the second waits
+ * on its result, so a billable cloud line is never paid for twice in parallel.
  */
 @Slf4j
 public final class DialogueAudioService {
@@ -37,7 +44,7 @@ public final class DialogueAudioService {
    * downgraded) emotion, and the text are all part of the identity, so the same words spoken with a
    * different backend, voice, or emotion are distinct cache entries.
    */
-  private record CacheKey(String backendId, String voiceKey, Emotion emotion, String text) {}
+  record CacheKey(String backendId, String voiceKey, Emotion emotion, String text) {}
 
   private final BackendProvider backends;
   private final AudioOutput output;
@@ -49,6 +56,10 @@ public final class DialogueAudioService {
   private final DiskAudioCache diskCache;
   private final IntSupplier volume;
   private final AtomicLong epoch = new AtomicLong();
+  // Synths currently running, keyed by CacheKey, so a second task for the same line reuses the
+  // pending result instead of issuing a duplicate (billable) backend call.
+  private final ConcurrentHashMap<CacheKey, CompletableFuture<Pcm>> inFlight =
+      new ConcurrentHashMap<>();
 
   public DialogueAudioService(
       BackendProvider backends,
@@ -165,6 +176,27 @@ public final class DialogueAudioService {
     if (epoch.get() != mine) {
       return;
     }
+    Pcm pcm = lookup(key);
+    if (pcm == null) {
+      // Both cache tiers missed: synthesize once (de-duped against any concurrent identical synth)
+      // and write through to both tiers so the line is free next time, this session and every
+      // future one.
+      pcm = synthesizeDeduped(backend, request, key);
+    }
+    if (pcm == null) {
+      return;
+    }
+    // Re-check after the (possibly slow) synth: the line may have been skipped meanwhile, so a
+    // cloud
+    // response that arrives after the dialogue advanced is dropped rather than played over the top.
+    if (epoch.get() != mine) {
+      return;
+    }
+    output.stream(pcm.getSamples(), pcm.getSampleRate(), volume.getAsInt());
+  }
+
+  /** Memory then disk lookup; a disk hit is promoted into memory. {@code null} when both miss. */
+  private Pcm lookup(CacheKey key) {
     Pcm pcm = cache.get(key);
     if (pcm != null) {
       log.debug(
@@ -172,13 +204,12 @@ public final class DialogueAudioService {
           abbreviate(key.text()),
           key.backendId(),
           key.voiceKey());
-    } else {
-      // Memory miss: try the persistent on-disk cache (this runs on the pipeline thread, never the
-      // game thread). A disk hit is promoted into memory so subsequent replays skip the disk read.
-      pcm =
-          diskCache == null
-              ? null
-              : diskCache.get(key.backendId(), key.voiceKey(), key.emotion(), key.text());
+      return pcm;
+    }
+    // Memory miss: try the persistent on-disk cache (this runs on the pipeline thread, never the
+    // game thread). A disk hit is promoted into memory so subsequent replays skip the disk read.
+    if (diskCache != null) {
+      pcm = diskCache.get(key.backendId(), key.voiceKey(), key.emotion(), key.text());
       if (pcm != null) {
         cache.put(key, pcm);
         log.debug(
@@ -186,24 +217,55 @@ public final class DialogueAudioService {
             abbreviate(key.text()),
             key.backendId(),
             key.voiceKey());
-      } else {
-        // Disk miss too: synthesize once and write through to both tiers so the line is free next
-        // time, this session (memory) and every future session (disk).
-        pcm = backends.synthesizeWith(backend, request);
-        if (pcm == null) {
-          return;
-        }
+      }
+    }
+    return pcm;
+  }
+
+  /**
+   * Synthesizes the line, ensuring at most one backend call per key runs at a time. The first
+   * caller for a key registers a pending result, synthesizes, writes through to both cache tiers,
+   * and publishes it; a caller that finds a synth already in flight for the same key waits on it
+   * instead of issuing a second (billable) backend call. Returns {@code null} on synth failure.
+   */
+  Pcm synthesizeDeduped(SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
+    CompletableFuture<Pcm> own = new CompletableFuture<>();
+    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
+    if (running != null) {
+      log.debug(
+          "Reusing in-flight synthesis for \"{}\" ({}/{})",
+          abbreviate(key.text()),
+          key.backendId(),
+          key.voiceKey());
+      return await(running);
+    }
+    Pcm pcm = null;
+    try {
+      pcm = backends.synthesizeWith(backend, request);
+      if (pcm != null) {
         cache.put(key, pcm);
         if (diskCache != null) {
           diskCache.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), pcm);
         }
       }
+    } finally {
+      // Publish before deregistering so a waiter that already grabbed this future is never left
+      // blocked, and a fresh request right after sees a populated cache rather than re-synthing.
+      own.complete(pcm);
+      inFlight.remove(key, own);
     }
-    // Re-check after the (possibly slow) synth: the line may have been skipped meanwhile.
-    if (epoch.get() != mine) {
-      return;
+    return pcm;
+  }
+
+  private static Pcm await(CompletableFuture<Pcm> future) {
+    try {
+      return future.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    } catch (ExecutionException e) {
+      return null;
     }
-    output.stream(pcm.getSamples(), pcm.getSampleRate(), volume.getAsInt());
   }
 
   private void submit(Runnable task) {

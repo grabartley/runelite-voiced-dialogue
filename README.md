@@ -86,7 +86,9 @@ The table above is the local Kokoro voice bank. The Cloud backend maps the same 
 
 ## Performance
 
-Synthesis and playback run off the game thread, so the client stays responsive even when you mash through dialogue, and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on the active backend, voice, emotion, and text: an in-memory layer covers the current session, and a size-bounded persistent on-disk cache under `~/.runelite/tts-dialogue/cache/` replays already-heard lines across client restarts. The disk cache uses least-recently-used eviction, survives corruption safely, and keeps cloud backends from being re-billed for audio you have already generated. It is controlled by the **Persistent Audio Cache** setting.
+Synthesis and playback run off the game thread, so the client stays responsive even when you mash through dialogue, and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on the active backend, model, voice, emotion, and text: an in-memory layer covers the current session, and a size-bounded persistent on-disk cache under `~/.runelite/tts-dialogue/cache/` replays already-heard lines across client restarts. The disk cache uses least-recently-used eviction, survives corruption safely, and keeps cloud backends from being re-billed for audio you have already generated. It is controlled by the **Persistent Audio Cache** setting.
+
+The cloud backend adds a few cost and latency guards on top of the cache. Each line is capped at **Max Cloud Characters** and truncated at a sentence or word boundary before sending, so a pathological long line can never run up the per-character bill; OSRS lines are short, so this only bites edge cases. Cloud calls carry a 10-second timeout so a hung request cannot pin the pipeline, and a response that lands after you have already skipped ahead is dropped rather than played late. If two identical lines hit the synth step at once, only one cloud call is made and the second reuses its result.
 
 ## Configuration
 
@@ -101,6 +103,8 @@ Synthesis and playback run off the game thread, so the client stays responsive e
 | **Enable Voice Fallbacks** | `On` | Falls back to a gender-appropriate human voice for NPCs missing from the table. When off, those NPCs use the single default voice. |
 | **Debug Mode** | `Off` | Logs detailed NPC race/gender resolution and the chosen voice per NPC. |
 | **OpenRouter API Key** | empty | Your OpenRouter API key. Required for the Cloud backend; stored locally and never bundled with the plugin. |
+| **Max Cloud Characters** | `600` | Caps how many characters of a line are sent to the cloud backend, truncating at a sentence or word boundary. Bounds worst-case per-line cost. `0` disables the cap. |
+| **Cloud Speaking Pace** | `100` | Speaking pace for the cloud backend as a percent of normal. Sent as the OpenRouter speed parameter only when not `100`; the active model may ignore it. No effect on the local backend. |
 
 ## Dev Setup
 

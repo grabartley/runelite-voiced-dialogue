@@ -2,6 +2,7 @@ package com.grahambartley.synthesis;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -28,13 +29,25 @@ import org.junit.Test;
  */
 public class OpenRouterTtsBackendTest {
 
-  /** Config with a settable key; everything else uses interface defaults. */
+  /** Config with a settable key, char cap, and pace; everything else uses interface defaults. */
   private static final class TestConfig implements TTSDialogueConfig {
     String key = "";
+    int maxChars = 600;
+    int speedPercent = 100;
 
     @Override
     public String openRouterApiKey() {
       return key;
+    }
+
+    @Override
+    public int maxCloudCharsPerLine() {
+      return maxChars;
+    }
+
+    @Override
+    public int cloudSpeedPercent() {
+      return speedPercent;
     }
   }
 
@@ -186,7 +199,7 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void cacheVariantIsTheResolvedVoiceSoDifferentVoicesNeverCollide() {
+  public void cacheVariantFoldsInModelAndVoiceSoRendersNeverCollide() {
     OpenRouterTtsBackend backend = backend(new TestConfig());
 
     SynthesisRequest humanMale =
@@ -194,13 +207,137 @@ public class OpenRouterTtsBackendTest {
     SynthesisRequest elfFemale =
         new SynthesisRequest("a", VoiceSpec.npc(NPCRace.ELF, NPCGender.FEMALE), Emotion.NEUTRAL);
 
-    assertEquals(
-        "the variant is the resolved Gemini voice",
-        new GeminiVoiceMap().voiceFor(humanMale.voice()),
-        backend.cacheVariant(humanMale));
-    assertFalse(
+    String variant = backend.cacheVariant(humanMale);
+    assertTrue(
+        "the variant carries the fixed model id so no future model switch can replay its audio",
+        variant.contains("google/gemini-3.1-flash-tts-preview"));
+    assertTrue(
+        "the variant carries the resolved Gemini voice",
+        variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice())));
+    assertNotEquals(
         "two specs that map to different voices never share a variant",
-        backend.cacheVariant(humanMale).equals(backend.cacheVariant(elfFemale)));
+        backend.cacheVariant(humanMale),
+        backend.cacheVariant(elfFemale));
+  }
+
+  @Test
+  public void cacheVariantChangesWithSpeedSoStaleAudioIsNeverServed() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+    SynthesisRequest line =
+        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+
+    String atDefaultPace = backend.cacheVariant(line);
+    config.speedPercent = 150;
+    assertNotEquals(
+        "a non-default pace must re-key so cached normal-pace audio is not served",
+        atDefaultPace,
+        backend.cacheVariant(line));
+  }
+
+  @Test
+  public void cacheVariantFoldsInCapOnlyForLinesItWouldTruncate() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+    SynthesisRequest shortLine =
+        new SynthesisRequest("ab", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+    SynthesisRequest longLine =
+        new SynthesisRequest(
+            "abcdef", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+
+    String shortAtDefault = backend.cacheVariant(shortLine);
+    String longAtDefault = backend.cacheVariant(longLine);
+    config.maxChars = 3;
+    assertEquals(
+        "a cap that cannot truncate this line leaves its key stable, avoiding needless re-bills",
+        shortAtDefault,
+        backend.cacheVariant(shortLine));
+    assertNotEquals(
+        "a cap that truncates this line must re-key so the full-length audio is not served",
+        longAtDefault,
+        backend.cacheVariant(longLine));
+  }
+
+  @Test
+  public void capLengthLeavesShortLinesAndDisabledCapUntouched() {
+    assertEquals("Hello there", OpenRouterTtsBackend.capLength("Hello there", 600));
+    assertEquals(
+        "a cap of 0 disables truncation", "long", OpenRouterTtsBackend.capLength("long", 0));
+  }
+
+  @Test
+  public void capLengthTruncatesAtSentenceBoundary() {
+    String text = "First sentence is here. Second sentence runs on and on and on.";
+    String capped = OpenRouterTtsBackend.capLength(text, 40);
+    assertTrue("stays within the cap", capped.length() <= 40);
+    assertEquals("cuts at the sentence boundary", "First sentence is here.", capped);
+  }
+
+  @Test
+  public void capLengthFallsBackToWordBoundaryWhenNoSentenceEnd() {
+    String text = "one two three four five six seven eight nine ten";
+    String capped = OpenRouterTtsBackend.capLength(text, 20);
+    assertTrue("stays within the cap", capped.length() <= 20);
+    assertFalse("does not end on a dangling space", capped.endsWith(" "));
+    assertTrue("cuts at a word boundary, not mid-word", text.startsWith(capped));
+  }
+
+  @Test
+  public void capLengthHardCutsWhenThereIsNoBoundary() {
+    String capped = OpenRouterTtsBackend.capLength("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 10);
+    assertEquals("a single huge token is hard-cut to the cap", 10, capped.length());
+  }
+
+  @Test
+  public void longLineIsCappedBeforeSending() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.maxChars = 30;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    String longLine = "This is a long sentence. More text that should be dropped beyond the cap.";
+    backend(config)
+        .synthesize(
+            new SynthesisRequest(
+                longLine, VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL));
+
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    String input = body.get("input").getAsString();
+    assertTrue("the sent input respects the cap", input.length() <= 30);
+    assertEquals("it is truncated at the sentence boundary", "This is a long sentence.", input);
+  }
+
+  @Test
+  public void speedParamIsSentOnlyWhenNonDefault() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+    backend(config).synthesize(req());
+    JsonObject defaultBody =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertFalse("normal pace sends no speed param", defaultBody.has("speed"));
+
+    config.speedPercent = 150;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+    backend(config).synthesize(req());
+    JsonObject fastBody =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertEquals(
+        "a non-default pace is sent as a fractional speed",
+        1.5,
+        fastBody.get("speed").getAsDouble(),
+        0.0001);
   }
 
   @Test

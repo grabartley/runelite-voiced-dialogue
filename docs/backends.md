@@ -29,7 +29,34 @@ headerless 16-bit LE mono stream at 24 kHz decoded to the pipeline's native rate
 
 With this backend active, dialogue text leaves your machine and is sent to OpenRouter. A missing key,
 an API error, or a network problem fails that line gracefully and falls back to the local voice with a
-one-time notice. The cache key folds in the resolved voice so two NPCs never replay each other's audio.
+one-time notice.
+
+### Cost and latency controls
+
+Because the cloud backend is billed per character, several guards keep cost bounded and latency low:
+
+- **Cache key.** `cacheVariant` folds in the model, the resolved Gemini voice, and (only when not at
+  their defaults) the speaking pace and the character cap, on top of the shared
+  `(backendId, voiceKey, emotion, text)` identity. A model, voice, or pace change therefore never
+  replays the wrong audio, while a short line stays on a stable key so changing a setting that cannot
+  affect it does not force a needless re-bill.
+- **Per-line character cap.** Each line is truncated to **Max Cloud Characters** (default 600) at a
+  sentence boundary, or a word boundary if there is none, before sending. `0` disables it. OSRS lines
+  are short, so this only bounds pathological cases.
+- **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
+  the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
+- **Timeout and stale-drop.** Cloud calls carry a 10-second `callTimeout` so a hung request cannot pin
+  the single synthesis thread, and the pipeline's epoch check drops any response that arrives after the
+  dialogue has advanced, so stale audio never plays late.
+- **Speaking pace.** **Cloud Speaking Pace** is sent as the OpenRouter `speed` parameter only when it
+  is not 100%, so the default request body is unchanged; the active model may ignore it.
+
+Streaming the audio response to start playback sooner was evaluated and deferred: OSRS lines are short,
+the full-buffer decode is already fast, and streaming would complicate the raw-PCM decode and the
+epoch-based stale-drop for little perceived gain.
+
+The primary cost lever remains the size-bounded persistent disk cache, on by default, which keeps any
+already-heard line from being billed again across sessions.
 
 ## Local (Kokoro) backend
 

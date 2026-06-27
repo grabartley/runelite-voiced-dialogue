@@ -83,6 +83,35 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "maxCloudCharsPerLine",
+      name = "Max Cloud Characters",
+      description =
+          "Hard cap on how many characters of a single dialogue line are sent to the cloud backend."
+              + " Cloud TTS is billed per character, so an unusually long line is truncated at a"
+              + " sentence or word boundary before sending. OSRS lines are short, so this only bites"
+              + " pathological cases. Set to 0 to disable the cap.",
+      position = 1,
+      section = cloudOpenRouterSection)
+  @Range(min = 0, max = 5000)
+  default int maxCloudCharsPerLine() {
+    return 600;
+  }
+
+  @ConfigItem(
+      keyName = "cloudSpeedPercent",
+      name = "Cloud Speaking Pace",
+      description =
+          "Speaking pace for the cloud backend, as a percentage of normal (100 = normal). Sent as"
+              + " the OpenRouter speed parameter only when not 100; the active model may ignore it."
+              + " Has no effect on the local backend.",
+      position = 2,
+      section = cloudOpenRouterSection)
+  @Range(min = 50, max = 200)
+  default int cloudSpeedPercent() {
+    return 100;
+  }
+
+  @ConfigItem(
       keyName = "volume",
       name = "Dialogue Volume",
       description = "Volume of the spoken dialogue (0–100)",

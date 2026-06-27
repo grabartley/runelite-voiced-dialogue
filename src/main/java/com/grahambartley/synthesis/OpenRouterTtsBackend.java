@@ -6,6 +6,7 @@ import com.grahambartley.TTSDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.EnumSet;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private static final String USER_AGENT = "tts-dialogue-runelite";
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
+  /**
+   * Per-call ceiling so a hung cloud request cannot pin the single synthesis thread indefinitely. A
+   * line that does not return within this window is abandoned (and the user falls back to the local
+   * voice for that line); OSRS lines are short, so a healthy synth finishes well inside it.
+   */
+  private static final Duration CALL_TIMEOUT = Duration.ofSeconds(10);
+
   private final OkHttpClient httpClient;
   private final TTSDialogueConfig config;
   private final Gson gson;
@@ -83,7 +91,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   OpenRouterTtsBackend(
       OkHttpClient httpClient, TTSDialogueConfig config, Gson gson, String endpoint) {
-    this.httpClient = httpClient;
+    // Derive a call-timeout client from the injected one: newBuilder() shares the connection pool
+    // and dispatcher (cheap), and never mutates the shared client's global timeouts.
+    this.httpClient = httpClient.newBuilder().callTimeout(CALL_TIMEOUT).build();
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -111,8 +121,27 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   @Override
   public String cacheVariant(SynthesisRequest request) {
-    // The model is fixed, so the only backend-specific render variant is the resolved Gemini voice.
-    return voiceMap.voiceFor(request.voice());
+    // Fold in everything outside (voice, emotion, original text) that changes the rendered audio,
+    // so
+    // a cache hit always returns the bytes the current settings would synthesize:
+    //  - model: fixed today, but explicit so a future model switch can never replay another model's
+    //    audio,
+    //  - voice: the resolved Gemini voice,
+    //  - speed: only when non-default (a short line is unaffected, so it stays a stable key),
+    //  - cap: only when this specific line is long enough to actually be truncated, so changing the
+    //    cap re-keys only the lines it would change rather than re-billing every short line.
+    StringBuilder variant =
+        new StringBuilder(MODEL).append('|').append(voiceMap.voiceFor(request.voice()));
+    int speed = speedPercent();
+    if (speed != 100) {
+      variant.append("|s").append(speed);
+    }
+    int cap = config.maxCloudCharsPerLine();
+    String text = request.text();
+    if (cap > 0 && text != null && text.length() > cap) {
+      variant.append("|c").append(cap);
+    }
+    return variant.toString();
   }
 
   @Override
@@ -124,7 +153,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
     String key = config.openRouterApiKey().trim();
     String voice = voiceMap.voiceFor(request.voice());
-    String styledInput = GeminiEmotionStyle.apply(request.text(), request.emotion());
+    String cappedText = capLength(request.text(), config.maxCloudCharsPerLine());
+    String styledInput = GeminiEmotionStyle.apply(cappedText, request.emotion());
 
     if (config.debugMode()) {
       String tag = GeminiEmotionStyle.tagFor(request.emotion());
@@ -132,6 +162,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           "[TTS voice] cloud emotion {} -> {}",
           request.emotion(),
           tag == null ? "no tag (neutral input)" : "inline tag [" + tag + "]");
+      if (cappedText.length() != request.text().length()) {
+        log.info(
+            "[TTS cloud] line capped {} -> {} chars (maxCloudCharsPerLine={})",
+            request.text().length(),
+            cappedText.length(),
+            config.maxCloudCharsPerLine());
+      }
     }
 
     JsonObject payload = new JsonObject();
@@ -139,6 +176,15 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     payload.addProperty("input", styledInput);
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", RESPONSE_FORMAT);
+    int speed = speedPercent();
+    if (speed != 100) {
+      // The model may ignore speed; sending it only when non-default keeps the default request body
+      // identical to before and avoids paying for a param the model might not honour.
+      payload.addProperty("speed", speed / 100.0);
+      if (config.debugMode()) {
+        log.info("[TTS cloud] speed {}", speed / 100.0);
+      }
+    }
 
     Request httpRequest =
         new Request.Builder()
@@ -183,6 +229,43 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       log.debug("OpenRouter TTS unexpected error: {}", e.getMessage());
       return null;
     }
+  }
+
+  /** The configured pace as a percentage of normal, clamped to the supported 50-200 range. */
+  private int speedPercent() {
+    int percent = config.cloudSpeedPercent();
+    if (percent < 50) {
+      return 50;
+    }
+    if (percent > 200) {
+      return 200;
+    }
+    return percent;
+  }
+
+  /**
+   * Truncates {@code text} to at most {@code maxChars} characters, cutting at the latest sentence
+   * boundary in the kept window, or failing that the latest word boundary, so a capped line still
+   * ends cleanly rather than mid-word. A non-positive cap or an already-short line is returned
+   * unchanged. The sentence boundary is only honoured past the halfway mark so an early period does
+   * not collapse a long line down to a fragment.
+   */
+  static String capLength(String text, int maxChars) {
+    if (text == null || maxChars <= 0 || text.length() <= maxChars) {
+      return text;
+    }
+    String window = text.substring(0, maxChars);
+    for (int i = window.length() - 1; i >= maxChars / 2; i--) {
+      char c = window.charAt(i);
+      if (c == '.' || c == '!' || c == '?') {
+        return window.substring(0, i + 1).trim();
+      }
+    }
+    int lastSpace = window.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      return window.substring(0, lastSpace).trim();
+    }
+    return window.trim();
   }
 
   private void warnOnce(String message) {
