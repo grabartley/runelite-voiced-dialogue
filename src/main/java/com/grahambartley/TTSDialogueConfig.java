@@ -70,6 +70,21 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "enableCharacterProfiles",
+      name = "Enable Character Profiles",
+      description =
+          "Steer each speaker's delivery with a per-character voice profile (accent, style, pace),"
+              + " resolved from the bundled profile table and rendered as a Cloud direction block in"
+              + " front of the line. Emotion still layers on top. Cloud only (the Local voice ignores"
+              + " it). Adds a little to each Cloud request; turn off for the cheapest, plainest"
+              + " delivery.",
+      position = 2,
+      section = synthesisSection)
+  default boolean enableCharacterProfiles() {
+    return true;
+  }
+
+  @ConfigItem(
       keyName = "openRouterApiKey",
       name = "OpenRouter API Key",
       description =
@@ -142,6 +157,45 @@ public interface TTSDialogueConfig extends Config {
       section = voiceSection)
   default VoiceManager.VoiceProfile playerVoice() {
     return VoiceManager.VoiceProfile.PLAYER_MALE;
+  }
+
+  @ConfigItem(
+      keyName = "playerProfileAccent",
+      name = "Player Accent",
+      description =
+          "Accent for your character's Cloud voice profile. British by default; this is a British"
+              + " medieval fantasy world. Used only when Character Profiles are on and the Cloud"
+              + " backend is active.",
+      position = 1,
+      section = voiceSection)
+  default String playerProfileAccent() {
+    return "British English, Received Pronunciation, as heard in southern England.";
+  }
+
+  @ConfigItem(
+      keyName = "playerProfileStyle",
+      name = "Player Style",
+      description =
+          "Persona and delivery style for your character's Cloud voice profile. Describe who your"
+              + " adventurer is. Used only when Character Profiles are on and the Cloud backend is"
+              + " active.",
+      position = 2,
+      section = voiceSection)
+  default String playerProfileStyle() {
+    return "A seasoned medieval fantasy adventurer: brave, resolute, and well-spoken, carrying the"
+        + " quiet confidence of someone who has seen the whole of Gielinor.";
+  }
+
+  @ConfigItem(
+      keyName = "playerProfilePace",
+      name = "Player Pace",
+      description =
+          "Speaking pace for your character's Cloud voice profile. Used only when Character Profiles"
+              + " are on and the Cloud backend is active.",
+      position = 3,
+      section = voiceSection)
+  default String playerProfilePace() {
+    return "Even and assured, unhurried but purposeful.";
   }
 
   @ConfigItem(

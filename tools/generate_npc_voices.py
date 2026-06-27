@@ -75,9 +75,15 @@ DEFAULT_MONSTERS_URL = (
 )
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
+# Hand-curated cloud (Gemini) character voice profiles, embedded verbatim into the
+# output under the top-level "profiles" key so regeneration never wipes them.
+DEFAULT_PROFILES = os.path.join("tools", "profiles.json")
 
 VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Troll", "Undead", "Demon", "Wizard"}
 VALID_GENDERS = {"Male", "Female"}
+# The four fields a fully-specified profile layer carries. "default" must have all
+# four; every other layer is sparse and inherits the rest.
+PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
 # Race keyword rules, checked in order. Each rule is (compiled word-aware regex,
 # race). The first match wins, so list the more specific races first. Patterns
@@ -279,6 +285,42 @@ def build_table(npcs_summary, monsters, overrides):
     return table, human_male_default, len(override_npcs)
 
 
+def validate_profiles(profiles):
+    """Light, auditable validation of the curated profiles source. Raises on the
+    few mistakes that would break runtime resolution; warns on softer issues.
+    Returns the profiles object unchanged so it can be embedded verbatim."""
+    if not isinstance(profiles, dict):
+        raise ValueError("profiles.json must be a JSON object")
+
+    default = profiles.get("default")
+    if not isinstance(default, dict) or not PROFILE_FIELDS.issubset(default):
+        raise ValueError(
+            "profiles.default must be a complete object with "
+            f"{sorted(PROFILE_FIELDS)}"
+        )
+
+    for race in (profiles.get("byRace") or {}):
+        if race.startswith("_"):
+            continue
+        if race not in VALID_RACES:
+            print(f"  (warning: byRace key '{race}' is not a known race)",
+                  file=sys.stderr)
+
+    for entry in (profiles.get("byCategory") or []):
+        if not isinstance(entry, dict) or not entry.get("keywords"):
+            raise ValueError(f"byCategory entry missing keywords: {entry!r}")
+
+    for key in (profiles.get("byId") or {}):
+        if key.startswith("_"):
+            continue
+        try:
+            int(key)
+        except (TypeError, ValueError):
+            raise ValueError(f"byId key '{key}' is not a numeric NPC id")
+
+    return profiles
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--npcs", default=DEFAULT_NPCS_URL,
@@ -288,6 +330,8 @@ def main():
                              "(optional, only used for examine text).")
     parser.add_argument("--overrides", default=DEFAULT_OVERRIDES,
                         help="Path to the curated overrides JSON.")
+    parser.add_argument("--profiles", default=DEFAULT_PROFILES,
+                        help="Path to the curated character voice profiles JSON.")
     parser.add_argument("--out", default=DEFAULT_OUT,
                         help="Output path for the bundled resource.")
     args = parser.parse_args()
@@ -295,6 +339,7 @@ def main():
     npcs_summary = load_json(args.npcs)
     monsters = load_json(args.monsters, optional=True)
     overrides = load_json(args.overrides)
+    profiles = validate_profiles(load_json(args.profiles))
 
     table, human_male_default, override_count = build_table(
         npcs_summary, monsters, overrides
@@ -324,7 +369,11 @@ def main():
             "overrides_applied": override_count,
             "race_counts": dict(sorted(race_counts.items())),
             "gender_counts": dict(sorted(gender_counts.items())),
+            "profiles_bespoke": len(
+                [k for k in (profiles.get("byId") or {}) if not k.startswith("_")]
+            ),
         },
+        "profiles": profiles,
         "npcs": npcs,
     }
 

@@ -13,6 +13,10 @@ so there are no network calls or large downloads when choosing a voice.
   entries. These always win over anything the generator infers, and they pin
   high-traffic named dialogue NPCs (Hans, the Cook, quest givers) whose gender
   cannot be read off the name.
+- `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
+  (Gemini) backend (accent, style, pace). The generator embeds this file verbatim
+  into the output under a top-level `profiles` key, so regenerating the table
+  never wipes it. See [Character voice profiles](#character-voice-profiles-cloud).
 
 ## Data sources
 
@@ -102,6 +106,53 @@ or correct the entry in `overrides.json`, then regenerate. Example:
 The optional `name` field is documentation only and is ignored by the generator.
 You can find an NPC's id with the RuneLite developer tools, the OSRS Wiki, or by
 enabling **Debug Mode** in the plugin (it logs the id and chosen voice per NPC).
+
+## Character voice profiles (cloud)
+
+Alongside the `npcId -> {race, gender}` table used to pick a Kokoro/Gemini voice,
+the bundled resource carries a `profiles` section that steers **how** the cloud
+(Gemini) backend delivers each line: accent, style, and pace, rendered into a
+Gemini `AUDIO PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text.
+Chat-head emotion is layered on top as a separate inline tag, so the two compose.
+The local Kokoro backend ignores profiles (it takes no prompt).
+
+The source of truth is `tools/profiles.json`; the generator embeds it under the
+output's `profiles` key. This is a **British** medieval fantasy world: everything
+defaults to a British accent and nothing sounds American.
+
+### Layers (deepest wins, each overrides only the fields it sets)
+
+1. `default` - the global British fallback. **Must be complete** (all four of
+   `name`, `accent`, `style`, `pace`). Every other layer is sparse.
+2. `byRace[race]` - one per race bucket (Human, Elf, Dwarf, Goblin, Troll, Undead,
+   Demon, Wizard), keyed by the same race the table assigns the NPC.
+3. `byCategory[]` - an **ordered** list; the first entry whose `keywords`
+   word-match the NPC's display name wins. This expresses categories the 8 race
+   buckets cannot (leprechaun -> Irish, vampyre -> Dracula-esque, Fremennik ->
+   Scandinavian, gnome, imp, ghost, pirate, royalty, and so on). Keyword matching
+   is case-insensitive and bounded on word edges, so `imp` matches "Imp" but not
+   "important".
+4. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id
+   (`NPCComposition#getId`). Sparse: carry only what is unique to the character
+   (usually `name` + `style`); accent and pace inherit from the category/race/
+   default layer unless the character genuinely differs.
+
+A bespoke entry therefore needs only its unique fields:
+
+```json
+"byId": {
+  "3105": { "name": "Hans", "style": "An eccentric, doddery old groundskeeper ..." }
+}
+```
+
+The `byId` map is grown over successive batches (250 NPCs per PR). Until an NPC
+has a bespoke entry it still gets a solid profile from the category/race/default
+layers, so coverage is universal from day one. Find an NPC's id with the RuneLite
+developer tools, the OSRS Wiki, the OSRS cache `npctypes` dump, or **Debug Mode**
+(it logs the resolved profile and which layer won per line).
+
+Player lines use the `player` layer over the default; the three player fields in
+the plugin config (accent/style/pace) override it at runtime when non-blank.
 
 ## Expanding coverage
 

@@ -3,6 +3,7 @@ package com.grahambartley;
 import com.google.gson.Gson;
 import com.google.inject.Provides;
 import com.grahambartley.synthesis.BackendProvider;
+import com.grahambartley.synthesis.CharacterProfile;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.ExpressionEmotionTable;
 import com.grahambartley.synthesis.LocalKokoroBackend;
@@ -172,7 +173,12 @@ public class TTSDialoguePlugin extends Plugin {
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
-    audioService.speak(new SynthesisRequest(text, voice, emotion));
+    // Character profile steers accent/style/pace and is rendered only by the cloud backend; emotion
+    // still layers on top. Resolved only when enabled, so a null profile keeps the request (and its
+    // cache key) byte-for-byte identical to the pre-profile behaviour.
+    CharacterProfile profile =
+        config.enableCharacterProfiles() ? voiceManager.resolveProfile(speaker, npcName) : null;
+    audioService.speak(new SynthesisRequest(text, voice, emotion, profile));
   }
 
   /**

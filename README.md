@@ -30,7 +30,7 @@ See [docs/backends.md](docs/backends.md) for the full comparison.
 
 ### Cloud (OpenRouter), the default
 
-An opt-in cloud voice with near-zero setup beyond supplying a key. Create an OpenRouter API key, paste it into the config, and dialogue routes through Google's Gemini 3.1 Flash TTS over HTTPS, with a gender-correct voice picked per NPC by race and the line's detected emotion rendered as an inline style tag. Until a key is set, the plugin logs a one-time notice and uses the free local voice instead.
+An opt-in cloud voice with near-zero setup beyond supplying a key. Create an OpenRouter API key, paste it into the config, and dialogue routes through Google's Gemini 3.1 Flash TTS over HTTPS, with a gender-correct voice picked per NPC by race and the line's detected emotion rendered as an inline style tag. On top of that, a **character profile** steers each speaker's accent, style, and pace (see [Character profiles](#character-profiles)). Until a key is set, the plugin logs a one-time notice and uses the free local voice instead.
 
 > **Privacy:** with the Cloud backend active, the dialogue text being spoken is sent to OpenRouter over HTTPS using your API key. The local backend stays fully offline and sends nothing off your machine. The persistent cache means audio you have already heard is replayed from disk rather than re-billed.
 
@@ -41,6 +41,12 @@ A real neural voice that runs on your CPU, fully offline. Nothing about a dialog
 ## Emotion
 
 Each new dialogue line's emotion is read from the speaker's chat-head expression animation, the NPC head for NPC lines and the player head for player lines, and mapped to one of five emotions (Neutral, Happy, Sad, Angry, Scared). The resolved emotion rides in every synthesis request. The cloud backend renders it by prepending a Gemini inline style tag to the spoken text (`[happy]`, `[sad]`, `[angry]`, `[fearful]`; Neutral adds none), so happy, sad, angry, and scared delivery is audibly distinct. The local Kokoro voice is neutral-only by design, so its lines are downgraded to Neutral. Detection is controlled by the **Enable Emotion** toggle, which is on by default; when it is off, every line is voiced as Neutral.
+
+## Character profiles
+
+On the cloud backend, every speaker also gets a **character profile** that steers delivery: an accent, a style/persona, and a pace, rendered into a Gemini `AUDIO PROFILE` direction block in front of the line. Emotion still layers on top, so a profile sets the character and the emotion tag colours the moment. This is a **British** medieval fantasy world: everything defaults to a British accent and nothing sounds American, with lore-driven exceptions (leprechauns Irish, vampyres Dracula-esque, trolls South London/Brixton, dwarves Scottish, Fremennik Scandinavian, goblins mischievous and high, wizards wise).
+
+Profiles resolve in layers, deepest wins, each overriding only what it sets: a global British default, then a per-race profile, then a name-keyword category, then a per-NPC bespoke override keyed by NPC id. So an unmatched NPC still gets a sensible British profile, while iconic NPCs get a hand-written one. Your own character's profile is editable in the config (**Player Accent**, **Player Style**, **Player Pace**), defaulting to a seasoned medieval adventurer. The whole feature is gated by the **Enable Character Profiles** toggle (on by default; cloud only, the local voice ignores it). The bundled profile data and how to grow it live in [docs/npc-voice-tooling.md](docs/npc-voice-tooling.md#character-voice-profiles-cloud).
 
 The mapping is derived from the live OSRS cache: dialogue chat-head expressions are seq animations whose **name** encodes the mood. The standard dialogue system uses a generic block (`chathap`/`chatlaugh` -> Happy, `chatsad` -> Sad, `chatang` -> Angry, `chatscared`/`chatshock` -> Scared) for the player and most NPCs, and some NPCs have their own expression heads (`lore_lizard_chat_happy`, `kahlith_chat_disapproving`, ...). Only the non-neutral ids are tabled; any id not present, and `-1` (no animation or a stale head), resolves to Neutral, so a neutral expression, an unseen id, or a non-human head (trolls, ogres, monsters often emit unrelated ids) is a safe no-op.
 

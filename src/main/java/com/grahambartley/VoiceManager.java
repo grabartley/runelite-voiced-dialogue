@@ -2,10 +2,13 @@ package com.grahambartley;
 
 import com.grahambartley.data.NPCAttributes;
 import com.grahambartley.data.NPCDemographicAnalyzer;
+import com.grahambartley.data.NpcProfileTable;
+import com.grahambartley.synthesis.CharacterProfile;
 import com.grahambartley.synthesis.VoiceSpec;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 
 /**
  * Resolves an NPC (or the player) to a backend-neutral {@link VoiceSpec} and, for the local Kokoro
@@ -157,12 +160,62 @@ public class VoiceManager {
   private final TTSDialogueConfig config;
   private final Client client;
   private final NPCDemographicAnalyzer demographicAnalyzer;
+  private final NpcProfileTable profileTable;
 
   public VoiceManager(TTSDialogueConfig config, Client client) {
     this.config = config;
     this.client = client;
     this.demographicAnalyzer = new NPCDemographicAnalyzer();
     this.demographicAnalyzer.initialize();
+    this.profileTable = new NpcProfileTable();
+    this.profileTable.initialize();
+  }
+
+  /**
+   * Resolves the {@link CharacterProfile} steering a line's delivery: the player's configured
+   * profile for player lines, or the layered NPC profile (default -> race -> keyword category ->
+   * per-NPC override) keyed on the NPC's composition id and display name. Never returns {@code
+   * null}. Only the cloud backend renders the profile; the local backend ignores it.
+   */
+  public CharacterProfile resolveProfile(String speaker, String npcName) {
+    if ("player".equalsIgnoreCase(speaker)) {
+      CharacterProfile profile =
+          profileTable.resolvePlayer(
+              config.playerProfileAccent(),
+              config.playerProfileStyle(),
+              config.playerProfilePace());
+      if (config.debugMode()) {
+        log.info("[TTS profile] player -> '{}' accent='{}'", profile.name(), profile.accent());
+      }
+      return profile;
+    }
+
+    Integer npcId = null;
+    String race = null;
+    NPC npc = findNPCByName(npcName);
+    if (npc != null) {
+      NPCComposition composition = npc.getComposition();
+      if (composition != null) {
+        npcId = composition.getId();
+      }
+      NPCAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
+      if (attributes != null) {
+        race = attributes.getRace();
+      }
+    }
+
+    NpcProfileTable.Resolution resolution = profileTable.resolveNpc(npcId, npcName, race);
+    if (config.debugMode()) {
+      log.info(
+          "[TTS profile] npc='{}' id={} race={} -> '{}' (source={}, accent='{}')",
+          npcName,
+          npcId == null ? "MISS" : npcId,
+          race == null ? "UNKNOWN" : race,
+          resolution.profile().name(),
+          resolution.source(),
+          resolution.profile().accent());
+    }
+    return resolution.profile();
   }
 
   /**
