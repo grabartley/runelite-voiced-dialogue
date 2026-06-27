@@ -15,13 +15,14 @@ import lombok.extern.slf4j.Slf4j;
  * Loads the bundled {@code expression-emotions.json} table mapping an OSRS dialogue chat-head
  * expression animation id to a canonical {@link Emotion}, and resolves ids against it.
  *
- * <p>The table is the complete documented RuneScape chathead expression enum (ids 9760-9862) mapped
- * to the nearest {@link Emotion}, covering the standard human dialogue expressions (see the Emotion
- * section of {@code README.md}); non-human head classes may emit ids outside this set. This class
- * owns the documented default contract that every consumer depends on: <strong>any unmapped
- * animation id, and {@code -1} (no/stale head animation), resolves to {@link
- * Emotion#NEUTRAL}</strong>. That makes an unseen expression, a non-human head, or the one-tick
- * race where the head animation lags the line a safe no-op rather than a crash.
+ * <p>The table lists the OSRS chat-head expression seq ids that carry a non-neutral emotion, taken
+ * from the live cache seq name dump (the generic {@code chathap}/{@code chatsad}/{@code chatang}/
+ * {@code chatscared} block plus per-NPC expression heads); see {@code docs/emotion-detection.md}
+ * for how it is derived and regenerated. Only non-neutral ids are listed: this class owns the
+ * documented default contract that every consumer depends on: <strong>any unmapped animation id,
+ * and {@code -1} (no/stale head animation), resolves to {@link Emotion#NEUTRAL}</strong>. That
+ * makes a neutral expression, an unseen id, a non-human head, or the one-tick race where the head
+ * animation lags the line a safe no-op rather than a crash.
  *
  * <p>Emotion detection (#26) wires its runtime {@code EmotionResolver} on top of this loader to
  * read the live widget and thread the resolved {@link Emotion} into each {@link SynthesisRequest};

@@ -15,46 +15,52 @@ import org.junit.Test;
 
 /**
  * Pins the shape of the bundled {@code expression-emotions.json} table (#25). Detection (#26) and
- * the backends depend on this resource parsing cleanly: every non-documentation key must be an
- * integer animation id inside the documented expression range (9760-9862) and every value must name
- * a valid {@link Emotion}. Documentation keys (those starting with {@code _}, e.g. the {@code
- * _meta} note) are allowed and skipped.
+ * the backends depend on this resource parsing cleanly: every non-documentation key must be a
+ * positive integer seq id and every value must name a valid, non-NEUTRAL {@link Emotion} (neutral
+ * expressions are not listed; they fall through to the loader's default-to-NEUTRAL contract).
+ * Documentation keys (those starting with {@code _}, e.g. the {@code _meta}/{@code _source} notes)
+ * are allowed and skipped.
  */
 public class ExpressionEmotionsResourceTest {
 
   private static final String RESOURCE = "/expression-emotions.json";
 
   @Test
-  public void resourceParsesWithIntegerKeysInRangeAndValidEmotionValues() throws Exception {
+  public void resourceParsesWithPositiveIntegerKeysAndValidNonNeutralEmotionValues()
+      throws Exception {
     JsonObject root = load();
 
     boolean sawAtLeastOneId = false;
     for (Map.Entry<String, com.google.gson.JsonElement> entry : root.entrySet()) {
       String key = entry.getKey();
       if (key.startsWith("_")) {
-        // Documentation key (e.g. _meta); not an id.
+        // Documentation key (e.g. _meta/_source); not an id.
         continue;
       }
-      // Key must parse as an integer animation id inside the documented expression enum range.
       int id = Integer.parseInt(key);
-      assertTrue(
-          "documented expression id must fall in 9760-9862, was " + id, id >= 9760 && id <= 9862);
-      // Value must be a valid Emotion enum constant.
-      Emotion.valueOf(entry.getValue().getAsString());
+      assertTrue("seq id must be positive, was " + id, id > 0);
+      // Value must be a valid Emotion; neutral expressions are omitted, not listed as NEUTRAL.
+      Emotion emotion = Emotion.valueOf(entry.getValue().getAsString());
+      assertFalse(
+          "NEUTRAL is the default and must not be listed explicitly (id " + id + ")",
+          emotion == Emotion.NEUTRAL);
       sawAtLeastOneId = true;
     }
 
-    assertTrue("table must contain at least one animationId -> Emotion entry", sawAtLeastOneId);
+    assertTrue("table must contain at least one seqId -> Emotion entry", sawAtLeastOneId);
   }
 
   @Test
   public void representativeIdsMapToExpectedEmotions() throws Exception {
     JsonObject root = load();
-    assertEquals("NEUTRAL", root.get("9760").getAsString());
-    assertEquals("SAD", root.get("9764").getAsString());
-    assertEquals("SCARED", root.get("9780").getAsString());
-    assertEquals("ANGRY", root.get("9788").getAsString());
-    assertEquals("HAPPY", root.get("9851").getAsString());
+    // Generic universal chat-head expression block (chathap/chatscared/chatlaugh/chatsad/chatang).
+    assertEquals("HAPPY", root.get("567").getAsString());
+    assertEquals("SCARED", root.get("596").getAsString());
+    assertEquals("HAPPY", root.get("605").getAsString());
+    assertEquals("SAD", root.get("610").getAsString());
+    assertEquals("ANGRY", root.get("614").getAsString());
+    // A per-NPC expression head (kahlith_chat_disapproving).
+    assertEquals("ANGRY", root.get("8215").getAsString());
   }
 
   @Test
