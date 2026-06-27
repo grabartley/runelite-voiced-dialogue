@@ -120,22 +120,30 @@ The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: everything
 defaults to a British accent and nothing sounds American.
 
-### Layers (deepest wins, each overrides only the fields it sets)
+### Layers (all matches combine)
+
+An NPC can be several things at once (a Fremennik human, a ghost pirate), so
+**every** matching layer contributes. `style` accumulates across all contributing
+layers so the persona blends; `name`, `accent`, and `pace` are single-valued, so
+the most specific layer that sets each one wins (per-NPC, then the last matching
+category, then race, then the default), which keeps a coherent accent and pace
+instead of stacking contradictory directions.
 
 1. `default` - the global British fallback. **Must be complete** (all four of
-   `name`, `accent`, `style`, `pace`). Every other layer is sparse.
+   `name`, `accent`, `style`, `pace`). Every other layer is sparse and contributes
+   only the fields it sets.
 2. `byRace[race]` - one per race bucket (Human, Elf, Dwarf, Goblin, Troll, Undead,
    Demon, Wizard), keyed by the same race the table assigns the NPC.
-3. `byCategory[]` - an **ordered** list; the first entry whose `keywords`
-   word-match the NPC's display name wins. This expresses categories the 8 race
-   buckets cannot (leprechaun -> Irish, vampyre -> Dracula-esque, Fremennik ->
-   Scandinavian, gnome, imp, ghost, pirate, royalty, and so on). Keyword matching
-   is case-insensitive and bounded on word edges, so `imp` matches "Imp" but not
-   "important".
+3. `byCategory[]` - an **ordered** list; **every** entry whose `keywords`
+   word-match the NPC's display name contributes (in declaration order). This
+   expresses categories the 8 race buckets cannot (leprechaun -> Irish, vampyre ->
+   Dracula-esque, Fremennik -> Scandinavian, gnome, imp, ghost, pirate, royalty,
+   and so on). Keyword matching is case-insensitive and bounded on word edges, so
+   `imp` matches "Imp" but not "important".
 4. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id
    (`NPCComposition#getId`). Sparse: carry only what is unique to the character
-   (usually `name` + `style`); accent and pace inherit from the category/race/
-   default layer unless the character genuinely differs.
+   (usually `name` + `style`); its style is added on top of the blend, and accent
+   and pace inherit from the category/race/default layer unless it sets them.
 
 A bespoke entry therefore needs only its unique fields:
 

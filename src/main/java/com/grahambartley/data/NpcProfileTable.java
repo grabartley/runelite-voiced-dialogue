@@ -165,36 +165,61 @@ public final class NpcProfileTable {
   }
 
   /**
-   * Resolves the complete profile for an NPC by layering default -> race -> keyword category ->
-   * per-NPC override. Never returns {@code null}.
+   * Resolves the complete profile for an NPC by <em>combining</em> every matching layer: the race
+   * bucket, every keyword category whose keyword is in the display name, and the per-NPC override.
+   * An NPC can be more than one thing at once (a Fremennik human, a ghost pirate), so all matches
+   * contribute. {@code style} accumulates across every contributing layer so the persona blends;
+   * {@code name}, {@code accent}, and {@code pace} are single-valued, so the most specific layer
+   * that sets each one wins (per-NPC override, then the last matching category, then race, then the
+   * default), which keeps a coherent accent and pace rather than stacking contradictory directions.
+   * Never returns {@code null}.
    *
    * @param npcId the live NPC id, or {@code null} when unknown (no bespoke override is applied)
    * @param npcName the display name used for keyword matching, may be {@code null}
    * @param race the resolved race bucket (e.g. {@code "Troll"}), may be {@code null}
    */
   public Resolution resolveNpc(Integer npcId, String npcName, String race) {
-    CharacterProfile profile = defaultProfile;
-    String source = "default";
+    // Contributing layers, least specific first, so a later layer wins single-valued fields.
+    List<Layer> layers = new ArrayList<>();
+    List<String> sources = new ArrayList<>();
 
     Layer raceLayer = race == null ? null : byRace.get(race.toLowerCase(Locale.ROOT));
     if (raceLayer != null) {
-      profile = apply(profile, raceLayer);
-      source = "race:" + race;
+      layers.add(raceLayer);
+      sources.add("race:" + race);
     }
-
-    CategoryRule category = matchCategory(npcName);
-    if (category != null) {
-      profile = apply(profile, category.layer());
-      source = "keyword:" + category.id();
+    for (CategoryRule rule : matchCategories(npcName)) {
+      layers.add(rule.layer());
+      sources.add("keyword:" + rule.id());
     }
-
     Layer idLayer = npcId == null ? null : byId.get(npcId);
     if (idLayer != null) {
-      profile = apply(profile, idLayer);
-      source = "id:" + npcId;
+      layers.add(idLayer);
+      sources.add("id:" + npcId);
     }
 
-    return new Resolution(profile, source);
+    String name = defaultProfile.name();
+    String accent = defaultProfile.accent();
+    String pace = defaultProfile.pace();
+    List<String> styleParts = new ArrayList<>();
+    for (Layer layer : layers) {
+      if (layer.name() != null) {
+        name = layer.name();
+      }
+      if (layer.accent() != null) {
+        accent = layer.accent();
+      }
+      if (layer.pace() != null) {
+        pace = layer.pace();
+      }
+      if (layer.style() != null) {
+        styleParts.add(layer.style());
+      }
+    }
+    String style = styleParts.isEmpty() ? defaultProfile.style() : String.join(" ", styleParts);
+    String source = sources.isEmpty() ? "default" : String.join("+", sources);
+
+    return new Resolution(new CharacterProfile(name, accent, style, pace), source);
   }
 
   /**
@@ -216,19 +241,22 @@ public final class NpcProfileTable {
     return loaded;
   }
 
-  private CategoryRule matchCategory(String npcName) {
+  /** Every category whose keyword is in the display name, in declaration order (may be empty). */
+  private List<CategoryRule> matchCategories(String npcName) {
     if (npcName == null || npcName.isEmpty()) {
-      return null;
+      return Collections.emptyList();
     }
     String lower = npcName.toLowerCase(Locale.ROOT);
+    List<CategoryRule> matches = new ArrayList<>();
     for (CategoryRule rule : byCategory) {
       for (String keyword : rule.keywords()) {
         if (wordContains(lower, keyword)) {
-          return rule;
+          matches.add(rule);
+          break;
         }
       }
     }
-    return null;
+    return matches;
   }
 
   /**

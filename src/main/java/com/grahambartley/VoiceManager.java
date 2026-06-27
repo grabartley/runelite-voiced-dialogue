@@ -173,9 +173,10 @@ public class VoiceManager {
 
   /**
    * Resolves the {@link CharacterProfile} steering a line's delivery: the player's configured
-   * profile for player lines, or the layered NPC profile (default -> race -> keyword category ->
-   * per-NPC override) keyed on the NPC's composition id and display name. Never returns {@code
-   * null}. Only the cloud backend renders the profile; the local backend ignores it.
+   * profile for player lines, or the NPC profile built by combining every matching layer (default,
+   * race, every keyword category that matches, and any per-NPC override) keyed on the NPC's
+   * composition id and display name. Never returns {@code null}. Only the cloud backend renders the
+   * profile; the local backend ignores it.
    */
   public CharacterProfile resolveProfile(String speaker, String npcName) {
     if ("player".equalsIgnoreCase(speaker)) {

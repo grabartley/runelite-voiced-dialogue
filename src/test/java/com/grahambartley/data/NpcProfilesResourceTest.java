@@ -76,8 +76,8 @@ public class NpcProfilesResourceTest {
   public void aBespokePerNpcProfileResolvesByIdFromTheBundledTable() {
     // Hans (id 3105) is in the iconic batch.
     NpcProfileTable.Resolution r = table.resolveNpc(3105, "Hans", "Human");
-    assertEquals("id:3105", r.source());
-    assertEquals("Hans", r.profile().name());
+    assertTrue("the bespoke id contributes to the blend", r.source().contains("id:3105"));
+    assertEquals("the bespoke name wins", "Hans", r.profile().name());
   }
 
   @Test

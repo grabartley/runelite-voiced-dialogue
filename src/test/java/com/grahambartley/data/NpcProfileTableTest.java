@@ -49,21 +49,44 @@ public class NpcProfileTableTest {
   }
 
   @Test
-  public void keywordCategoryOverridesRace() {
-    // A vampyre whose race resolved to Troll: the keyword layer wins over the race layer.
+  public void raceAndCategoryCombineStyleWhileTheCategoryAccentWins() {
+    // A vampyre whose race resolved to Troll: both contribute style; the more specific accent wins.
     NpcProfileTable.Resolution r = table().resolveNpc(null, "Vampyre Brute", "Troll");
-    assertEquals("keyword:vampyre", r.source());
-    assertEquals("Vampyre", r.profile().name());
+    assertEquals("race:Troll+keyword:vampyre", r.source());
+    assertEquals("the most specific name wins", "Vampyre", r.profile().name());
     assertEquals(
-        "the keyword accent beats the race accent", "Transylvanian.", r.profile().accent());
+        "the category accent beats the race accent", "Transylvanian.", r.profile().accent());
+    assertTrue("the race style is part of the blend", r.profile().style().contains("Big and dim."));
+    assertTrue(
+        "the category style is part of the blend", r.profile().style().contains("Predatory."));
+    assertEquals("pace falls through to the default", "Steady.", r.profile().pace());
   }
 
   @Test
-  public void perIdOverrideWinsOverEverythingAndStillInheritsUnsetFields() {
+  public void multipleCategoriesAllCombine() {
+    // "Imp Vampyre" matches both the vampyre and imp categories; both styles blend.
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Imp Vampyre", null);
+    assertEquals(
+        "both categories appear in declaration order", "keyword:vampyre+keyword:imp", r.source());
+    assertTrue(r.profile().style().contains("Predatory."));
+    assertTrue(r.profile().style().contains("Squeaky."));
+    assertEquals("the last category to set a name wins", "Imp", r.profile().name());
+    assertEquals(
+        "accent comes from the only matching layer that set one",
+        "Transylvanian.",
+        r.profile().accent());
+  }
+
+  @Test
+  public void perIdOverrideAddsOnTopAndWinsSingleValuedFields() {
     NpcProfileTable.Resolution r = table().resolveNpc(100, "Vampyre Vanstrom", "Undead");
-    assertEquals("id:100", r.source());
+    assertEquals("every match contributes", "keyword:vampyre+id:100", r.source());
     assertEquals("the bespoke name wins", "Vanstrom", r.profile().name());
-    assertEquals("the bespoke style wins", "An ancient vampyre lord.", r.profile().style());
+    assertTrue(
+        "the category style is still in the blend", r.profile().style().contains("Predatory."));
+    assertTrue(
+        "the bespoke style is added on top",
+        r.profile().style().contains("An ancient vampyre lord."));
     assertEquals(
         "accent the id entry did not set inherits from the matched keyword layer",
         "Transylvanian.",
