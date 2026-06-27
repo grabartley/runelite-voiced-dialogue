@@ -55,8 +55,10 @@ Streaming the audio response to start playback sooner was evaluated and deferred
 the full-buffer decode is already fast, and streaming would complicate the raw-PCM decode and the
 epoch-based stale-drop for little perceived gain.
 
-The primary cost lever remains the size-bounded persistent disk cache, on by default, which keeps any
-already-heard line from being billed again across sessions.
+The primary cost lever remains the persistent disk cache, on by default, which keeps any already-heard
+line from being billed again across sessions. Its footprint is bounded by the **Cache Size Limit**
+(default 256 MiB) and evicted oldest-first (FIFO) so it never grows past the configured limit; a read
+never rescues an old entry, and the just-written clip always survives.
 
 ## Local (Kokoro) backend
 

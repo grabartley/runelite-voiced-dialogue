@@ -114,7 +114,9 @@ public class TTSDialoguePlugin extends Plugin {
     // backend provider's synthesis regardless of which backend (local or cloud) runs. Opt-out via
     // config.
     DiskAudioCache diskCache =
-        config.persistentCache() ? new DiskAudioCache(ttsDir.resolve("cache")) : null;
+        config.persistentCache()
+            ? new DiskAudioCache(ttsDir.resolve("cache"), config.diskCacheMaxMiB() * 1024L * 1024)
+            : null;
     audioService =
         new DialogueAudioService(
             backendProvider,

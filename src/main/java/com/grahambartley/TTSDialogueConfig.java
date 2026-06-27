@@ -170,6 +170,20 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "diskCacheMaxMiB",
+      name = "Cache Size Limit (MiB)",
+      description =
+          "Maximum size of the on-disk audio cache in MiB. When a new clip would push the cache over"
+              + " this limit, the oldest clips are deleted first (FIFO) to make room, so the cache"
+              + " never grows past it. Only applies when Persistent Audio Cache is on.",
+      position = 6,
+      section = generalSection)
+  @Range(min = 16, max = 4096)
+  default int diskCacheMaxMiB() {
+    return 256;
+  }
+
+  @ConfigItem(
       keyName = "debugMode",
       name = "Debug Mode",
       description = "Show detailed NPC race/gender resolution info in logs",

@@ -42,9 +42,10 @@ import lombok.extern.slf4j.Slf4j;
  * next synth can rewrite it). All I/O is meant to run on the existing pipeline executor thread,
  * never the game thread.
  *
- * <p>Disk usage is bounded by a total-size cap enforced with LRU-by-mtime eviction: after a write
- * that pushes the directory over the cap, the oldest (least-recently modified) files are deleted
- * until usage is back under the limit.
+ * <p>Disk usage is bounded by a configurable total-size cap enforced with FIFO eviction: after a
+ * write that pushes the directory over the cap, the oldest entries by write time are deleted until
+ * usage is back under the limit. Eviction is purely first-in-first-out, so a read never rescues an
+ * old entry from being dropped; the just-written entry always survives because it is the newest.
  */
 @Slf4j
 public final class DiskAudioCache {
@@ -86,8 +87,9 @@ public final class DiskAudioCache {
 
   /**
    * Returns the cached audio for this key, or {@code null} on any miss (absent, corrupt, or I/O
-   * error). A corrupt/undecodable file is deleted so the caller's write-through can replace it.
-   * Touches the file's mtime on a hit so the size-cap eviction is genuinely LRU.
+   * error). A corrupt/undecodable file is deleted so the caller's write-through can replace it. A
+   * hit deliberately does not bump the file's mtime: eviction is FIFO by write time, so a read must
+   * not extend an entry's lifetime.
    */
   public Pcm get(String backendId, String voiceKey, Emotion emotion, String text) {
     if (disabled) {
@@ -109,7 +111,6 @@ public final class DiskAudioCache {
         deleteQuietly(file);
         return null;
       }
-      touch(file);
       return pcm;
     } catch (IOException | RuntimeException e) {
       log.debug("Disk cache read failed for {}; treating as miss", file.getFileName(), e);
@@ -248,15 +249,6 @@ public final class DiskAudioCache {
     }
   }
 
-  private static void touch(Path file) {
-    try {
-      Files.setLastModifiedTime(
-          file, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis()));
-    } catch (IOException ignored) {
-      // mtime is only an eviction heuristic; failing to bump it is harmless.
-    }
-  }
-
   private static void deleteQuietly(Path file) {
     try {
       Files.deleteIfExists(file);
@@ -266,9 +258,9 @@ public final class DiskAudioCache {
   }
 
   /**
-   * Deletes least-recently-modified entries until the directory's total size is back under the cap.
-   * Only {@code .tdc} entries count; stray temp files are ignored (they are short-lived and cleaned
-   * up by their own writers).
+   * Deletes oldest-first (by write time) entries until the directory's total size is back under the
+   * cap, so the cache never persists more than its limit. Only {@code .tdc} entries count; stray
+   * temp files are ignored (they are short-lived and cleaned up by their own writers).
    */
   private void enforceSizeCap() {
     List<Entry> entries = new ArrayList<>();

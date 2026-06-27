@@ -86,7 +86,7 @@ The table above is the local Kokoro voice bank. The Cloud backend maps the same 
 
 ## Performance
 
-Synthesis and playback run off the game thread, so the client stays responsive even when you mash through dialogue, and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on the active backend, model, voice, emotion, and text: an in-memory layer covers the current session, and a size-bounded persistent on-disk cache under `~/.runelite/tts-dialogue/cache/` replays already-heard lines across client restarts. The disk cache uses least-recently-used eviction, survives corruption safely, and keeps cloud backends from being re-billed for audio you have already generated. It is controlled by the **Persistent Audio Cache** setting.
+Synthesis and playback run off the game thread, so the client stays responsive even when you mash through dialogue, and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on the active backend, model, voice, emotion, and text: an in-memory layer covers the current session, and a size-bounded persistent on-disk cache under `~/.runelite/tts-dialogue/cache/` replays already-heard lines across client restarts. The disk cache is capped by the **Cache Size Limit** setting and evicts oldest-first (FIFO) so it never grows past that limit, survives corruption safely, and keeps cloud backends from being re-billed for audio you have already generated. It is controlled by the **Persistent Audio Cache** setting.
 
 The cloud backend adds a few cost and latency guards on top of the cache. Each line is capped at **Max Cloud Characters** and truncated at a sentence or word boundary before sending, so a pathological long line can never run up the per-character bill; OSRS lines are short, so this only bites edge cases. Cloud calls carry a 10-second timeout so a hung request cannot pin the pipeline, and a response that lands after you have already skipped ahead is dropped rather than played late. If two identical lines hit the synth step at once, only one cloud call is made and the second reuses its result.
 
@@ -97,6 +97,7 @@ The cloud backend adds a few cost and latency guards on top of the cache. Each l
 | **Voice Backend** | `Cloud` | Selects the synthesis engine: `Cloud` (OpenRouter, falls back to local until a key is set) or `Local` (offline neutral Kokoro). |
 | **Enable Emotion** | `On` | Carries the emotion detected from the speaker's chat-head animation through to synthesis. The Cloud voice renders happy, sad, angry, and scared delivery; the Local voice is neutral-only. Off voices every line as Neutral. |
 | **Persistent Audio Cache** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and cloud backends are not re-billed. |
+| **Cache Size Limit (MiB)** | `256` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest clips are deleted first (FIFO) so the cache never grows past this limit. |
 | **Dialogue Volume** | `100` | Volume of the spoken dialogue (0 to 100). |
 | **Enable Automatic NPC Voices** | `On` | Picks a voice per NPC from the race and gender table. When off, every NPC uses the default Human voice. |
 | **Player Voice** | `Player Male` | The voice used for the player character. |
