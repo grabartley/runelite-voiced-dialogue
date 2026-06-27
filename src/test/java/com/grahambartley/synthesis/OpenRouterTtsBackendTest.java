@@ -78,8 +78,45 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void emotionIsNeutralOnlyUntilPerModelRenderingLands() {
-    assertEquals(EnumSet.of(Emotion.NEUTRAL), backend(new TestConfig()).supportedEmotions());
+  public void advertisesTheFullGeminiEmotionSet() {
+    assertEquals(
+        "every chat-head emotion is renderable, so none is downgraded away",
+        EnumSet.of(Emotion.NEUTRAL, Emotion.HAPPY, Emotion.SAD, Emotion.ANGRY, Emotion.SCARED),
+        backend(new TestConfig()).supportedEmotions());
+  }
+
+  @Test
+  public void prependsTheInlineStyleTagForEachEmotion() throws Exception {
+    assertEquals("[happy] Hello & welcome", inputForEmotion(Emotion.HAPPY));
+    assertEquals("[sad] Hello & welcome", inputForEmotion(Emotion.SAD));
+    assertEquals("[angry] Hello & welcome", inputForEmotion(Emotion.ANGRY));
+    assertEquals("[fearful] Hello & welcome", inputForEmotion(Emotion.SCARED));
+  }
+
+  @Test
+  public void neutralEmotionSendsThePlainTextWithNoTag() throws Exception {
+    assertEquals("Hello & welcome", inputForEmotion(Emotion.NEUTRAL));
+  }
+
+  /**
+   * Synthesizes one line at the given emotion and returns the {@code input} field actually sent.
+   */
+  private String inputForEmotion(Emotion emotion) throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    SynthesisRequest request =
+        new SynthesisRequest(
+            "Hello & welcome", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), emotion);
+    backend(config).synthesize(request);
+
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    return body.get("input").getAsString();
   }
 
   @Test

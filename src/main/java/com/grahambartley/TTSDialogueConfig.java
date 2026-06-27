@@ -60,8 +60,9 @@ public interface TTSDialogueConfig extends Config {
       name = "Enable Emotion",
       description =
           "Carry the emotion detected from the speaker's chat-head animation through to synthesis."
-              + " Per-model emotion rendering is still being rolled out, so today every line is"
-              + " voiced as Neutral on both backends regardless of this setting.",
+              + " The Cloud voice renders happy, sad, angry, and scared delivery; the Local voice is"
+              + " neutral-only, so its lines stay neutral. Turn this off to voice every line as"
+              + " Neutral.",
       position = 1,
       section = synthesisSection)
   default boolean enableEmotion() {

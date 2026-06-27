@@ -18,19 +18,19 @@ public class TTSDialoguePluginEmotionTest {
   @Test
   public void mappedIdWithEmotionEnabledResolvesToThatEmotion() {
     TTSDialoguePlugin plugin = new TTSDialoguePlugin();
-    assertEquals(Emotion.ANGRY, plugin.resolveLineEmotion(9788, true));
-    assertEquals(Emotion.SCARED, plugin.resolveLineEmotion(9780, true));
-    assertEquals(Emotion.HAPPY, plugin.resolveLineEmotion(9851, true));
-    assertEquals(Emotion.SAD, plugin.resolveLineEmotion(9764, true));
-    assertEquals(Emotion.NEUTRAL, plugin.resolveLineEmotion(9760, true));
+    assertEquals(Emotion.ANGRY, plugin.resolveLineEmotion(614, true));
+    assertEquals(Emotion.SCARED, plugin.resolveLineEmotion(596, true));
+    assertEquals(Emotion.HAPPY, plugin.resolveLineEmotion(567, true));
+    assertEquals(Emotion.SAD, plugin.resolveLineEmotion(610, true));
+    assertEquals(Emotion.NEUTRAL, plugin.resolveLineEmotion(588, true));
   }
 
   /** The enableEmotion gate forces NEUTRAL even for an id that maps to a real emotion. */
   @Test
   public void emotionDisabledForcesNeutral() {
     TTSDialoguePlugin plugin = new TTSDialoguePlugin();
-    assertEquals(Emotion.NEUTRAL, plugin.resolveLineEmotion(9788, false));
-    assertEquals(Emotion.NEUTRAL, plugin.resolveLineEmotion(9851, false));
+    assertEquals(Emotion.NEUTRAL, plugin.resolveLineEmotion(614, false));
+    assertEquals(Emotion.NEUTRAL, plugin.resolveLineEmotion(567, false));
   }
 
   /** {@code -1} (missing head, sprite dialogue, or one-tick race) resolves to NEUTRAL. */

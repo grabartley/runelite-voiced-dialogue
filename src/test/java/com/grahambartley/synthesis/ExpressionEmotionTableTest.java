@@ -18,16 +18,24 @@ public class ExpressionEmotionTableTest {
   @Test
   public void documentedIdsResolveToTheirEmotion() {
     ExpressionEmotionTable table = ExpressionEmotionTable.load();
-    // Full documented expression enum (9760-9862), every id present.
-    assertEquals("full documented table is expected", 27, table.size());
+    // Every non-neutral chat-head expression seq harvested from the cache (generic block +
+    // per-NPC).
+    assertEquals("full non-neutral expression table is expected", 41, table.size());
 
-    // Representative entries from the documented mapping.
-    assertEquals(Emotion.NEUTRAL, table.resolve(9760));
-    assertEquals(Emotion.SAD, table.resolve(9764));
-    assertEquals(Emotion.SCARED, table.resolve(9780));
-    assertEquals(Emotion.ANGRY, table.resolve(9788));
-    assertEquals(Emotion.NEUTRAL, table.resolve(9808));
-    assertEquals(Emotion.HAPPY, table.resolve(9851));
+    // Generic universal block: chathap=happy, chatscared/chatshock=scared, chatsad, chatang.
+    assertEquals(Emotion.HAPPY, table.resolve(567));
+    assertEquals(Emotion.SCARED, table.resolve(571));
+    assertEquals(Emotion.SCARED, table.resolve(596));
+    assertEquals(Emotion.HAPPY, table.resolve(605));
+    assertEquals(Emotion.SAD, table.resolve(610));
+    assertEquals(Emotion.ANGRY, table.resolve(614));
+    // Per-NPC expression heads: lore_lizard_chat_happy/sad, kahlith_chat_disapproving.
+    assertEquals(Emotion.HAPPY, table.resolve(4843));
+    assertEquals(Emotion.SAD, table.resolve(4844));
+    assertEquals(Emotion.ANGRY, table.resolve(8215));
+
+    // A generic neutral expression (chatneu1) is intentionally absent and defaults to NEUTRAL.
+    assertEquals(Emotion.NEUTRAL, table.resolve(588));
   }
 
   @Test

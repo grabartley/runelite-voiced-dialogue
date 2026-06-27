@@ -28,9 +28,11 @@ import okhttp3.ResponseBody;
  *
  * <p>The model is fixed to Gemini 3.1 Flash TTS, the one OpenRouter speech model with both a voice
  * catalog rich enough to map every race/gender and full emotion support. {@link GeminiVoiceMap}
- * resolves each {@link VoiceSpec} to a gender-correct Gemini voice, spread per NPC. Emotion
- * rendering is a follow-up, so the backend advertises {@link Emotion#NEUTRAL} only for now and
- * {@link BackendProvider} downgrades every line to neutral.
+ * resolves each {@link VoiceSpec} to a gender-correct Gemini voice, spread per NPC. Emotion is
+ * rendered through {@link GeminiEmotionStyle}, which prepends an inline style tag to the spoken
+ * {@code input} (e.g. {@code "[angry] ..."}); the backend advertises {@link
+ * GeminiEmotionStyle#SUPPORTED} and {@link BackendProvider} downgrades anything outside it to
+ * {@link Emotion#NEUTRAL}, which carries no tag.
  *
  * <p>It is selected when {@link TTSDialogueConfig#voiceBackend()} is {@code CLOUD} and reports
  * {@link #isAvailable()} only when an API key is set. Every failure path (missing key, non-2xx,
@@ -104,7 +106,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   @Override
   public EnumSet<Emotion> supportedEmotions() {
-    return EnumSet.of(Emotion.NEUTRAL);
+    return EnumSet.copyOf(GeminiEmotionStyle.SUPPORTED);
   }
 
   @Override
@@ -122,10 +124,19 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
     String key = config.openRouterApiKey().trim();
     String voice = voiceMap.voiceFor(request.voice());
+    String styledInput = GeminiEmotionStyle.apply(request.text(), request.emotion());
+
+    if (config.debugMode()) {
+      String tag = GeminiEmotionStyle.tagFor(request.emotion());
+      log.info(
+          "[TTS voice] cloud emotion {} -> {}",
+          request.emotion(),
+          tag == null ? "no tag (neutral input)" : "inline tag [" + tag + "]");
+    }
 
     JsonObject payload = new JsonObject();
     payload.addProperty("model", MODEL);
-    payload.addProperty("input", request.text());
+    payload.addProperty("input", styledInput);
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", RESPONSE_FORMAT);
 
