@@ -23,14 +23,14 @@ The plugin routes every line through one synthesis backend, chosen by the **Voic
 
 | Backend | Config value | Where it runs | Emotion | Offline | Setup |
 |---------|--------------|---------------|---------|---------|-------|
-| **Cloud (OpenRouter)** | `Cloud` (default) | Gemini 3.1 Flash TTS via OpenRouter over HTTPS | Neutral (emotion rolling out) | No | your own OpenRouter API key |
+| **Cloud (OpenRouter)** | `Cloud` (default) | Gemini 3.1 Flash TTS via OpenRouter over HTTPS | Happy, Sad, Angry, Scared, Neutral | No | your own OpenRouter API key |
 | **Local (Kokoro)** | `Local` | external CPU engine the plugin installs | Neutral | Yes | one-time engine + model download |
 
 See [docs/backends.md](docs/backends.md) for the full comparison.
 
 ### Cloud (OpenRouter), the default
 
-An opt-in cloud voice with near-zero setup beyond supplying a key. Create an OpenRouter API key, paste it into the config, and dialogue routes through Google's Gemini 3.1 Flash TTS over HTTPS, with a gender-correct voice picked per NPC by race. Until a key is set, the plugin logs a one-time notice and uses the free local voice instead.
+An opt-in cloud voice with near-zero setup beyond supplying a key. Create an OpenRouter API key, paste it into the config, and dialogue routes through Google's Gemini 3.1 Flash TTS over HTTPS, with a gender-correct voice picked per NPC by race and the line's detected emotion rendered as an inline style tag. Until a key is set, the plugin logs a one-time notice and uses the free local voice instead.
 
 > **Privacy:** with the Cloud backend active, the dialogue text being spoken is sent to OpenRouter over HTTPS using your API key. The local backend stays fully offline and sends nothing off your machine. The persistent cache means audio you have already heard is replayed from disk rather than re-billed.
 
@@ -40,7 +40,7 @@ A real neural voice that runs on your CPU, fully offline. Nothing about a dialog
 
 ## Emotion
 
-Each new dialogue line's emotion is read from the speaker's chat-head expression animation, the NPC head for NPC lines and the player head for player lines, and mapped to one of five emotions (Neutral, Happy, Sad, Angry, Scared). The resolved emotion rides in every synthesis request. Per-model emotion rendering on the cloud backend is still being rolled out, so today every line is voiced as Neutral on both backends; detection runs either way and is ready for emotional rendering once it lands. Detection is controlled by the **Enable Emotion** toggle, which is on by default; when it is off, every line is voiced as Neutral.
+Each new dialogue line's emotion is read from the speaker's chat-head expression animation, the NPC head for NPC lines and the player head for player lines, and mapped to one of five emotions (Neutral, Happy, Sad, Angry, Scared). The resolved emotion rides in every synthesis request. The cloud backend renders it by prepending a Gemini inline style tag to the spoken text (`[happy]`, `[sad]`, `[angry]`, `[fearful]`; Neutral adds none), so happy, sad, angry, and scared delivery is audibly distinct. The local Kokoro voice is neutral-only by design, so its lines are downgraded to Neutral. Detection is controlled by the **Enable Emotion** toggle, which is on by default; when it is off, every line is voiced as Neutral.
 
 The mapping is derived from the documented RuneScape chathead expression animation enum, a named set spanning ids **9760-9862**, with every documented expression mapped to the nearest of the five emotions. Any animation id not present in the table, and `-1` (no animation or a stale head), resolves to Neutral, so an unseen expression or a non-human head (trolls, ogres, children, monsters often emit ids outside the documented set) is a safe no-op. Five expressions do not map cleanly onto the five emotions and are mapped to the nearest one: `9800` MANIC_FACE -> Angry, `9812` LOOK_DOWN -> Sad, `9816` WHAT_THE -> Neutral, `9820` WHAT_THE_TWO -> Neutral, and `9824` EYES_WIDE -> Scared.
 
@@ -110,7 +110,7 @@ Synthesis and playback run off the game thread, so the client stays responsive e
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Voice Backend** | `Cloud` | Selects the synthesis engine: `Cloud` (OpenRouter, falls back to local until a key is set) or `Local` (offline neutral Kokoro). |
-| **Enable Emotion** | `On` | Carries the emotion detected from the speaker's chat-head animation through to synthesis. Per-model emotion rendering is still rolling out, so lines are currently Neutral on both backends. |
+| **Enable Emotion** | `On` | Carries the emotion detected from the speaker's chat-head animation through to synthesis. The Cloud voice renders happy, sad, angry, and scared delivery; the Local voice is neutral-only. Off voices every line as Neutral. |
 | **Persistent Audio Cache** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and cloud backends are not re-billed. |
 | **Dialogue Volume** | `100` | Volume of the spoken dialogue (0 to 100). |
 | **Enable Automatic NPC Voices** | `On` | Picks a voice per NPC from the race and gender table. When off, every NPC uses the default Human voice. |
