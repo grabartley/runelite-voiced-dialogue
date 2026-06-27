@@ -1,6 +1,8 @@
 package com.grahambartley.tts;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.TTSDialogueConfig;
@@ -16,7 +18,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -375,6 +381,112 @@ public class DialogueAudioServiceTest {
     assertEquals(
         "second session must be served from disk, not re-synthesized", 0, backend2.requests.size());
     assertEquals("the line still plays in the new session", 1, output2.streamCalls);
+  }
+
+  @Test
+  public void concurrentIdenticalSynthsIssueExactlyOneBackendCall() throws Exception {
+    // Two tasks reach the synth step for the same key at once (a real cloud call is slow). The
+    // first must be the only one billed; the second waits on and reuses its result.
+    CountDownLatch entered = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    AtomicInteger calls = new AtomicInteger();
+    Pcm canned = new Pcm(new float[] {0.2f, -0.2f}, 24_000);
+    SynthesisBackend blocking =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return BackendProvider.LOCAL_KOKORO_ID;
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            calls.incrementAndGet();
+            entered.countDown();
+            try {
+              release.await();
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+            return canned;
+          }
+        };
+    DialogueAudioService svc =
+        service(provider(blocking), new FakeOutput(), new DeferredExecutor(), 8, 100);
+    DialogueAudioService.CacheKey key =
+        new DialogueAudioService.CacheKey(
+            BackendProvider.LOCAL_KOKORO_ID, "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
+    SynthesisRequest request = req("Echo", NPCRace.HUMAN, NPCGender.MALE);
+
+    AtomicReference<Pcm> first = new AtomicReference<>();
+    AtomicReference<Pcm> second = new AtomicReference<>();
+    Thread owner = new Thread(() -> first.set(svc.synthesizeDeduped(blocking, request, key)));
+    owner.start();
+    assertTrue("owner reached the backend", entered.await(2, TimeUnit.SECONDS));
+    Thread waiter = new Thread(() -> second.set(svc.synthesizeDeduped(blocking, request, key)));
+    waiter.start();
+    // Wait until the waiter is parked inside the in-flight future's get(), so releasing the owner
+    // cannot race ahead and let the waiter register itself as a second owner.
+    while (waiter.getState() != Thread.State.WAITING) {
+      Thread.onSpinWait();
+    }
+    release.countDown();
+    owner.join(2_000);
+    waiter.join(2_000);
+
+    assertEquals(
+        "two simultaneous identical requests issue exactly one backend call", 1, calls.get());
+    assertNotNull("the owner produced audio", first.get());
+    assertSame("the waiter reuses the owner's audio", first.get(), second.get());
+  }
+
+  @Test
+  public void lateResponseIsDroppedWhenEpochAdvancesDuringSynth() {
+    // Simulates a slow cloud response that lands after the player skipped ahead: the epoch bumps
+    // mid-synth, so the now-stale audio must never play even though synthesis succeeded.
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    final DialogueAudioService[] holder = new DialogueAudioService[1];
+    SynthesisBackend slow =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return BackendProvider.LOCAL_KOKORO_ID;
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            holder[0].interrupt();
+            return new Pcm(new float[] {0.1f, -0.1f}, 24_000);
+          }
+        };
+    DialogueAudioService svc = service(provider(slow), output, executor, 8, 100);
+    holder[0] = svc;
+
+    svc.speak(req("Stale cloud line", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals(
+        "a response that lands after the epoch advanced must not play", 0, output.streamCalls);
   }
 
   @Test

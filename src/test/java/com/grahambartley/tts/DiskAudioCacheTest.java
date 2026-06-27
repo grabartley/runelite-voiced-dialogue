@@ -136,7 +136,7 @@ public class DiskAudioCacheTest {
       String text = "line-" + i;
       texts.add(text);
       cache.put("local-kokoro", "npc:HUMAN:MALE", Emotion.NEUTRAL, text, new Pcm(samples, 24_000));
-      Thread.sleep(5); // ensure distinct, increasing mtimes for deterministic LRU ordering
+      Thread.sleep(5); // ensure distinct, increasing write times for deterministic FIFO ordering
     }
 
     assertTrue("total cache size must stay under the cap", dirSize(cacheDir()) <= cap);
@@ -147,6 +147,33 @@ public class DiskAudioCacheTest {
     assertNotNull(
         "newest line should remain",
         cache.get("local-kokoro", "npc:HUMAN:MALE", Emotion.NEUTRAL, "line-11"));
+  }
+
+  @Test
+  public void readDoesNotRescueAnEntryFromFifoEviction() throws Exception {
+    // ~120 bytes/entry (16 + 26*4), so five entries fit under the cap and a sixth evicts the
+    // oldest. Eviction is FIFO by write time: reading the oldest entry must not save it.
+    long cap = 600;
+    DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap);
+    float[] samples = new float[26];
+
+    cache.put("local-kokoro", "v", Emotion.NEUTRAL, "first", new Pcm(samples, 24_000));
+    Thread.sleep(5);
+    assertNotNull(
+        "the oldest entry is present before the cache fills",
+        cache.get("local-kokoro", "v", Emotion.NEUTRAL, "first"));
+
+    for (int i = 0; i < 5; i++) {
+      cache.put("local-kokoro", "v", Emotion.NEUTRAL, "fill-" + i, new Pcm(samples, 24_000));
+      Thread.sleep(5);
+    }
+
+    assertTrue("total cache size must stay under the cap", dirSize(cacheDir()) <= cap);
+    assertNull(
+        "the oldest entry is evicted FIFO even though it was read",
+        cache.get("local-kokoro", "v", Emotion.NEUTRAL, "first"));
+    assertNotNull(
+        "the newest entry survives", cache.get("local-kokoro", "v", Emotion.NEUTRAL, "fill-4"));
   }
 
   @Test
