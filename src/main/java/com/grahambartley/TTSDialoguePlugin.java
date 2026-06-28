@@ -91,6 +91,9 @@ public class TTSDialoguePlugin extends Plugin {
    */
   static final String ONBOARDING_SEEN_KEY = "onboardingSeen";
 
+  /** Chat-markup hex colour for plugin notices, so they stand out red from ordinary game chat. */
+  private static final String CHAT_NOTICE_COLOR = "ff3333";
+
   /**
    * Per-session guard so the onboarding check runs at most once per plugin lifetime, not per tick.
    */
@@ -245,12 +248,10 @@ public class TTSDialoguePlugin extends Plugin {
       return;
     }
     addGameMessage(
-        "Voiced Dialogue is on. The Cloud voice (recommended) needs a free OpenRouter API key.");
-    addGameMessage(
-        "Get one at openrouter.ai, then paste it into the plugin's Cloud Voice settings. While Cloud"
-            + " is active your dialogue text is sent to OpenRouter to be voiced.");
-    addGameMessage(
-        "Prefer to stay offline? Set Voice Backend to Local for a free, no-key voice (basic and"
+        "Voiced Dialogue is on. The Cloud voice (recommended) needs a free OpenRouter API key: get"
+            + " one at openrouter.ai and paste it into the plugin's Cloud Voice settings. While Cloud"
+            + " is active your dialogue text is sent to OpenRouter to be voiced. Prefer to stay"
+            + " offline? Set Voice Backend to Local for a free, no-key voice (basic and"
             + " neutral-only).");
     configManager.setConfiguration(CONFIG_GROUP, ONBOARDING_SEEN_KEY, true);
   }
@@ -264,9 +265,14 @@ public class TTSDialoguePlugin extends Plugin {
     return !Boolean.TRUE.equals(seenFlag);
   }
 
-  /** Posts a plugin-tagged line into the game chat box. Must be called on the client thread. */
+  /**
+   * Posts a single red, plugin-tagged notice into the game chat box. Red marks it as a plugin
+   * notice that stands out from ordinary dialogue and game spam. Must be called on the client
+   * thread.
+   */
   private void addGameMessage(String message) {
-    client.addChatMessage(ChatMessageType.CONSOLE, "", "[Voiced Dialogue] " + message, null);
+    String line = "<col=" + CHAT_NOTICE_COLOR + ">[Voiced Dialogue] " + message + "</col>";
+    client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", line, null);
   }
 
   /**
