@@ -120,6 +120,22 @@
 
     "3644": { "name": "Captain Tobias", "race": "Human", "gender": "Male" },
     "12": { "name": "Hudo", "race": "Goblin", "gender": "Male" },
-    "6816": { "name": "Gee", "race": "Goblin", "gender": "Male" }
+    "6816": { "name": "Gee", "race": "Goblin", "gender": "Male" },
+    "731": { "name": "Sheep", "race": "Human", "gender": "Male" },
+    "997": { "name": "Dartog", "race": "Goblin", "gender": "Male" },
+    "1157": { "name": "Archer", "race": "Human", "gender": "Female" },
+    "1160": { "name": "Wizard", "race": "Wizard", "gender": "Male" },
+    "1162": { "name": "Shamus", "race": "Human", "gender": "Male" },
+    "1325": { "name": "Hari", "race": "Human", "gender": "Male" },
+    "4274": { "name": "Leela", "race": "Human", "gender": "Female", "ethnicity": "kharidian" },
+    "5122": { "name": "Drain Pipe", "race": "Dwarf", "gender": "Male" },
+    "5444": { "name": "Cap'n Hand", "race": "Human", "gender": "Male" },
+    "6001": { "name": "Orlando Smith", "race": "Human", "gender": "Male" },
+    "7300": { "name": "Kazgar", "race": "Goblin", "gender": "Male" },
+    "7301": { "name": "Kazgar", "race": "Goblin", "gender": "Male" },
+    "8491": { "name": "The Collector", "race": "Human", "gender": "Male" },
+    "13510": { "name": "Ivy Sophista", "race": "Human", "gender": "Female", "ethnicity": "asgarnia" },
+    "13555": { "name": "Suspicious outsider", "race": "Human", "gender": "Male" },
+    "24723": { "name": "Drain Pipe", "race": "Dwarf", "gender": "Male" }
   }
 }
