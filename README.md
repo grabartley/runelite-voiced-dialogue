@@ -109,7 +109,7 @@ Cloud requests are tuned for latency. They reuse one long-lived keepalive HTTP/2
 | **Voice Backend** | `Cloud` | Selects the synthesis engine: `Cloud` (OpenRouter, falls back to local until a key is set) or `Local` (offline neutral Kokoro). |
 | **Enable Emotion** | `On` | Carries the emotion detected from the speaker's chat-head animation through to synthesis. The Cloud voice renders happy, sad, angry, and scared delivery; the Local voice is neutral-only. Off voices every line as Neutral. |
 | **Persistent Audio Cache** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and cloud backends are not re-billed. |
-| **Cache Size Limit (MiB)** | `256` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest clips are deleted first (FIFO) so the cache never grows past this limit. |
+| **Cache Size Limit (MiB)** | `256` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest clips are deleted first (FIFO) so the cache never grows past this limit. Set to `0` for no limit: the cache keeps every clip and is never evicted. |
 | **Dialogue Volume** | `100` | Volume of the spoken dialogue (0 to 100). |
 | **Enable Automatic NPC Voices** | `On` | Picks a voice per NPC from the race and gender table. When off, every NPC uses the default Human voice. |
 | **Player Voice** | `Player Male` | The voice used for the player character. |
