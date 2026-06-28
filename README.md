@@ -109,12 +109,17 @@ Cloud requests are tuned for latency. They reuse a long-lived keepalive connecti
 |---------|---------|--------------|
 | **Voice Backend** | `Cloud` | Selects the synthesis engine: `Cloud` (OpenRouter, falls back to local until a key is set) or `Local` (offline neutral Kokoro). |
 | **Enable Emotion** | `On` | Carries the emotion detected from the speaker's chat-head animation through to synthesis. The Cloud voice renders happy, sad, angry, and scared delivery; the Local voice is neutral-only. Off voices every line as Neutral. |
+| **Enable Character Profiles** | `On` | Steers each speaker's delivery with a per-character profile (accent, style, pace), rendered as a direction block in front of the line. Emotion still layers on top. Cloud only; the Local voice ignores it. Off gives the plainest, cheapest delivery. |
 | **Persistent Audio Cache** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and cloud backends are not re-billed. |
 | **Cache Size Limit (MiB)** | `256` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest clips are deleted first (FIFO) so the cache never grows past this limit. Set to `0` for no limit: the cache keeps every clip and is never evicted. |
 | **Dialogue Volume** | `100` | Volume of the spoken dialogue (0 to 100). |
 | **Enable Automatic NPC Voices** | `On` | Picks a voice per NPC from the race and gender table. When off, every NPC uses the default Human voice. |
 | **Player Voice** | `Player Male` | The voice used for the player character. |
+| **Player Accent** | seasoned RP adventurer | Accent for your character's Cloud voice profile. Used only with Character Profiles on and the Cloud backend active. |
+| **Player Style** | seasoned RP adventurer | Persona and delivery style for your character's Cloud voice profile. Used only with Character Profiles on and the Cloud backend active. |
+| **Player Pace** | even and assured | Speaking pace for your character's Cloud voice profile. Used only with Character Profiles on and the Cloud backend active. |
 | **Enable Voice Fallbacks** | `On` | Falls back to a gender-appropriate human voice for NPCs missing from the table. When off, those NPCs use the single default voice. |
+| **Auto-learn New NPCs** | `Off` | For an NPC not in the bundled table (e.g. one added since the last plugin update), looks its race, gender and ethnicity up on the OSRS Wiki once and caches the result locally. The first line still uses the default voice while the lookup runs. When on, makes a one-time wiki request (the NPC's name); the Local backend stays fully offline regardless. |
 | **Debug Mode** | `Off` | Logs detailed NPC race/gender resolution and the chosen voice per NPC. |
 | **OpenRouter API Key** | empty | Your OpenRouter API key. Required for the Cloud backend; stored locally and never bundled with the plugin. |
 | **Max Cloud Characters** | `600` | Caps how many characters of a line are sent to the cloud backend, truncating at a sentence or word boundary. Bounds worst-case per-line cost. `0` disables the cap. |
