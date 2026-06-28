@@ -6,7 +6,7 @@
     "npc_pages": 5899,
     "count": 13661,
     "name_matched_ids": 714,
-    "overrides_applied": 91,
+    "overrides_applied": 92,
     "race_counts": {
       "Demon": 751,
       "Dwarf": 516,
@@ -19,8 +19,8 @@
       "Wizard": 4
     },
     "gender_counts": {
-      "Female": 1591,
-      "Male": 12070
+      "Female": 1592,
+      "Male": 12069
     },
     "region_counts": {
       "asgarnia": 581,
@@ -36,7 +36,7 @@
       "varlamore": 999,
       "wilderness": 124
     },
-    "profiles_bespoke": 31
+    "profiles_bespoke": 37
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byRegion[region] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -86,7 +86,7 @@
       "Troll": {
         "name": "Troll",
         "accent": "British English, South London Brixton accent.",
-        "style": "A huge, slow, simple-minded troll, good-natured but dim. Deep and lumbering, pleased with itself, easily confused.",
+        "style": "A huge, slow, simple-minded troll, good-natured but dim. A very deep, low, booming, rumbling voice, lumbering and pleased with itself, easily confused.",
         "pace": "Slow and heavy, with long thinking pauses."
       },
       "Undead": {
@@ -213,7 +213,7 @@
         ],
         "name": "Ogre",
         "accent": "Big, dim British English with a West Midlands burr.",
-        "style": "A huge, slow-witted ogre. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
+        "style": "A huge, slow-witted ogre with a very deep, low, booming voice. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
         "pace": "Slow and heavy, with plodding, simple phrasing."
       },
       {
@@ -513,6 +513,36 @@
         "name": "Ak-Haranu",
         "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence.",
         "accent": "A Japanese accent, refined and precise, of the far Eastern Lands."
+      },
+      "4011": {
+        "name": "Bill Teach",
+        "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.",
+        "accent": "Rough West Country British English, a Cornish seafarer's drawl."
+      },
+      "4012": {
+        "name": "Bill Teach",
+        "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.",
+        "accent": "Rough West Country British English, a Cornish seafarer's drawl."
+      },
+      "4014": {
+        "name": "Bill Teach",
+        "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.",
+        "accent": "Rough West Country British English, a Cornish seafarer's drawl."
+      },
+      "4015": {
+        "name": "Bill Teach",
+        "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.",
+        "accent": "Rough West Country British English, a Cornish seafarer's drawl."
+      },
+      "4016": {
+        "name": "Bill Teach",
+        "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.",
+        "accent": "Rough West Country British English, a Cornish seafarer's drawl."
+      },
+      "2995": {
+        "name": "Robin",
+        "style": "A sly, fast-talking gambling-game host; a chancer plying his trade in Port Phasmatys, not a native Morytanian.",
+        "accent": "Common British English, plain and down-to-earth."
       }
     }
   },
@@ -11271,7 +11301,7 @@
     },
     "2622": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "2623": {
       "race": "Human",

@@ -46,7 +46,7 @@
     "Troll": {
       "name": "Troll",
       "accent": "British English, South London Brixton accent.",
-      "style": "A huge, slow, simple-minded troll, good-natured but dim. Deep and lumbering, pleased with itself, easily confused.",
+      "style": "A huge, slow, simple-minded troll, good-natured but dim. A very deep, low, booming, rumbling voice, lumbering and pleased with itself, easily confused.",
       "pace": "Slow and heavy, with long thinking pauses."
     },
     "Undead": {
@@ -130,7 +130,7 @@
       "keywords": ["ogre"],
       "name": "Ogre",
       "accent": "Big, dim British English with a West Midlands burr.",
-      "style": "A huge, slow-witted ogre. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
+      "style": "A huge, slow-witted ogre with a very deep, low, booming voice. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
       "pace": "Slow and heavy, with plodding, simple phrasing."
     },
     {
@@ -269,6 +269,12 @@
     "822": { "name": "Oziach", "style": "A blunt, no-nonsense armour seller; gruff and dismissive, unimpressed and curt with strangers." },
     "9636": { "name": "Drezel", "style": "A meek, devout monk; gentle, humble, and earnest, soft-spoken and grateful for any aid." },
     "4280": { "name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Irish English." },
-    "2989": { "name": "Ak-Haranu", "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence.", "accent": "A Japanese accent, refined and precise, of the far Eastern Lands." }
+    "2989": { "name": "Ak-Haranu", "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence.", "accent": "A Japanese accent, refined and precise, of the far Eastern Lands." },
+    "4011": { "name": "Bill Teach", "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.", "accent": "Rough West Country British English, a Cornish seafarer's drawl." },
+    "4012": { "name": "Bill Teach", "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.", "accent": "Rough West Country British English, a Cornish seafarer's drawl." },
+    "4014": { "name": "Bill Teach", "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.", "accent": "Rough West Country British English, a Cornish seafarer's drawl." },
+    "4015": { "name": "Bill Teach", "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.", "accent": "Rough West Country British English, a Cornish seafarer's drawl." },
+    "4016": { "name": "Bill Teach", "style": "A bluff, weather-beaten pirate captain, hearty and rough but fair; he is a seafarer passing through Port Phasmatys, not a local.", "accent": "Rough West Country British English, a Cornish seafarer's drawl." },
+    "2995": { "name": "Robin", "style": "A sly, fast-talking gambling-game host; a chancer plying his trade in Port Phasmatys, not a native Morytanian.", "accent": "Common British English, plain and down-to-earth." }
   }
 }

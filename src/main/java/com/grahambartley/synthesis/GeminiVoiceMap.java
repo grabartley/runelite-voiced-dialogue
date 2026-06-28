@@ -50,8 +50,8 @@ final class GeminiVoiceMap {
     put(NPCRace.DWARF, male("Algenib", "Alnilam"), female("Gacrux", "Kore"));
     // Goblin (small, crude): bright/light voices, deliberately high.
     put(NPCRace.GOBLIN, male("Puck", "Zubenelgenubi"), female("Leda", "Laomedeia"));
-    // Troll/ogre (big, lumbering): firm/gravelly, deep.
-    put(NPCRace.TROLL, male("Alnilam", "Orus"), female("Gacrux", "Kore"));
+    // Troll/ogre (big, lumbering): gravelly/firm, the deepest male timbres.
+    put(NPCRace.TROLL, male("Algenib", "Orus"), female("Gacrux", "Kore"));
     // Undead (hollow, eerie): breathy/even, deep and cold.
     put(NPCRace.UNDEAD, male("Enceladus", "Schedar"), female("Achernar", "Sulafat"));
     // Demon (booming, sinister): gravelly/informative, the deepest.
