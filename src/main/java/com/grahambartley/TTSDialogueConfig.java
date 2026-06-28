@@ -104,10 +104,20 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "playerVoice",
+      name = "Player Voice",
+      description = "The voice used for your own character's dialogue and public chat.",
+      position = 1,
+      section = generalSection)
+  default VoiceManager.PlayerVoice playerVoice() {
+    return VoiceManager.PlayerVoice.TYPE_A;
+  }
+
+  @ConfigItem(
       keyName = "volume",
       name = "Dialogue Volume",
       description = "Loudness of the spoken dialogue, from 0 (muted) to 100.",
-      position = 1,
+      position = 2,
       section = generalSection)
   @Range(min = 0, max = 100)
   default int volume() {
@@ -120,7 +130,7 @@ public interface TTSDialogueConfig extends Config {
       description =
           "Speak your own public chat messages aloud using your player voice. Voiced exactly as"
               + " typed: spoken language and speaking style are never applied to public chat.",
-      position = 2,
+      position = 3,
       section = generalSection)
   default boolean voicePublicChat() {
     return false;
@@ -133,7 +143,7 @@ public interface TTSDialogueConfig extends Config {
           "Warm the audio cache for the dialogue options you can see, so the line you pick next"
               + " plays instantly. Works on both backends. On Cloud it can raise spend on branches"
               + " you never choose; the Local voice is free, so it only speeds things up.",
-      position = 3,
+      position = 4,
       section = generalSection)
   default boolean prefetch() {
     return true;
@@ -146,7 +156,7 @@ public interface TTSDialogueConfig extends Config {
           "Save synthesized dialogue to disk so repeated lines play instantly across sessions and"
               + " the Cloud backend is not re-billed for audio you have already heard. The cache"
               + " lives in ~/.runelite/tts-dialogue/cache and is size-bounded.",
-      position = 4,
+      position = 5,
       section = generalSection)
   default boolean persistentCache() {
     return true;
@@ -171,26 +181,16 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "playerVoice",
-      name = "Player Voice",
-      description = "The voice used for your own character's dialogue and public chat.",
-      position = 1,
-      section = cloudSection)
-  default VoiceManager.PlayerVoice playerVoice() {
-    return VoiceManager.PlayerVoice.TYPE_A;
-  }
-
-  @ConfigItem(
       keyName = "playerAccent",
       name = "Your Accent",
       description =
           "Accent for your character's Cloud voice. British by default; this is a British medieval"
               + " fantasy world. Used only when Character Voices are on and the Cloud backend is"
               + " active.",
-      position = 2,
+      position = 1,
       section = cloudSection)
   default String playerAccent() {
-    return "British English, Received Pronunciation, as heard in southern England.";
+    return "British English, as spoken in Cambridge, England.";
   }
 
   @ConfigItem(
@@ -199,11 +199,10 @@ public interface TTSDialogueConfig extends Config {
       description =
           "Persona and delivery style for your character's Cloud voice. Describe who your adventurer"
               + " is. Used only when Character Voices are on and the Cloud backend is active.",
-      position = 3,
+      position = 2,
       section = cloudSection)
   default String playerPersona() {
-    return "A seasoned medieval fantasy adventurer: brave, resolute, and well-spoken, carrying the"
-        + " quiet confidence of someone who has seen the whole of Gielinor.";
+    return "Friendly, plucky, warm, and enthusiastic.";
   }
 
   @ConfigItem(
@@ -212,10 +211,10 @@ public interface TTSDialogueConfig extends Config {
       description =
           "Speaking pace for your character's Cloud voice. Used only when Character Voices are on"
               + " and the Cloud backend is active.",
-      position = 4,
+      position = 3,
       section = cloudSection)
   default String playerPace() {
-    return "Even and assured, unhurried but purposeful.";
+    return "Normal.";
   }
 
   @ConfigItem(
@@ -225,7 +224,7 @@ public interface TTSDialogueConfig extends Config {
           "Give each speaker a distinct voice (accent, style, pace) drawn from the bundled character"
               + " table, instead of one shared voice for everyone. Adds a little to each Cloud"
               + " request; turn off for the cheapest, plainest delivery.",
-      position = 5,
+      position = 4,
       section = cloudSection)
   default boolean cloudCharacterProfiles() {
     return true;
@@ -238,7 +237,7 @@ public interface TTSDialogueConfig extends Config {
           "Carry the emotion read from the speaker's chat-head animation through to the Cloud voice,"
               + " so lines are delivered happy, sad, angry, or scared. Turn this off to voice every"
               + " line neutrally.",
-      position = 6,
+      position = 5,
       section = cloudSection)
   default boolean cloudEmotion() {
     return true;
@@ -253,7 +252,7 @@ public interface TTSDialogueConfig extends Config {
               + " other language routes each line through a translation model first, preserving"
               + " names, places, and item terms, then voices the translation. Adds a translation"
               + " request per new line.",
-      position = 7,
+      position = 6,
       section = cloudSection)
   default String cloudLanguage() {
     return "English";
@@ -268,7 +267,7 @@ public interface TTSDialogueConfig extends Config {
               + " slang, pirate speak, and so on) via the translation model, so it routes through"
               + " that hop even for English. Leave this on None with English to skip the translation"
               + " model entirely.",
-      position = 8,
+      position = 7,
       section = cloudSection)
   default SpeakingStyle cloudSpeakingStyle() {
     return SpeakingStyle.NONE;
@@ -280,7 +279,7 @@ public interface TTSDialogueConfig extends Config {
       description =
           "Speaking pace for the Cloud voice, as a percentage of normal (100 = normal). Sent to"
               + " OpenRouter only when not 100; the active model may ignore it.",
-      position = 9,
+      position = 8,
       section = cloudSection)
   @Range(min = 50, max = 200)
   default int cloudPace() {
@@ -296,7 +295,7 @@ public interface TTSDialogueConfig extends Config {
               + " Wiki once, then cache the result locally so it voices correctly from then on. The"
               + " first line for such an NPC still uses the default voice while the lookup runs. Off"
               + " by default; when on it makes a network request (the NPC's name) to the wiki.",
-      position = 10,
+      position = 9,
       section = cloudSection)
   default boolean autoLearnNewNpcs() {
     return false;
