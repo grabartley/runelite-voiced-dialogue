@@ -46,7 +46,27 @@ import urllib.request
 
 WIKI_API = "https://oldschool.runescape.wiki/api.php"
 USER_AGENT = "tts-dialogue-runelite NPC table generator (contact: grabartley@gmail.com)"
-INFOBOX_TEMPLATE = "Template:Infobox NPC"
+# Talkable NPCs use Infobox NPC (carries race/gender/leagueRegion); talkable creatures use Infobox
+# Monster (carries none of those), so for Monster pages race comes from the page's categories.
+INFOBOX_TEMPLATES = ["Template:Infobox NPC", "Template:Infobox Monster"]
+
+# Wiki page-category substring -> voice bucket, checked in order, first match wins. This is how
+# Infobox Monster NPCs (trolls like Kob, ghosts, TzHaar, ...) get a race the infobox does not carry.
+CATEGORY_RACE_RULES = [
+    ("vampyre", "Undead"), ("vyre", "Undead"), ("ghost", "Undead"), ("skeleton", "Undead"),
+    ("zombie", "Undead"), ("ghoul", "Undead"), ("undead", "Undead"), ("shade", "Undead"),
+    ("wight", "Undead"), ("revenant", "Undead"), ("spectre", "Undead"), ("wraith", "Undead"),
+    ("banshee", "Undead"), ("mummy", "Undead"), ("ankou", "Undead"),
+    ("tzhaar", "Demon"), ("demon", "Demon"), ("dragon", "Demon"), ("devil", "Demon"),
+    ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"),
+    ("gnome", "Gnome"),
+    ("goblin", "Goblin"), ("hobgoblin", "Goblin"),
+    ("dwarf", "Dwarf"), ("dwarves", "Dwarf"),
+    ("elves", "Elf"), ("elf", "Elf"),
+    ("troll", "Troll"), ("ogre", "Troll"), ("cyclop", "Troll"), ("giant", "Troll"),
+    ("wizard", "Wizard"), ("sorcerer", "Wizard"),
+    ("human", "Human"),
+]
 
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
@@ -116,7 +136,7 @@ def region_key(league_region, location):
 
 def bucket_for_race(race_text):
     if not race_text:
-        return "Human"
+        return None  # no infobox race field; caller falls back to categories
     for regex, bucket in RACE_BUCKET_RULES:
         if regex.search(race_text):
             return bucket
@@ -151,30 +171,45 @@ def api_get(params):
 
 
 def enumerate_npc_pages(limit=None):
-    """All main-namespace page titles transcluding Template:Infobox NPC."""
+    """All main-namespace page titles transcluding an NPC or Monster infobox, deduped."""
+    seen = set()
     titles = []
-    cont = None
-    while True:
-        params = {
-            "action": "query",
-            "list": "embeddedin",
-            "eititle": INFOBOX_TEMPLATE,
-            "einamespace": "0",
-            "eilimit": "500",
-            "eifilterredir": "nonredirects",
-        }
-        if cont:
-            params["eicontinue"] = cont
-        data = api_get(params)
-        for entry in data.get("query", {}).get("embeddedin", []):
-            titles.append(entry["title"])
-        if limit and len(titles) >= limit:
-            return titles[:limit]
-        cont = data.get("continue", {}).get("eicontinue")
-        if not cont:
-            break
-        print(f"  enumerated {len(titles)} NPC pages ...", file=sys.stderr)
+    for template in INFOBOX_TEMPLATES:
+        cont = None
+        while True:
+            params = {
+                "action": "query",
+                "list": "embeddedin",
+                "eititle": template,
+                "einamespace": "0",
+                "eilimit": "500",
+                "eifilterredir": "nonredirects",
+            }
+            if cont:
+                params["eicontinue"] = cont
+            data = api_get(params)
+            for entry in data.get("query", {}).get("embeddedin", []):
+                title = entry["title"]
+                if title not in seen:
+                    seen.add(title)
+                    titles.append(title)
+            if limit and len(titles) >= limit:
+                return titles[:limit]
+            cont = data.get("continue", {}).get("eicontinue")
+            if not cont:
+                break
+            print(f"  enumerated {len(titles)} pages ...", file=sys.stderr)
     return titles
+
+
+def bucket_from_categories(categories):
+    """Voice bucket inferred from a page's wiki categories, or None. Lets Infobox Monster NPCs
+    (which carry no race field) still get a race, e.g. a page in Category:Trolls -> Troll."""
+    joined = " ".join(categories).lower()
+    for needle, bucket in CATEGORY_RACE_RULES:
+        if needle in joined:
+            return bucket
+    return None
 
 
 FIELD_RE = {
@@ -210,16 +245,17 @@ def parse_ids(wikitext):
     return ids
 
 
-def fetch_infoboxes(titles, batch=50):
-    """Yield (title, lead-wikitext) for each page, in batches."""
+def fetch_infoboxes(titles, batch=30):
+    """Yield (title, lead-wikitext, [category titles]) for each page, in batches."""
     for i in range(0, len(titles), batch):
         chunk = titles[i:i + batch]
         data = api_get({
             "action": "query",
-            "prop": "revisions",
+            "prop": "revisions|categories",
             "rvprop": "content",
             "rvslots": "main",
             "rvsection": "0",
+            "cllimit": "500",
             "titles": "|".join(chunk),
         })
         for page in data.get("query", {}).get("pages", []):
@@ -227,7 +263,8 @@ def fetch_infoboxes(titles, batch=50):
             if not revs:
                 continue
             content = revs[0].get("slots", {}).get("main", {}).get("content", "")
-            yield page.get("title", ""), content
+            cats = [c.get("title", "") for c in page.get("categories", [])]
+            yield page.get("title", ""), content, cats
         print(f"  parsed {min(i + batch, len(titles))}/{len(titles)} pages ...", file=sys.stderr)
         time.sleep(0.2)
 
@@ -268,9 +305,13 @@ def build_table_from_wiki(limit=None):
     table = {}
     name_map = {}
     pages_with_ids = 0
-    for title, wikitext in fetch_infoboxes(titles):
+    for title, wikitext, categories in fetch_infoboxes(titles):
         ids = parse_ids(wikitext)
-        race = bucket_for_race(first_field(wikitext, "race")) or "Human"
+        # Infobox race when present (NPC pages); otherwise the page's categories (Monster pages).
+        race = bucket_for_race(first_field(wikitext, "race"))
+        if race is None:
+            race = bucket_from_categories(categories)
+        race = race or "Human"
         gender = normalise_gender(first_field(wikitext, "gender"))
         region = region_key(
             first_field(wikitext, "leagueRegion"), first_field(wikitext, "location"))
