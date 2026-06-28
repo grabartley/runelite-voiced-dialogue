@@ -221,9 +221,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // A non-English target (or a global quirk) re-keys the line: the audio is the transformed
     // speech, not the source words, so the same source text must not collide across languages or
     // quirks. Plain English with no quirk adds nothing, so pre-translation cache entries stay
-    // valid.
+    // valid. A skip-translation request (public chat) is voiced verbatim, so it keeps the plain
+    // pre-translation key and never collides with a translated dialogue line of the same text.
     String language = effectiveSpokenLanguage();
-    if (needsTranslation(language)) {
+    if (needsTranslation(language) && !request.skipTranslation()) {
       variant.append("|l").append(language.toLowerCase());
     }
     return variant.toString();
@@ -269,9 +270,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // Optional first hop: a non-English target language (or a global quirk) routes the (already
     // capped) line through the translation model before it is voiced, so the spoken transcript is
     // the transformed text. A failed translation fails the line rather than voicing the wrong
-    // language or caching a mistranslation under the language key.
+    // language or caching a mistranslation under the language key. A skip-translation request
+    // (public chat) is voiced exactly as typed, so it bypasses the hop even under a non-English
+    // target or a global quirk.
     String language = effectiveSpokenLanguage();
-    boolean translating = needsTranslation(language);
+    boolean translating = needsTranslation(language) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
       String translated = translator.translate(cappedText, language.trim(), key);

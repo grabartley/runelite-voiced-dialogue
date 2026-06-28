@@ -13,22 +13,38 @@ package com.grahambartley.synthesis;
  * {@code null} when character profiles are off or no profile applies. Only the cloud backend
  * renders it (as a leading AUDIO PROFILE block); the local backend ignores it. A {@code null}
  * profile leaves the request body byte-for-byte as before, so existing cache entries stay valid.
+ *
+ * <p>{@code skipTranslation} forces the line to be voiced verbatim even when a non-English spoken
+ * language or a global quirk is configured: the cloud backend skips the translation hop and the
+ * {@code |l<language>} cache segment for such a request. It is {@code true} only for the player's
+ * own public chat (voiced as typed); every dialogue line leaves it {@code false}, so the request
+ * body and cache key stay byte-for-byte as before.
  */
 public record SynthesisRequest(
-    String text, VoiceSpec voice, Emotion emotion, CharacterProfile profile) {
+    String text,
+    VoiceSpec voice,
+    Emotion emotion,
+    CharacterProfile profile,
+    boolean skipTranslation) {
 
   /** A request with no character profile (backward-compatible 3-arg form). */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
-    this(text, voice, emotion, null);
+    this(text, voice, emotion, null, false);
+  }
+
+  /** A translating request with a character profile (backward-compatible 4-arg form). */
+  public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion, CharacterProfile profile) {
+    this(text, voice, emotion, profile, false);
   }
 
   /**
-   * Returns a copy of this request with a different emotion, leaving text, voice, profile intact.
+   * Returns a copy of this request with a different emotion, leaving text, voice, profile, and the
+   * translation behaviour intact.
    */
   public SynthesisRequest withEmotion(Emotion newEmotion) {
     if (newEmotion == emotion) {
       return this;
     }
-    return new SynthesisRequest(text, voice, newEmotion, profile);
+    return new SynthesisRequest(text, voice, newEmotion, profile, skipTranslation);
   }
 }

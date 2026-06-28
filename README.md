@@ -114,6 +114,7 @@ Cloud requests are tuned for latency. They reuse a long-lived keepalive connecti
 | **Cache Size Limit (MiB)** | `256` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest clips are deleted first (FIFO) so the cache never grows past this limit. Set to `0` for no limit: the cache keeps every clip and is never evicted. |
 | **Dialogue Volume** | `100` | Volume of the spoken dialogue (0 to 100). |
 | **Enable Automatic NPC Voices** | `On` | Picks a voice per NPC from the race and gender table. When off, every NPC uses the default Human voice. |
+| **Voice My Public Chat** | `Off` | Speaks your own public chat messages aloud in your player voice and profile. Only your own messages are voiced (other players' public chat is ignored), and chat is spoken exactly as typed: language translation and the Global Quirk are never applied to it, even when set for dialogue. |
 | **Player Voice** | `Player Male` | The voice used for the player character. |
 | **Player Accent** | seasoned RP adventurer | Accent for your character's Cloud voice profile. Used only with Character Profiles on and the Cloud backend active. |
 | **Player Style** | seasoned RP adventurer | Persona and delivery style for your character's Cloud voice profile. Used only with Character Profiles on and the Cloud backend active. |
