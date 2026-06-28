@@ -6,16 +6,16 @@
     "npc_pages": 5899,
     "count": 13661,
     "name_matched_ids": 714,
-    "overrides_applied": 99,
+    "overrides_applied": 100,
     "race_counts": {
       "Demon": 751,
       "Dwarf": 516,
       "Elf": 314,
       "Gnome": 263,
       "Goblin": 233,
-      "Human": 10347,
+      "Human": 10346,
       "Troll": 434,
-      "Undead": 799,
+      "Undead": 800,
       "Wizard": 4
     },
     "gender_counts": {
@@ -32,8 +32,8 @@
       "kharidian": 576,
       "kourend": 819,
       "menaphite": 94,
-      "misthalin": 924,
-      "morytania": 1055,
+      "misthalin": 923,
+      "morytania": 1056,
       "tirannwn": 343,
       "varlamore": 999,
       "wilderness": 124
@@ -130,7 +130,8 @@
           "drakan",
           "vanescula",
           "ranis",
-          "damien"
+          "damien",
+          "count check"
         ],
         "name": "Vampyre",
         "accent": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.",
@@ -327,8 +328,6 @@
           "lady",
           "baron",
           "baroness",
-          "count",
-          "countess",
           "advisor",
           "chancellor",
           "steward",
@@ -362,7 +361,7 @@
         "accent": "A Welsh accent, lilting and lyrical, of the western land of Tirannwn."
       },
       "varlamore": {
-        "accent": "A warm Mediterranean accent, an Italian-and-Spanish-flavoured English, of the sun-baked realm of Varlamore."
+        "accent": "An Italian accent, warm and melodic, as spoken in Italy, of the sun-baked realm of Varlamore."
       },
       "kharidian": {
         "accent": "A Middle Eastern accent, Arabic-inflected English, as spoken in the desert cities of the Kharidian."
@@ -30058,9 +30057,9 @@
       "gender": "Male"
     },
     "7414": {
-      "race": "Human",
+      "race": "Undead",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "morytania"
     },
     "7415": {
       "race": "Human",

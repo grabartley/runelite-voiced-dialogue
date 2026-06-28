@@ -79,7 +79,7 @@
     },
     {
       "id": "vampyre",
-      "keywords": ["vampyre", "vyre", "juvinate", "vanstrom", "drakan", "vanescula", "ranis", "damien"],
+      "keywords": ["vampyre", "vyre", "juvinate", "vanstrom", "drakan", "vanescula", "ranis", "damien", "count check"],
       "name": "Vampyre",
       "accent": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.",
       "style": "An ancient, predatory vampyre noble. Silken, cold, and menacing, dripping with disdain for lesser mortals.",
@@ -191,7 +191,7 @@
     },
     {
       "id": "noble",
-      "keywords": ["lord", "lady", "baron", "baroness", "count", "countess", "advisor", "chancellor", "steward", "dame", "noble"],
+      "keywords": ["lord", "lady", "baron", "baroness", "advisor", "chancellor", "steward", "dame", "noble"],
       "name": "Noble",
       "accent": "Refined, well-bred British English (Received Pronunciation), the polished accent of the aristocracy.",
       "style": "A highborn aristocrat of the realm. Polished, urbane, and self-assured, accustomed to deference.",
@@ -219,7 +219,7 @@
       "accent": "A Welsh accent, lilting and lyrical, of the western land of Tirannwn."
     },
     "varlamore": {
-      "accent": "A warm Mediterranean accent, an Italian-and-Spanish-flavoured English, of the sun-baked realm of Varlamore."
+      "accent": "An Italian accent, warm and melodic, as spoken in Italy, of the sun-baked realm of Varlamore."
     },
     "kharidian": {
       "accent": "A Middle Eastern accent, Arabic-inflected English, as spoken in the desert cities of the Kharidian."
