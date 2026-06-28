@@ -64,8 +64,7 @@ Because the cloud backend is billed per character, several guards keep cost boun
   is present but no audio came back), so the line is retried once before falling back; any other
   failure is not retried.
 - **Fastest-provider routing.** Every request carries a `provider` block with `sort: "throughput"`
-  (the `:nitro` equivalent), so OpenRouter routes to the lowest-latency provider for the model. An
-  optional **Provider Region** adds a geographic bias to the same block when set.
+  (the `:nitro` equivalent), so OpenRouter routes to the lowest-latency provider for the model.
 - **Prompt-cache stabilisation.** The per-speaker character-profile block leads each request and is
   byte-stable (profile fields are trailing-trimmed at construction), so Gemini's implicit prompt
   cache hits on repeats for the same speaker, lowering input cost and time-to-first-byte.
@@ -83,9 +82,20 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
 - **Optional translation.** With **Spoken Language** set to anything but English, `OpenRouterTranslator`
   translates each line through `google/gemini-3.1-flash-lite-preview` (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,
-  which then carries a BCP-47 `language_code`. The language is folded into the cache key, so a line is
-  translated and billed at most once per language; a failed translation fails the line gracefully
-  rather than voicing the wrong language.
+  which then carries a BCP-47 `language_code` derived from the base language. The language (with any
+  quirk) is folded into the cache key, so a line is translated and billed at most once per
+  language/quirk; a failed translation fails the line gracefully rather than voicing the wrong
+  language. **Spoken Language** is free text (any name; a recognised one gets a `language_code`, an
+  unrecognised one omits the optional code and lets the model detect language from the text).
+- **Global Quirk.** An optional language-agnostic delivery register (Gen Z slang, pirate speak,
+  formal, and so on) is appended to the spoken language, so the translation hop rewrites every line
+  in that style. It routes through the hop even for English, and composes with any language.
+
+The translation model is invoked only when there is something for it to do. With **Global Quirk** on
+`None` and **Spoken Language** English (or blank), the effective target is plain English, so the
+line bypasses the model entirely and the source text goes straight to speech: no chat-completions
+request, no added latency or cost. Setting a non-English language, a quirk, or both is what turns
+the hop on.
 
 Streaming the audio response to start playback sooner was evaluated and deferred: OSRS lines are short,
 the full-buffer decode is already fast, and streaming would complicate the raw-PCM decode and the

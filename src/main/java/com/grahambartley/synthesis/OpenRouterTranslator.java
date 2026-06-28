@@ -71,7 +71,7 @@ final class OpenRouterTranslator {
     messages.add(message("system", systemPrompt(language)));
     messages.add(message("user", text));
     payload.add("messages", messages);
-    OpenRouterProvider.apply(payload, config.providerRegion().code());
+    OpenRouterProvider.apply(payload);
 
     Request httpRequest =
         new Request.Builder()

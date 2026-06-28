@@ -43,29 +43,39 @@ public interface TTSDialogueConfig extends Config {
   }
 
   /**
-   * Geographic bias for OpenRouter provider routing, offered as a fixed dropdown. {@link #AUTO}
-   * sends no preference (the default, OpenRouter picks the provider); every other value is injected
-   * into the request's provider preferences as its {@link #code()}.
+   * An optional global delivery quirk layered onto every spoken line. {@link #NONE} (the default)
+   * changes nothing; any other value appends its {@link #phrase()} to the configured spoken
+   * language, so the line is routed through the translation model and rewritten in that register
+   * (for example "English" plus Gen Z slang behaves like a "English Gen Z slang" target). Every
+   * value is a register or tone, not a dialect, so it stays language-agnostic and composes with any
+   * spoken language ("French pirate speak", "Japanese Gen Z slang"). Cloud only.
    */
-  enum CloudRegion {
-    AUTO("", "Auto (no preference)"),
-    US("us", "United States"),
-    EU("eu", "European Union"),
-    UK("uk", "United Kingdom"),
-    CANADA("ca", "Canada"),
-    ASIA_PACIFIC("apac", "Asia Pacific");
+  enum GlobalQuirk {
+    NONE("None", ""),
+    GEN_Z("Gen Z Slang", "Gen Z slang"),
+    MILLENNIAL("Millennial Slang", "millennial slang"),
+    STREET("Street Slang", "casual street slang"),
+    FORMAL("Formal & Posh", "very formal and posh"),
+    DRAMATIC("Over-Dramatic", "wildly over-dramatic and theatrical"),
+    CUTESY("Cutesy & Bubbly", "cutesy, bubbly and over-enthusiastic"),
+    PIRATE("Pirate Speak", "pirate speak");
 
-    private final String code;
     private final String label;
+    private final String phrase;
 
-    CloudRegion(String code, String label) {
-      this.code = code;
+    GlobalQuirk(String label, String phrase) {
       this.label = label;
+      this.phrase = phrase;
     }
 
-    /** The region token sent to OpenRouter, or blank for {@link #AUTO} (no preference). */
-    public String code() {
-      return code;
+    /** Whether this is the no-op default. */
+    public boolean isNone() {
+      return this == NONE;
+    }
+
+    /** The style descriptor appended to the spoken language for the translation model. */
+    public String phrase() {
+      return phrase;
     }
 
     @Override
@@ -159,30 +169,34 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "providerRegion",
-      name = "Provider Region",
-      description =
-          "Optional geographic bias for OpenRouter provider routing, injected into the request when"
-              + " set. Leave on Auto (default) to let OpenRouter pick the best provider"
-              + " automatically. Used only by the Cloud backend.",
-      position = 3,
-      section = cloudOpenRouterSection)
-  default CloudRegion providerRegion() {
-    return CloudRegion.AUTO;
-  }
-
-  @ConfigItem(
       keyName = "targetLanguage",
       name = "Spoken Language",
       description =
-          "Language dialogue is spoken in. English (default) speaks the original line directly. Any"
+          "Language dialogue is spoken in. Type any language name (e.g. French, Brazilian"
+              + " Portuguese, Japanese). English (default) speaks the original line directly. Any"
               + " other language routes each line through a translation model first, preserving"
               + " names, places, and item terms, then voices the translation. Adds a translation"
               + " request per new line. Used only by the Cloud backend.",
-      position = 4,
+      position = 3,
       section = cloudOpenRouterSection)
   default String targetLanguage() {
     return "English";
+  }
+
+  @ConfigItem(
+      keyName = "globalQuirk",
+      name = "Global Quirk",
+      description =
+          "Optional delivery register layered onto every line, on top of the Spoken Language. None"
+              + " (default) changes nothing; any other value rewrites each line in that style (Gen Z"
+              + " slang, pirate speak, and so on) via the translation model, so it routes through"
+              + " that hop even for English. Registers are language-agnostic and compose with any"
+              + " Spoken Language. Leave this on None with English (or blank) language to skip the"
+              + " translation model entirely. Used only by the Cloud backend.",
+      position = 4,
+      section = cloudOpenRouterSection)
+  default GlobalQuirk globalQuirk() {
+    return GlobalQuirk.NONE;
   }
 
   @ConfigItem(

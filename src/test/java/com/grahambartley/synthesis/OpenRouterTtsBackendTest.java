@@ -34,8 +34,8 @@ public class OpenRouterTtsBackendTest {
     String key = "";
     int maxChars = 600;
     int speedPercent = 100;
-    TTSDialogueConfig.CloudRegion region = TTSDialogueConfig.CloudRegion.AUTO;
     String language = "English";
+    TTSDialogueConfig.GlobalQuirk quirk = TTSDialogueConfig.GlobalQuirk.NONE;
 
     @Override
     public String openRouterApiKey() {
@@ -53,13 +53,13 @@ public class OpenRouterTtsBackendTest {
     }
 
     @Override
-    public TTSDialogueConfig.CloudRegion providerRegion() {
-      return region;
+    public String targetLanguage() {
+      return language;
     }
 
     @Override
-    public String targetLanguage() {
-      return language;
+    public TTSDialogueConfig.GlobalQuirk globalQuirk() {
+      return quirk;
     }
   }
 
@@ -456,32 +456,105 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void providerRegionAppearsOnlyWhenConfigured() throws Exception {
+  public void englishWithNoQuirkBypassesTheTranslationModel() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
+    // Default language English, default quirk None: the line must go straight to speech with no
+    // translation hop, so a single enqueued speech response is enough.
     server.enqueue(
         new MockResponse()
             .setResponseCode(200)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
-    backend(config).synthesize(req());
-    JsonObject defaultBody =
-        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    assertFalse(
-        "a blank region adds no region field",
-        defaultBody.getAsJsonObject("provider").has("region"));
 
-    config.region = TTSDialogueConfig.CloudRegion.EU;
+    assertNotNull(backend(config).synthesize(req()));
+    assertEquals("English + no quirk makes exactly one (speech) call", 1, server.getRequestCount());
+    assertTrue(
+        "the only request is the speech call, never the translation model",
+        server.takeRequest().getPath().endsWith("/audio/speech"));
+  }
+
+  @Test
+  public void blankLanguageWithNoQuirkAlsoBypassesTranslation() {
+    TestConfig config = new TestConfig();
+    config.language = "";
+    assertFalse(
+        "a blank language with no quirk needs no translation",
+        OpenRouterTtsBackend.needsTranslation(backend(config).effectiveSpokenLanguage()));
+  }
+
+  @Test
+  public void combineLanguageAppendsTheQuirkOnlyWhenSet() {
+    assertEquals(
+        "no quirk leaves the language untouched",
+        "English",
+        OpenRouterTtsBackend.combineLanguage("English", TTSDialogueConfig.GlobalQuirk.NONE));
+    assertEquals(
+        "a quirk on English becomes a styled English target",
+        "English Gen Z slang",
+        OpenRouterTtsBackend.combineLanguage("English", TTSDialogueConfig.GlobalQuirk.GEN_Z));
+    assertEquals(
+        "a quirk layers onto a non-English language too",
+        "French pirate speak",
+        OpenRouterTtsBackend.combineLanguage("French", TTSDialogueConfig.GlobalQuirk.PIRATE));
+    assertEquals(
+        "a blank language defaults to English before the quirk",
+        "English Gen Z slang",
+        OpenRouterTtsBackend.combineLanguage("  ", TTSDialogueConfig.GlobalQuirk.GEN_Z));
+  }
+
+  @Test
+  public void globalQuirkRoutesEnglishThroughTranslationAndKeepsTheBaseLanguageCode()
+      throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = "English";
+    config.quirk = TTSDialogueConfig.GlobalQuirk.GEN_Z;
+    // Even with English as the base, the quirk forces the translation hop; it is served first.
+    server.enqueue(
+        new MockResponse().setResponseCode(200).setBody(chatResponse("no cap, well met")));
     server.enqueue(
         new MockResponse()
             .setResponseCode(200)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
-    backend(config).synthesize(req());
-    JsonObject regionBody =
+
+    backend(config)
+        .synthesize(
+            new SynthesisRequest(
+                "Well met.", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL));
+
+    RecordedRequest translation = server.takeRequest();
+    assertTrue(
+        "the quirk routes English through the translation hop",
+        translation.getPath().endsWith("/chat/completions"));
+    assertTrue(
+        "the quirk is carried in the system prompt as a styled English target",
+        translation.getBody().readUtf8().contains("Gen Z slang"));
+
+    JsonObject speech =
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
     assertEquals(
-        "a configured region biases routing",
-        "eu",
-        regionBody.getAsJsonObject("provider").get("region").getAsString());
+        "the rewritten line is what is voiced",
+        "no cap, well met",
+        speech.get("input").getAsString());
+    assertEquals(
+        "the language_code stays the base language, not the quirk",
+        "en-US",
+        speech.get("language_code").getAsString());
+  }
+
+  @Test
+  public void globalQuirkPartitionsTheCacheKey() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+    SynthesisRequest line =
+        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+
+    String plain = backend.cacheVariant(line);
+    assertFalse("plain English with no quirk adds no language fragment", plain.contains("|l"));
+
+    config.quirk = TTSDialogueConfig.GlobalQuirk.GEN_Z;
+    assertNotEquals(
+        "a quirk must not collide with the unquirked line", plain, backend.cacheVariant(line));
   }
 
   @Test

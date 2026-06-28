@@ -219,13 +219,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     if (profile != null) {
       variant.append("|p").append(profile.cacheKey());
     }
-    // A non-English target language re-keys the line: the audio is the translated speech, not the
-    // source words, so the same source text must not collide across languages. English (the
-    // default)
-    // adds nothing, so pre-translation cache entries stay valid.
-    String language = config.targetLanguage();
+    // A non-English target (or a global quirk) re-keys the line: the audio is the transformed
+    // speech, not the source words, so the same source text must not collide across languages or
+    // quirks. Plain English with no quirk adds nothing, so pre-translation cache entries stay
+    // valid.
+    String language = effectiveSpokenLanguage();
     if (needsTranslation(language)) {
-      variant.append("|l").append(language.trim().toLowerCase());
+      variant.append("|l").append(language.toLowerCase());
     }
     return variant.toString();
   }
@@ -235,6 +235,27 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     return language != null
         && !language.trim().isEmpty()
         && !language.trim().equalsIgnoreCase("English");
+  }
+
+  /**
+   * The spoken language actually requested of the model: the configured language with any global
+   * quirk appended, so "English" plus a Gen Z quirk becomes an "English Gen Z slang" target that
+   * routes through the translation hop and is rewritten in that style. A blank language defaults to
+   * English; the no-op quirk leaves the language untouched.
+   */
+  String effectiveSpokenLanguage() {
+    return combineLanguage(config.targetLanguage(), config.globalQuirk());
+  }
+
+  /**
+   * Appends a non-empty quirk phrase to the (blank-safe) base language, e.g. "French pirate speak".
+   */
+  static String combineLanguage(String language, TTSDialogueConfig.GlobalQuirk quirk) {
+    String base = language == null || language.trim().isEmpty() ? "English" : language.trim();
+    if (quirk == null || quirk.isNone()) {
+      return base;
+    }
+    return base + " " + quirk.phrase();
   }
 
   @Override
@@ -247,11 +268,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     String key = config.openRouterApiKey().trim();
     String voice = voiceMap.voiceFor(request.voice());
     String cappedText = capLength(request.text(), config.maxCloudCharsPerLine());
-    // Optional first hop: a non-English target language translates the (already capped) line before
-    // it is voiced, so the spoken transcript is the translation. A failed translation fails the
-    // line
-    // rather than voicing the wrong language or caching a mistranslation under the language key.
-    String language = config.targetLanguage();
+    // Optional first hop: a non-English target language (or a global quirk) routes the (already
+    // capped) line through the translation model before it is voiced, so the spoken transcript is
+    // the transformed text. A failed translation fails the line rather than voicing the wrong
+    // language or caching a mistranslation under the language key.
+    String language = effectiveSpokenLanguage();
     boolean translating = needsTranslation(language);
     String spokenText = cappedText;
     if (translating) {
@@ -314,18 +335,19 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         log.info("[TTS cloud] speed {}", speed / 100.0);
       }
     }
-    // A non-English target gets a BCP-47 language_code when we can map the name, so the voice
-    // pronounces the translated text natively; an unmapped language omits it and lets the model
-    // detect language from the transcript.
+    // A translated line gets a BCP-47 language_code from the base language (not the quirk) when we
+    // can map the name, so the voice pronounces the text natively; an unmapped language omits it
+    // and
+    // lets the model detect language from the transcript.
     if (translating) {
-      String code = LanguageCodes.codeFor(language.trim());
+      String code = LanguageCodes.codeFor(config.targetLanguage());
       if (code != null) {
         payload.addProperty("language_code", code);
       }
     }
-    // Route every call to the fastest provider (throughput sort, the :nitro equivalent) and apply
-    // the optional region bias. Identical block on the translation hop, so routing is consistent.
-    OpenRouterProvider.apply(payload, config.providerRegion().code());
+    // Route every call to the fastest provider (throughput sort, the :nitro equivalent). Identical
+    // block on the translation hop, so routing is consistent.
+    OpenRouterProvider.apply(payload);
 
     Request httpRequest =
         new Request.Builder()
