@@ -30,7 +30,8 @@ default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory keyword ma
 ## Decide what to change
 
 1. **Wrong/missing race, gender, or origin accent** (e.g. a woman voiced male, a talkable monster with no race, a foreigner sounding like the locals) -> `tools/overrides.json`.
-   - Set `ethnicity` to a `byEthnicity` key to fix where they're from; **omit** `ethnicity` to clear a wrong one the wiki inferred (a foreigner in Morytania -> drop it -> British default).
+   - An override **replaces** the table entry, so it must carry `race` + `gender`. `race` must be one of Human, Elf, Dwarf, Goblin, Gnome, Troll, Undead, Demon, Wizard; map a wiki race that is not one of these (Dorgeshuun -> Goblin, Vampyre -> Undead, Imp -> Demon, ...). A truly unmappable species (Serpent, Merfolk, ...) gets a `byId` style only.
+   - Set `ethnicity` to a `byEthnicity` key to fix where they're from; **omit** `ethnicity` to clear a wrong one the wiki inferred (a foreigner in Morytania -> drop it -> British default). Ethnicity is a no-op for non-human races (the racial accent wins), so only set it on Human/Unknown NPCs.
    - This is also how you make a non-region accent land via a dedicated ethnicity (e.g. Ak-Haranu -> `ethnicity: easternlands`).
 2. **A unique personality / a quirk accent that is not an ethnicity** -> `tools/profiles.json` `byId[id]`. Sparse: usually just `name` + `style`. Only set `accent`/`pace` for a genuine per-character quirk (most origin accents belong in `overrides.json` ethnicity instead, so you do not repeat an accent string across variant ids).
 3. **A whole new creature/lore accent** (vampyre, leprechaun, ...) -> add a `byCategory` entry (keywords match the display name, word-bounded, case-insensitive). Creature categories **define** the accent; **social-role** categories (royalty, knight, noble, monk, wizard) are **style-only** so the ethnicity accent shows through.
@@ -52,6 +53,8 @@ An NPC can have several variant ids, list them all in overrides.
 - Gemini renders British/European accents reliably; foreign accents (Italian, Egyptian, West African, Japanese) are inconsistent in the model, no prompt guarantees them.
 
 ## Apply and verify
+
+In both sources, `byId` and `npcs` entries are **one-line objects** (`"id": { ... }`); keep that shape so the diff stays small.
 
 ```bash
 python3 tools/generate_npc_voices.py        # regenerates npc-voices.json (needs network)
