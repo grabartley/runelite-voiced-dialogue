@@ -236,6 +236,18 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "enablePlayerPublicChat",
+      name = "Voice My Public Chat",
+      description =
+          "Speak your own public chat messages aloud using your player voice and profile. Voiced as"
+              + " typed; language translation and global quirk are never applied to public chat.",
+      position = 2,
+      section = generalSection)
+  default boolean enablePlayerPublicChat() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "playerVoice",
       name = "Player Voice",
       description = "Voice used for player dialogue",

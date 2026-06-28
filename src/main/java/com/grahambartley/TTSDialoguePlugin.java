@@ -25,7 +25,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.Player;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
@@ -36,6 +39,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.util.Text;
 import okhttp3.OkHttpClient;
 
 @Slf4j
@@ -76,6 +80,13 @@ public class TTSDialoguePlugin extends Plugin {
   @Inject private Gson gson;
 
   private String lastSpoken = "";
+
+  /**
+   * Whether a dialogue widget (NPC or player text) was open on the previous tick. Used to
+   * edge-trigger the close interrupt so audio is cut only on the open-&gt;closed transition, not on
+   * every idle tick, which would otherwise truncate public-chat clips played while walking around.
+   */
+  private boolean wasDialogueOpen;
 
   /**
    * Sentinel head-animation id meaning "no detectable expression" - a missing head widget (sprite /
@@ -211,20 +222,51 @@ public class TTSDialoguePlugin extends Plugin {
    * there is no head); it is resolved to an {@link Emotion} here and ridden into the request.
    */
   private void speakWithTTS(String text, String speaker, String npcName, int headAnimationId) {
-    if (audioService == null || !backendProvider.active().isAvailable()) {
-      return;
-    }
-    VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
     Emotion emotion = resolveLineEmotion(headAnimationId, config.enableEmotion());
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
-    // Character profile steers accent/style/pace and is rendered only by the cloud backend; emotion
-    // still layers on top. Resolved only when enabled, so a null profile keeps the request (and its
-    // cache key) byte-for-byte identical to the pre-profile behaviour.
-    CharacterProfile profile =
-        config.enableCharacterProfiles() ? voiceManager.resolveProfile(speaker, npcName) : null;
-    audioService.speak(new SynthesisRequest(text, voice, emotion, profile));
+    VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
+    dispatch(new SynthesisRequest(text, voice, emotion, resolveProfile(speaker, npcName)));
+  }
+
+  /**
+   * Voices the player's own public chat through the same player voice path as their dialogue lines,
+   * but always neutral (public chat has no chat-head to read an expression from) and with
+   * translation/global-quirk bypassed ({@code skipTranslation}), so chat is spoken exactly as
+   * typed. Reuses {@link #resolveProfile} and {@link #dispatch}, so it shares the availability
+   * guard, profile resolution, and cache/queue behaviour with dialogue.
+   */
+  private void speakPublicChat(String text) {
+    VoiceSpec voice = voiceManager.resolveVoice("player", null);
+    dispatch(
+        new SynthesisRequest(
+            text,
+            voice,
+            Emotion.NEUTRAL,
+            resolveProfile("player", null),
+            /* skipTranslation= */ true));
+  }
+
+  /**
+   * Resolves the per-speaker {@link CharacterProfile} when character profiles are enabled, else
+   * {@code null}. A null profile keeps the request (and its cache key) byte-for-byte identical to
+   * the pre-profile behaviour. Shared by every synthesis path (dialogue, prefetch, public chat).
+   */
+  private CharacterProfile resolveProfile(String speaker, String npcName) {
+    return config.enableCharacterProfiles() ? voiceManager.resolveProfile(speaker, npcName) : null;
+  }
+
+  /**
+   * Hands a built request to the off-thread synth pipeline, guarded by the same availability check
+   * every speak path needs: no-op when the plugin is mid-shutdown ({@code audioService} null) or
+   * the active backend is unavailable.
+   */
+  private void dispatch(SynthesisRequest request) {
+    if (audioService == null || !backendProvider.active().isAvailable()) {
+      return;
+    }
+    audioService.speak(request);
   }
 
   /**
@@ -315,13 +357,19 @@ public class TTSDialoguePlugin extends Plugin {
       prefetchVisibleOptions(options);
     }
 
-    if ((npcDialogue == null || npcDialogue.isHidden())
-        && (playerDialogue == null || playerDialogue.isHidden())) {
+    // Edge-trigger the close interrupt: cut dialogue audio (and reset dedup) only on the
+    // open->closed transition, not on every idle tick. Public chat plays with no dialogue open, so
+    // interrupting every idle tick would truncate it within one tick (<=600ms).
+    boolean dialogueOpen =
+        (npcDialogue != null && !npcDialogue.isHidden())
+            || (playerDialogue != null && !playerDialogue.isHidden());
+    if (shouldInterruptOnClose(dialogueOpen, wasDialogueOpen)) {
       if (audioService != null) {
         audioService.interrupt();
       }
       lastSpoken = "";
     }
+    wasDialogueOpen = dialogueOpen;
 
     // Reset prefetch only when the dialogue is fully gone (no text and no option list), so the
     // session cap and queued warming survive the option-select screen instead of being cancelled
@@ -333,6 +381,53 @@ public class TTSDialoguePlugin extends Plugin {
     if (fullyClosed && prefetcher != null) {
       prefetcher.reset();
     }
+  }
+
+  /**
+   * Pure decision for {@link #onGameTick}'s close interrupt: cut audio only on the open-&gt;closed
+   * transition, so the idle ticks while the player walks around (no dialogue open) never interrupt
+   * a playing public-chat clip. Factored out so it is unit-testable without a live client.
+   */
+  static boolean shouldInterruptOnClose(boolean dialogueOpen, boolean wasDialogueOpen) {
+    return wasDialogueOpen && !dialogueOpen;
+  }
+
+  /**
+   * Voices the local player's own public chat (default off). Only the player's {@code PUBLICCHAT}
+   * stream is spoken; other players' public messages, and every other chat type, are ignored. The
+   * message is cleaned with the same {@link #cleanDialogueText} as dialogue (stripping rank icons,
+   * colour and image tags) and voiced through the player path with translation bypassed.
+   */
+  @Subscribe
+  public void onChatMessage(ChatMessage event) {
+    if (!config.enablePlayerPublicChat()) {
+      return;
+    }
+    if (event.getType() != ChatMessageType.PUBLICCHAT) {
+      return;
+    }
+    Player local = client.getLocalPlayer();
+    if (local == null || !isSelfPublicChat(event.getName(), local.getName())) {
+      return;
+    }
+    String cleaned = cleanDialogueText(event.getMessage());
+    if (cleaned.isEmpty()) {
+      return;
+    }
+    speakPublicChat(cleaned);
+  }
+
+  /**
+   * Whether a public-chat event came from the local player. Both names are run through {@link
+   * Text#sanitize} first because {@code event.getName()} can carry clan/friend rank {@code
+   * <img=...>} icons and non-breaking spaces that the local player's raw name does not. Pure and
+   * null-safe (a null local name never matches) so it is unit-testable without a live client.
+   */
+  static boolean isSelfPublicChat(String eventName, String localName) {
+    if (eventName == null || localName == null) {
+      return false;
+    }
+    return Text.sanitize(eventName).equals(Text.sanitize(localName));
   }
 
   /**
@@ -355,8 +450,7 @@ public class TTSDialoguePlugin extends Plugin {
       return;
     }
     VoiceSpec voice = voiceManager.resolveVoice("player", null);
-    CharacterProfile profile =
-        config.enableCharacterProfiles() ? voiceManager.resolveProfile("player", null) : null;
+    CharacterProfile profile = resolveProfile("player", null);
     List<SynthesisRequest> candidates = new ArrayList<>(children.length);
     for (Widget child : children) {
       if (child == null) {

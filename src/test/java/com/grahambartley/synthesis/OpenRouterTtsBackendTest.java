@@ -616,6 +616,90 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void skipTranslationVoicesVerbatimUnderANonEnglishTarget() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = "French";
+    config.quirk = TTSDialogueConfig.GlobalQuirk.GEN_Z;
+    // A skip-translation line bypasses the hop entirely, so only the speech call is enqueued.
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    backend(config)
+        .synthesize(
+            new SynthesisRequest(
+                "Hello",
+                VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE),
+                Emotion.NEUTRAL,
+                null,
+                true));
+
+    assertEquals(
+        "skip-translation makes exactly one (speech) call, never the translation model",
+        1,
+        server.getRequestCount());
+    RecordedRequest speech = server.takeRequest();
+    assertTrue("the only request is the speech call", speech.getPath().endsWith("/audio/speech"));
+    JsonObject body = new JsonParser().parse(speech.getBody().readUtf8()).getAsJsonObject();
+    assertEquals(
+        "the transcript is the source text exactly as typed, untranslated",
+        "Hello",
+        body.get("input").getAsString());
+    assertFalse("an untranslated line carries no language_code", body.has("language_code"));
+  }
+
+  @Test
+  public void normalLineStillTranslatesWhenSkipTranslationIsOff() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = "French";
+    server.enqueue(new MockResponse().setResponseCode(200).setBody(chatResponse("Bonjour")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    backend(config)
+        .synthesize(
+            new SynthesisRequest(
+                "Hello",
+                VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE),
+                Emotion.NEUTRAL,
+                null,
+                false));
+
+    assertTrue(
+        "a normal request still runs the translation hop first",
+        server.takeRequest().getPath().endsWith("/chat/completions"));
+    assertTrue("then the speech call", server.takeRequest().getPath().endsWith("/audio/speech"));
+  }
+
+  @Test
+  public void skipTranslationOmitsTheLanguageFragmentFromTheCacheVariant() {
+    TestConfig config = new TestConfig();
+    config.language = "French";
+    OpenRouterTtsBackend backend = backend(config);
+    VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+
+    SynthesisRequest dialogue = new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false);
+    SynthesisRequest publicChat = new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, true);
+
+    assertTrue(
+        "a translated dialogue line still folds the language in",
+        backend.cacheVariant(dialogue).contains("|lfrench"));
+    assertFalse(
+        "a skip-translation line keeps the plain pre-translation key",
+        backend.cacheVariant(publicChat).contains("|l"));
+    assertNotEquals(
+        "so an untranslated public-chat clip never collides with a translated dialogue line of the"
+            + " same text",
+        backend.cacheVariant(dialogue),
+        backend.cacheVariant(publicChat));
+  }
+
+  @Test
   public void translationFailureFailsTheLineWithoutCallingSpeech() {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
