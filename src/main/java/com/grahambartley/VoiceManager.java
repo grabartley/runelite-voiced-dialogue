@@ -1,7 +1,9 @@
 package com.grahambartley;
 
+import com.grahambartley.data.LearnedNpcStore;
 import com.grahambartley.data.NPCAttributes;
 import com.grahambartley.data.NPCDemographicAnalyzer;
+import com.grahambartley.data.NpcLearningService;
 import com.grahambartley.data.NpcProfileTable;
 import com.grahambartley.synthesis.CharacterProfile;
 import com.grahambartley.synthesis.VoiceSpec;
@@ -162,6 +164,9 @@ public class VoiceManager {
   private final NPCDemographicAnalyzer demographicAnalyzer;
   private final NpcProfileTable profileTable;
 
+  /** Optional runtime wiki fallback for NPCs missing from the bundled table; null when off. */
+  private NpcLearningService learningService;
+
   public VoiceManager(TTSDialogueConfig config, Client client) {
     this.config = config;
     this.client = client;
@@ -169,6 +174,16 @@ public class VoiceManager {
     this.demographicAnalyzer.initialize();
     this.profileTable = new NpcProfileTable();
     this.profileTable.initialize();
+  }
+
+  /**
+   * Wires in the runtime "learn a new NPC" fallback: the analyzer consults {@code store} for NPCs
+   * missing from the bundled table, and an unknown NPC triggers a one-off background wiki lookup
+   * via {@code service} that populates {@code store} for subsequent lines.
+   */
+  public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
+    this.demographicAnalyzer.setLearnedStore(store);
+    this.learningService = service;
   }
 
   /**
@@ -193,6 +208,7 @@ public class VoiceManager {
 
     Integer npcId = null;
     String race = null;
+    String region = null;
     NPC npc = findNPCByName(npcName);
     if (npc != null) {
       NPCComposition composition = npc.getComposition();
@@ -202,16 +218,18 @@ public class VoiceManager {
       NPCAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
       if (attributes != null) {
         race = attributes.getRace();
+        region = attributes.getRegion();
       }
     }
 
-    NpcProfileTable.Resolution resolution = profileTable.resolveNpc(npcId, npcName, race);
+    NpcProfileTable.Resolution resolution = profileTable.resolveNpc(npcId, npcName, race, region);
     if (config.debugMode()) {
       log.info(
-          "[TTS profile] npc='{}' id={} race={} -> '{}' (source={}, accent='{}')",
+          "[TTS profile] npc='{}' id={} race={} region={} -> '{}' (source={}, accent='{}')",
           npcName,
           npcId == null ? "MISS" : npcId,
           race == null ? "UNKNOWN" : race,
+          region == null ? "-" : region,
           resolution.profile().name(),
           resolution.source(),
           resolution.profile().accent());
@@ -363,6 +381,13 @@ public class VoiceManager {
     NPCRace race = convertToNPCRace(attributes.getRace());
     NPCGender gender = convertToNPCGender(attributes.getGender());
     String source = "StaticTable".equals(attributes.getSource()) ? "table-hit" : "table-miss";
+
+    // An NPC unknown to the bundled table (and the learned cache) triggers a one-off background
+    // wiki
+    // lookup when the fallback is enabled, so the next line voices it correctly. No-op otherwise.
+    if (race == NPCRace.UNKNOWN && learningService != null && npc.getComposition() != null) {
+      learningService.considerLearning(npc.getComposition().getId(), npcName);
+    }
 
     // An unrecognised race falls back rather than silently borrowing the human voice, so the
     // fallback toggle stays meaningful.

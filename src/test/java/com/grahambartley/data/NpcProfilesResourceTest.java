@@ -9,8 +9,9 @@ import org.junit.Test;
 
 /**
  * Validates the character profiles actually bundled in {@code /npc-voices.json}: the section loads,
- * every race bucket resolves, the stated special accents hold, and the player and a bespoke NPC
- * resolve. Guards against a malformed or regenerated resource shipping broken profiles.
+ * every race bucket resolves, the stated special accents hold (race, region, and keyword), and the
+ * player and a bespoke NPC resolve. Guards against a malformed or regenerated resource shipping
+ * broken profiles.
  */
 public class NpcProfilesResourceTest {
 
@@ -34,14 +35,13 @@ public class NpcProfilesResourceTest {
       assertEquals(
           "race " + race + " resolves to its own bucket",
           "race:" + race,
-          table.resolveNpc(null, "someone", race).source());
+          table.resolveNpc(null, "someone", race, null).source());
     }
   }
 
   @Test
   public void everythingDefaultsToABritishAccent() {
-    // An NPC with no race and no keyword match must still get a British default.
-    CharacterProfile p = table.resolveNpc(null, "A Nameless Stranger", null).profile();
+    CharacterProfile p = table.resolveNpc(null, "A Nameless Stranger", null, null).profile();
     assertTrue("the default accent is British", p.accent().contains("British"));
   }
 
@@ -49,33 +49,69 @@ public class NpcProfilesResourceTest {
   public void statedSpecialAccentsHold() {
     assertTrue(
         "trolls sound South London / Brixton",
-        table.resolveNpc(null, "Mountain Troll", "Troll").profile().accent().contains("Brixton"));
+        table
+            .resolveNpc(null, "Mountain Troll", "Troll", null)
+            .profile()
+            .accent()
+            .contains("Brixton"));
     assertTrue(
         "dwarves sound Scottish",
-        table.resolveNpc(null, "Dwarf Miner", "Dwarf").profile().accent().contains("Scottish"));
+        table
+            .resolveNpc(null, "Dwarf Miner", "Dwarf", null)
+            .profile()
+            .accent()
+            .contains("Scottish"));
     assertTrue(
         "leprechauns sound Irish",
-        table.resolveNpc(null, "Tool Leprechaun", "Human").profile().accent().contains("Irish"));
+        table
+            .resolveNpc(null, "Tool Leprechaun", "Human", null)
+            .profile()
+            .accent()
+            .contains("Irish"));
     assertTrue(
         "vampyres sound Transylvanian / Dracula-esque",
         table
-            .resolveNpc(null, "Feral Vampyre", "Undead")
+            .resolveNpc(null, "Feral Vampyre", "Undead", null)
             .profile()
             .accent()
             .contains("Transylvanian"));
+  }
+
+  @Test
+  public void regionAccentsHoldFromTheBundledTable() {
     assertTrue(
-        "Fremennik sound Scandinavian",
+        "Kharidian desert locals sound Middle Eastern",
         table
-            .resolveNpc(null, "Thorvald the Warrior", "Human")
+            .resolveNpc(null, "Desert Trader", "Human", "kharidian")
             .profile()
             .accent()
-            .contains("Scandinavian"));
+            .contains("Middle Eastern"));
+    assertTrue(
+        "Menaphite locals sound Egyptian",
+        table
+            .resolveNpc(null, "Citizen", "Human", "menaphite")
+            .profile()
+            .accent()
+            .contains("Egyptian"));
+    assertTrue(
+        "Karamja locals sound West African",
+        table
+            .resolveNpc(null, "Trader", "Human", "karamja")
+            .profile()
+            .accent()
+            .contains("African"));
+    assertTrue(
+        "Fremennik locals sound Norse",
+        table
+            .resolveNpc(null, "Villager", "Human", "fremennik")
+            .profile()
+            .accent()
+            .contains("Norse"));
   }
 
   @Test
   public void aBespokePerNpcProfileResolvesByIdFromTheBundledTable() {
-    // Hans (id 3105) is in the iconic batch.
-    NpcProfileTable.Resolution r = table.resolveNpc(3105, "Hans", "Human");
+    NpcProfileTable.Resolution r = table.resolveNpc(3105, "Hans", "Human", null);
     assertTrue("the bespoke id contributes to the blend", r.source().contains("id:3105"));
     assertEquals("the bespoke name wins", "Hans", r.profile().name());
   }

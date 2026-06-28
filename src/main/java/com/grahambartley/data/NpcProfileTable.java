@@ -22,13 +22,13 @@ import lombok.extern.slf4j.Slf4j;
  * {@code tools/profiles.json}).
  *
  * <p>Resolution <em>combines</em> every matching layer: {@code default} (always complete), {@code
- * byRace[race]}, <em>every</em> {@code byCategory} entry whose keyword word-matches the display
- * name, and {@code byId[npcId]}. An NPC can be several things at once (a Fremennik human, a ghost
- * pirate), so all matches contribute: {@code style} accumulates across the layers, while {@code
- * name}, {@code accent}, and {@code pace} take the most specific layer that sets them. A bespoke
- * per-NPC entry therefore need only carry what is unique (usually a {@code name} and a {@code
- * style}); the rest falls through to the category, race, or British default. Every NPC resolves to
- * a complete {@link CharacterProfile}, whether or not it has a bespoke entry.
+ * byRace[race]}, {@code byRegion[region]}, <em>every</em> {@code byCategory} entry whose keyword
+ * word-matches the display name, and {@code byId[npcId]}. An NPC can be several things at once (a
+ * Fremennik human, a ghost pirate), so all matches contribute: {@code style} accumulates across the
+ * layers, while {@code name}, {@code accent}, and {@code pace} take the most specific layer that
+ * sets them. A bespoke per-NPC entry therefore need only carry what is unique (usually a {@code
+ * name} and a {@code style}); the rest falls through to the category, race, or British default.
+ * Every NPC resolves to a complete {@link CharacterProfile}, whether or not it has a bespoke entry.
  *
  * <p>The player is resolved separately: the {@code player} layer over the default, with the three
  * configured player fields (accent/style/pace) overriding when non-blank.
@@ -63,6 +63,7 @@ public final class NpcProfileTable {
   private CharacterProfile defaultProfile = BUILTIN_DEFAULT;
   private Layer playerLayer = null;
   private Map<String, Layer> byRace = Collections.emptyMap();
+  private Map<String, Layer> byRegion = Collections.emptyMap();
   private List<CategoryRule> byCategory = Collections.emptyList();
   private Map<Integer, Layer> byId = Collections.emptyMap();
   private boolean loaded = false;
@@ -89,8 +90,9 @@ public final class NpcProfileTable {
       parseProfiles(root.getAsJsonObject("profiles"));
       loaded = true;
       log.info(
-          "NPC profiles loaded: {} race, {} keyword categories, {} bespoke NPC overrides",
+          "NPC profiles loaded: {} race, {} region, {} keyword categories, {} bespoke NPC overrides",
           byRace.size(),
+          byRegion.size(),
           byCategory.size(),
           byId.size());
     } catch (Exception e) {
@@ -116,17 +118,8 @@ public final class NpcProfileTable {
 
     this.playerLayer = parseLayer(optObject(profiles, "player"));
 
-    Map<String, Layer> races = new HashMap<>();
-    JsonObject raceObj = optObject(profiles, "byRace");
-    if (raceObj != null) {
-      for (String race : raceObj.keySet()) {
-        if (isComment(race) || !raceObj.get(race).isJsonObject()) {
-          continue;
-        }
-        races.put(race.toLowerCase(Locale.ROOT), parseLayer(raceObj.getAsJsonObject(race)));
-      }
-    }
-    this.byRace = Collections.unmodifiableMap(races);
+    this.byRace = parseLayerMap(optObject(profiles, "byRace"));
+    this.byRegion = parseLayerMap(optObject(profiles, "byRegion"));
 
     List<CategoryRule> categories = new ArrayList<>();
     if (profiles.has("byCategory") && profiles.get("byCategory").isJsonArray()) {
@@ -168,19 +161,20 @@ public final class NpcProfileTable {
 
   /**
    * Resolves the complete profile for an NPC by <em>combining</em> every matching layer: the race
-   * bucket, every keyword category whose keyword is in the display name, and the per-NPC override.
-   * An NPC can be more than one thing at once (a Fremennik human, a ghost pirate), so all matches
-   * contribute. {@code style} accumulates across every contributing layer so the persona blends;
-   * {@code name}, {@code accent}, and {@code pace} are single-valued, so the most specific layer
-   * that sets each one wins (per-NPC override, then the last matching category, then race, then the
-   * default), which keeps a coherent accent and pace rather than stacking contradictory directions.
-   * Never returns {@code null}.
+   * bucket, the home-region accent, every keyword category whose keyword is in the display name,
+   * and the per-NPC override. An NPC can be more than one thing at once (a Fremennik human, a ghost
+   * pirate), so all matches contribute. {@code style} accumulates across every contributing layer
+   * so the persona blends; {@code name}, {@code accent}, and {@code pace} are single-valued, so the
+   * most specific layer that sets each one wins (per-NPC override, then the last matching category,
+   * then race, then the default), which keeps a coherent accent and pace rather than stacking
+   * contradictory directions. Never returns {@code null}.
    *
    * @param npcId the live NPC id, or {@code null} when unknown (no bespoke override is applied)
    * @param npcName the display name used for keyword matching, may be {@code null}
    * @param race the resolved race bucket (e.g. {@code "Troll"}), may be {@code null}
+   * @param region the NPC's home region accent key (e.g. {@code "kharidian"}), may be {@code null}
    */
-  public Resolution resolveNpc(Integer npcId, String npcName, String race) {
+  public Resolution resolveNpc(Integer npcId, String npcName, String race, String region) {
     // Contributing layers, least specific first, so a later layer wins single-valued fields.
     List<Layer> layers = new ArrayList<>();
     List<String> sources = new ArrayList<>();
@@ -189,6 +183,16 @@ public final class NpcProfileTable {
     if (raceLayer != null) {
       layers.add(raceLayer);
       sources.add("race:" + race);
+    }
+    // Region tints only the plain folk (Human / unknown race); a distinctive race keeps its own
+    // accent wherever it is found, so a dwarf stays gruff and Scottish even in the desert.
+    boolean plainRace =
+        race == null || race.equalsIgnoreCase("Human") || race.equalsIgnoreCase("Unknown");
+    Layer regionLayer =
+        (region == null || !plainRace) ? null : byRegion.get(region.toLowerCase(Locale.ROOT));
+    if (regionLayer != null) {
+      layers.add(regionLayer);
+      sources.add("region:" + region);
     }
     for (CategoryRule rule : matchCategories(npcName)) {
       layers.add(rule.layer());
@@ -292,6 +296,21 @@ public final class NpcProfileTable {
         layer.accent() != null ? layer.accent() : base.accent(),
         layer.style() != null ? layer.style() : base.style(),
         layer.pace() != null ? layer.pace() : base.pace());
+  }
+
+  /** Parses an object of {@code key -> sparse layer} (e.g. byRace, byRegion), keyed lower-case. */
+  private static Map<String, Layer> parseLayerMap(JsonObject obj) {
+    if (obj == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, Layer> map = new HashMap<>();
+    for (String key : obj.keySet()) {
+      if (isComment(key) || !obj.get(key).isJsonObject()) {
+        continue;
+      }
+      map.put(key.toLowerCase(Locale.ROOT), parseLayer(obj.getAsJsonObject(key)));
+    }
+    return Collections.unmodifiableMap(map);
   }
 
   /** Parses a sparse layer; absent fields stay {@code null} so they inherit. */

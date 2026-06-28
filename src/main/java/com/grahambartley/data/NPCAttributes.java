@@ -31,6 +31,9 @@ public class NPCAttributes {
   /** Additional notes or context about the classification */
   private String notes;
 
+  /** The NPC's home region accent key (e.g. "kharidian"), or null when not regionally distinct. */
+  private String region;
+
   /** Constructor for basic race/gender classification */
   public NPCAttributes(String race, String gender) {
     this.race = race;

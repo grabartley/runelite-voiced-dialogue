@@ -49,10 +49,21 @@ public class NPCDemographicAnalyzer {
   /** Immutable npcId -> {race, gender} table loaded once from the bundled resource. */
   private Map<Integer, NPCAttributes> voiceTable = Collections.emptyMap();
 
+  /**
+   * Optional writable cache of NPCs learned at runtime via the wiki fallback, consulted after the
+   * bundled table and before the default so a once-learned NPC voices correctly thereafter.
+   */
+  private LearnedNpcStore learnedStore;
+
   /** Loads the static lookup table from the bundled resource. */
   public void initialize() {
     voiceTable = loadVoiceTable();
     log.info("NPC voice table loaded with {} entries from {}", voiceTable.size(), TABLE_RESOURCE);
+  }
+
+  /** Wires in the runtime learned-NPC cache (the wiki fallback). */
+  public void setLearnedStore(LearnedNpcStore learnedStore) {
+    this.learnedStore = learnedStore;
   }
 
   /**
@@ -81,6 +92,13 @@ public class NPCDemographicAnalyzer {
     NPCAttributes attributes = voiceTable.get(npcId);
     if (attributes != null) {
       return attributes;
+    }
+    if (learnedStore != null) {
+      NPCAttributes learned = learnedStore.get(npcId);
+      if (learned != null) {
+        learned.setName(npcName);
+        return learned;
+      }
     }
     return defaultAttributes(npcId, npcName);
   }
@@ -133,6 +151,9 @@ public class NPCDemographicAnalyzer {
                   "StaticTable",
                   1.0);
           attributes.setNpcId(npcId);
+          if (entry.has("region") && !entry.get("region").isJsonNull()) {
+            attributes.setRegion(entry.get("region").getAsString());
+          }
           table.put(npcId, attributes);
         } catch (RuntimeException e) {
           log.warn("Skipping malformed NPC voice entry {}: {}", npcIdStr, e.getMessage());

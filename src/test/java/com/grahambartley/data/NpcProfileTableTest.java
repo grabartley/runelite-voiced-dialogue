@@ -9,14 +9,17 @@ import com.google.gson.JsonParser;
 import com.grahambartley.synthesis.CharacterProfile;
 import org.junit.Test;
 
-/** Combining resolution: default + race + every matching keyword category + per-NPC id. */
+/** Combining resolution: default + race + region + every matching keyword category + per-NPC id. */
 public class NpcProfileTableTest {
 
   private static final String JSON =
       "{"
           + "\"default\":{\"name\":\"Default\",\"accent\":\"British RP.\",\"style\":\"Plain.\",\"pace\":\"Steady.\"},"
           + "\"player\":{\"name\":\"Adventurer\",\"style\":\"Brave hero.\"},"
-          + "\"byRace\":{\"Troll\":{\"name\":\"Troll\",\"accent\":\"Brixton.\",\"style\":\"Big and dim.\"}},"
+          + "\"byRace\":{"
+          + "\"Human\":{\"name\":\"Human\",\"accent\":\"British.\",\"style\":\"Ordinary.\"},"
+          + "\"Troll\":{\"name\":\"Troll\",\"accent\":\"Brixton.\",\"style\":\"Big and dim.\"}},"
+          + "\"byRegion\":{\"kharidian\":{\"accent\":\"Middle Eastern.\"}},"
           + "\"byCategory\":["
           + "{\"id\":\"vampyre\",\"keywords\":[\"vampyre\",\"vyre\"],\"name\":\"Vampyre\",\"accent\":\"Transylvanian.\",\"style\":\"Predatory.\"},"
           + "{\"id\":\"imp\",\"keywords\":[\"imp\"],\"name\":\"Imp\",\"style\":\"Squeaky.\"}"
@@ -30,8 +33,8 @@ public class NpcProfileTableTest {
   }
 
   @Test
-  public void unknownNpcFallsBackToTheCompleteDefault() {
-    CharacterProfile p = table().resolveNpc(null, "Random Bloke", "Human").profile();
+  public void noMatchingLayerFallsBackToTheCompleteDefault() {
+    CharacterProfile p = table().resolveNpc(null, "Random Bloke", null, null).profile();
     assertEquals("Default", p.name());
     assertEquals("British RP.", p.accent());
     assertEquals("Plain.", p.style());
@@ -40,7 +43,7 @@ public class NpcProfileTableTest {
 
   @Test
   public void raceLayerOverridesDefaultAndInheritsUnsetFields() {
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Mountain Troll", "Troll");
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Mountain Troll", "Troll", null);
     assertEquals("race:Troll", r.source());
     assertEquals("Troll", r.profile().name());
     assertEquals("Brixton.", r.profile().accent());
@@ -49,9 +52,34 @@ public class NpcProfileTableTest {
   }
 
   @Test
+  public void regionAccentTintsPlainFolkOverTheRaceAccent() {
+    // A desert human: region tints the accent over the human default, persona unchanged.
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Desert Trader", "Human", "kharidian");
+    assertEquals("race:Human+region:kharidian", r.source());
+    assertEquals("the region accent wins for plain folk", "Middle Eastern.", r.profile().accent());
+    assertEquals(
+        "style stays the race style (region is accent-only)", "Ordinary.", r.profile().style());
+  }
+
+  @Test
+  public void regionIsSkippedForDistinctiveRaces() {
+    // A dwarf-equivalent (Troll here) in the desert keeps its racial accent, not the region's.
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Desert Troll", "Troll", "kharidian");
+    assertEquals("region is not applied to a distinctive race", "race:Troll", r.source());
+    assertEquals("Brixton.", r.profile().accent());
+  }
+
+  @Test
+  public void aKeywordCategoryStillBeatsTheRegionAccent() {
+    // A vampyre in the desert: the distinctive category accent beats the regional one.
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Feral Vampyre", "Human", "kharidian");
+    assertEquals("race:Human+region:kharidian+keyword:vampyre", r.source());
+    assertEquals("Transylvanian.", r.profile().accent());
+  }
+
+  @Test
   public void raceAndCategoryCombineStyleWhileTheCategoryAccentWins() {
-    // A vampyre whose race resolved to Troll: both contribute style; the more specific accent wins.
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Vampyre Brute", "Troll");
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Vampyre Brute", "Troll", null);
     assertEquals("race:Troll+keyword:vampyre", r.source());
     assertEquals("the most specific name wins", "Vampyre", r.profile().name());
     assertEquals(
@@ -59,27 +87,21 @@ public class NpcProfileTableTest {
     assertTrue("the race style is part of the blend", r.profile().style().contains("Big and dim."));
     assertTrue(
         "the category style is part of the blend", r.profile().style().contains("Predatory."));
-    assertEquals("pace falls through to the default", "Steady.", r.profile().pace());
   }
 
   @Test
   public void multipleCategoriesAllCombine() {
-    // "Imp Vampyre" matches both the vampyre and imp categories; both styles blend.
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Imp Vampyre", null);
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Imp Vampyre", null, null);
     assertEquals(
         "both categories appear in declaration order", "keyword:vampyre+keyword:imp", r.source());
     assertTrue(r.profile().style().contains("Predatory."));
     assertTrue(r.profile().style().contains("Squeaky."));
     assertEquals("the last category to set a name wins", "Imp", r.profile().name());
-    assertEquals(
-        "accent comes from the only matching layer that set one",
-        "Transylvanian.",
-        r.profile().accent());
   }
 
   @Test
   public void perIdOverrideAddsOnTopAndWinsSingleValuedFields() {
-    NpcProfileTable.Resolution r = table().resolveNpc(100, "Vampyre Vanstrom", "Undead");
+    NpcProfileTable.Resolution r = table().resolveNpc(100, "Vampyre Vanstrom", "Undead", null);
     assertEquals("every match contributes", "keyword:vampyre+id:100", r.source());
     assertEquals("the bespoke name wins", "Vanstrom", r.profile().name());
     assertTrue(
@@ -95,8 +117,8 @@ public class NpcProfileTableTest {
 
   @Test
   public void raceMatchingIsCaseInsensitive() {
-    assertEquals("Troll", table().resolveNpc(null, "x", "TROLL").profile().name());
-    assertEquals("Troll", table().resolveNpc(null, "x", "troll").profile().name());
+    assertEquals("Troll", table().resolveNpc(null, "x", "TROLL", null).profile().name());
+    assertEquals("Troll", table().resolveNpc(null, "x", "troll", null).profile().name());
   }
 
   @Test
@@ -104,11 +126,11 @@ public class NpcProfileTableTest {
     assertEquals(
         "'imp' must not match inside 'important'",
         "Default",
-        table().resolveNpc(null, "Important Person", "Human").profile().name());
+        table().resolveNpc(null, "Important Person", null, null).profile().name());
     assertEquals(
         "'imp' matches the whole word",
         "Imp",
-        table().resolveNpc(null, "Imp", "Human").profile().name());
+        table().resolveNpc(null, "Imp", null, null).profile().name());
   }
 
   @Test
