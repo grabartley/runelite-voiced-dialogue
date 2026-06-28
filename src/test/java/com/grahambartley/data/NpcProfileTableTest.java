@@ -9,7 +9,9 @@ import com.google.gson.JsonParser;
 import com.grahambartley.synthesis.CharacterProfile;
 import org.junit.Test;
 
-/** Combining resolution: default + race + region + every matching keyword category + per-NPC id. */
+/**
+ * Combining resolution: default + race + ethnicity + every matching keyword category + per-NPC id.
+ */
 public class NpcProfileTableTest {
 
   private static final String JSON =
@@ -19,7 +21,7 @@ public class NpcProfileTableTest {
           + "\"byRace\":{"
           + "\"Human\":{\"name\":\"Human\",\"accent\":\"British.\",\"style\":\"Ordinary.\"},"
           + "\"Troll\":{\"name\":\"Troll\",\"accent\":\"Brixton.\",\"style\":\"Big and dim.\"}},"
-          + "\"byRegion\":{\"kharidian\":{\"accent\":\"Middle Eastern.\"}},"
+          + "\"byEthnicity\":{\"kharidian\":{\"accent\":\"Middle Eastern.\"}},"
           + "\"byCategory\":["
           + "{\"id\":\"vampyre\",\"keywords\":[\"vampyre\",\"vyre\"],\"name\":\"Vampyre\",\"accent\":\"Transylvanian.\",\"style\":\"Predatory.\"},"
           + "{\"id\":\"imp\",\"keywords\":[\"imp\"],\"name\":\"Imp\",\"style\":\"Squeaky.\"}"
@@ -52,28 +54,29 @@ public class NpcProfileTableTest {
   }
 
   @Test
-  public void regionAccentTintsPlainFolkOverTheRaceAccent() {
-    // A desert human: region tints the accent over the human default, persona unchanged.
+  public void ethnicityAccentTintsPlainFolkOverTheRaceAccent() {
+    // A desert human: ethnicity tints the accent over the human default, persona unchanged.
     NpcProfileTable.Resolution r = table().resolveNpc(null, "Desert Trader", "Human", "kharidian");
-    assertEquals("race:Human+region:kharidian", r.source());
-    assertEquals("the region accent wins for plain folk", "Middle Eastern.", r.profile().accent());
+    assertEquals("race:Human+ethnicity:kharidian", r.source());
     assertEquals(
-        "style stays the race style (region is accent-only)", "Ordinary.", r.profile().style());
+        "the ethnicity accent wins for plain folk", "Middle Eastern.", r.profile().accent());
+    assertEquals(
+        "style stays the race style (ethnicity is accent-only)", "Ordinary.", r.profile().style());
   }
 
   @Test
-  public void regionIsSkippedForDistinctiveRaces() {
-    // A dwarf-equivalent (Troll here) in the desert keeps its racial accent, not the region's.
+  public void ethnicityIsSkippedForDistinctiveRaces() {
+    // A dwarf-equivalent (Troll here) in the desert keeps its racial accent, not the ethnicity's.
     NpcProfileTable.Resolution r = table().resolveNpc(null, "Desert Troll", "Troll", "kharidian");
-    assertEquals("region is not applied to a distinctive race", "race:Troll", r.source());
+    assertEquals("ethnicity is not applied to a distinctive race", "race:Troll", r.source());
     assertEquals("Brixton.", r.profile().accent());
   }
 
   @Test
-  public void aKeywordCategoryStillBeatsTheRegionAccent() {
-    // A vampyre in the desert: the distinctive category accent beats the regional one.
+  public void aKeywordCategoryStillBeatsTheEthnicityAccent() {
+    // A vampyre in the desert: the distinctive category accent beats the ethnicity one.
     NpcProfileTable.Resolution r = table().resolveNpc(null, "Feral Vampyre", "Human", "kharidian");
-    assertEquals("race:Human+region:kharidian+keyword:vampyre", r.source());
+    assertEquals("race:Human+ethnicity:kharidian+keyword:vampyre", r.source());
     assertEquals("Transylvanian.", r.profile().accent());
   }
 

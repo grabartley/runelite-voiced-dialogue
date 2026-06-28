@@ -52,14 +52,15 @@ public final class NpcLearningService {
             log.debug("[TTS learn] wiki had no usable entry for '{}' (id {})", npcName, npcId);
             return;
           }
-          store.learn(npcId, attributes.getRace(), attributes.getGender(), attributes.getRegion());
+          store.learn(
+              npcId, attributes.getRace(), attributes.getGender(), attributes.getEthnicity());
           log.info(
-              "[TTS learn] learned '{}' (id {}) from wiki -> race={} gender={} region={}",
+              "[TTS learn] learned '{}' (id {}) from wiki -> race={} gender={} ethnicity={}",
               npcName,
               npcId,
               attributes.getRace(),
               attributes.getGender(),
-              attributes.getRegion() == null ? "-" : attributes.getRegion());
+              attributes.getEthnicity() == null ? "-" : attributes.getEthnicity());
         });
   }
 }

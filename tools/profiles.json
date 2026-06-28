@@ -1,5 +1,5 @@
 {
-  "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byRegion[region] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
+  "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
   "default": {
     "name": "Gielinor Commoner",
     "accent": "Common British English, the plain, earthy speech of an ordinary medieval peasant or townsperson, not posh or refined.",
@@ -198,8 +198,8 @@
       "pace": "Measured and composed."
     }
   ],
-  "byRegion": {
-    "_comment": "Accent layer keyed by an NPC's home region (the wiki leagueRegion, baked per-NPC into npcs[id].region). Applied only to the plain folk (Human / unknown race) so it tints them with local colour, while distinctive races (dwarf, elf, troll, goblin, undead, demon, wizard) keep their racial accent wherever they are. A keyword category (vampyre, ghost) or a bespoke byId entry can still override. Sparse and accent-only, so it does not dilute the persona blend. Every league region has an accent: the desert and far lands follow the real-world cultures they are based on; the central British kingdoms use distinct English regional accents for variety. NPCs documented across several regions carry no single region and keep the common British default.",
+  "byEthnicity": {
+    "_comment": "Accent layer keyed by an NPC's ethnicity (where they are from, baked per-NPC into npcs[id].ethnicity; defaulted from the wiki leagueRegion and corrected in overrides.json for foreigners). Applied only to the plain folk (Human / unknown race) so it tints them with local colour, while distinctive races (dwarf, elf, troll, goblin, undead, demon, wizard) keep their racial accent wherever they are. A keyword category (vampyre, ghost) or a bespoke byId entry can still override. Sparse and accent-only, so it does not dilute the persona blend. The desert and far lands follow the real-world cultures they are based on; the central British kingdoms use distinct English regional accents for variety. NPCs with no single ethnicity keep the common British default.",
     "misthalin": {
       "accent": "Common British English, the plain, standard speech of Gielinor's central kingdom of Misthalin."
     },
@@ -235,6 +235,9 @@
     },
     "fremennik": {
       "accent": "A fantasy Norse accent, a Scandinavian-flavoured English in the manner of a Viking from the old sagas."
+    },
+    "easternlands": {
+      "accent": "A Japanese accent, refined and precise, of the distant Eastern Lands across the sea."
     }
   },
   "byId": {
@@ -269,6 +272,6 @@
     "822": { "name": "Oziach", "style": "A blunt, no-nonsense armour seller; gruff and dismissive, unimpressed and curt with strangers." },
     "9636": { "name": "Drezel", "style": "A meek, devout monk; gentle, humble, and earnest, soft-spoken and grateful for any aid." },
     "4280": { "name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Irish English." },
-    "2989": { "name": "Ak-Haranu", "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence.", "accent": "A Japanese accent, refined and precise, of the far Eastern Lands." }
+    "2989": { "name": "Ak-Haranu", "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence." }
   }
 }

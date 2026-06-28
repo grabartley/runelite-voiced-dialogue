@@ -207,28 +207,29 @@ public class VoiceManager {
 
     Integer npcId = null;
     String race = null;
-    String region = null;
+    String ethnicity = null;
     NPC npc = findNPCByName(npcName);
     if (npc != null) {
       npcId = npc.getId();
       NPCAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
       if (attributes != null) {
         race = attributes.getRace();
-        region = attributes.getRegion();
+        ethnicity = attributes.getEthnicity();
         // The id the analyzer actually matched (active or base), so a bespoke byId profile keyed by
         // the wiki id resolves even for transformed multiloc NPCs.
         npcId = attributes.getNpcId();
       }
     }
 
-    NpcProfileTable.Resolution resolution = profileTable.resolveNpc(npcId, npcName, race, region);
+    NpcProfileTable.Resolution resolution =
+        profileTable.resolveNpc(npcId, npcName, race, ethnicity);
     if (config.debugMode()) {
       log.info(
-          "[TTS profile] npc='{}' id={} race={} region={} -> '{}' (source={}, accent='{}')",
+          "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}')",
           npcName,
           npcId == null ? "MISS" : npcId,
           race == null ? "UNKNOWN" : race,
-          region == null ? "-" : region,
+          ethnicity == null ? "-" : ethnicity,
           resolution.profile().name(),
           resolution.source(),
           resolution.profile().accent());

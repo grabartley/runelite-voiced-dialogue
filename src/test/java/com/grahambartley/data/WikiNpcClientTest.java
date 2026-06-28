@@ -11,7 +11,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/** The runtime wiki NPC lookup: infobox parsing, race/region mapping, and graceful misses. */
+/** The runtime wiki NPC lookup: infobox parsing, race/ethnicity mapping, and graceful misses. */
 public class WikiNpcClientTest {
 
   private MockWebServer server;
@@ -37,7 +37,7 @@ public class WikiNpcClientTest {
   }
 
   @Test
-  public void parsesRaceGenderAndDesertRegion() {
+  public void parsesRaceGenderAndDesertEthnicity() {
     server.enqueue(
         new MockResponse()
             .setBody(
@@ -48,19 +48,19 @@ public class WikiNpcClientTest {
     NPCAttributes a = client.lookup("Some Trader");
     assertEquals("Human", a.getRace());
     assertEquals("Female", a.getGender());
-    assertEquals("kharidian", a.getRegion());
+    assertEquals("kharidian", a.getEthnicity());
     assertEquals("Wiki", a.getSource());
   }
 
   @Test
-  public void menaphiteLocationMapsToEgyptianRegion() {
+  public void menaphiteLocationMapsToEgyptianEthnicity() {
     server.enqueue(
         new MockResponse()
             .setBody(
                 pageBody(
                     "{{Infobox NPC\n|race=[[Human]]\n|gender=Male\n|leagueRegion=Desert\n"
                         + "|location=Sophanem\n|id=1\n}}")));
-    assertEquals("menaphite", client.lookup("Sophanem Guard").getRegion());
+    assertEquals("menaphite", client.lookup("Sophanem Guard").getEthnicity());
   }
 
   @Test
@@ -95,11 +95,11 @@ public class WikiNpcClientTest {
   }
 
   @Test
-  public void multiRegionNpcCarriesNoSingleRegion() {
-    assertNull(WikiNpcClient.regionKey("Desert, Misthalin", null));
-    assertNull(WikiNpcClient.regionKey("No", null));
-    assertEquals("fremennik", WikiNpcClient.regionKey("Fremennik", null));
-    assertEquals("varlamore", WikiNpcClient.regionKey("Varlamore", null));
+  public void multiRegionNpcCarriesNoSingleEthnicity() {
+    assertNull(WikiNpcClient.ethnicityKey("Desert, Misthalin", null));
+    assertNull(WikiNpcClient.ethnicityKey("No", null));
+    assertEquals("fremennik", WikiNpcClient.ethnicityKey("Fremennik", null));
+    assertEquals("varlamore", WikiNpcClient.ethnicityKey("Varlamore", null));
   }
 
   @Test

@@ -130,7 +130,7 @@ public class NPCDemographicAnalyzerTest {
     NPCAttributes a = analyzer.lookup(987001, "A New Elf");
     assertEquals("Elf", a.getRace());
     assertEquals("Female", a.getGender());
-    assertEquals("tirannwn", a.getRegion());
+    assertEquals("tirannwn", a.getEthnicity());
     assertEquals("Learned", a.getSource());
   }
 

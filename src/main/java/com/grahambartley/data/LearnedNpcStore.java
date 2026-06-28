@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * A small, writable on-disk cache of NPC race/gender/region the plugin has <em>learned</em> at
+ * A small, writable on-disk cache of NPC race/gender/ethnicity the plugin has <em>learned</em> at
  * runtime (via the wiki fallback) for NPCs missing from the bundled table, e.g. NPCs added to the
  * game since the last plugin update. It is a peer of the bundled table: {@link
  * NPCDemographicAnalyzer} consults it after the baked-in resource and before the default, so a
@@ -47,15 +47,15 @@ public final class LearnedNpcStore {
     }
     NPCAttributes copy = new NPCAttributes(stored.getRace(), stored.getGender(), "Learned", 0.9);
     copy.setNpcId(npcId);
-    copy.setRegion(stored.getRegion());
+    copy.setEthnicity(stored.getEthnicity());
     return copy;
   }
 
-  /** Records race/gender/region for an id and persists the whole store. */
-  public synchronized void learn(int npcId, String race, String gender, String region) {
+  /** Records race/gender/ethnicity for an id and persists the whole store. */
+  public synchronized void learn(int npcId, String race, String gender, String ethnicity) {
     NPCAttributes attributes = new NPCAttributes(race, gender, "Learned", 0.9);
     attributes.setNpcId(npcId);
-    attributes.setRegion(region);
+    attributes.setEthnicity(ethnicity);
     learned.put(npcId, attributes);
     persist();
   }
@@ -87,8 +87,8 @@ public final class LearnedNpcStore {
                   "Learned",
                   0.9);
           attributes.setNpcId(id);
-          if (entry.has("region") && !entry.get("region").isJsonNull()) {
-            attributes.setRegion(entry.get("region").getAsString());
+          if (entry.has("ethnicity") && !entry.get("ethnicity").isJsonNull()) {
+            attributes.setEthnicity(entry.get("ethnicity").getAsString());
           }
           learned.put(id, attributes);
         } catch (RuntimeException e) {
@@ -112,8 +112,8 @@ public final class LearnedNpcStore {
         JsonObject entry = new JsonObject();
         entry.addProperty("race", e.getValue().getRace());
         entry.addProperty("gender", e.getValue().getGender());
-        if (e.getValue().getRegion() != null) {
-          entry.addProperty("region", e.getValue().getRegion());
+        if (e.getValue().getEthnicity() != null) {
+          entry.addProperty("ethnicity", e.getValue().getEthnicity());
         }
         npcs.add(String.valueOf(e.getKey()), entry);
       }

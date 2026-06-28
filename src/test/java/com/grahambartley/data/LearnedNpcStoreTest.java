@@ -14,7 +14,7 @@ public class LearnedNpcStoreTest {
   private final Gson gson = new Gson();
 
   @Test
-  public void learnsAndReadsBackWithRegion() throws Exception {
+  public void learnsAndReadsBackWithEthnicity() throws Exception {
     Path file = Files.createTempDirectory("learned").resolve("learned-npcs.json");
     LearnedNpcStore store = new LearnedNpcStore(file, gson);
 
@@ -23,7 +23,7 @@ public class LearnedNpcStoreTest {
     NPCAttributes a = store.get(123);
     assertEquals("Dwarf", a.getRace());
     assertEquals("Female", a.getGender());
-    assertEquals("kharidian", a.getRegion());
+    assertEquals("kharidian", a.getEthnicity());
     assertEquals("Learned", a.getSource());
     assertEquals(123, a.getNpcId());
     assertNull("an unlearned id is absent", store.get(999));
@@ -38,7 +38,7 @@ public class LearnedNpcStoreTest {
     NPCAttributes a = reloaded.get(456);
     assertEquals("Human", a.getRace());
     assertEquals("Male", a.getGender());
-    assertNull("a null region is not persisted", a.getRegion());
+    assertNull("a null ethnicity is not persisted", a.getEthnicity());
     assertEquals(1, reloaded.size());
   }
 

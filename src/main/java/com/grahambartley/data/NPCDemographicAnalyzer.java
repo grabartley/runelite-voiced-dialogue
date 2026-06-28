@@ -160,8 +160,8 @@ public class NPCDemographicAnalyzer {
                   "StaticTable",
                   1.0);
           attributes.setNpcId(npcId);
-          if (entry.has("region") && !entry.get("region").isJsonNull()) {
-            attributes.setRegion(entry.get("region").getAsString());
+          if (entry.has("ethnicity") && !entry.get("ethnicity").isJsonNull()) {
+            attributes.setEthnicity(entry.get("ethnicity").getAsString());
           }
           table.put(npcId, attributes);
         } catch (RuntimeException e) {

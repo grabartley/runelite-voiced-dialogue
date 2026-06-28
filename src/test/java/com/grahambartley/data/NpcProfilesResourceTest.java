@@ -9,8 +9,8 @@ import org.junit.Test;
 
 /**
  * Validates the character profiles actually bundled in {@code /npc-voices.json}: the section loads,
- * every race bucket resolves, the stated special accents hold (race, region, and keyword), and the
- * player and a bespoke NPC resolve. Guards against a malformed or regenerated resource shipping
+ * every race bucket resolves, the stated special accents hold (race, ethnicity, and keyword), and
+ * the player and a bespoke NPC resolve. Guards against a malformed or regenerated resource shipping
  * broken profiles.
  */
 public class NpcProfilesResourceTest {
@@ -81,7 +81,7 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
-  public void regionAccentsHoldFromTheBundledTable() {
+  public void ethnicityAccentsHoldFromTheBundledTable() {
     assertTrue(
         "Kharidian desert locals sound Middle Eastern",
         table

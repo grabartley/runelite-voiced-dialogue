@@ -16,7 +16,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * Looks an NPC's race, gender and home region up on the Old School RuneScape Wiki at runtime, for
+ * Looks an NPC's race, gender and ethnicity up on the Old School RuneScape Wiki at runtime, for
  * NPCs missing from the bundled table (typically ones added to the game since the last plugin
  * update). It queries the MediaWiki API for the NPC's page lead wikitext and parses the {@code
  * Infobox NPC} fields, mirroring the offline generator ({@code tools/generate_npc_voices.py}) so a
@@ -60,7 +60,7 @@ public final class WikiNpcClient {
   }
 
   /**
-   * Resolves race/gender/region for an NPC by wiki page name, or {@code null} when it cannot be
+   * Resolves race/gender/ethnicity for an NPC by wiki page name, or {@code null} when it cannot be
    * found or parsed. The returned attributes carry source {@code "Wiki"}.
    */
   public NPCAttributes lookup(String npcName) {
@@ -97,11 +97,11 @@ public final class WikiNpcClient {
         return null; // no Infobox NPC race -> not a usable NPC page (disambiguation, monster, ...)
       }
       String gender = normaliseGender(firstField(GENDER, wikitext));
-      String region =
-          regionKey(firstField(LEAGUE_REGION, wikitext), firstField(LOCATION, wikitext));
+      String ethnicity =
+          ethnicityKey(firstField(LEAGUE_REGION, wikitext), firstField(LOCATION, wikitext));
       NPCAttributes attributes = new NPCAttributes(race, gender, "Wiki", 0.9);
       attributes.setName(npcName);
-      attributes.setRegion(region);
+      attributes.setEthnicity(ethnicity);
       return attributes;
     } catch (Exception e) {
       log.debug("Wiki lookup for '{}' failed: {}", npcName, e.getMessage());
@@ -200,8 +200,8 @@ public final class WikiNpcClient {
     return "Male";
   }
 
-  /** Maps a single wiki leagueRegion onto a region accent key; mirrors the generator. */
-  static String regionKey(String leagueRegion, String location) {
+  /** Maps a single wiki leagueRegion onto an ethnicity accent key; mirrors the generator. */
+  static String ethnicityKey(String leagueRegion, String location) {
     if (leagueRegion == null) {
       return null;
     }

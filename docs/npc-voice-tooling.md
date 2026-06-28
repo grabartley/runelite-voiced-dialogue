@@ -8,10 +8,10 @@ are no network calls or large downloads when choosing a voice.
 ## Files
 
 - `tools/generate_npc_voices.py` - the generator. Pulls every NPC's race, gender
-  and home region from the Old School RuneScape Wiki, merges the curated
+  and ethnicity from the Old School RuneScape Wiki, merges the curated
   overrides, embeds the voice profiles, and writes the bundled resource.
 - `tools/overrides.json` - hand-curated, **authoritative** `npcId -> {race,
-  gender, region?}` entries. These always win over the wiki, for pinning the rare
+  gender, ethnicity?}` entries. These always win over the wiki, for pinning the rare
   NPC the wiki gets wrong or does not cover.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
   (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
@@ -27,7 +27,7 @@ which exposes `race`, `gender`, `leagueRegion`, `location` and one or more cache
 1. Enumerates every main-namespace page transcluding `Template:Infobox NPC` (via
    the MediaWiki `embeddedin` API).
 2. Fetches each page's lead wikitext in batches and parses every infobox.
-3. Maps each cache id to `{race, gender, region}`.
+3. Maps each cache id to `{race, gender, ethnicity}`.
 
 Because race and gender come straight from the wiki, townsfolk get the correct
 gender (e.g. Cecilia is Female) and newly released NPCs (Varlamore, etc.) are
@@ -42,7 +42,7 @@ name still resolves to a documented NPC is covered too.
 > **Coverage notes.** The live client reports a transformed/multiloc NPC's
 > *active* id, which can differ from its base composition id; the runtime resolves
 > by the active id first (then the base id) to match the wiki. Combat creatures use
-> a separate `Infobox Monster` that carries **no race/gender/region**, so they
+> a separate `Infobox Monster` that carries **no race/gender/ethnicity**, so they
 > cannot be auto-derived; the handful of *talkable* monsters (e.g. TzHaar-Mej) are
 > pinned in `overrides.json`. Anything still unknown (a brand-new NPC) is left to
 > the runtime auto-learn fallback.
@@ -55,12 +55,13 @@ name still resolves to a documented NPC is covered too.
   sound country Irish) even though they share the small/high goblin voice timbre.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
-- **Region.** The wiki `leagueRegion` (the NPC's home region) maps to a region
-  accent key. `Desert` splits into `kharidian` (Middle Eastern) and `menaphite`
-  (Egyptian, for the Sophanem/Menaphos cities). An NPC documented across several
-  regions has no single home, so it carries no region and keeps the British
-  default. Region is an **origin** signal, not where the NPC is standing, so a
-  Varrock guard exploring Karamja still sounds Misthalin.
+- **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
+  proxy for ethnicity (where they are from) and maps to an ethnicity accent key.
+  `Desert` splits into `kharidian` (Middle Eastern) and `menaphite` (Egyptian, for
+  the Sophanem/Menaphos cities). An NPC documented across several league regions
+  has no single ethnicity, so it keeps the British default. Ethnicity is an
+  **origin** signal, not where the NPC is standing, so a Varrock guard exploring
+  Karamja still sounds Misthalin; a foreigner is corrected in `overrides.json`.
 
 ## Regenerate the table
 
@@ -96,13 +97,13 @@ local-only correction, or to pin a talkable monster the wiki splits into
 }
 ```
 
-The optional `name` field is documentation only. `region` is also optional. Find
+The optional `name` field is documentation only. `ethnicity` is also optional (set a byEthnicity key, or omit to clear a wrong one). Find
 an NPC's id with the RuneLite developer tools, the wiki, or **Debug Mode** in the
 plugin (it logs the id and chosen voice/profile per line).
 
 ## Character voice profiles (cloud)
 
-Alongside the `npcId -> {race, gender, region}` table, the bundled resource
+Alongside the `npcId -> {race, gender, ethnicity}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini) backend
 delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
 PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
@@ -124,7 +125,7 @@ the most specific layer that sets each one wins.
 1. `default` - the global British fallback. **Must be complete** (all four of
    `name`, `accent`, `style`, `pace`). Every other layer is sparse.
 2. `byRace[race]` - one per race bucket.
-3. `byRegion[region]` - a home-region accent. Applied **only to the plain folk**
+3. `byEthnicity[ethnicity]` - an ethnicity accent. Applied **only to the plain folk**
    (Human / unknown race) so distinctive races keep their racial accent wherever
    they are. Every league region has an accent: the far lands follow the
    real-world cultures they are based on (Desert -> Middle Eastern,
@@ -141,7 +142,7 @@ the most specific layer that sets each one wins.
    carry only what is unique to the character (usually `name` + `style`); its
    style is added on top of the blend, and accent and pace inherit unless it sets
    them. This is the highest-precedence layer, so it can pin any character's
-   delivery regardless of region.
+   delivery regardless of ethnicity.
 
 Player lines use the `player` layer over the default; the three player fields in
 the plugin config (accent/style/pace) override it at runtime when non-blank.

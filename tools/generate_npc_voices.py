@@ -10,7 +10,7 @@ Data source: the Old School RuneScape Wiki (https://oldschool.runescape.wiki),
 which is authoritative and current. Every NPC page transcludes
 ``Template:Infobox NPC`` and exposes ``race``, ``gender``, ``leagueRegion``,
 ``location`` and one or more cache ``id``s. We enumerate those pages, parse the
-infoboxes, and map each id -> {race, gender, region}. This replaces the older
+infoboxes, and map each id -> {race, gender, ethnicity}. This replaces the older
 heuristic name classifier: race and gender now come straight from the wiki, so
 townsfolk get the correct gender (e.g. Cecilia is Female) and newer NPCs
 (Varlamore, etc.) are covered as soon as the wiki documents them.
@@ -98,17 +98,17 @@ RACE_BUCKET_RULES = [
 ]
 RACE_BUCKET_RULES = [(re.compile(p, re.IGNORECASE), b) for p, b in RACE_BUCKET_RULES]
 
-# leagueRegion (+ a Menaphite location refinement) -> region accent key in
-# tools/profiles.json byRegion. Regions with no real-world-distinct accent
-# (Misthalin, Asgarnia, Kandarin, Varlamore, Wilderness, Zeah, ...) map to None
-# and just keep the British default.
+# Sophanem/Menaphos are split out of the Desert league region into the Menaphite
+# (Egyptian) ethnicity by matching the NPC's location text.
 MENAPHITE_HINT = re.compile(r"sophanem|menaphos|menaphite|necropolis", re.IGNORECASE)
 
-# Single wiki leagueRegion -> region accent key in tools/profiles.json byRegion.
-# "Desert" is split into kharidian/menaphite by location below. Values not listed
-# here (No, General, N/A, ...) and any NPC documented across several regions
-# (comma- or &-separated) carry no single home and keep the British default.
-SINGLE_REGION = {
+# Single wiki leagueRegion -> ethnicity accent key in tools/profiles.json byEthnicity.
+# leagueRegion (where an NPC is found) is the default proxy for ethnicity (where they
+# are from); a foreigner is corrected in overrides.json. "Desert" is split into
+# kharidian/menaphite by location. Values not listed here (No, General, N/A, ...) and
+# any NPC documented across several regions (comma- or &-separated) carry no single
+# ethnicity and keep the British default.
+SINGLE_ETHNICITY = {
     "misthalin": "misthalin",
     "asgarnia": "asgarnia",
     "kandarin": "kandarin",
@@ -122,16 +122,16 @@ SINGLE_REGION = {
 }
 
 
-def region_key(league_region, location):
+def ethnicity_key(league_region, location):
     if not league_region:
         return None
     lr = league_region.strip()
     if "," in lr or "&" in lr:
-        return None  # documented in several regions -> no single home accent
+        return None  # documented in several regions -> no single ethnicity
     key = lr.lower()
     if key == "desert":
         return "menaphite" if location and MENAPHITE_HINT.search(location) else "kharidian"
-    return SINGLE_REGION.get(key)
+    return SINGLE_ETHNICITY.get(key)
 
 
 def bucket_for_race(race_text):
@@ -313,11 +313,11 @@ def build_table_from_wiki(limit=None):
             race = bucket_from_categories(categories)
         race = race or "Human"
         gender = normalise_gender(first_field(wikitext, "gender"))
-        region = region_key(
+        ethnicity = ethnicity_key(
             first_field(wikitext, "leagueRegion"), first_field(wikitext, "location"))
         entry = {"race": race, "gender": gender}
-        if region:
-            entry["region"] = region
+        if ethnicity:
+            entry["ethnicity"] = ethnicity
         # First page to claim a name wins, so the canonical NPC page beats a stray transclusion.
         key = normalize_name(title)
         if key and key not in name_map:
@@ -354,9 +354,9 @@ def apply_overrides(table, overrides):
         if gender not in VALID_GENDERS:
             raise ValueError(f"Override {key} has invalid gender '{gender}'")
         merged = {"race": race, "gender": gender}
-        region = entry.get("region")
-        if region:
-            merged["region"] = region
+        ethnicity = entry.get("ethnicity")
+        if ethnicity:
+            merged["ethnicity"] = ethnicity
         table[npc_id] = merged
     return len(override_npcs)
 
@@ -413,12 +413,12 @@ def main():
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
 
-    race_counts, gender_counts, region_counts = {}, {}, {}
+    race_counts, gender_counts, ethnicity_counts = {}, {}, {}
     for v in table.values():
         race_counts[v["race"]] = race_counts.get(v["race"], 0) + 1
         gender_counts[v["gender"]] = gender_counts.get(v["gender"], 0) + 1
-        if "region" in v:
-            region_counts[v["region"]] = region_counts.get(v["region"], 0) + 1
+        if "ethnicity" in v:
+            ethnicity_counts[v["ethnicity"]] = ethnicity_counts.get(v["ethnicity"], 0) + 1
 
     out = {
         "_meta": {
@@ -427,7 +427,7 @@ def main():
                            "tools/generate_npc_voices.py from the Old School RuneScape Wiki "
                            "(Infobox NPC). Do not hand-edit; edit tools/overrides.json or "
                            "tools/profiles.json and regenerate.",
-            "schema": "npcs[id] = { race, gender, region? }",
+            "schema": "npcs[id] = { race, gender, ethnicity? }",
             "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location), "
                       "cross-referenced by name against a full id dump for variant ids, "
                       "+ curated tools/overrides.json; profiles from tools/profiles.json.",
@@ -437,7 +437,7 @@ def main():
             "overrides_applied": override_count,
             "race_counts": dict(sorted(race_counts.items())),
             "gender_counts": dict(sorted(gender_counts.items())),
-            "region_counts": dict(sorted(region_counts.items())),
+            "ethnicity_counts": dict(sorted(ethnicity_counts.items())),
             "profiles_bespoke": len(
                 [k for k in (profiles.get("byId") or {}) if not k.startswith("_")]),
         },
@@ -453,7 +453,7 @@ def main():
     print(f"Wrote {len(npcs)} NPC entries from {pages_with_ids} pages to {args.out}", file=sys.stderr)
     print(f"  races:   {out['_meta']['race_counts']}", file=sys.stderr)
     print(f"  genders: {out['_meta']['gender_counts']}", file=sys.stderr)
-    print(f"  regions: {out['_meta']['region_counts']}", file=sys.stderr)
+    print(f"  ethnicities: {out['_meta']['ethnicity_counts']}", file=sys.stderr)
 
 
 if __name__ == "__main__":
