@@ -6,15 +6,16 @@
     "npc_pages": 5899,
     "count": 13663,
     "name_matched_ids": 713,
-    "overrides_applied": 713,
+    "overrides_applied": 737,
     "race_counts": {
       "Demon": 753,
       "Dwarf": 517,
       "Elf": 333,
       "Gnome": 263,
       "Goblin": 334,
-      "Human": 10119,
-      "Monkey": 67,
+      "Gorilla": 11,
+      "Human": 10116,
+      "Monkey": 59,
       "Troll": 451,
       "Undead": 819,
       "Wizard": 7
@@ -27,7 +28,7 @@
       "asgarnia": 569,
       "easternlands": 2,
       "fremennik": 634,
-      "kandarin": 1066,
+      "kandarin": 1070,
       "karamja": 184,
       "kharidian": 522,
       "kourend": 796,
@@ -84,6 +85,12 @@
         "accent": "Bright, casual island English, the quick, chattery speech of a tropical islander.",
         "style": "A lively, quick-witted monkey from a tropical island. Fast, chattery, and expressive, hopping between mischief and earnestness with restless energy.",
         "pace": "Quick and animated, words tripping over each other in bursts."
+      },
+      "Gorilla": {
+        "name": "Gorilla",
+        "accent": "Deep, booming English, the low rumbling growl of a huge silverback ape.",
+        "style": "An enormous, powerful gorilla. A very deep, booming, guttural voice that rumbles from the chest, primal and commanding, with a slow, heavy weight behind every word.",
+        "pace": "Slow and ponderous, each utterance landing with deliberate heft."
       },
       "Gnome": {
         "name": "Gnome",
@@ -25789,12 +25796,12 @@
       "ethnicity": "kandarin"
     },
     "1464": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "1465": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
@@ -41193,12 +41200,12 @@
       "gender": "Male"
     },
     "5247": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "5248": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
@@ -41228,7 +41235,7 @@
       "ethnicity": "kandarin"
     },
     "5254": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
@@ -41272,8 +41279,9 @@
       "ethnicity": "kandarin"
     },
     "5263": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Monkey",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "5264": {
       "race": "Monkey",
@@ -41327,20 +41335,22 @@
       "gender": "Male"
     },
     "5275": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Gorilla",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "5276": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Gorilla",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "5277": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "5278": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
@@ -48105,13 +48115,14 @@
       "gender": "Male"
     },
     "7098": {
-      "race": "Monkey",
+      "race": "Gorilla",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "7099": {
-      "race": "Monkey",
-      "gender": "Male"
+      "race": "Gorilla",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "7100": {
       "race": "Gnome",

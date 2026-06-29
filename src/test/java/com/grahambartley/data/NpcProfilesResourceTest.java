@@ -31,7 +31,10 @@ public class NpcProfilesResourceTest {
   @Test
   public void everyRaceBucketResolvesToItsOwnLayer() {
     for (String race :
-        new String[] {"Human", "Elf", "Dwarf", "Goblin", "Troll", "Undead", "Demon", "Wizard"}) {
+        new String[] {
+          "Human", "Elf", "Dwarf", "Goblin", "Monkey", "Gorilla", "Troll", "Undead", "Demon",
+          "Wizard"
+        }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
           "race:" + race,
@@ -78,6 +81,9 @@ public class NpcProfilesResourceTest {
             .profile()
             .accent()
             .contains("Transylvanian"));
+    assertTrue(
+        "gorillas sound deep and booming, not chattery island monkey",
+        table.resolveNpc(null, "Gorilla", "Gorilla", null).profile().accent().contains("booming"));
   }
 
   @Test

@@ -79,14 +79,16 @@ DEFAULT_SUMMARY_URL = (
     "https://raw.githubusercontent.com/0xNeffarion/osrsreboxed-db/master/docs/npcs-summary.json"
 )
 
-VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Troll", "Undead", "Demon", "Wizard"}
+VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
+               "Demon", "Wizard"}
 VALID_GENDERS = {"Male", "Female"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
-# Wiki race text -> the nine voice buckets (VoiceProfile). Buckets are
+# Wiki race text -> the voice buckets (VoiceProfile). Buckets are
 # voice-categorical, not lore-accurate: lore-distinct creatures map to the
 # closest available voice (gnome -> Goblin, ogre/cyclops -> Troll, vampyre ->
-# Undead, dragon/TzHaar -> Demon). Checked in order, first hit wins.
+# Undead, dragon/TzHaar -> Demon). Checked in order, first hit wins, so gorilla
+# is matched before monkey to keep apes off the chattery island voice.
 RACE_BUCKET_RULES = [
     (r"vampyre|vampire|\bvyre\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|"
      r"revenant|mummy|banshee|spectre|wraith|ankou|lich|reanimat", "Undead"),
@@ -96,7 +98,8 @@ RACE_BUCKET_RULES = [
     (r"dwarf|dwarven", "Dwarf"),
     (r"\belf\b|\belves\b|elven|gnome elf", "Elf"),
     (r"troll|\bgiant\b|cyclops|ogre|\bent\b|\bgolem\b|\bhuman.*giant", "Troll"),
-    (r"monkey|gorilla|primate|baboon|mandril", "Monkey"),
+    (r"gorilla", "Gorilla"),
+    (r"monkey|primate|baboon|mandril", "Monkey"),
     (r"\bhuman\b|\bman\b|\bwoman\b|\bgnome child\b", "Human"),
 ]
 RACE_BUCKET_RULES = [(re.compile(p, re.IGNORECASE), b) for p, b in RACE_BUCKET_RULES]
@@ -420,21 +423,35 @@ def main():
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--limit", type=int, default=None,
                         help="Cap the number of NPC pages (for quick test runs).")
+    parser.add_argument("--base", default=None,
+                        help="Re-apply overrides/profiles onto an existing npc-voices.json offline, "
+                             "skipping the wiki + summary fetch. Use for overrides/profiles-only "
+                             "changes to get a minimal, deterministic diff with no wiki drift.")
     args = parser.parse_args()
 
     profiles = validate_profiles(load_json(args.profiles))
     overrides = load_json(args.overrides)
 
-    table, page_count, pages_with_ids, name_map = build_table_from_wiki(limit=args.limit)
-    name_matched = 0
-    if args.summary:
-        try:
-            summary = fetch_json_url(args.summary)
-            name_matched = fill_from_summary(table, name_map, summary)
-            print(f"  name cross-ref covered {name_matched} extra ids from the id dump",
-                  file=sys.stderr)
-        except Exception as exc:  # noqa: BLE001 - tooling, surface and continue
-            print(f"  (skipping name cross-ref: {exc})", file=sys.stderr)
+    if args.base:
+        base = load_json(args.base)
+        table = {int(npc_id): entry for npc_id, entry in base["npcs"].items()}
+        base_meta = base.get("_meta", {})
+        page_count = base_meta.get("npc_pages", 0)
+        pages_with_ids = page_count
+        name_matched = base_meta.get("name_matched_ids", 0)
+        print(f"Seeded {len(table)} entries from {args.base} (offline; no wiki fetch)",
+              file=sys.stderr)
+    else:
+        table, page_count, pages_with_ids, name_map = build_table_from_wiki(limit=args.limit)
+        name_matched = 0
+        if args.summary:
+            try:
+                summary = fetch_json_url(args.summary)
+                name_matched = fill_from_summary(table, name_map, summary)
+                print(f"  name cross-ref covered {name_matched} extra ids from the id dump",
+                      file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001 - tooling, surface and continue
+                print(f"  (skipping name cross-ref: {exc})", file=sys.stderr)
     override_count = apply_overrides(table, overrides)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}

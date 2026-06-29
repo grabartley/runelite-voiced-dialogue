@@ -23,6 +23,7 @@ public class GeminiVoiceMapTest {
     NPCRace.DWARF,
     NPCRace.GOBLIN,
     NPCRace.MONKEY,
+    NPCRace.GORILLA,
     NPCRace.TROLL,
     NPCRace.UNDEAD,
     NPCRace.DEMON,

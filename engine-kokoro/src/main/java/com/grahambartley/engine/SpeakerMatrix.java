@@ -30,6 +30,8 @@ final class SpeakerMatrix {
   private static final int GOBLIN_FEMALE = 10; // af_sky
   private static final int MONKEY_MALE = 15; // am_liam
   private static final int MONKEY_FEMALE = 4; // af_jessica
+  private static final int GORILLA_MALE = 11; // am_adam
+  private static final int GORILLA_FEMALE = 20; // bf_alice
   private static final int TROLL_MALE = 17; // am_onyx
   private static final int TROLL_FEMALE = 9; // af_sarah
   private static final int UNDEAD_MALE = 12; // am_echo
@@ -67,6 +69,8 @@ final class SpeakerMatrix {
         return female ? WIZARD_FEMALE : WIZARD_MALE;
       case "MONKEY":
         return female ? MONKEY_FEMALE : MONKEY_MALE;
+      case "GORILLA":
+        return female ? GORILLA_FEMALE : GORILLA_MALE;
       case "HUMAN":
       default:
         return female ? HUMAN_FEMALE : HUMAN_MALE;

@@ -53,6 +53,9 @@ name still resolves to a documented NPC is covered too.
   voice-categorical, not lore-accurate: ogre/cyclops -> Troll, vampyre -> Undead,
   dragon/TzHaar -> Demon. Gnomes are kept as their own `Gnome` race (so they can
   sound country Irish) even though they share the small/high goblin voice timbre.
+  Gorillas are their own `Gorilla` race (deep and booming, matched before monkey)
+  so apes are kept off the chattery island-monkey voice; the explicitly demonic
+  Monkey Madness 2 gorillas stay `Demon` via overrides.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
@@ -71,6 +74,16 @@ From the repo root (needs network access to the wiki):
 python3 tools/generate_npc_voices.py
 # or a quick partial run for testing:
 python3 tools/generate_npc_voices.py --limit 500
+```
+
+For an **overrides- or profiles-only** change (no new wiki coverage needed), use
+the offline `--base` mode instead. It re-applies `overrides.json` and re-embeds
+`profiles.json` onto the existing table without the live wiki scrape, so the diff
+is minimal and deterministic (only the changed ids, the embedded profiles, and
+the `_meta` counts) with no wiki drift:
+
+```bash
+python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json
 ```
 
 Then build and test:
