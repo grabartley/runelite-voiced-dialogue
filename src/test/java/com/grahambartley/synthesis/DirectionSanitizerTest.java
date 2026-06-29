@@ -40,14 +40,23 @@ public class DirectionSanitizerTest {
   }
 
   @Test
-  public void capsFieldLength() {
-    StringBuilder longField = new StringBuilder();
-    for (int i = 0; i < 500; i++) {
-      longField.append("a");
+  public void capsOnlyAHostilePasteAndLeavesRealisticDescriptionsIntact() {
+    StringBuilder hostile = new StringBuilder();
+    for (int i = 0; i < 5_000; i++) {
+      hostile.append("a");
     }
     assertTrue(
-        "the field is capped to the documented maximum",
-        sanitizer.sanitize(longField.toString()).length() <= DirectionSanitizer.MAX_FIELD_LENGTH);
+        "a pathological paste is bounded by the defensive ceiling",
+        sanitizer.sanitize(hostile.toString()).length() <= DirectionSanitizer.MAX_FIELD_LENGTH);
+
+    String realistic =
+        "A weathered sea captain from the northern isles, gruff but warm, who has seen too many"
+            + " storms and speaks in slow, deliberate sentences with a dry, knowing humour that"
+            + " surfaces only when he trusts you, and never wastes a word he does not mean.";
+    assertEquals(
+        "a normal multi-sentence description is never truncated",
+        realistic,
+        sanitizer.sanitize(realistic));
   }
 
   @Test

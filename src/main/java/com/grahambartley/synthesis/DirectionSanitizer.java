@@ -17,8 +17,13 @@ import java.util.regex.Pattern;
  */
 public final class DirectionSanitizer {
 
-  /** Cap per field: long enough for a real description, short enough to bound prompt growth. */
-  static final int MAX_FIELD_LENGTH = 200;
+  /**
+   * Defensive per-field ceiling. RuneLite enforces no length limit on a text config value, so this
+   * is the only bound on how much of these fields reaches the cloud prompt. It sits far above any
+   * realistic accent/persona/pace description, so a legitimate field is never truncated; it exists
+   * only to stop a hostile paste from inflating the prompt, not to constrain normal input.
+   */
+  static final int MAX_FIELD_LENGTH = 1000;
 
   /** Newlines and other control characters that could break out of the single-line field. */
   private static final Pattern CONTROL = Pattern.compile("[\\u0000-\\u001F\\u007F]+");
