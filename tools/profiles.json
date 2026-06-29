@@ -43,6 +43,12 @@
       "style": "A lively, quick-witted monkey from a tropical island. Fast, chattery, and expressive, hopping between mischief and earnestness with restless energy.",
       "pace": "Quick and animated, words tripping over each other in bursts."
     },
+    "Gorilla": {
+      "name": "Gorilla",
+      "accent": "Deep, booming English, the low rumbling growl of a huge silverback ape.",
+      "style": "An enormous, powerful gorilla. A very deep, booming, guttural voice that rumbles from the chest, primal and commanding, with a slow, heavy weight behind every word.",
+      "pace": "Slow and ponderous, each utterance landing with deliberate heft."
+    },
     "Gnome": {
       "name": "Gnome",
       "accent": "A country Irish accent, the warm rural lilt of the Irish countryside.",

@@ -45,7 +45,7 @@ public class VoiceManagerTest {
     for (VoiceProfile voice : VoiceProfile.values()) {
       ids.add(voice.getSpeakerId());
     }
-    assertEquals("each race/gender category must map to a unique Kokoro speaker", 20, ids.size());
+    assertEquals("each race/gender category must map to a unique Kokoro speaker", 22, ids.size());
     assertEquals(VoiceProfile.values().length, ids.size());
   }
 
@@ -133,6 +133,22 @@ public class VoiceManagerTest {
           profile.getSpeakerId(),
           manager.kokoroSpeakerId(spec));
     }
+  }
+
+  @Test
+  public void gorillaRaceResolvesToTheDeepGorillaSpeakers() {
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    assertEquals("am_adam", VoiceProfile.GORILLA_MALE.getKokoroVoice());
+    assertEquals("bf_alice", VoiceProfile.GORILLA_FEMALE.getKokoroVoice());
+    assertEquals(
+        VoiceProfile.GORILLA_MALE.getSpeakerId(),
+        manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.GORILLA, NPCGender.MALE)));
+    assertEquals(
+        VoiceProfile.GORILLA_FEMALE.getSpeakerId(),
+        manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.GORILLA, NPCGender.FEMALE)));
+    // A gorilla must not collapse onto the chattery monkey speaker.
+    assertNotEquals(
+        VoiceProfile.MONKEY_MALE.getSpeakerId(), VoiceProfile.GORILLA_MALE.getSpeakerId());
   }
 
   @Test

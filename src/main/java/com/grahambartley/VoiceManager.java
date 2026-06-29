@@ -30,6 +30,7 @@ public class VoiceManager {
     DWARF,
     GOBLIN,
     MONKEY,
+    GORILLA,
     TROLL,
     UNDEAD,
     DEMON,
@@ -75,6 +76,10 @@ public class VoiceManager {
     // Monkey voices (small, quick, chattery) - bright, energetic
     MONKEY_MALE(15, "am_liam", "Monkey Male", NPCRace.MONKEY, NPCGender.MALE),
     MONKEY_FEMALE(4, "af_jessica", "Monkey Female", NPCRace.MONKEY, NPCGender.FEMALE),
+
+    // Gorilla voices (huge, deep, booming, primal) - the heaviest ape timbres
+    GORILLA_MALE(11, "am_adam", "Gorilla Male", NPCRace.GORILLA, NPCGender.MALE),
+    GORILLA_FEMALE(20, "bf_alice", "Gorilla Female", NPCRace.GORILLA, NPCGender.FEMALE),
 
     // Troll voices (big, deep, primitive)
     TROLL_MALE(17, "am_onyx", "Troll Male", NPCRace.TROLL, NPCGender.MALE),
@@ -526,6 +531,8 @@ public class VoiceManager {
         return female ? VoiceProfile.GOBLIN_FEMALE : VoiceProfile.GOBLIN_MALE;
       case MONKEY:
         return female ? VoiceProfile.MONKEY_FEMALE : VoiceProfile.MONKEY_MALE;
+      case GORILLA:
+        return female ? VoiceProfile.GORILLA_FEMALE : VoiceProfile.GORILLA_MALE;
       case TROLL:
         return female ? VoiceProfile.TROLL_FEMALE : VoiceProfile.TROLL_MALE;
       case UNDEAD:
@@ -580,6 +587,10 @@ public class VoiceManager {
           || raceLower.contains("dragon")
           || raceLower.contains("devil")) {
         return NPCRace.DEMON;
+      } else if (raceLower.contains("gorilla")) {
+        return NPCRace.GORILLA;
+      } else if (raceLower.contains("monkey") || raceLower.contains("primate")) {
+        return NPCRace.MONKEY;
       } else if (raceLower.contains("wizard") || raceLower.contains("mage")) {
         return NPCRace.WIZARD;
       }
