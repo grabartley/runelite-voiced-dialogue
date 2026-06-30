@@ -890,6 +890,66 @@ public class OpenRouterTtsBackendTest {
     assertEquals("the persistent failure surfaces one notice", 1, notices[0]);
   }
 
+  /** 1.5 s of full-amplitude audio with no trailing silence: a line cut off mid-utterance. */
+  private static short[] truncatedAudio() {
+    short[] s = new short[36_000];
+    java.util.Arrays.fill(s, (short) 12_000);
+    return s;
+  }
+
+  /** 1.5 s of audio that releases into 200 ms of silence: a complete line. */
+  private static short[] completeAudio() {
+    short[] s = new short[40_800];
+    java.util.Arrays.fill(s, 0, 36_000, (short) 12_000);
+    return s;
+  }
+
+  @Test
+  public void truncatedAudioIsRetriedOnceAndRecovers() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    // The first line ends mid-utterance; the immediate retry returns a complete line.
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(completeAudio()))));
+
+    int[] notices = {0};
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setNotice(msg -> notices[0]++);
+
+    assertNotNull("a truncated line is recovered by the retry", backend.synthesize(req()));
+    assertEquals("the line was attempted twice", 2, server.getRequestCount());
+    assertEquals("a recovered line surfaces no failure notice", 0, notices[0]);
+  }
+
+  @Test
+  public void repeatedTruncatedAudioFailsRatherThanCachingAClippedLine() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
+
+    int[] notices = {0};
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setNotice(msg -> notices[0]++);
+
+    assertNull(
+        "a persistently truncated line is never voiced or cached", backend.synthesize(req()));
+    assertEquals("it retries exactly once, never storms", 2, server.getRequestCount());
+    assertEquals("the persistent failure surfaces one notice", 1, notices[0]);
+  }
+
   @Test
   public void emptyBodyReturnsNull() {
     TestConfig config = new TestConfig();
