@@ -66,3 +66,7 @@ log line `[TTS profile] npc='...' ... -> '...' (source=..., accent='...')` shows
 the resolved profile and which layers won. Commit the regenerated
 `npc-voices.json` with the source edits. See `diagnose-npc-voice` to investigate a
 wrong voice first, and `regenerate-npc-voices` for the table mechanics.
+
+Whenever the table changes, update the NPC counts in `README.md` to match: the
+total entry count (`_meta.count`) and the bespoke-personality count
+(`profiles.byId` length) from the regenerated `npc-voices.json`, in the same commit.

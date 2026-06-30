@@ -19,6 +19,11 @@ python3 tools/generate_npc_voices.py        # needs network access to the wiki
 Quick partial run for testing: `--limit 500`. Commit the regenerated
 `npc-voices.json` alongside any `overrides.json` / `profiles.json` edits.
 
+After regenerating, update the NPC counts in `README.md` to match the new
+table: the total entry count (`_meta.count`) and the bespoke-personality count
+(`profiles.byId` length). Read both from the regenerated `npc-voices.json` and
+edit the README figures in the same commit so they never drift.
+
 ## What the generator does
 
 1. Enumerates every main-namespace page transcluding `Template:Infobox NPC` **or** `Template:Infobox Monster`.
