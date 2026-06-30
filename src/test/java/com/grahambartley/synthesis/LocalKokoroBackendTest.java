@@ -102,7 +102,9 @@ public class LocalKokoroBackendTest {
   }
 
   @Test
-  public void firesUnavailableNoticeOnceWhenEngineCannotInstall() {
+  public void firesUnavailableNoticeAtStartupAndOnEveryUnvoicedLine() {
+    // Mirrors the cloud missing-key notice: once when warm-up first finds the engine unavailable,
+    // then again for each line that cannot be voiced.
     EngineInstaller installer = mock(EngineInstaller.class);
     when(installer.install()).thenReturn(null);
 
@@ -111,12 +113,33 @@ public class LocalKokoroBackendTest {
         new LocalKokoroBackend(installer, launcher -> mock(ExternalEngineClient.class));
     backend.setNotice(notices::add);
 
+    backend.warmUp(); // startup notice
+    // A redundant warm-up is a no-op and must not fire.
     backend.warmUp();
-    // A second warm-up (or a later synthesize that lazily warms) must not re-fire the notice.
-    backend.warmUp();
-    backend.synthesize(request());
+    backend.synthesize(request()); // unvoiced line
+    backend.synthesize(request()); // unvoiced line
 
-    assertEquals("the unavailable notice fires exactly once", 1, notices.size());
-    assertEquals(LocalKokoroBackend.UNAVAILABLE_NOTICE, notices.get(0));
+    assertEquals("startup notice plus one per unvoiced line", 3, notices.size());
+    for (String n : notices) {
+      assertEquals(LocalKokoroBackend.UNAVAILABLE_NOTICE, n);
+    }
+  }
+
+  @Test
+  public void lazyFirstLineFiresTheNoticeExactlyOnce() {
+    // When the very first synthesize is what triggers (and fails) warm-up, warm-up fires the notice
+    // and synthesize must not duplicate it for that same line.
+    EngineInstaller installer = mock(EngineInstaller.class);
+    when(installer.install()).thenReturn(null);
+
+    List<String> notices = new ArrayList<>();
+    LocalKokoroBackend backend =
+        new LocalKokoroBackend(installer, launcher -> mock(ExternalEngineClient.class));
+    backend.setNotice(notices::add);
+
+    assertNull(backend.synthesize(request()));
+    assertEquals("lazy first line fires once, not twice", 1, notices.size());
+    assertNull(backend.synthesize(request()));
+    assertEquals("the next unvoiced line fires again", 2, notices.size());
   }
 }

@@ -32,8 +32,10 @@ import lombok.extern.slf4j.Slf4j;
 public final class LocalKokoroBackend implements SynthesisBackend {
 
   /**
-   * One-time notice shown when the offline engine cannot start (unsupported platform, or a failed
+   * Notice shown when the offline engine cannot start (unsupported platform, or a failed
    * download/verify/spawn), so a Local user whose lines are silent is told why and how to recover.
+   * Surfaced once when warm-up first finds the engine unavailable and again for each line that then
+   * cannot be voiced, mirroring the cloud backend's missing-key notice.
    */
   public static final String UNAVAILABLE_NOTICE =
       "The offline (Local) voice could not start on this machine, so Local dialogue lines will be"
@@ -48,11 +50,8 @@ public final class LocalKokoroBackend implements SynthesisBackend {
   /** Live speaking pace (percent of normal); folds into the cache key when not the default 100. */
   private final IntSupplier speakingPacePercent;
 
-  /** One-time user notice hook for an unavailable engine; defaults to a no-op. */
+  /** User notice hook for an unavailable engine; defaults to a no-op. */
   private Consumer<String> notice = msg -> {};
-
-  /** Guards the one-time notice so a repeated warm-up attempt cannot re-fire it. */
-  private boolean warned;
 
   private volatile ExternalEngineClient client;
   private volatile boolean installAttempted;
@@ -73,7 +72,7 @@ public final class LocalKokoroBackend implements SynthesisBackend {
     this.speakingPacePercent = speakingPacePercent;
   }
 
-  /** Registers a one-time notice hook (e.g. a chat or log message) for an unavailable engine. */
+  /** Registers a notice hook (e.g. a chat or log message) for an unavailable engine. */
   public void setNotice(Consumer<String> notice) {
     this.notice = notice == null ? msg -> {} : notice;
   }
@@ -120,10 +119,17 @@ public final class LocalKokoroBackend implements SynthesisBackend {
     ExternalEngineClient c = client;
     if (c == null) {
       // First use before warm-up completed: bring the engine up now. This runs on the pipeline
-      // thread (never the game thread), so the blocking install/spawn is safe here.
+      // thread (never the game thread), so the blocking install/spawn is safe here. When this call
+      // is the one that attempts (and fails) the install, warmUp itself fires the notice, so this
+      // line stays silent without a duplicate; an already-attempted warm-up is a no-op, so a later
+      // unvoiced line falls through to notifyUnavailable below.
+      boolean warmUpAttemptsHere = !installAttempted;
       warmUp();
       c = client;
       if (c == null) {
+        if (!warmUpAttemptsHere) {
+          notifyUnavailable();
+        }
         return null;
       }
     }
@@ -140,7 +146,7 @@ public final class LocalKokoroBackend implements SynthesisBackend {
     if (installed == null) {
       log.info(
           "Local Kokoro engine is not installed; backend unavailable, Local lines stay silent.");
-      warnUnavailable();
+      notifyUnavailable();
       return;
     }
     ExternalEngineClient c = clientFactory.create(installed.launcher());
@@ -155,16 +161,12 @@ public final class LocalKokoroBackend implements SynthesisBackend {
       } catch (RuntimeException ignored) {
         // best-effort
       }
-      warnUnavailable();
+      notifyUnavailable();
     }
   }
 
-  /** Surfaces the unavailable-engine notice at most once per backend lifetime. */
-  private void warnUnavailable() {
-    if (warned) {
-      return;
-    }
-    warned = true;
+  /** Surfaces the unavailable-engine notice. */
+  private void notifyUnavailable() {
     notice.accept(UNAVAILABLE_NOTICE);
   }
 

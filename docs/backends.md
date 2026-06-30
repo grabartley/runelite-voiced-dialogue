@@ -153,5 +153,7 @@ cloud calls.
   only when it is not 100, so a pace change never replays stale Local audio while the default stays on
   a stable key.
 - **Unavailable notice.** If the engine cannot start (unsupported platform, or a failed
-  download/verify/spawn), the backend surfaces a one-time chat notice telling the player Local lines
-  will be silent and to switch to Cloud, instead of failing quietly.
+  download/verify/spawn), the backend surfaces a chat notice telling the player Local lines will be
+  silent and to switch to Cloud, instead of failing quietly. It is posted once when warm-up first
+  finds the engine unavailable and again for each line that then cannot be voiced, mirroring the
+  cloud backend's missing-key notice.
