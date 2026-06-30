@@ -1,6 +1,6 @@
 package com.grahambartley.voice;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.data.NPCAttributes;
 import com.grahambartley.data.NPCDemographicAnalyzer;
 import com.grahambartley.data.NpcLearningService;
@@ -20,7 +20,7 @@ import net.runelite.api.NPC;
 @Slf4j
 final class NpcVoiceResolver {
 
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
   private final NPCDemographicAnalyzer demographicAnalyzer;
   private final NpcFinder npcFinder;
 
@@ -28,7 +28,9 @@ final class NpcVoiceResolver {
   private NpcLearningService learningService;
 
   NpcVoiceResolver(
-      TTSDialogueConfig config, NPCDemographicAnalyzer demographicAnalyzer, NpcFinder npcFinder) {
+      VoicedDialogueConfig config,
+      NPCDemographicAnalyzer demographicAnalyzer,
+      NpcFinder npcFinder) {
     this.config = config;
     this.demographicAnalyzer = demographicAnalyzer;
     this.npcFinder = npcFinder;

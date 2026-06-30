@@ -52,7 +52,7 @@ public final class DiskAudioCache {
 
   /**
    * Magic + version prefix so a future format change can be detected and treated as a miss rather
-   * than mis-decoded. Four ASCII bytes "TDC1" (TTS Dialogue Cache v1).
+   * than mis-decoded. Four ASCII bytes "TDC1" tag the cache format version.
    */
   private static final int MAGIC = 0x54_44_43_31; // "TDC1"
 

@@ -20,7 +20,7 @@ set of bundles the release workflow actually built.
 Usage:
   generate_manifest.py \
     --version v1.2.3 \
-    --repo grabartley/tts-dialogue-runelite \
+    --repo grabartley/runelite-voiced-dialogue \
     --artifacts-dir ./release-artifacts \
     --out ./engine-manifest.json
 """

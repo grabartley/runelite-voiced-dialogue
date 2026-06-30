@@ -12,7 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.CaveEchoPolicy;
 import com.grahambartley.tts.DialogueAudioService;
 import com.grahambartley.voice.EmotionResolver;
@@ -33,7 +33,7 @@ public class SynthesisDispatcherTest {
   private final EmotionResolver emotionResolver = mock(EmotionResolver.class);
   private final ProfileResolver profileResolver = mock(ProfileResolver.class);
   private final CaveEchoPolicy caveEchoPolicy = mock(CaveEchoPolicy.class);
-  private final TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+  private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final BackendProvider backendProvider = mock(BackendProvider.class);
   private final SynthesisBackend backend = mock(SynthesisBackend.class);
   private final DialogueAudioService audioService = mock(DialogueAudioService.class);

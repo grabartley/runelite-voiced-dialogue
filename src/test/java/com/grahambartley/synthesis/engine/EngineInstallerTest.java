@@ -249,7 +249,8 @@ public class EngineInstallerTest {
     // engine-manifest.json from .../releases/download/v<version>/ and parse it.
     String manifestJson =
         manifest("linux-x64", "https://example/bundle.tar.gz", "abc", "kokoro-engine");
-    String path = "/grabartley/tts-dialogue-runelite/releases/download/v1.2.3/engine-manifest.json";
+    String path =
+        "/grabartley/runelite-voiced-dialogue/releases/download/v1.2.3/engine-manifest.json";
     String base = serveText(path, manifestJson);
 
     StringBuilder requested = new StringBuilder();

@@ -3,7 +3,7 @@ package com.grahambartley.synthesis;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import okhttp3.ResponseBody;
  * OpenRouter's chat-completions endpoint and the Gemini Flash Lite model.
  *
  * <p>This is the optional first hop of the cloud pipeline: {@link OpenRouterTtsBackend} calls it
- * only when {@link TTSDialogueConfig#cloudLanguage()} is not English, so the common case pays no
+ * only when {@link VoicedDialogueConfig#cloudLanguage()} is not English, so the common case pays no
  * extra request. The system prompt is a fixed per-language constant (all per-line variance lives in
  * the user message) so the cacheable prefix is byte-identical across calls and the model's implicit
  * prompt cache hits; the instruction preserves proper nouns, place names, item names, and OSRS
@@ -35,21 +35,27 @@ final class OpenRouterTranslator {
   static final String MODEL = "google/gemini-3.1-flash-lite-preview";
 
   static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-  private static final String USER_AGENT = "tts-dialogue-runelite";
+  private static final String USER_AGENT = "runelite-voiced-dialogue";
+
+  /** OpenRouter app-attribution headers, shown as the app name/URL in its usage dashboard. */
+  private static final String APP_TITLE = "RuneLite Voiced Dialogue";
+
+  private static final String APP_URL = "https://github.com/grabartley/runelite-voiced-dialogue";
+
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   private final OkHttpClient httpClient;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
 
-  OpenRouterTranslator(OkHttpClient httpClient, TTSDialogueConfig config, Gson gson) {
+  OpenRouterTranslator(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
   }
 
   /** Test seam: points the translation request at a mock server instead of the live host. */
   OpenRouterTranslator(
-      OkHttpClient httpClient, TTSDialogueConfig config, Gson gson, String endpoint) {
+      OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
     this.httpClient = httpClient;
     this.config = config;
     this.gson = gson;
@@ -78,6 +84,8 @@ final class OpenRouterTranslator {
             .url(endpoint)
             .addHeader("Authorization", "Bearer " + apiKey)
             .addHeader("User-Agent", USER_AGENT)
+            .addHeader("HTTP-Referer", APP_URL)
+            .addHeader("X-Title", APP_TITLE)
             .post(
                 RequestBody.create(
                     JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))

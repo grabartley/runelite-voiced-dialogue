@@ -2,7 +2,7 @@ package com.grahambartley;
 
 import static org.junit.Assert.assertEquals;
 
-import com.grahambartley.TTSDialogueConfig.VoiceBackend;
+import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.SynthesisBackend;
@@ -21,7 +21,7 @@ import org.junit.Test;
  * exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing. The pure
  * decision behind the trigger lives in {@link BackendWarmUpPolicy}.
  */
-public class TTSDialoguePluginTest {
+public class VoicedDialoguePluginTest {
 
   /**
    * A backend-key change in the plugin group drives the real off-thread pipeline end to end: {@code
@@ -35,7 +35,7 @@ public class TTSDialoguePluginTest {
     config.backend = VoiceBackend.CLOUD; // so warmUpActive targets the non-Kokoro backend
     Harness harness = harness(config, warmCalls);
 
-    harness.plugin.onConfigChanged(configChanged("ttsDialogue", "voiceBackend"));
+    harness.plugin.onConfigChanged(configChanged("voicedDialogue", "voiceBackend"));
     harness.audioService.awaitWarm();
 
     assertEquals(1, warmCalls.get());
@@ -49,7 +49,7 @@ public class TTSDialoguePluginTest {
     config.backend = VoiceBackend.CLOUD;
     Harness harness = harness(config, warmCalls);
 
-    harness.plugin.onConfigChanged(configChanged("ttsDialogue", "volume"));
+    harness.plugin.onConfigChanged(configChanged("voicedDialogue", "volume"));
     harness.plugin.onConfigChanged(configChanged("otherPlugin", "voiceBackend"));
 
     assertEquals(0, warmCalls.get());
@@ -60,9 +60,9 @@ public class TTSDialoguePluginTest {
    */
   @Test
   public void configChangeWhileStoppedDoesNotThrow() throws Exception {
-    TTSDialoguePlugin plugin = new TTSDialoguePlugin();
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     // audioService and backendProvider are null (never started / already shut down).
-    plugin.onConfigChanged(configChanged("ttsDialogue", "voiceBackend"));
+    plugin.onConfigChanged(configChanged("voicedDialogue", "voiceBackend"));
   }
 
   // --- helpers -------------------------------------------------------------
@@ -82,24 +82,24 @@ public class TTSDialoguePluginTest {
     DialogueAudioService audioService =
         new DialogueAudioService(provider, null, null, 1, 1, () -> 100);
 
-    TTSDialoguePlugin plugin = new TTSDialoguePlugin();
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     setField(plugin, "audioService", audioService);
     setField(plugin, "backendProvider", provider);
     return new Harness(plugin, audioService);
   }
 
   private static void setField(Object target, String name, Object value) throws Exception {
-    Field field = TTSDialoguePlugin.class.getDeclaredField(name);
+    Field field = VoicedDialoguePlugin.class.getDeclaredField(name);
     field.setAccessible(true);
     field.set(target, value);
   }
 
   /** Holds the plugin plus the audio service so a test can await the off-thread warm. */
   private static final class Harness {
-    final TTSDialoguePlugin plugin;
+    final VoicedDialoguePlugin plugin;
     final AwaitableAudioService audioService;
 
-    Harness(TTSDialoguePlugin plugin, DialogueAudioService audioService) {
+    Harness(VoicedDialoguePlugin plugin, DialogueAudioService audioService) {
       this.plugin = plugin;
       this.audioService = new AwaitableAudioService(audioService);
     }
@@ -125,7 +125,7 @@ public class TTSDialoguePluginTest {
     }
   }
 
-  private static final class StubConfig implements TTSDialogueConfig {
+  private static final class StubConfig implements VoicedDialogueConfig {
     private VoiceBackend backend = VoiceBackend.LOCAL;
 
     @Override

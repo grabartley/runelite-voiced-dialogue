@@ -7,11 +7,11 @@ import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 
-@ConfigGroup(TTSDialogueConfig.GROUP)
-public interface TTSDialogueConfig extends Config {
+@ConfigGroup(VoicedDialogueConfig.GROUP)
+public interface VoicedDialogueConfig extends Config {
 
   /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
-  String GROUP = "ttsDialogue";
+  String GROUP = "voicedDialogue";
 
   @ConfigSection(
       name = "General",
@@ -269,7 +269,7 @@ public interface TTSDialogueConfig extends Config {
       description =
           "Save synthesized dialogue to disk so repeated lines play instantly across sessions and"
               + " the Cloud backend is not re-billed for audio you have already heard. The cache"
-              + " lives in ~/.runelite/tts-dialogue/cache and is size-bounded.",
+              + " lives in ~/.runelite/voiced-dialogue/cache and is size-bounded.",
       position = 5,
       section = generalSection)
   default boolean persistentCache() {

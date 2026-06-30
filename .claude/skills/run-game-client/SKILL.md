@@ -5,22 +5,22 @@ description: Runs the RuneLite dev client locally with the plugin for manual tes
 
 # Run Game Client
 
-Runs the RuneLite dev client with the TTS Dialogue plugin loaded for manual testing.
+Runs the RuneLite dev client with the Voiced Dialogue plugin loaded for manual testing.
 
 ## Quick Start
 
-Ensure Java 17 is active (`jenv local 17` or `sdk use java 17-amzn`), build the plugin, then launch via the `com.grahambartley.TTSDialoguePluginRunner` entry point (the shadow jar's `Main-Class`), passing `--developer-mode` so the dev client logs in and exposes developer tooling:
+Ensure Java 17 is active (`jenv local 17` or `sdk use java 17-amzn`), build the plugin, then launch via the `com.grahambartley.VoicedDialoguePluginRunner` entry point (the shadow jar's `Main-Class`), passing `--developer-mode` so the dev client logs in and exposes developer tooling:
 
 ```bash
 ./gradlew shadowJar
-java -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED -jar build/libs/tTSDialogue-1.0-SNAPSHOT-all.jar --developer-mode --debug 2>&1 | tee /tmp/tts-client.log
+java -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED -jar build/libs/voicedDialogue-1.0-SNAPSHOT-all.jar --developer-mode --debug 2>&1 | tee /tmp/tts-client.log
 ```
 
-`TTSDialoguePluginRunner.main` forwards these program arguments to `RuneLite.main`. `--developer-mode` belongs only with this launcher and is required for login to work; omit it and login fails. `--debug` is optional and turns on RuneLite debug-level logging, which pairs well with the plugin's Debug Mode config toggle.
+`VoicedDialoguePluginRunner.main` forwards these program arguments to `RuneLite.main`. `--developer-mode` belongs only with this launcher and is required for login to work; omit it and login fails. `--debug` is optional and turns on RuneLite debug-level logging, which pairs well with the plugin's Debug Mode config toggle.
 
 **Always write the client output to `/tmp/tts-client.log`** (the `tee` above, or `> /tmp/tts-client.log 2>&1 &` when launching in the background) so the logs can be read and grepped during and after testing. With Debug Mode on, that file carries the `[TTS profile]` / `[TTS voice]` / `[TTS cloud]` traces used to diagnose voice issues (see the `diagnose-npc-voice` skill).
 
-The entry point calls `ExternalPluginManager.loadBuiltin(TTSDialoguePlugin.class)` and starts RuneLite. You can also run that `main` directly from the IDE with the same VM options and the `--developer-mode` (and optional `--debug`) program arguments.
+The entry point calls `ExternalPluginManager.loadBuiltin(VoicedDialoguePlugin.class)` and starts RuneLite. You can also run that `main` directly from the IDE with the same VM options and the `--developer-mode` (and optional `--debug`) program arguments.
 
 ## Logging In (Jagex accounts)
 
@@ -30,7 +30,7 @@ To write or refresh the credentials (requires RuneLite launcher 2.6.3+):
 
 1. macOS: `/Applications/RuneLite.app/Contents/MacOS/RuneLite --configure`, then add `--insecure-write-credentials` to the `Client arguments` box and save.
 2. Launch RuneLite once through the Jagex launcher so it writes fresh `JX_*` tokens into `~/.runelite/credentials.properties`.
-3. Re-run the dev client (`TTSDialoguePluginRunner`); it picks up the saved credentials and logs in without a password.
+3. Re-run the dev client (`VoicedDialoguePluginRunner`); it picks up the saved credentials and logs in without a password.
 
 Keep `credentials.properties` private, and delete it (or use "End sessions" on the account site) to return the client to normal.
 
@@ -38,7 +38,7 @@ Keep `credentials.properties` private, and delete it (or use "End sessions" on t
 
 The plugin synthesizes dialogue in-process with the embedded Kokoro model via `sherpa-onnx`, on by default. No external voice server, Docker container, or `localhost` port is needed for audio.
 
-On first launch the plugin downloads the Kokoro model bundle (~349 MB) once into `~/.runelite/tts-dialogue/` and caches it; the model loads on a background thread, so dialogue may stay silent only until the load finishes (watch the logs for `Kokoro model loaded`). Every later line is generated locally with no network call.
+On first launch the plugin downloads the Kokoro model bundle (~349 MB) once into `~/.runelite/voiced-dialogue/` and caches it; the model loads on a background thread, so dialogue may stay silent only until the load finishes (watch the logs for `Kokoro model loaded`). Every later line is generated locally with no network call.
 
 There is no external voice server to start: synthesis is always in-process, so there is no Docker container or `localhost` port to manage for audio.
 

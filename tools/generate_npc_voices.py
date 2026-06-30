@@ -47,7 +47,7 @@ import urllib.parse
 import urllib.request
 
 WIKI_API = "https://oldschool.runescape.wiki/api.php"
-USER_AGENT = "tts-dialogue-runelite NPC table generator (contact: grabartley@gmail.com)"
+USER_AGENT = "runelite-voiced-dialogue NPC table generator (contact: grabartley@gmail.com)"
 # Talkable NPCs use Infobox NPC (carries race/gender/leagueRegion); talkable creatures use Infobox
 # Monster (carries none of those), so for Monster pages race comes from the page's categories.
 INFOBOX_TEMPLATES = ["Template:Infobox NPC", "Template:Infobox Monster"]

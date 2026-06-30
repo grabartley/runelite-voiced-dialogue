@@ -6,9 +6,9 @@ import net.runelite.client.externalplugins.ExternalPluginManager;
 /**
  * Dev-client launcher: runs RuneLite with this plugin loaded for manual testing. Not a unit test.
  */
-public class TTSDialoguePluginRunner {
+public class VoicedDialoguePluginRunner {
   public static void main(String[] args) throws Exception {
-    ExternalPluginManager.loadBuiltin(TTSDialoguePlugin.class);
+    ExternalPluginManager.loadBuiltin(VoicedDialoguePlugin.class);
     RuneLite.main(args);
   }
 }

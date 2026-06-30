@@ -18,7 +18,7 @@ path (`grep -rn "new OkHttpClient" src/` returns nothing). Every component recei
 RuneLite's injected `OkHttpClient` and, where it needs different timeouts or a keepalive
 pool, derives from it via `newBuilder()` (allowed):
 
-- `TTSDialoguePlugin.java` — `@Inject private OkHttpClient okHttpClient;`, passed into every
+- `VoicedDialoguePlugin.java` — `@Inject private OkHttpClient okHttpClient;`, passed into every
   network component.
 - `OpenRouterTtsBackend.java` — derives a keepalive client via
   `httpClient.newBuilder()...build()`.
@@ -41,7 +41,7 @@ never makes a network call or blocks on synthesis.
 **Verified.**
 
 - Stored via the RuneLite config item `openRouterApiKey` declared `secret = true`
-  (`TTSDialogueConfig.java`), so RuneLite masks it in the UI and config store.
+  (`VoicedDialogueConfig.java`), so RuneLite masks it in the UI and config store.
 - Read only to build the OpenRouter request `Authorization: Bearer <key>` header in
   `OpenRouterTtsBackend` and `OpenRouterTranslator`. Sent to no host other than
   `openrouter.ai`.
@@ -58,9 +58,9 @@ dialogue text leaves the machine:
 - First-run onboarding chat notice (`ChatNoticeManager`): "...While Cloud is active your
   dialogue text is sent to OpenRouter to be voiced. Prefer to stay offline? Set Voice
   Backend to Local..."
-- Voice Backend setting description (`TTSDialogueConfig`): "...while it is active your
+- Voice Backend setting description (`VoicedDialogueConfig`): "...while it is active your
   dialogue text is sent to OpenRouter to be voiced..."
-- Cloud Voice section header (`TTSDialogueConfig`): "...While Cloud is active, your dialogue
+- Cloud Voice section header (`VoicedDialogueConfig`): "...While Cloud is active, your dialogue
   text is sent to OpenRouter to be voiced, so it leaves your machine."
 - API Key field description: key is "Stored locally and never bundled with the plugin."
 - The Hub listing itself carries the off-machine-data `warning=` in the descriptor (see

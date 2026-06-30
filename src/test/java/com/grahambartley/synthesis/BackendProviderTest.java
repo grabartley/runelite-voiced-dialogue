@@ -3,8 +3,8 @@ package com.grahambartley.synthesis;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.TTSDialogueConfig;
-import com.grahambartley.TTSDialogueConfig.VoiceBackend;
+import com.grahambartley.VoicedDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.tts.Pcm;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
@@ -14,7 +14,7 @@ import org.junit.Test;
 public class BackendProviderTest {
 
   /** Config whose backend selection is settable; everything else uses interface defaults. */
-  private static final class TestConfig implements TTSDialogueConfig {
+  private static final class TestConfig implements VoicedDialogueConfig {
     private VoiceBackend backend = VoiceBackend.LOCAL;
 
     @Override

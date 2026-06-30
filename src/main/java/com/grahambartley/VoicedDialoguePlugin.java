@@ -53,7 +53,7 @@ import okhttp3.OkHttpClient;
  */
 @Slf4j
 @PluginDescriptor(name = "Voiced Dialogue")
-public class TTSDialoguePlugin extends Plugin {
+public class VoicedDialoguePlugin extends Plugin {
 
   /** Cache enough recent lines that loops of NPC chatter replay instantly without re-synthesis. */
   private static final int CACHE_SIZE = 64;
@@ -63,7 +63,7 @@ public class TTSDialoguePlugin extends Plugin {
 
   @Inject private Client client;
 
-  @Inject private TTSDialogueConfig config;
+  @Inject private VoicedDialogueConfig config;
 
   /**
    * Injected per Hub rules: never {@code new OkHttpClient()} / {@code new Gson()} in plugin code.
@@ -95,7 +95,7 @@ public class TTSDialoguePlugin extends Plugin {
   protected void startUp() {
     VoiceManager voiceManager = new VoiceManager(config, client);
 
-    Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("tts-dialogue");
+    Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
     // Runtime "learn a new NPC" fallback: the learned cache is always consulted (so previously
     // learned NPCs voice correctly even with the toggle off), while new wiki lookups are gated by
     // the config toggle. Lookups run on a dedicated daemon thread, never the game thread.
@@ -183,7 +183,7 @@ public class TTSDialoguePlugin extends Plugin {
             prefetcher,
             audioService);
 
-    log.info("TTSDialogue started");
+    log.info("VoicedDialogue started");
   }
 
   @Override
@@ -261,7 +261,7 @@ public class TTSDialoguePlugin extends Plugin {
   }
 
   @Provides
-  TTSDialogueConfig provideConfig(ConfigManager configManager) {
-    return configManager.getConfig(TTSDialogueConfig.class);
+  VoicedDialogueConfig provideConfig(ConfigManager configManager) {
+    return configManager.getConfig(VoicedDialogueConfig.class);
   }
 }

@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Create a PR for the tts-dialogue-runelite repo using a git worktree branched from latest main. Use for final branch, commit, push, and PR flow.
+description: Create a PR for the runelite-voiced-dialogue repo using a git worktree branched from latest main. Use for final branch, commit, push, and PR flow.
 ---
 
 # PR
@@ -19,8 +19,8 @@ This skill is used directly by humans and also as a handoff step from the build 
 6. Push: `git push origin <branch-name>`
 7. Create PR with a body file to preserve markdown formatting and avoid shell interpolation issues:
 	- Write body markdown to a temp file (example: `.claude/tmp/pr-body.md`) and include real newlines.
-	- Create PR: `gh pr create --repo grabartley/tts-dialogue-runelite --base main --head <branch-name> --title "<title>" --body-file .claude/tmp/pr-body.md`
-	- If updating an existing PR body, use: `gh pr edit <pr-number> --repo grabartley/tts-dialogue-runelite --body-file .claude/tmp/pr-body.md`
+	- Create PR: `gh pr create --repo grabartley/runelite-voiced-dialogue --base main --head <branch-name> --title "<title>" --body-file .claude/tmp/pr-body.md`
+	- If updating an existing PR body, use: `gh pr edit <pr-number> --repo grabartley/runelite-voiced-dialogue --body-file .claude/tmp/pr-body.md`
 	- Title: `<type>: <description>` (same style as commit message)
 	- Body: lead with concise prose describing the FINAL STATE of the branch as it differs from `main`. Write in present tense as if the change has already landed. Group related behaviour into a few tight paragraphs. Reference specific files inline only when the path is essential context; otherwise leave file enumeration to the diff.
 	- Prose is the backbone of the description, but structured elements like tables are encouraged when they explain a complex part of the change more clearly than a paragraph would. Reach for a table to lay out things like a status-transition matrix, config option to behaviour mappings, before-and-after behaviour for several cases, or option-to-default pairs. Keep the prose carrying the narrative and let the table clarify one dense piece.
@@ -32,7 +32,7 @@ This skill is used directly by humans and also as a handoff step from the build 
 	- Attach screenshots whenever the change has a visible surface (plugin config panel, in-game dialogue, RuneLite overlay). Capture the relevant state in the dev client or wherever the change is visible, and either drag the file into the GitHub PR description after creation or upload it through the GitHub web UI; reference the resulting `user-attachments` URL in the body next to the paragraph it illustrates. Skip screenshots only when the change has no rendered output.
 	- Wrap class names, commands, and identifiers in backticks inside the markdown file, not inline shell args.
 	- Always include a closing reference like `Closes #<issue-number>` so the PR Development section is linked to the issue being worked on.
-8. After merge, clean up: `cd ../tts-dialogue-runelite && git worktree remove ./.claude/worktrees/tts-<branch-name>`
+8. After merge, clean up: `cd ../runelite-voiced-dialogue && git worktree remove ./.claude/worktrees/tts-<branch-name>`
 
 ## Conventions
 

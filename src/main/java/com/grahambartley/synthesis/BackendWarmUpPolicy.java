@@ -1,6 +1,6 @@
 package com.grahambartley.synthesis;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import java.util.Set;
 
 /**
@@ -26,6 +26,8 @@ public final class BackendWarmUpPolicy {
   public static boolean affectsBackendWarmUp(String group, String key) {
     // key != null first: WARM_TRIGGER_KEYS is an immutable Set.of(...), whose contains(null)
     // throws.
-    return TTSDialogueConfig.GROUP.equals(group) && key != null && WARM_TRIGGER_KEYS.contains(key);
+    return VoicedDialogueConfig.GROUP.equals(group)
+        && key != null
+        && WARM_TRIGGER_KEYS.contains(key);
   }
 }

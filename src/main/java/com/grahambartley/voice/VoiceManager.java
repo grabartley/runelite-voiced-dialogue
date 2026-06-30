@@ -1,6 +1,6 @@
 package com.grahambartley.voice;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.data.LearnedNpcStore;
 import com.grahambartley.data.NPCAttributes;
 import com.grahambartley.data.NPCDemographicAnalyzer;
@@ -134,13 +134,13 @@ public class VoiceManager {
     }
   }
 
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
   private final NPCDemographicAnalyzer demographicAnalyzer;
   private final NpcProfileTable profileTable;
   private final NpcFinder npcFinder;
   private final NpcVoiceResolver npcVoiceResolver;
 
-  public VoiceManager(TTSDialogueConfig config, Client client) {
+  public VoiceManager(VoicedDialogueConfig config, Client client) {
     this.config = config;
     this.demographicAnalyzer = new NPCDemographicAnalyzer();
     this.demographicAnalyzer.initialize();

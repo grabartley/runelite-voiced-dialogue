@@ -17,15 +17,15 @@ public class BackendWarmUpPolicyTest {
   private Object[] warmUpCases() {
     return new Object[] {
       // Plugin group with a backend-affecting key warms.
-      new Object[] {"ttsDialogue", "voiceBackend", true},
-      new Object[] {"ttsDialogue", "openRouterApiKey", true},
+      new Object[] {"voicedDialogue", "voiceBackend", true},
+      new Object[] {"voicedDialogue", "openRouterApiKey", true},
       // Right group, key that does not affect backend selection/availability.
-      new Object[] {"ttsDialogue", "volume", false},
+      new Object[] {"voicedDialogue", "volume", false},
       // A backend key but a different plugin's config group.
       new Object[] {"otherPlugin", "voiceBackend", false},
       // Defensive: nulls never throw and never warm.
       new Object[] {null, "voiceBackend", false},
-      new Object[] {"ttsDialogue", null, false},
+      new Object[] {"voicedDialogue", null, false},
     };
   }
 

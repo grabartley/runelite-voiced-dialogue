@@ -1,6 +1,6 @@
 package com.grahambartley.dialogue;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
@@ -37,7 +37,7 @@ public final class ChatNoticeManager {
   private final Client client;
   private final ConfigManager configManager;
   private final ClientThread clientThread;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
 
   private boolean onboardingChecked;
   private boolean cloudKeyNoticeChecked;
@@ -46,7 +46,7 @@ public final class ChatNoticeManager {
       Client client,
       ConfigManager configManager,
       ClientThread clientThread,
-      TTSDialogueConfig config) {
+      VoicedDialogueConfig config) {
     this.client = client;
     this.configManager = configManager;
     this.clientThread = clientThread;
@@ -72,12 +72,13 @@ public final class ChatNoticeManager {
     }
     onboardingChecked = true;
     Boolean seen =
-        configManager.getConfiguration(TTSDialogueConfig.GROUP, ONBOARDING_SEEN_KEY, Boolean.class);
+        configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, ONBOARDING_SEEN_KEY, Boolean.class);
     if (!shouldShowOnboarding(seen)) {
       return;
     }
     addGameMessage(ONBOARDING_MESSAGE);
-    configManager.setConfiguration(TTSDialogueConfig.GROUP, ONBOARDING_SEEN_KEY, true);
+    configManager.setConfiguration(VoicedDialogueConfig.GROUP, ONBOARDING_SEEN_KEY, true);
   }
 
   /**
@@ -108,8 +109,8 @@ public final class ChatNoticeManager {
    * and its key is unavailable. Local needs no key, so it never warns.
    */
   static boolean shouldWarnMissingCloudKey(
-      TTSDialogueConfig.VoiceBackend backend, boolean keyAvailable) {
-    return backend == TTSDialogueConfig.VoiceBackend.CLOUD && !keyAvailable;
+      VoicedDialogueConfig.VoiceBackend backend, boolean keyAvailable) {
+    return backend == VoicedDialogueConfig.VoiceBackend.CLOUD && !keyAvailable;
   }
 
   /**

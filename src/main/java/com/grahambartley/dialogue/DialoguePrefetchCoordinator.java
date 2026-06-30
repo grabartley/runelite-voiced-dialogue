@@ -1,6 +1,6 @@
 package com.grahambartley.dialogue;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.CharacterProfile;
 import com.grahambartley.synthesis.Emotion;
@@ -28,7 +28,7 @@ public final class DialoguePrefetchCoordinator {
   private final DialogueTextCleaner textCleaner;
   private final DialoguePrefetcher prefetcher;
   private final BackendProvider backendProvider;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
 
   public DialoguePrefetchCoordinator(
       VoiceManager voiceManager,
@@ -36,7 +36,7 @@ public final class DialoguePrefetchCoordinator {
       DialogueTextCleaner textCleaner,
       DialoguePrefetcher prefetcher,
       BackendProvider backendProvider,
-      TTSDialogueConfig config) {
+      VoicedDialogueConfig config) {
     this.voiceManager = voiceManager;
     this.profileResolver = profileResolver;
     this.textCleaner = textCleaner;

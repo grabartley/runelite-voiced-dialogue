@@ -6,8 +6,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.TTSDialogueConfig;
-import com.grahambartley.TTSDialogueConfig.VoiceBackend;
+import com.grahambartley.VoicedDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.SynthesisBackend;
@@ -121,7 +121,7 @@ public class DialogueAudioServiceTest {
   /**
    * Config whose only meaningful answer is the backend selection; everything else uses defaults.
    */
-  private static final class TestConfig implements TTSDialogueConfig {
+  private static final class TestConfig implements VoicedDialogueConfig {
     private VoiceBackend backend = VoiceBackend.LOCAL;
 
     @Override

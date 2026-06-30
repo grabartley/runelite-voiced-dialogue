@@ -1,6 +1,6 @@
 ---
 name: build
-description: Build or implement a feature for the TTS Dialogue RuneLite plugin, optionally from a GitHub issue. Use when asked to build, implement, or ship scoped work and keep project board status updated.
+description: Build or implement a feature for the Voiced Dialogue RuneLite plugin, optionally from a GitHub issue. Use when asked to build, implement, or ship scoped work and keep project board status updated.
 ---
 
 # Build
@@ -26,7 +26,7 @@ description: Build or implement a feature for the TTS Dialogue RuneLite plugin, 
 1. Run the `worktree` skill to create a fresh isolated branch worktree, then perform all implementation and validation work inside that worktree.
 2. Capture scope from the request.
 3. If an issue number or URL is provided, read it first with gh:
-- `gh issue view <number> --repo grabartley/tts-dialogue-runelite`
+- `gh issue view <number> --repo grabartley/runelite-voiced-dialogue`
 - Extract acceptance criteria, constraints, and references.
 4. If no issue is provided, invoke the `create-issue` skill before coding.
 5. Use the created issue as the tracking artifact for all subsequent status moves.
