@@ -6,8 +6,11 @@ import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 
-@ConfigGroup("ttsDialogue")
+@ConfigGroup(TTSDialogueConfig.GROUP)
 public interface TTSDialogueConfig extends Config {
+
+  /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
+  String GROUP = "ttsDialogue";
 
   @ConfigSection(
       name = "General",

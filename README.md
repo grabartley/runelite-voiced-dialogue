@@ -172,7 +172,7 @@ cd tts-dialogue-runelite
 ./gradlew build
 ```
 
-Run the `com.grahambartley.TTSDialoguePluginTest` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. The standalone TTS engine lives under `engine-kokoro/`, built and published to GitHub Releases by a manual workflow and resolved at runtime through the bundled `engine-manifest.json`. For how the jar and engine fit together and the release runbook, see [docs/engine-pipeline.md](docs/engine-pipeline.md).
+Run the `com.grahambartley.TTSDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. The standalone TTS engine lives under `engine-kokoro/`, built and published to GitHub Releases by a manual workflow and resolved at runtime through the bundled `engine-manifest.json`. For how the jar and engine fit together and the release runbook, see [docs/engine-pipeline.md](docs/engine-pipeline.md).
 
 **Tech stack:** Java, Kokoro-82M for the local voice, sherpa-onnx for ONNX inference, the OpenRouter speech API for the cloud voice, and the RuneLite plugin framework.
 
