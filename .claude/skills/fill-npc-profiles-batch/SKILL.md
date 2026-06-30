@@ -1,6 +1,6 @@
 ---
 name: fill-npc-profiles-batch
-description: Bulk-author bespoke per-NPC voice profiles (and race/gender/ethnicity corrections) for a whole league region, researching each from the OSRS Wiki and osrs MCP. Use for the region-by-region rollout (umbrella issue #122; batches #123-125...) or when asked to "fill in NPC profiles" for an area.
+description: Bulk-author bespoke per-NPC voice profiles (and race/gender/ethnicity corrections) for a whole league region, researching each from the OSRS Wiki and osrs MCP. Use for the region-by-region rollout or when asked to "fill in NPC profiles" for an area.
 ---
 
 # Fill in NPC profiles for a league region
@@ -191,7 +191,7 @@ British medieval fantasy: commoners common British; royalty/knights/nobles posh
 via **style register**, not a new accent; distinctive races and lore creatures
 keep their racial accents (handled by the race layer, do not restate them in a
 `byId` accent); `ethnicity` = origin, following the real-world cultures the OSRS
-locations are based on. Phrase accents positively, never mention America. No
+locations are based on. Phrase accents positively, never by negation. No
 transient comments. Gemini renders British/European accents reliably, foreign
 ones inconsistently, do not over-invest where the model cannot deliver.
 

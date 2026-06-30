@@ -138,8 +138,8 @@ when **Voice Backend** is `Local`, and is then the only backend used: it is full
 cloud calls.
 
 - **British-only by design.** Kokoro has no accent parameter: accent is baked into the chosen speaker
-  id, and the model loads a US-English lexicon, so its realistic range is American vs British with a
-  small British bank. Rather than wire the cloud accent system into it, every Local voice is British
+  id, and its English voices offer only a narrow accent range backed by a small British bank.
+  Rather than wire the cloud accent system into it, every Local voice is British
   (this is a British medieval fantasy world). The plugin's `KokoroVoice` bank holds only the British
   (`bm_`/`bf_`) voices, split into a male pool and a female pool; race never selects a Local voice,
   only gender does. Each NPC hashes its composition id (or name) into the gender pool for a stable,

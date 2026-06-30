@@ -47,7 +47,7 @@ An NPC can have several variant ids, list them all in overrides.
 ## World rules (keep consistent)
 
 - British medieval fantasy. Commoners speak **common** British; royalty/knights/nobles/high society are **posh** RP, carried by the role's **style register**, not an accent. Distinctive races and lore creatures keep their accents (dwarf Scottish, troll Brixton, gnome country Irish, leprechaun Irish, vampyre Dracula, Fremennik Norse, wizard wise).
-- Phrase accents **positively**; never mention America.
+- Phrase accents **positively**; never by negation.
 - No transient comments (no "for now", batch/PR/date references) in code or JSON.
 - Do **not** change pitch on the fly; depth comes from the race -> Gemini voice map (`GeminiVoiceMap`).
 - Gemini renders British/European accents reliably; foreign accents (Italian, Egyptian, West African, Japanese) are inconsistent in the model, no prompt guarantees them.
