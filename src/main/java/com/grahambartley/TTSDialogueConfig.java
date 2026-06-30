@@ -65,7 +65,19 @@ public interface TTSDialogueConfig extends Config {
     CUTESY("Cutesy & Bubbly", "cutesy, bubbly and over-enthusiastic"),
     PIRATE("Pirate Speak", "pirate speak"),
     UK_SLANG("UK Slang", "with London Roadman Slang"),
-    IRISH_SLANG("Irish Slang", "with Dublin Slang");
+    IRISH_SLANG("Irish Slang", "with Dublin Slang"),
+    COCKNEY("Cockney", "with a Cockney accent and Cockney rhyming slang"),
+    NINETIES_STREET("90s Street", "with 90s hip-hop street slang"),
+    JAMAICAN("Jamaican Patois", "with Jamaican Patois"),
+    WESTEROS("Westeros", "in the archaic courtly speech of Westeros"),
+    CYBERPUNK("Cyberpunk", "with gritty cyberpunk netrunner slang"),
+    RHYMING("Rhyming", "as rhyming verse"),
+    RIDDLES("Riddles", "phrased as a cryptic riddle"),
+    US_SLANG("US Slang", "with casual American slang"),
+    SURFER("Surfer", "with laid-back surfer slang"),
+    SHAKESPEAREAN("Shakespearean", "in Shakespearean Early Modern English"),
+    VALLEY_GIRL("Valley Girl", "with Valley Girl slang"),
+    COWBOY("Cowboy", "with Wild West cowboy slang");
 
     private final String label;
     private final String phrase;
