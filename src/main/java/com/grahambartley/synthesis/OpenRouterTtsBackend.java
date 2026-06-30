@@ -478,7 +478,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   /** The configured pace as a percentage of normal, clamped to the supported 50-200 range. */
   private int speedPercent() {
-    int percent = config.cloudPace();
+    int percent = config.speakingPace();
     if (percent < 50) {
       return 50;
     }

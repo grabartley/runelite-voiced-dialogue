@@ -184,7 +184,11 @@ public class TTSDialoguePlugin extends Plugin {
     // in the plugin jar.
     EngineInstaller installer = new EngineInstaller(okHttpClient, gson, ttsDir.resolve("engines"));
     LocalKokoroBackend localKokoro =
-        new LocalKokoroBackend(installer, launcher -> new ExternalEngineClient(launcher, gson));
+        new LocalKokoroBackend(
+            installer,
+            launcher -> new ExternalEngineClient(launcher, gson, config::speakingPace),
+            config::speakingPace);
+    localKokoro.setNotice(this::notifyBackend);
     // The cloud OpenRouter backend is registered alongside the local Kokoro backend and selected
     // when Voice Backend is Cloud and an API key is set. It uses the injected OkHttpClient and Gson
     // (Hub rule: never new them in plugin code). The provider routes every line to the selected

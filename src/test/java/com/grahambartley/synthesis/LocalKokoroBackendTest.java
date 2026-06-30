@@ -13,7 +13,9 @@ import com.grahambartley.synthesis.engine.EngineInstaller;
 import com.grahambartley.synthesis.engine.ExternalEngineClient;
 import com.grahambartley.tts.Pcm;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -81,5 +83,63 @@ public class LocalKokoroBackendTest {
     Pcm result = backend.synthesize(request());
     assertEquals(expected, result);
     assertEquals(24000, result.getSampleRate());
+  }
+
+  @Test
+  public void cacheVariantFoldsSpeakingPaceOnlyWhenNotDefault() {
+    LocalKokoroBackend atDefault =
+        new LocalKokoroBackend(
+            mock(EngineInstaller.class), launcher -> mock(ExternalEngineClient.class), () -> 100);
+    assertEquals("default pace adds no cache variant", "", atDefault.cacheVariant(request()));
+
+    LocalKokoroBackend faster =
+        new LocalKokoroBackend(
+            mock(EngineInstaller.class), launcher -> mock(ExternalEngineClient.class), () -> 150);
+    assertEquals(
+        "a non-default pace re-keys the cache so stale audio is not replayed",
+        "s150",
+        faster.cacheVariant(request()));
+  }
+
+  @Test
+  public void firesUnavailableNoticeAtStartupAndOnEveryUnvoicedLine() {
+    // Mirrors the cloud missing-key notice: once when warm-up first finds the engine unavailable,
+    // then again for each line that cannot be voiced.
+    EngineInstaller installer = mock(EngineInstaller.class);
+    when(installer.install()).thenReturn(null);
+
+    List<String> notices = new ArrayList<>();
+    LocalKokoroBackend backend =
+        new LocalKokoroBackend(installer, launcher -> mock(ExternalEngineClient.class));
+    backend.setNotice(notices::add);
+
+    backend.warmUp(); // startup notice
+    // A redundant warm-up is a no-op and must not fire.
+    backend.warmUp();
+    backend.synthesize(request()); // unvoiced line
+    backend.synthesize(request()); // unvoiced line
+
+    assertEquals("startup notice plus one per unvoiced line", 3, notices.size());
+    for (String n : notices) {
+      assertEquals(LocalKokoroBackend.UNAVAILABLE_NOTICE, n);
+    }
+  }
+
+  @Test
+  public void lazyFirstLineFiresTheNoticeExactlyOnce() {
+    // When the very first synthesize is what triggers (and fails) warm-up, warm-up fires the notice
+    // and synthesize must not duplicate it for that same line.
+    EngineInstaller installer = mock(EngineInstaller.class);
+    when(installer.install()).thenReturn(null);
+
+    List<String> notices = new ArrayList<>();
+    LocalKokoroBackend backend =
+        new LocalKokoroBackend(installer, launcher -> mock(ExternalEngineClient.class));
+    backend.setNotice(notices::add);
+
+    assertNull(backend.synthesize(request()));
+    assertEquals("lazy first line fires once, not twice", 1, notices.size());
+    assertNull(backend.synthesize(request()));
+    assertEquals("the next unvoiced line fires again", 2, notices.size());
   }
 }

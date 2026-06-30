@@ -14,23 +14,31 @@ import java.nio.charset.StandardCharsets;
  *
  * <p>Protocol: the plugin writes one JSON request line on stdin
  *
- * <pre>{"text","voice":{race,gender,player},"emotion","speed"}</pre>
+ * <pre>{"text","voice":{race,gender,player},"emotion","speed","speakerId"}</pre>
  *
  * and reads back one JSON header line
  *
  * <pre>{"sampleRate":24000,"samples":N,"format":"f32le"}</pre>
  *
- * immediately followed by {@code N*4} little-endian float32 bytes. {@code emotion} is accepted and
- * ignored (Kokoro is neutral-only by design); {@code speed} defaults to 1.0 when absent.
+ * immediately followed by {@code N*4} little-endian float32 bytes. The engine renders the explicit
+ * {@code speakerId} the plugin resolves; the {@code voice} object and {@code emotion} are accepted
+ * and ignored (the plugin owns voice selection and Kokoro is neutral-only by design); {@code speed}
+ * defaults to 1.0 when absent.
  */
 final class StdioProtocol {
 
   static final String FORMAT = "f32le";
 
   /**
-   * Sentinel for an absent/unspecified explicit speaker id: fall back to the race/gender matrix.
+   * Sentinel for an absent/unspecified explicit speaker id: fall back to {@link #DEFAULT_SPEAKER}.
    */
   static final int NO_SPEAKER_ID = -1;
+
+  /**
+   * British voice (bm_george) used when a request carries no explicit speaker id. The plugin always
+   * sends one now, so this is only a safety net for a malformed or legacy request.
+   */
+  static final int DEFAULT_SPEAKER = 26;
 
   private static final Gson GSON = new Gson();
 
@@ -45,32 +53,27 @@ final class StdioProtocol {
     return buf.array();
   }
 
-  /** Decodes a request line into the fields the engine needs. */
+  /**
+   * Decodes a request line into the fields the engine needs: the text, the speed, and the explicit
+   * Kokoro speaker id the plugin chose. The {@code voice} object (player/race/gender) the plugin
+   * also sends is ignored here: the plugin owns voice selection and sends the resolved speaker id,
+   * so the engine never maps race/gender to a voice itself.
+   */
   static Request decodeRequest(String line) {
     JsonObject root = line == null ? new JsonObject() : GSON.fromJson(line, JsonObject.class);
     if (root == null) {
       root = new JsonObject();
     }
     String text = asString(root.get("text"), "");
-    JsonObject voice =
-        root.has("voice") && root.get("voice").isJsonObject()
-            ? root.getAsJsonObject("voice")
-            : new JsonObject();
-    boolean player = voice.has("player") && voice.get("player").getAsBoolean();
-    String race = asString(voice.get("race"), null);
-    String gender = asString(voice.get("gender"), null);
     float speed =
         root.has("speed") && !root.get("speed").isJsonNull()
             ? root.get("speed").getAsFloat()
             : 1.0f;
-    // Optional explicit Kokoro speaker id (per-NPC voice variety, issue #78). Absent or negative
-    // means "not specified": speakerId() then falls back to the race/gender matrix, so an older
-    // plugin that never sends this field keeps the exact pre-#78 behaviour.
     int explicitSpeakerId =
         root.has("speakerId") && !root.get("speakerId").isJsonNull()
             ? root.get("speakerId").getAsInt()
             : NO_SPEAKER_ID;
-    return new Request(text, player, race, gender, speed, explicitSpeakerId);
+    return new Request(text, speed, explicitSpeakerId);
   }
 
   /** Writes the header line then the raw PCM frame to {@code out}, flushing once complete. */
@@ -106,47 +109,34 @@ final class StdioProtocol {
     return el == null || el.isJsonNull() ? fallback : el.getAsString();
   }
 
-  /** A decoded synthesis request. {@code emotion} is intentionally absent: it is ignored. */
+  /**
+   * A decoded synthesis request. {@code emotion} and the {@code voice} object are intentionally
+   * absent: Kokoro is neutral-only and the plugin resolves the voice to an explicit speaker id.
+   */
   static final class Request {
     final String text;
-    final boolean player;
-    final String race;
-    final String gender;
     final float speed;
 
     /** Explicit per-NPC speaker id from the wire, or {@link #NO_SPEAKER_ID} when not specified. */
     final int explicitSpeakerId;
 
-    Request(String text, boolean player, String race, String gender, float speed) {
-      this(text, player, race, gender, speed, NO_SPEAKER_ID);
+    Request(String text, float speed) {
+      this(text, speed, NO_SPEAKER_ID);
     }
 
-    Request(
-        String text,
-        boolean player,
-        String race,
-        String gender,
-        float speed,
-        int explicitSpeakerId) {
+    Request(String text, float speed, int explicitSpeakerId) {
       this.text = text;
-      this.player = player;
-      this.race = race;
-      this.gender = gender;
       this.speed = speed;
       this.explicitSpeakerId = explicitSpeakerId;
     }
 
     /**
-     * The Kokoro speaker id to synthesize with. The plugin's explicit per-NPC choice wins when
-     * present (issue #78); otherwise this falls back to the shared race/gender {@link
-     * SpeakerMatrix} exactly as before, so a plugin that never sends {@code speakerId} is
-     * unaffected.
+     * The Kokoro speaker id to synthesize with: the plugin's explicit choice when present,
+     * otherwise the default British voice. The plugin owns voice selection, so the engine simply
+     * renders the id it is given.
      */
     int speakerId() {
-      if (explicitSpeakerId >= 0) {
-        return explicitSpeakerId;
-      }
-      return SpeakerMatrix.speakerId(player, race, gender);
+      return explicitSpeakerId >= 0 ? explicitSpeakerId : DEFAULT_SPEAKER;
     }
   }
 }

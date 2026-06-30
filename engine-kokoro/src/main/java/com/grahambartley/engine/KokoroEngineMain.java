@@ -74,9 +74,7 @@ public final class KokoroEngineMain {
     try {
       KokoroEngine.Pcm pcm =
           engine.synthesize(
-              "Conformance check. The engine is alive.",
-              SpeakerMatrix.speakerId(false, "HUMAN", "MALE"),
-              1.0f);
+              "Conformance check. The engine is alive.", StdioProtocol.DEFAULT_SPEAKER, 1.0f);
       System.out.println("sampleRate=" + pcm.sampleRate + " samples=" + pcm.samples.length);
       if (pcm.sampleRate <= 0 || pcm.samples.length == 0) {
         System.err.println("Self-test produced empty audio");

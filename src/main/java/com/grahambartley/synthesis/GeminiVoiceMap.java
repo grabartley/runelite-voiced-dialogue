@@ -92,13 +92,22 @@ final class GeminiVoiceMap {
     }
     NPCGender gender = normalizeGender(spec.gender());
     if (spec.player()) {
-      return pick(playerVoices.get(gender), spec);
+      // The player anchors to its configured voice; the per-NPC seed is for NPC variety only, so
+      // the
+      // player ignores it (it carries a British Local speaker id since #150, which must not perturb
+      // the cloud player voice). There is a single player, so anchoring keeps it stable.
+      return anchor(playerVoices.get(gender));
     }
     Map<NPCGender, String[]> byGender = npcVoices.get(spec.race());
     if (byGender == null) {
       return pick(playerVoices.get(gender), spec);
     }
     return pick(byGender.get(gender), spec);
+  }
+
+  /** The anchor (index 0) voice of {@code pool}, falling back to the default for an empty pool. */
+  private static String anchor(String[] pool) {
+    return (pool == null || pool.length == 0) ? DEFAULT_VOICE : pool[0];
   }
 
   /**

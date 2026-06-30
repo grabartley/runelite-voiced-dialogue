@@ -55,8 +55,9 @@ Because the cloud backend is billed per character, several guards keep cost boun
 - **Timeout and stale-drop.** Cloud calls carry a 10-second `callTimeout` so a hung request cannot pin
   the single synthesis thread, and the pipeline's epoch check drops any response that arrives after the
   dialogue has advanced, so stale audio never plays late.
-- **Speaking pace.** **Speaking Pace** is sent as the OpenRouter `speed` parameter only when it
-  is not 100%, so the default request body is unchanged; the active model may ignore it.
+- **Speaking pace.** The shared **Speaking Pace** setting (General section) is sent as the OpenRouter
+  `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
+  model may ignore it. The Local backend reads the same setting and always sends it.
 - **Keepalive connection.** The backend reuses one long-lived client derived from the injected one
   (an 8-connection 5-minute keepalive pool, a 2s connect and 15s read budget), so back-to-back lines
   reuse a warm connection instead of re-handshaking. It is pinned to HTTP/1.1: the speech endpoint
@@ -135,3 +136,24 @@ header line plus a raw float PCM frame back), spawned lazily off the game thread
 lines. Neutral-only by deliberate design so the local voice stays clean neural output. It runs only
 when **Voice Backend** is `Local`, and is then the only backend used: it is fully offline and makes no
 cloud calls.
+
+- **British-only by design.** Kokoro has no accent parameter: accent is baked into the chosen speaker
+  id, and the model loads a US-English lexicon, so its realistic range is American vs British with a
+  small British bank. Rather than wire the cloud accent system into it, every Local voice is British
+  (this is a British medieval fantasy world). The plugin's `KokoroVoice` bank holds only the British
+  (`bm_`/`bf_`) voices, split into a male pool and a female pool; race never selects a Local voice,
+  only gender does. Each NPC hashes its composition id (or name) into the gender pool for a stable,
+  distinct voice, and the player resolves to a fixed British voice by gender. Gender-correctness and
+  per-NPC variety survive; only accent and race-character variety go away. The plugin resolves the
+  speaker id and sends it explicitly, so the engine just renders it and owns no voice mapping of its
+  own. Accents, emotion, spoken language, speaking styles, free-text persona, and the character cap
+  are Cloud-only: each needs a network or LLM hop, or a capability the neutral local model lacks.
+- **Speaking pace.** **Speaking Pace** is sent to the engine as the `speed` field on every request, so
+  the offline voice actually speeds up or slows down. `cacheVariant` folds the pace into the cache key
+  only when it is not 100, so a pace change never replays stale Local audio while the default stays on
+  a stable key.
+- **Unavailable notice.** If the engine cannot start (unsupported platform, or a failed
+  download/verify/spawn), the backend surfaces a chat notice telling the player Local lines will be
+  silent and to switch to Cloud, instead of failing quietly. It is posted once when warm-up first
+  finds the engine unavailable and again for each line that then cannot be voiced, mirroring the
+  cloud backend's missing-key notice.
