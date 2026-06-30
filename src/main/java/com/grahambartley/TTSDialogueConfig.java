@@ -74,10 +74,6 @@ public interface TTSDialogueConfig extends Config {
     PIRATE("Pirate Speak", "pirate speak"),
     COWBOY("Cowboy", "with Wild West cowboy slang"),
     CYBERPUNK("Cyberpunk", "with gritty cyberpunk netrunner slang"),
-    WESTEROS(
-        "Westeros",
-        "in the style of A Song of Ice and Fire, using the formal medieval phrasing and idioms of"
-            + " Westerosi nobility"),
     RHYMING("Rhyming", "as rhyming verse");
 
     private final String label;
