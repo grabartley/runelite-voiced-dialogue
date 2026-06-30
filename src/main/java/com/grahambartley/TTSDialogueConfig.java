@@ -66,7 +66,7 @@ public interface TTSDialogueConfig extends Config {
     PIRATE("Pirate Speak", "pirate speak"),
     UK_SLANG("UK Slang", "with London Roadman Slang"),
     IRISH_SLANG("Irish Slang", "with Dublin Slang"),
-    COCKNEY("Cockney", "with a Cockney accent and Cockney rhyming slang"),
+    COCKNEY("Cockney", "with Cockney rhyming slang"),
     NINETIES_STREET("90s Street", "with 90s hip-hop street slang"),
     JAMAICAN("Jamaican Patois", "with Jamaican Patois"),
     WESTEROS("Westeros", "in the archaic courtly speech of Westeros"),
