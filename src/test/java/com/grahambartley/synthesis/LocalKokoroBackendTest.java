@@ -13,7 +13,9 @@ import com.grahambartley.synthesis.engine.EngineInstaller;
 import com.grahambartley.synthesis.engine.ExternalEngineClient;
 import com.grahambartley.tts.Pcm;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -81,5 +83,40 @@ public class LocalKokoroBackendTest {
     Pcm result = backend.synthesize(request());
     assertEquals(expected, result);
     assertEquals(24000, result.getSampleRate());
+  }
+
+  @Test
+  public void cacheVariantFoldsSpeakingPaceOnlyWhenNotDefault() {
+    LocalKokoroBackend atDefault =
+        new LocalKokoroBackend(
+            mock(EngineInstaller.class), launcher -> mock(ExternalEngineClient.class), () -> 100);
+    assertEquals("default pace adds no cache variant", "", atDefault.cacheVariant(request()));
+
+    LocalKokoroBackend faster =
+        new LocalKokoroBackend(
+            mock(EngineInstaller.class), launcher -> mock(ExternalEngineClient.class), () -> 150);
+    assertEquals(
+        "a non-default pace re-keys the cache so stale audio is not replayed",
+        "s150",
+        faster.cacheVariant(request()));
+  }
+
+  @Test
+  public void firesUnavailableNoticeOnceWhenEngineCannotInstall() {
+    EngineInstaller installer = mock(EngineInstaller.class);
+    when(installer.install()).thenReturn(null);
+
+    List<String> notices = new ArrayList<>();
+    LocalKokoroBackend backend =
+        new LocalKokoroBackend(installer, launcher -> mock(ExternalEngineClient.class));
+    backend.setNotice(notices::add);
+
+    backend.warmUp();
+    // A second warm-up (or a later synthesize that lazily warms) must not re-fire the notice.
+    backend.warmUp();
+    backend.synthesize(request());
+
+    assertEquals("the unavailable notice fires exactly once", 1, notices.size());
+    assertEquals(LocalKokoroBackend.UNAVAILABLE_NOTICE, notices.get(0));
   }
 }

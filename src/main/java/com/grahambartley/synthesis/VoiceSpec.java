@@ -30,6 +30,21 @@ public record VoiceSpec(
     return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SPEAKER_ID);
   }
 
+  /**
+   * A player voice of the given gender carrying an explicit Kokoro {@code speakerId} (British-only
+   * Local, issue #150), so the local engine voices that exact British speaker instead of resolving
+   * the player through its matrix. The id is Local-specific and advisory: the cloud backend anchors
+   * the player to its configured voice and ignores it. A negative id is normalised to {@link
+   * #UNSPECIFIED_SPEAKER_ID}.
+   */
+  public static VoiceSpec player(VoiceManager.NPCGender gender, int speakerId) {
+    return new VoiceSpec(
+        true,
+        VoiceManager.NPCRace.HUMAN,
+        gender,
+        speakerId < 0 ? UNSPECIFIED_SPEAKER_ID : speakerId);
+  }
+
   /** An NPC voice for the given race and gender, with no explicit per-NPC Kokoro speaker. */
   public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender) {
     return new VoiceSpec(false, race, gender, UNSPECIFIED_SPEAKER_ID);

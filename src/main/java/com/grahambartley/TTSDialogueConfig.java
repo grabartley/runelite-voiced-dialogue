@@ -263,6 +263,20 @@ public interface TTSDialogueConfig extends Config {
     return true;
   }
 
+  @ConfigItem(
+      keyName = "speakingPace",
+      name = "Speaking Pace",
+      description =
+          "How fast dialogue is spoken, as a percentage of normal (100 = normal). Applies to both"
+              + " backends: Local speeds up or slows down the offline voice directly, while Cloud"
+              + " sends it to OpenRouter only when not 100 (the active model may ignore it).",
+      position = 6,
+      section = generalSection)
+  @Range(min = 50, max = 200)
+  default int speakingPace() {
+    return 100;
+  }
+
   // ---------------------------------------------------------------------------
   // Cloud Voice (OpenRouter)
   // ---------------------------------------------------------------------------
@@ -389,28 +403,17 @@ public interface TTSDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "cloudPace",
-      name = "Speaking Pace",
-      description =
-          "Speaking pace for the Cloud voice, as a percentage of normal (100 = normal). Sent to"
-              + " OpenRouter only when not 100; the active model may ignore it.",
-      position = 9,
-      section = cloudSection)
-  @Range(min = 50, max = 200)
-  default int cloudPace() {
-    return 100;
-  }
-
-  @ConfigItem(
       keyName = "autoLearnNewNpcs",
       name = "Auto-learn New NPCs",
       description =
           "When an NPC isn't in the bundled voice table (e.g. one added to the game since the last"
               + " plugin update), look its race, gender and ethnicity up on the Old School RuneScape"
-              + " Wiki once, then cache the result locally so it voices correctly from then on. The"
-              + " first line for such an NPC still uses the default voice while the lookup runs. Off"
-              + " by default; when on it makes a network request (the NPC's name) to the wiki.",
-      position = 10,
+              + " Wiki once, then cache the result locally so it voices correctly from then on. Helps"
+              + " both backends: the learned race and gender pick the right Local voice too, not just"
+              + " the Cloud character. The first line for such an NPC still uses the default voice"
+              + " while the lookup runs. Off by default; when on it makes a network request (the"
+              + " NPC's name) to the wiki.",
+      position = 9,
       section = cloudSection)
   default boolean autoLearnNewNpcs() {
     return false;
@@ -424,7 +427,7 @@ public interface TTSDialogueConfig extends Config {
               + " dungeon, sewer or basement), spoken lines get a decaying echo so they sound"
               + " enclosed. Cloud backend only; off by default. The echo is added at playback, so"
               + " cached audio is unchanged and nothing is re-billed.",
-      position = 11,
+      position = 10,
       section = cloudSection)
   default boolean cloudCaveEcho() {
     return false;

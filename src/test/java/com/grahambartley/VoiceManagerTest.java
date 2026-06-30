@@ -76,14 +76,21 @@ public class VoiceManagerTest {
     VoiceSpec spec = manager.resolveVoice("player", null);
     assertTrue("player voice should be a player spec", spec.player());
     assertEquals(NPCGender.FEMALE, spec.gender());
-    assertEquals("player:FEMALE", spec.key());
+    // British-only Local (#150): the player carries an explicit British speaker, so the cache key
+    // includes it.
+    assertEquals(
+        "player:FEMALE#" + VoiceManager.britishPlayerSpeaker(NPCGender.FEMALE), spec.key());
   }
 
   @Test
-  public void playerSpecMapsToConfiguredKokoroSpeaker() {
+  public void playerSpecMapsToBritishSpeaker() {
     VoiceManager manager = newManager(PlayerVoice.TYPE_B);
     VoiceSpec spec = manager.resolveVoice("player", null);
-    assertEquals(VoiceProfile.PLAYER_FEMALE.getSpeakerId(), manager.kokoroSpeakerId(spec));
+    assertEquals(
+        VoiceManager.britishPlayerSpeaker(NPCGender.FEMALE), manager.kokoroSpeakerId(spec));
+    assertTrue(
+        "british player speaker must be a British voice",
+        isBritishSpeaker(manager.kokoroSpeakerId(spec)));
   }
 
   @Test
@@ -91,7 +98,7 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     VoiceSpec spec = manager.resolveVoice("PLAYER", null);
     assertTrue(spec.player());
-    assertEquals(VoiceProfile.PLAYER_MALE.getSpeakerId(), manager.kokoroSpeakerId(spec));
+    assertEquals(VoiceManager.britishPlayerSpeaker(NPCGender.MALE), manager.kokoroSpeakerId(spec));
   }
 
   @Test
@@ -121,34 +128,41 @@ public class VoiceManagerTest {
   }
 
   @Test
-  public void kokoroSpeakerIdRoundTripsEveryRaceGenderProfile() {
+  public void bareSpecsLandInTheGenderCorrectBritishPool() {
+    // British-only Local (#150): a bare race/gender spec (no stamped speaker) resolves to a British
+    // pool voice of the correct gender, never the American race/gender baseline.
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     for (VoiceProfile profile : VoiceProfile.values()) {
       if (profile == VoiceProfile.PLAYER_MALE || profile == VoiceProfile.PLAYER_FEMALE) {
         continue; // Player profiles share HUMAN race; covered by the player-spec tests.
       }
       VoiceSpec spec = VoiceSpec.npc(profile.getRace(), profile.getGender());
-      assertEquals(
-          profile + " should round-trip to its own speaker id",
-          profile.getSpeakerId(),
-          manager.kokoroSpeakerId(spec));
+      int[] pool =
+          profile.getGender() == NPCGender.FEMALE
+              ? VoiceManager.FEMALE_SPEAKER_POOL
+              : VoiceManager.MALE_SPEAKER_POOL;
+      assertTrue(
+          profile + " must resolve to a British pool voice of its gender",
+          contains(pool, manager.kokoroSpeakerId(spec)));
     }
   }
 
   @Test
-  public void gorillaRaceResolvesToTheDeepGorillaSpeakers() {
+  public void gorillaBareSpecsResolveToGenderCorrectBritishVoices() {
+    // Under British-only Local the race no longer maps to a distinct timbre; only
+    // gender-correctness
+    // and per-NPC variety (within the British bank) survive.
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
-    assertEquals("am_adam", VoiceProfile.GORILLA_MALE.getKokoroVoice());
-    assertEquals("bf_alice", VoiceProfile.GORILLA_FEMALE.getKokoroVoice());
-    assertEquals(
-        VoiceProfile.GORILLA_MALE.getSpeakerId(),
-        manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.GORILLA, NPCGender.MALE)));
-    assertEquals(
-        VoiceProfile.GORILLA_FEMALE.getSpeakerId(),
-        manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.GORILLA, NPCGender.FEMALE)));
-    // A gorilla must not collapse onto the chattery monkey speaker.
-    assertNotEquals(
-        VoiceProfile.MONKEY_MALE.getSpeakerId(), VoiceProfile.GORILLA_MALE.getSpeakerId());
+    int male = manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.GORILLA, NPCGender.MALE));
+    int female = manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.GORILLA, NPCGender.FEMALE));
+    assertTrue(
+        "gorilla male lands in the British male pool",
+        contains(VoiceManager.MALE_SPEAKER_POOL, male));
+    assertTrue(
+        "gorilla female lands in the British female pool",
+        contains(VoiceManager.FEMALE_SPEAKER_POOL, female));
+    assertEquals(NPCGender.MALE, genderOfSpeaker(male));
+    assertEquals(NPCGender.FEMALE, genderOfSpeaker(female));
   }
 
   @Test
@@ -285,15 +299,16 @@ public class VoiceManagerTest {
   }
 
   @Test
-  public void playerPathIgnoresPerNpcSpeakerAndIsUnchanged() {
+  public void playerResolvesToAStableBritishSpeaker() {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     VoiceSpec spec = manager.resolveVoice("player", "ignored-name");
     assertTrue(spec.player());
-    // No per-NPC speaker is ever stamped on the player; it maps to the configured player voice.
-    assertFalse(
-        "player spec carries no explicit per-NPC speaker", spec.hasExplicitKokoroSpeakerId());
-    assertEquals("player:MALE", spec.key());
-    assertEquals(VoiceProfile.PLAYER_MALE.getSpeakerId(), manager.kokoroSpeakerId(spec));
+    // British-only Local (#150): the player now carries an explicit British speaker so the engine
+    // does not resolve it to an American matrix voice.
+    assertTrue("player carries a British Local speaker", spec.hasExplicitKokoroSpeakerId());
+    assertEquals("player:MALE#" + VoiceManager.britishPlayerSpeaker(NPCGender.MALE), spec.key());
+    assertEquals(VoiceManager.britishPlayerSpeaker(NPCGender.MALE), manager.kokoroSpeakerId(spec));
+    assertTrue(isBritishSpeaker(manager.kokoroSpeakerId(spec)));
   }
 
   @Test
@@ -302,9 +317,31 @@ public class VoiceManagerTest {
     // An NPC spec stamped with an explicit speaker is honored verbatim, not recomputed from race.
     VoiceSpec spec = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, 17);
     assertEquals(17, manager.kokoroSpeakerId(spec));
-    // A bare spec still falls back to the race/gender matrix.
+    // A bare spec falls back to a gender-correct British pool voice (British-only Local, #150).
     VoiceSpec bare = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
-    assertEquals(VoiceProfile.HUMAN_MALE.getSpeakerId(), manager.kokoroSpeakerId(bare));
+    assertTrue(contains(VoiceManager.MALE_SPEAKER_POOL, manager.kokoroSpeakerId(bare)));
+  }
+
+  @Test
+  public void speakerPoolsAreBritishOnly() {
+    // British-only Local (#150): the variety pools hold only bm_/bf_ voices.
+    assertTrue("male pool not empty", VoiceManager.MALE_SPEAKER_POOL.length > 0);
+    assertTrue("female pool not empty", VoiceManager.FEMALE_SPEAKER_POOL.length > 0);
+    for (int id : VoiceManager.MALE_SPEAKER_POOL) {
+      assertTrue("male pool id " + id + " must be British", isBritishSpeaker(id));
+    }
+    for (int id : VoiceManager.FEMALE_SPEAKER_POOL) {
+      assertTrue("female pool id " + id + " must be British", isBritishSpeaker(id));
+    }
+  }
+
+  @Test
+  public void unknownGenderBareSpecStillLandsBritish() {
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    int chosen = manager.kokoroSpeakerId(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.UNKNOWN));
+    assertTrue("unknown gender must still resolve to a British voice", isBritishSpeaker(chosen));
+    // Unknown gender mirrors the engine collapsing to male, so it lands in the male British pool.
+    assertTrue(contains(VoiceManager.MALE_SPEAKER_POOL, chosen));
   }
 
   private static NPCGender genderOfSpeaker(int speakerId) {
@@ -323,6 +360,11 @@ public class VoiceManagerTest {
       }
     }
     return false;
+  }
+
+  /** Whether a speaker id names a British ({@code bm_}/{@code bf_}) Kokoro voice. */
+  private static boolean isBritishSpeaker(int speakerId) {
+    return VoiceManager.kokoroVoiceName(speakerId).startsWith("b");
   }
 
   @Test

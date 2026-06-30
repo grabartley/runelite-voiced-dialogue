@@ -15,6 +15,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -47,6 +48,11 @@ public final class ExternalEngineClient {
   private final Gson gson;
   private final ProcessFactory processFactory;
 
+  /**
+   * Live speaking pace as a percent of normal (100 = normal), folded into the wire {@code speed}.
+   */
+  private final IntSupplier speakingPacePercent;
+
   private Process process;
   private OutputStream toEngine;
   private DataInputStream fromEngine;
@@ -62,13 +68,27 @@ public final class ExternalEngineClient {
    * @param gson the injected Gson (Hub rule: never {@code new Gson()} in plugin code)
    */
   public ExternalEngineClient(Path launcher, Gson gson) {
-    this(launcher, gson, ExternalEngineClient::spawn);
+    this(launcher, gson, () -> 100);
+  }
+
+  /**
+   * @param speakingPacePercent live speaking pace (percent of normal) read per request and sent as
+   *     the wire {@code speed}, so a pace change takes effect on the next line without a restart
+   */
+  public ExternalEngineClient(Path launcher, Gson gson, IntSupplier speakingPacePercent) {
+    this(launcher, gson, ExternalEngineClient::spawn, speakingPacePercent);
   }
 
   ExternalEngineClient(Path launcher, Gson gson, ProcessFactory processFactory) {
+    this(launcher, gson, processFactory, () -> 100);
+  }
+
+  ExternalEngineClient(
+      Path launcher, Gson gson, ProcessFactory processFactory, IntSupplier speakingPacePercent) {
     this.launcher = launcher;
     this.gson = gson;
     this.processFactory = processFactory;
+    this.speakingPacePercent = speakingPacePercent;
   }
 
   private static Process spawn(List<String> command) throws IOException {
@@ -137,14 +157,26 @@ public final class ExternalEngineClient {
 
   /** Encodes the request as the protocol JSON line and writes it to the engine's stdin. */
   private void writeRequest(SynthesisRequest request) throws IOException {
-    String line = encodeRequest(request, gson);
+    String line = encodeRequest(request, gson, speed());
     toEngine.write(line.getBytes(StandardCharsets.UTF_8));
     toEngine.write('\n');
     toEngine.flush();
   }
 
+  /** The configured speaking pace as a {@code speed} multiplier, clamped to the 50-200% range. */
+  private float speed() {
+    int percent = speakingPacePercent.getAsInt();
+    if (percent < 50) {
+      percent = 50;
+    }
+    if (percent > 200) {
+      percent = 200;
+    }
+    return percent / 100.0f;
+  }
+
   /** Builds the one-line JSON request the engine's {@code StdioProtocol} decodes. */
-  static String encodeRequest(SynthesisRequest request, Gson gson) {
+  static String encodeRequest(SynthesisRequest request, Gson gson, float speed) {
     VoiceSpec spec = request.voice();
     JsonObject voice = new JsonObject();
     voice.addProperty("player", spec.player());
@@ -165,7 +197,7 @@ public final class ExternalEngineClient {
     }
     // Emotion is sent for protocol completeness; Kokoro ignores it (neutral-only by design).
     root.addProperty("emotion", request.emotion().name());
-    root.addProperty("speed", 1.0f);
+    root.addProperty("speed", speed);
     return gson.toJson(root);
   }
 

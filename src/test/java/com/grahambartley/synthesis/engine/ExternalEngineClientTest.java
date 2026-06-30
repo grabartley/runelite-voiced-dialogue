@@ -112,6 +112,11 @@ public class ExternalEngineClientTest {
   }
 
   private static ExternalEngineClient clientFor(FakeProcess process) {
+    return clientFor(process, () -> 100);
+  }
+
+  private static ExternalEngineClient clientFor(
+      FakeProcess process, java.util.function.IntSupplier pace) {
     ExternalEngineClient.ProcessFactory factory =
         new ExternalEngineClient.ProcessFactory() {
           @Override
@@ -119,12 +124,12 @@ public class ExternalEngineClientTest {
             return process;
           }
         };
-    return new ExternalEngineClient(Paths.get("/fake/kokoro-engine"), GSON, factory);
+    return new ExternalEngineClient(Paths.get("/fake/kokoro-engine"), GSON, factory, pace);
   }
 
   @Test
   public void encodeRequestCarriesVoiceFieldsAndSpeed() {
-    String line = ExternalEngineClient.encodeRequest(request(), GSON);
+    String line = ExternalEngineClient.encodeRequest(request(), GSON, 1.0f);
     JsonObject root = GSON.fromJson(line, JsonObject.class);
     assertEquals("Hello there.", root.get("text").getAsString());
     JsonObject voice = root.getAsJsonObject("voice");
@@ -136,11 +141,29 @@ public class ExternalEngineClientTest {
   }
 
   @Test
+  public void encodeRequestEmitsTheGivenSpeed() {
+    JsonObject root =
+        GSON.fromJson(ExternalEngineClient.encodeRequest(request(), GSON, 1.5f), JsonObject.class);
+    assertEquals(1.5f, root.get("speed").getAsFloat(), 0.0001f);
+  }
+
+  @Test
+  public void clientSendsConfiguredSpeakingPaceAsSpeed() {
+    // A non-default pace (150%) is read live and folded into the wire request as speed=1.5, so the
+    // offline voice actually speeds up rather than always synthesizing at 1.0.
+    FakeProcess process = new FakeProcess(pcmFrame(24000, new float[] {0.0f}));
+    ExternalEngineClient client = clientFor(process, () -> 150);
+    client.synthesize(request());
+    JsonObject root = GSON.fromJson(process.capturedStdin().trim(), JsonObject.class);
+    assertEquals(1.5f, root.get("speed").getAsFloat(), 0.0001f);
+  }
+
+  @Test
   public void encodeRequestOmitsSpeakerIdWhenSpecHasNone() {
     // A bare race/gender spec (no per-NPC speaker) must keep the line byte-for-byte the pre-#78
     // request so old/other engines are unaffected.
     JsonObject root =
-        GSON.fromJson(ExternalEngineClient.encodeRequest(request(), GSON), JsonObject.class);
+        GSON.fromJson(ExternalEngineClient.encodeRequest(request(), GSON, 1.0f), JsonObject.class);
     assertFalse(root.has("speakerId"));
   }
 
@@ -152,7 +175,7 @@ public class ExternalEngineClientTest {
         new SynthesisRequest(
             "Hello there.", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, 17), Emotion.NEUTRAL);
     JsonObject root =
-        GSON.fromJson(ExternalEngineClient.encodeRequest(req, GSON), JsonObject.class);
+        GSON.fromJson(ExternalEngineClient.encodeRequest(req, GSON, 1.0f), JsonObject.class);
     assertTrue(root.has("speakerId"));
     assertEquals(17, root.get("speakerId").getAsInt());
   }

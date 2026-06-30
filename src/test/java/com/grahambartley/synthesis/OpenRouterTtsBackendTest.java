@@ -49,7 +49,7 @@ public class OpenRouterTtsBackendTest {
     }
 
     @Override
-    public int cloudPace() {
+    public int speakingPace() {
       return speedPercent;
     }
 

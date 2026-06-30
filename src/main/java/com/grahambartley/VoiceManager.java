@@ -172,16 +172,34 @@ public class VoiceManager {
   }
 
   /**
-   * Gender-appropriate Kokoro speaker pools for per-NPC voice variety (issue #78). Built once from
-   * the {@link VoiceProfile} bank so they can only ever contain gender-correct, in-range English
-   * voices: the male pool is every distinct {@code am_}/{@code bm_} NPC speaker, the female pool
-   * every distinct {@code af_}/{@code bf_} NPC speaker. Player-only voices are excluded so an NPC
-   * never borrows the player's voice. Each pool is sorted ascending for a stable, deterministic
-   * index so a given NPC always hashes to the same slot across runs.
+   * Gender-appropriate Kokoro speaker pools for per-NPC voice variety (issue #78), British-only by
+   * design (issue #150). Built once from the {@link VoiceProfile} bank, filtered to the British
+   * ({@code bm_}/{@code bf_}) voices only: this is a British medieval fantasy world and Kokoro
+   * bakes accent into the chosen speaker, so the local voice stays British for everyone and accents
+   * remain a Cloud-only feature. The male pool is every distinct British male NPC speaker, the
+   * female pool every distinct British female NPC speaker; player-only voices are excluded so an
+   * NPC never borrows the player's voice. Each pool is sorted ascending for a stable, deterministic
+   * index so a given NPC always hashes to the same slot across runs, and gender-correctness plus
+   * per-NPC variety (hashing within the British bank) both survive the narrowing.
    */
   static final int[] MALE_SPEAKER_POOL = buildSpeakerPool(NPCGender.MALE);
 
   static final int[] FEMALE_SPEAKER_POOL = buildSpeakerPool(NPCGender.FEMALE);
+
+  /**
+   * The British voice the player resolves to on the Local backend, by gender. The voices carry no
+   * race, so the player borrows a clean British timbre from the bank without taking on an NPC race.
+   */
+  static int britishPlayerSpeaker(NPCGender gender) {
+    return gender == NPCGender.FEMALE
+        ? VoiceProfile.ELF_FEMALE.getSpeakerId()
+        : VoiceProfile.ELF_MALE.getSpeakerId();
+  }
+
+  /** Whether a profile's Kokoro voice is British ({@code bm_}/{@code bf_}) rather than American. */
+  private static boolean isBritish(VoiceProfile profile) {
+    return profile.getKokoroVoice().startsWith("b");
+  }
 
   private static int[] buildSpeakerPool(NPCGender gender) {
     java.util.TreeSet<Integer> ids = new java.util.TreeSet<>();
@@ -190,7 +208,7 @@ public class VoiceManager {
       if (profile == VoiceProfile.PLAYER_MALE || profile == VoiceProfile.PLAYER_FEMALE) {
         continue;
       }
-      if (profile.getGender() == gender) {
+      if (profile.getGender() == gender && isBritish(profile)) {
         ids.add(profile.getSpeakerId());
       }
     }
@@ -288,7 +306,13 @@ public class VoiceManager {
       if (config != null && config.debugMode()) {
         log.info(buildPlayerTrace(config.playerVoice().getVoiceProfile()));
       }
-      return VoiceSpec.player(playerGender());
+      // Stamp a British speaker on the player spec (British-only Local, issue #150): the Local
+      // engine
+      // sends this explicit id instead of resolving the player through its matrix to an American
+      // voice. The id is Local-specific and advisory; the cloud backend anchors the player to its
+      // configured voice and ignores it.
+      NPCGender gender = playerGender();
+      return VoiceSpec.player(gender, britishPlayerSpeaker(gender));
     }
     NpcVoice resolved = resolveNpcVoice(npcName);
     // Stamp the per-NPC Kokoro speaker (issue #78) onto the spec so it rides the wire and the cache
@@ -304,20 +328,20 @@ public class VoiceManager {
    */
   public int kokoroSpeakerId(VoiceSpec voice) {
     if (voice.player()) {
-      // Derive the player speaker id from the spec's gender, not by re-reading config. The spec was
-      // stamped from config when the line was resolved, so this keeps the cache key and the audio
-      // in
-      // agreement even if the player voice is switched between resolution and synthesis.
-      return voice.gender() == NPCGender.FEMALE
-          ? VoiceProfile.PLAYER_FEMALE.getSpeakerId()
-          : VoiceProfile.PLAYER_MALE.getSpeakerId();
+      // British-only Local (issue #150): the player resolves to a British voice by gender, not the
+      // American PLAYER_MALE/PLAYER_FEMALE matrix speaker. Derived from the spec's gender (stamped
+      // from config at resolution time) so the cache key and audio agree even if the player voice
+      // is
+      // switched between resolution and synthesis.
+      return britishPlayerSpeaker(voice.gender());
     }
-    // An NPC that was stamped with a per-NPC speaker (issue #78) keeps it; otherwise fall back to
-    // the race/gender baseline so callers that built a bare spec still get a valid voice.
+    // An NPC that was stamped with a per-NPC speaker (issue #78) keeps it; otherwise fall back to a
+    // gender-correct British pool pick so callers that built a bare spec still land British (issue
+    // #150) rather than on the American race/gender baseline.
     if (voice.hasExplicitKokoroSpeakerId()) {
       return voice.kokoroSpeakerId();
     }
-    return getVoiceForRaceAndGender(voice.race(), voice.gender()).getSpeakerId();
+    return pickNpcSpeakerId(getVoiceForRaceAndGender(voice.race(), voice.gender()), null, null);
   }
 
   /**
@@ -342,7 +366,14 @@ public class VoiceManager {
             ? MALE_SPEAKER_POOL
             : raceGenderBaseline.getGender() == NPCGender.FEMALE ? FEMALE_SPEAKER_POOL : null;
     if (pool == null || pool.length == 0) {
-      return raceGenderBaseline.getSpeakerId();
+      // British-only fallback (issue #150): an unknown/empty-pool gender still lands on a British
+      // voice rather than the possibly-American race/gender baseline. Unknown gender uses the male
+      // British bank, mirroring the engine collapsing unknown gender to male.
+      int[] fallback =
+          raceGenderBaseline.getGender() == NPCGender.FEMALE
+              ? FEMALE_SPEAKER_POOL
+              : MALE_SPEAKER_POOL;
+      return fallback.length > 0 ? fallback[0] : raceGenderBaseline.getSpeakerId();
     }
     int hash = npcId != null ? Integer.hashCode(npcId) : normalizeName(npcName).hashCode();
     return pool[Math.floorMod(hash, pool.length)];

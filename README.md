@@ -80,26 +80,18 @@ Profanity filtering is always on, for everyone, with no toggle and no opt-out. E
 
 ## Voices
 
-Each NPC's voice is chosen by race and gender, and the player has a dedicated voice. Race and gender come from a static, precomputed `npcId -> {race, gender}` lookup table bundled with the plugin, so choosing a voice at runtime is a single in-memory lookup with no network calls. The matrix spans eleven races across two genders plus player voices, and each category maps to a distinct speaker so they sound genuinely different.
+Each speaker is resolved by race and gender from a static, precomputed `npcId -> {race, gender}` lookup table bundled with the plugin, so picking a voice at runtime is a single in-memory lookup with no network calls. An NPC missing from the table uses the default Human voice. How that resolution turns into an actual voice depends on the backend.
 
-| Category | Male | Female |
-|----------|------|--------|
-| **Player** | `am_michael` | `af_heart` |
-| **Human** | `am_fenrir` | `af_bella` |
-| **Elf** | `bm_george` | `bf_emma` |
-| **Dwarf** | `bm_lewis` | `bf_isabella` |
-| **Goblin** | `am_puck` | `af_sky` |
-| **Monkey** | `am_liam` | `af_jessica` |
-| **Gorilla** | `am_adam` | `bf_alice` |
-| **Troll** | `am_onyx` | `af_sarah` |
-| **Undead** | `am_echo` | `af_nicole` |
-| **Demon** | `bm_daniel` | `af_river` |
-| **Wizard** | `bm_fable` | `af_alloy` |
-| **Tortugan** | `am_santa` | `af_nova` |
+**Local (Kokoro)** voices everyone with a British accent: this is a British medieval fantasy world, and Kokoro bakes accent into the chosen speaker (it has no accent parameter), so accent variety is a Cloud-only feature. The player and every NPC get a gender-correct British voice, and NPCs of the same gender are spread across a small British bank by a stable per-NPC hash so they still sound distinct.
 
-An NPC missing from the table uses the default Human voice. The lookup table is generated offline and can be grown over time; see [docs/npc-voice-tooling.md](docs/npc-voice-tooling.md) for how it is built and how to add or correct entries.
+| Gender | British voices |
+|--------|----------------|
+| **Male** | `bm_daniel`, `bm_fable`, `bm_george`, `bm_lewis` |
+| **Female** | `bf_alice`, `bf_emma`, `bf_isabella` |
 
-The table above is the local Kokoro voice bank. The Cloud backend maps the same race and gender categories onto Google's Gemini voices, keeping each category gender-correct and spreading NPCs of the same race and gender across a sub-pool so they still sound distinct.
+**Cloud (OpenRouter)** maps the same race and gender categories onto Google's Gemini voices, keeping each category gender-correct and giving each race its own character (gravelly dwarves and trolls, refined elves and wizards, bright goblins), with NPCs spread across a per-race sub-pool so they sound distinct. Accent, persona, and pace are then steered per character (see [Character profiles](#character-profiles)).
+
+The lookup table is generated offline and can be grown over time; see [docs/npc-voice-tooling.md](docs/npc-voice-tooling.md) for how it is built and how to add or correct entries.
 
 ## Performance
 
@@ -123,6 +115,7 @@ Settings are split into three categories that mirror the in-game panel: **Genera
 | **Voice My Public Chat** | `Off` | Speaks your own public chat messages aloud in your player voice. Only your own messages are voiced (other players' public chat is ignored), and chat is spoken exactly as typed: Spoken Language and the Player/NPC Speaking Style are never applied to it. |
 | **Prefetch Dialogue** | `On` | Warms the audio cache for the dialogue options you can see, so the line you pick next plays instantly. Works on both backends; on Cloud it can raise spend on branches you never choose. |
 | **Save Audio To Disk** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and the Cloud backend is not re-billed. |
+| **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. Applies to both backends: Local speeds up or slows down the offline voice directly, while Cloud sends it to OpenRouter only when not `100` (the active model may ignore it). |
 
 ### Cloud Voice (OpenRouter)
 
@@ -137,8 +130,7 @@ Settings are split into three categories that mirror the in-game panel: **Genera
 | **Spoken Language** | `English` | Language dialogue is spoken in, picked from a dropdown of supported languages (e.g. `Brazilian Portuguese`, `Japanese`). `English` voices the original line directly; anything else translates each line first (preserving names, places, and item terms), then voices the translation. Adds a translation request per new line. |
 | **Player Speaking Style** | `None` | Optional delivery register layered onto your own dialogue lines on top of the language (Gen Z slang, pirate speak, formal, and so on). `None` changes nothing; any other value rewrites your lines in that style via the translation model. Set independently of the NPC style, so you can be a roadman among posh NPCs. |
 | **NPC Speaking Style** | `None` | Optional delivery register layered onto NPC dialogue lines on top of the language, from the same option set. `None` changes nothing; any other value rewrites NPC lines in that style via the translation model. Registers are language-agnostic, so they compose with any Spoken Language. |
-| **Speaking Pace** | `100` | Speaking pace for the Cloud voice as a percent of normal. Sent to OpenRouter only when not `100`; the active model may ignore it. |
-| **Auto-learn New NPCs** | `Off` | For an NPC not in the bundled table (e.g. one added since the last plugin update), looks its race, gender and ethnicity up on the OSRS Wiki once and caches the result locally. The first line still uses the default voice while the lookup runs. When on, makes a one-time wiki request (the NPC's name); the Local backend stays fully offline regardless. |
+| **Auto-learn New NPCs** | `Off` | For an NPC not in the bundled table (e.g. one added since the last plugin update), looks its race, gender and ethnicity up on the OSRS Wiki once and caches the result locally. Helps both backends: the learned race and gender pick the right Local voice too. The first line still uses the default voice while the lookup runs. When on, makes a one-time wiki request (the NPC's name); synthesis itself stays offline on Local regardless. |
 | **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken while you are below the overworld (a cave, dungeon, sewer or basement), so lines sound enclosed. Cloud backend only. The echo is local DSP applied at playback, so cached audio is unchanged and nothing is re-billed. |
 
 ### Advanced

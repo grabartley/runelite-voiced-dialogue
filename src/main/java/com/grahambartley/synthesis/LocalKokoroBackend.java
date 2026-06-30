@@ -5,6 +5,8 @@ import com.grahambartley.synthesis.engine.ExternalEngineClient;
 import com.grahambartley.tts.Pcm;
 import java.nio.file.Path;
 import java.util.EnumSet;
+import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -29,11 +31,28 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class LocalKokoroBackend implements SynthesisBackend {
 
+  /**
+   * One-time notice shown when the offline engine cannot start (unsupported platform, or a failed
+   * download/verify/spawn), so a Local user whose lines are silent is told why and how to recover.
+   */
+  public static final String UNAVAILABLE_NOTICE =
+      "The offline (Local) voice could not start on this machine, so Local dialogue lines will be"
+          + " silent. Switch Voice Backend to Cloud for voiced dialogue.";
+
   /** Installs/resolves the engine bundle for this OS. */
   private final EngineInstaller installer;
 
   /** Builds the transport client once the launcher is resolved (seam for tests). */
   private final ClientFactory clientFactory;
+
+  /** Live speaking pace (percent of normal); folds into the cache key when not the default 100. */
+  private final IntSupplier speakingPacePercent;
+
+  /** One-time user notice hook for an unavailable engine; defaults to a no-op. */
+  private Consumer<String> notice = msg -> {};
+
+  /** Guards the one-time notice so a repeated warm-up attempt cannot re-fire it. */
+  private boolean warned;
 
   private volatile ExternalEngineClient client;
   private volatile boolean installAttempted;
@@ -44,8 +63,19 @@ public final class LocalKokoroBackend implements SynthesisBackend {
   }
 
   public LocalKokoroBackend(EngineInstaller installer, ClientFactory clientFactory) {
+    this(installer, clientFactory, () -> 100);
+  }
+
+  public LocalKokoroBackend(
+      EngineInstaller installer, ClientFactory clientFactory, IntSupplier speakingPacePercent) {
     this.installer = installer;
     this.clientFactory = clientFactory;
+    this.speakingPacePercent = speakingPacePercent;
+  }
+
+  /** Registers a one-time notice hook (e.g. a chat or log message) for an unavailable engine. */
+  public void setNotice(Consumer<String> notice) {
+    this.notice = notice == null ? msg -> {} : notice;
   }
 
   @Override
@@ -74,6 +104,17 @@ public final class LocalKokoroBackend implements SynthesisBackend {
     return EnumSet.of(Emotion.NEUTRAL);
   }
 
+  /**
+   * Folds the speaking pace into the cache key when it is not the default 100, so changing the pace
+   * never replays stale Local audio rendered at a different speed. At 100 the fragment is empty, so
+   * audio cached before any pace change stays valid.
+   */
+  @Override
+  public String cacheVariant(SynthesisRequest request) {
+    int pace = speakingPacePercent.getAsInt();
+    return pace == 100 ? "" : "s" + pace;
+  }
+
   @Override
   public Pcm synthesize(SynthesisRequest request) {
     ExternalEngineClient c = client;
@@ -99,6 +140,7 @@ public final class LocalKokoroBackend implements SynthesisBackend {
     if (installed == null) {
       log.info(
           "Local Kokoro engine is not installed; backend unavailable, Local lines stay silent.");
+      warnUnavailable();
       return;
     }
     ExternalEngineClient c = clientFactory.create(installed.launcher());
@@ -113,7 +155,17 @@ public final class LocalKokoroBackend implements SynthesisBackend {
       } catch (RuntimeException ignored) {
         // best-effort
       }
+      warnUnavailable();
     }
+  }
+
+  /** Surfaces the unavailable-engine notice at most once per backend lifetime. */
+  private void warnUnavailable() {
+    if (warned) {
+      return;
+    }
+    warned = true;
+    notice.accept(UNAVAILABLE_NOTICE);
   }
 
   @Override
