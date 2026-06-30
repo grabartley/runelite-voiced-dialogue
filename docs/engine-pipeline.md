@@ -1,41 +1,42 @@
 # Engine Pipeline
 
-How the plugin jar and the external TTS engine relate, how each is built and shipped, and the runbook for cutting an engine release. The `README.md` covers what the plugin does for a player; this doc covers the build/release plumbing for maintainers and contributors.
+How the plugin jar and the external TTS engine relate, how each is built and shipped, and the runbook for cutting a release. The `README.md` covers what the plugin does for a player; this doc covers the build/release plumbing for maintainers and contributors.
 
 ## Two artifacts, two channels
 
-The project ships two separate artifacts on two separate channels.
+The project produces two artifacts. They are built and released **together** under one version tag, but reach users through two channels.
 
 | Artifact | What it is | Built/tested by | Published by |
 |----------|------------|-----------------|--------------|
-| **Plugin jar** | Tiny, pure-JVM RuneLite plugin. Ships with no engine binary and no voice model. | `.github/workflows/cicd.yml` on every PR | The **RuneLite Plugin Hub**, which builds it from source at a tagged commit. This repo does not self-publish the jar. |
-| **Engine bundles** | Self-contained per-OS engine processes (jlink runtime + native libs + model + licenses). | `.github/workflows/kokoro-engine-release.yml` (also compiled in `cicd.yml`) | This repo's **GitHub Releases**, via the manual `kokoro-engine-release.yml` workflow. |
+| **Plugin jar** | Pure-JVM RuneLite plugin. Ships with no engine binary and no voice model. The Hub builds the thin jar from source; the deploy also builds a standalone `*-all.jar` shadow jar (runnable via `TTSDialoguePluginRunner`). | `.github/workflows/cicd.yml` on every PR (thin jar + shadow jar) | The **RuneLite Plugin Hub** builds the thin jar from source at a tagged commit. The shadow jar is attached to the GitHub Release. |
+| **Engine bundles** | Self-contained per-OS engine processes (jlink runtime + native libs + model + licenses). | `.github/workflows/cicd.yml` matrix on the manual deploy | This repo's **GitHub Releases**, in the same release as the shadow jar. |
 
-The jar is what a user installs from the Hub. The engine bundle is what the jar downloads at runtime. They are versioned and released independently, and the manifest below is the contract that binds a given jar build to a specific published engine release.
+The thin jar is what a user installs from the Hub. The engine bundle is what that jar downloads at runtime. The shadow jar and the engine bundles ride one GitHub Release under one `v<semver>` tag, and the manifest below is the contract that binds a jar build to the engine bundles in that release.
 
 The local backend is served by a single engine family:
 
 | Engine | Backend | Runtime | Bundle contents | Built by | Manifest |
 |--------|---------|---------|-----------------|----------|----------|
-| **Kokoro** (CPU) | `local-kokoro` (default `LOCAL`) | jlink JVM + sherpa-onnx native libs (ONNX) | engine jars, native libs, jlink runtime, Kokoro model, licenses | `kokoro-engine-release.yml` (`engine-kokoro/` Gradle module) | `engine-manifest.json` |
+| **Kokoro** (CPU) | `local-kokoro` (default `LOCAL`) | jlink JVM + sherpa-onnx native libs (ONNX) | engine jars, native libs, jlink runtime, Kokoro model, licenses | `cicd.yml` deploy (`engine-kokoro/` Gradle module) | `engine-manifest.json` |
 
 The engine speaks the `--stdio` wire protocol (`ExternalEngineClient` drives it). Kokoro is a JVM engine in the `engine-kokoro/` Gradle subproject. (The emotional Cloud backend is a separate HTTP path with no external engine bundle.)
 
-## CI vs release
+## CI vs deploy
 
-These are two distinct workflows with non-overlapping responsibilities.
+`cicd.yml` is the only plugin workflow. It runs in two modes off the trigger.
 
-### `cicd.yml` — the PR gate (build + test only)
+### Pull requests — the build/test gate
 
-- Triggers: `on: pull_request` (to `main`) and `workflow_dispatch` (a manual re-run of the same gate, never a release).
+- Trigger: `on: pull_request` (to `main`).
 - Validates the Gradle wrapper, runs `./gradlew spotlessCheck`, then `./gradlew build`, which compiles the plugin **and** the `:engine-kokoro` module and runs the full test suite. That includes the engine's `--stdio` framing/manifest conformance tests (`EngineConformanceTest`).
-- Publishes the JUnit report and uploads the built plugin jar as a CI artifact.
-- It deliberately **never** builds the cross-platform engine bundles, signs, notarizes, or publishes anything.
+- Publishes the JUnit report, then builds the standalone shadow jar (`./gradlew shadowJar`) and uploads it as a downloadable CI artifact.
+- It deliberately **never** builds the cross-platform engine bundles, signs, notarizes, tags, or publishes anything.
 
-### `kokoro-engine-release.yml` — the manual release (build bundles + sign + publish)
+### `workflow_dispatch` — the manual deploy (one tagged release)
 
-- Trigger: `on: workflow_dispatch` **only**. There is intentionally no `push`/tag trigger. Inputs are a `version` tag string (e.g. `v1.0.0`) and a `prerelease` boolean flag (defaults to `true`).
-- A matrix `build` job produces the three Kokoro bundles, each on a runner matching its OS/arch so the jlink runtime and native libs are native to the target:
+- Trigger: `on: workflow_dispatch` **only**. There is intentionally no `push`/tag trigger. Inputs are a `bump` (`patch`/`minor`/`major`, default `patch`) and a `release_type` (`alpha`/`beta`/`stable`, default `alpha`). `alpha`/`beta` publish a prerelease; `stable` publishes a full release.
+- The `plugin` job computes the next semver from the latest `v*` tag and the `bump` input, runs the same Spotless + test gate, builds the release shadow jar (`./gradlew shadowJar -PreleaseVersion=<semver>`), and exposes the version to the rest of the run. A cheap test failure here fast-fails before the expensive engine matrix runs.
+- The `engine` matrix job produces the three Kokoro bundles, each on a runner matching its OS/arch so the jlink runtime and native libs are native to the target, all versioned to the same `v<semver>`:
 
   | Target | Runner | Archive |
   |--------|--------|---------|
@@ -45,9 +46,9 @@ These are two distinct workflows with non-overlapping responsibilities.
 
   Each bundle carries the engine application jar, the per-target sherpa-onnx native libraries, a self-contained `jlink` Java runtime (so end users need no JDK), the Kokoro model (`kokoro-multi-lang-v1_0`, downloaded from the sherpa-onnx model release and normalized to a `model/` dir), and the Apache-2.0 attribution files under `licenses/`.
 - Per-target validation runs before any signing: the `--stdio` conformance test runs on the Linux bundle (`EngineConformanceTest`, asserting the full frame round-trips on a real built engine), and every target runs a native `--selftest` (synthesize a fixed phrase, report sample rate + sample count). Self-test runs before signing so a self-test failure fast-fails cheaply and a signed bundle always implies "passed self-test".
-- Optional, secret-gated code-signing/notarization (see the table below). With no secrets the bundles ship **unsigned** and the workflow still completes.
-- Each bundle is sha256'd. A `publish` job gathers all targets, regenerates `engine-manifest.json` via `engine-kokoro/scripts/generate_manifest.py`, publishes (or refreshes) a GitHub Release under the version tag with the bundles + their `.sha256` files, and opens an auto-PR to commit the refreshed manifest into the plugin resources.
-- The workflow is re-runnable: re-running for the same tag refreshes that release's assets.
+- Optional, secret-gated code-signing/notarization (see the table below). With no secrets the bundles ship **unsigned** and the deploy still completes.
+- Each bundle is sha256'd. The `publish` job gathers the shadow jar and every engine target, regenerates `engine-manifest.json` via `engine-kokoro/scripts/generate_manifest.py`, generates a changelog from the GitHub compare notes, creates the `v<semver>` tag, publishes a single GitHub Release carrying the shadow jar plus the bundles + their `.sha256` files, and opens an auto-PR to commit the refreshed manifest into the plugin resources.
+- The publish step is re-runnable: re-running for an existing tag refreshes that release's assets.
 
 ## The manifest is the glue
 
@@ -63,9 +64,9 @@ If the manifest entry has an empty `url`/`sha256` (the dev placeholder), the ins
 
 Releases are **never automatic**. Cut one in this order:
 
-1. **Dispatch `kokoro-engine-release.yml`** from the Actions tab ("Kokoro Engine Release" -> "Run workflow"), supplying the `version` tag and the `prerelease` flag. It builds and validates the three Kokoro bundles, signs them if secrets are present, publishes the GitHub Release, regenerates `engine-manifest.json`, and opens an auto-PR with the updated manifest.
+1. **Dispatch `CI/CD`** from the Actions tab ("CI/CD" -> "Run workflow"), choosing the `bump` (`patch`/`minor`/`major`) and `release_type` (`alpha`/`beta`/`stable`). One run computes the next `v<semver>`, builds and validates the shadow jar and the three Kokoro bundles, signs the bundles if secrets are present, tags the release, publishes a single GitHub Release carrying the shadow jar + the bundles, regenerates `engine-manifest.json`, and opens an auto-PR with the updated manifest.
 2. **Merge the manifest auto-PR** so the bundled manifest in the plugin points at the real, published engine bundles (real `url` + `sha256` per platform) instead of the dev placeholders.
-3. **Submit/update the plugin in `runelite/plugin-hub`** at the tagged commit (see issue #31) so the Hub builds the jar from source at that commit and serves it. The jar is published by the Hub, not by this repo.
+3. **Submit/update the plugin in `runelite/plugin-hub`** at the tagged commit (see issue #31) so the Hub builds the thin jar from source at that commit and serves it. The Hub jar is published by the Hub, not by this repo; the shadow jar on the Release is the standalone/sideload artifact.
 4. **Users install from the Hub.** On first use of the local voice, the jar reads the merged manifest, downloads the per-OS engine bundle from the Release, verifies its sha256, and runs it.
 
 ### Signing secrets
@@ -88,4 +89,4 @@ Windows SmartScreen may warn on an unsigned bundle; choose **More info -> Run an
 
 ## Versioning
 
-The plugin and engine versions are **decoupled**. The manifest is the contract between them: a given plugin build points at exactly one engine release through the bundled manifest. When the engine or its `--stdio` protocol changes, bump the engine version, re-run `kokoro-engine-release.yml`, merge the new manifest, and re-tag the plugin commit submitted to the Hub. A plugin-only change that does not touch the protocol can ship against the existing engine release without cutting a new one.
+The plugin and engine ship under **one version**. A single `v<semver>` tag carries both the shadow jar and the engine bundles, and the bundled manifest in that commit points at the engine bundles in the same release. To cut a new version, dispatch the `CI/CD` deploy with the desired `bump`; it rebuilds and republishes both the jar and the engine bundles together, then opens the manifest auto-PR. Re-tag the plugin commit submitted to the Hub at that release.
