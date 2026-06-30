@@ -29,6 +29,9 @@ final class StdioProtocol {
 
   static final String FORMAT = "f32le";
 
+  /** Speed used when a request omits the {@code speed} field. */
+  static final float DEFAULT_SPEED = 1.0f;
+
   /**
    * Sentinel for an absent/unspecified explicit speaker id: fall back to {@link #DEFAULT_SPEAKER}.
    */
@@ -46,7 +49,8 @@ final class StdioProtocol {
 
   /** Encodes mono float samples to little-endian float32 bytes, the protocol PCM frame. */
   static byte[] encodeSamples(float[] samples) {
-    ByteBuffer buf = ByteBuffer.allocate(samples.length * 4).order(ByteOrder.LITTLE_ENDIAN);
+    ByteBuffer buf =
+        ByteBuffer.allocate(samples.length * Float.BYTES).order(ByteOrder.LITTLE_ENDIAN);
     for (float s : samples) {
       buf.putFloat(s);
     }
@@ -68,7 +72,7 @@ final class StdioProtocol {
     float speed =
         root.has("speed") && !root.get("speed").isJsonNull()
             ? root.get("speed").getAsFloat()
-            : 1.0f;
+            : DEFAULT_SPEED;
     int explicitSpeakerId =
         root.has("speakerId") && !root.get("speakerId").isJsonNull()
             ? root.get("speakerId").getAsInt()
@@ -78,7 +82,7 @@ final class StdioProtocol {
 
   /** Writes the header line then the raw PCM frame to {@code out}, flushing once complete. */
   static void writeResponse(OutputStream out, int sampleRate, byte[] pcm) throws IOException {
-    String header = header(sampleRate, pcm.length / 4) + System.lineSeparator();
+    String header = header(sampleRate, pcm.length / Float.BYTES) + System.lineSeparator();
     out.write(header.getBytes(StandardCharsets.UTF_8));
     out.write(pcm);
     out.flush();

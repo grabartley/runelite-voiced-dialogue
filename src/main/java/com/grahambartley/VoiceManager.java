@@ -25,6 +25,11 @@ import net.runelite.api.NPC;
 @Slf4j
 public class VoiceManager {
 
+  /** Speaker-type tokens passed as the {@code speaker} argument to the resolve methods. */
+  public static final String SPEAKER_PLAYER = "player";
+
+  public static final String SPEAKER_NPC = "npc";
+
   public enum NPCRace {
     HUMAN,
     ELF,
@@ -196,7 +201,7 @@ public class VoiceManager {
    * profile; the local backend ignores it.
    */
   public CharacterProfile resolveProfile(String speaker, String npcName) {
-    if ("player".equalsIgnoreCase(speaker)) {
+    if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
       CharacterProfile profile =
           profileTable.resolvePlayer(
               config.playerAccent(), config.playerPersona(), config.playerPace());
@@ -245,7 +250,7 @@ public class VoiceManager {
    * reads the race/gender and uses the speaker id only as a per-NPC variety seed.
    */
   public VoiceSpec resolveVoice(String speaker, String npcName) {
-    if ("player".equalsIgnoreCase(speaker)) {
+    if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
       NPCGender gender = playerGender();
       if (config != null && config.debugMode()) {
         log.info(buildPlayerTrace(gender));
