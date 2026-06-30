@@ -9,7 +9,7 @@
 
 ## Gielinor, out loud
 
-Every quest, every shopkeeper, every cheeky goblin: **now they actually talk.** Voiced Dialogue gives NPCs and your own adventurer real AI voices in real time, turning silent text boxes into a living, breathing world you can hear.
+Every quest, every shopkeeper, every back-alley stranger: **now they actually talk.** Voiced Dialogue gives NPCs and your own adventurer real AI voices in real time, turning silent text boxes into a living, breathing world you can hear.
 
 Walk up, talk, and listen. That is the whole setup.
 
@@ -17,7 +17,7 @@ Walk up, talk, and listen. That is the whole setup.
 
 - **A voice for everyone.** NPCs and the player each get a distinct voice, so a goblin never sounds like a king.
 - **Thousands of NPCs, already voiced.** The plugin knows exactly who is speaking and picks the right voice from a bundled table of **over 13,000 NPCs**, matched by race and gender, with no lookups or lag mid-conversation. Bump into someone added in a future update? **Auto-learn** quietly looks them up on the wiki once and remembers them.
-- **Accents and personalities with real craft.** **12 races and 13 regional origins** each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **over 2,600 named characters** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
+- **Accents and personalities with real craft.** **12 races and 13 regional origins** each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **over 5,300 NPCs** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
 - **Real emotion.** The plugin reads each speaker's chat-head expression and delivers the line happy, sad, angry, scared, or neutral, so a furious dwarf actually sounds furious.
 - **You star in it too.** Set your own hero's accent, persona, and pace and play the dashing knight, the gruff mercenary, or the chaos goblin of your dreams.
 - **Speak any language, any vibe.** Pipe dialogue through another language, or drop a delivery style over it: be a roadman in Gen Z slang among posh nobles, or run the whole realm as a pirate crew.
