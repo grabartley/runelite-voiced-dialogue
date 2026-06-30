@@ -76,7 +76,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   private static final Duration KEEP_ALIVE = Duration.ofMinutes(5);
 
-  /** One speech call plus a single retry, only ever for a transient empty 200 body. */
+  /** One speech call plus a single retry, for a transient empty 200 body or a truncated line. */
   private static final int MAX_SPEECH_ATTEMPTS = 2;
 
   /** Speaking pace as a percentage of normal: the default (skipped on the wire) and clamp range. */
@@ -377,6 +377,20 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               "OpenRouter TTS returned audio that could not be decoded; this line was not voiced.");
           logFailure(
               "undecodable", response.code(), response.message(), contentType, generationId, bytes);
+          return null;
+        }
+        // The response is transport-complete (OkHttp throws on a truncated chunked stream, handled
+        // below), but the model occasionally returns a line whose audio stops mid-utterance. A
+        // complete line releases into trailing silence; one that does not is rejected so a clipped
+        // clip is never cached or voiced. One retry recovers the common transient case.
+        if (PcmCompleteness.isTruncated(pcm)) {
+          if (attempt < MAX_SPEECH_ATTEMPTS) {
+            log.debug("[TTS cloud] audio ended mid-line (no trailing silence); retrying once");
+            continue;
+          }
+          warnOnce("OpenRouter TTS returned a truncated line; this line was not voiced.");
+          logFailure(
+              "truncated", response.code(), response.message(), contentType, generationId, bytes);
           return null;
         }
         return pcm;

@@ -963,6 +963,24 @@
     "15063": {"name": "Chet", "race": "Tortugan", "gender": "Male"},
     "15064": {"name": "Guppa", "race": "Tortugan", "gender": "Male"},
     "15065": {"name": "Argo", "race": "Tortugan", "gender": "Male"},
-    "15170": {"name": "Angry tortugan", "race": "Tortugan", "gender": "Male"}
+    "15170": {"name": "Angry tortugan", "race": "Tortugan", "gender": "Male"},
+    "1198": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "1208": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "1211": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "12019": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "12020": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "12021": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "12022": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "12023": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "12024": {"name": "Khazard Guard", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "4969": {"name": "Khazard trooper", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "4970": {"name": "Khazard trooper", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "5964": {"name": "Khazard trooper", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "5965": {"name": "Khazard trooper", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "6329": {"name": "Khazard warlord", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "6390": {"name": "Khazard warlord", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "4972": {"name": "Khazard commander", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "7621": {"name": "Khazard warlord", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "7622": {"name": "Khazard warlord", "race": "Human", "gender": "Male", "ethnicity": "kandarin"}
   }
 }

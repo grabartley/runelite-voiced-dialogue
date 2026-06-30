@@ -204,6 +204,7 @@ python3 tools/generate_npc_voices.py
 
 Spot-check resolutions with `run-game-client` + Debug Mode (`diagnose-npc-voice`),
 checking a local commoner, a flagged foreigner, a corrected non-human, and a
-quirk NPC. Then open the region PR linked to the batch issue. See
-`add-npc-profile`, `regenerate-npc-voices`, and `create-issue` for the
-surrounding flow.
+quirk NPC. Update the NPC counts in `README.md` to match the regenerated table
+(total `_meta.count` and bespoke `profiles.byId` length) in the same commit. Then
+open the region PR linked to the batch issue. See `add-npc-profile`,
+`regenerate-npc-voices`, and `create-issue` for the surrounding flow.

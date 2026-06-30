@@ -29,7 +29,7 @@ Cloud profile resolution combines layers: `default -> byRace[race] -> byEthnicit
 4. **`tools/generate_npc_voices.py`** — add the race to `VALID_RACES`; add a `RACE_BUCKET_RULES` regex (ordered so it does not collide with a broader bucket); add a `CATEGORY_RACE_RULES` entry so Infobox-Monster pages (no race field) still bucket by category.
 5. **`tools/profiles.json`** — add a `byRace["<RACE>"]` entry: `name`, `accent`, `style`, `pace`. This is where the racial accent lives.
 6. **`tools/overrides.json`** — add the race to the `_comment` valid-race list, then one one-line `npcs[id]` entry per NPC id (race + gender, no ethnicity).
-7. **Docs** — `README.md` Voices table row + the "spans N races" count; `docs/npc-voice-tooling.md` race note; the valid-race list in `.claude/skills/add-npc-profile/SKILL.md`.
+7. **Docs** — `README.md` Voices table row + the "spans N races" count **and the NPC counts** (total `_meta.count`, bespoke `profiles.byId` length from the regenerated `npc-voices.json`); `docs/npc-voice-tooling.md` race note; the valid-race list in `.claude/skills/add-npc-profile/SKILL.md`.
 
 ## Kokoro speaker id rule
 

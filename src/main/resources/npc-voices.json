@@ -3,39 +3,39 @@
     "description": "Static precomputed npcId -> {race, gender, ethnicity?} lookup plus cloud voice profiles, baked into the plugin. Generated offline by tools/generate_npc_voices.py from the Old School RuneScape Wiki (Infobox NPC). Do not hand-edit; edit tools/overrides.json or tools/profiles.json and regenerate.",
     "schema": "npcs[id] = { race, gender, ethnicity? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
-    "npc_pages": 5899,
-    "count": 13679,
+    "npc_pages": 5917,
+    "count": 13695,
     "name_matched_ids": 713,
-    "overrides_applied": 946,
+    "overrides_applied": 964,
     "race_counts": {
       "Demon": 721,
       "Dwarf": 517,
       "Elf": 352,
-      "Gnome": 263,
+      "Gnome": 260,
       "Goblin": 335,
       "Gorilla": 11,
-      "Human": 10078,
+      "Human": 10095,
       "Monkey": 59,
-      "Tortugan": 64,
+      "Tortugan": 66,
       "Troll": 451,
       "Undead": 821,
       "Wizard": 7
     },
     "gender_counts": {
       "Female": 1918,
-      "Male": 11761
+      "Male": 11777
     },
     "ethnicity_counts": {
       "asgarnia": 571,
       "easternlands": 2,
       "fremennik": 634,
-      "kandarin": 1071,
+      "kandarin": 1089,
       "karamja": 184,
       "kharidian": 524,
       "kourend": 796,
       "menaphite": 127,
       "misthalin": 813,
-      "morytania": 991,
+      "morytania": 994,
       "tirannwn": 322,
       "varlamore": 988,
       "wilderness": 119
@@ -26836,6 +26836,11 @@
       "gender": "Male",
       "ethnicity": "asgarnia"
     },
+    "1198": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kandarin"
+    },
     "1199": {
       "race": "Human",
       "gender": "Male",
@@ -26872,7 +26877,8 @@
     },
     "1208": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "1209": {
       "race": "Human",
@@ -26886,7 +26892,8 @@
     },
     "1211": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "1212": {
       "race": "Human",
@@ -42291,15 +42298,18 @@
     },
     "4969": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "4970": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "4972": {
-      "race": "Gnome",
-      "gender": "Male"
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "4973": {
       "race": "Gnome",
@@ -46276,11 +46286,13 @@
     },
     "5964": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "5965": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "5966": {
       "race": "Gnome",
@@ -47120,7 +47132,8 @@
     },
     "6329": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "6330": {
       "race": "Human",
@@ -47365,7 +47378,8 @@
     },
     "6390": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "6391": {
       "race": "Human",
@@ -52185,12 +52199,14 @@
       "gender": "Male"
     },
     "7621": {
-      "race": "Gnome",
-      "gender": "Male"
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "7622": {
-      "race": "Gnome",
-      "gender": "Male"
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "7623": {
       "race": "Human",
@@ -69159,27 +69175,33 @@
     },
     "12019": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "12020": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "12021": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "12022": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "12023": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "12024": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "12025": {
       "race": "Human",
@@ -80285,11 +80307,11 @@
       "gender": "Male"
     },
     "15009": {
-      "race": "Human",
+      "race": "Tortugan",
       "gender": "Male"
     },
     "15010": {
-      "race": "Human",
+      "race": "Tortugan",
       "gender": "Male"
     },
     "15011": {
@@ -82660,6 +82682,64 @@
       "gender": "Male",
       "ethnicity": "kandarin"
     },
+    "15740": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "15741": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15742": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15743": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15765": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15766": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15767": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15768": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15769": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15770": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16212": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16226": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16233": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16293": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
     "17009": {
       "race": "Human",
       "gender": "Male"
@@ -83726,6 +83806,11 @@
     "33163": {
       "race": "Human",
       "gender": "Male"
+    },
+    "33642": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
     },
     "34774": {
       "race": "Human",
