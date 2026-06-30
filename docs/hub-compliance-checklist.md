@@ -88,12 +88,13 @@ resources, all loaded via `getResourceAsStream`:
 | `npc-voices.json` | ~2.0 MiB uncompressed | Precomputed NPC race/gender/ethnicity + voice profile table |
 | `expression-emotions.json` | ~1.5 KiB | Chat-head animation → emotion map |
 | `profanity.txt` | ~1.0 KiB | Offline profanity blocklist |
-| `engine-manifest.json` | ~1.1 KiB | Per-OS engine download URLs + SHA-256 hashes |
+| `plugin-version.txt` | ~10 B | This build's version, used to resolve the matching engine release |
 
 No API keys, no model files, no native libraries, no `sherpa-onnx` or model-extraction
 dependencies (`build.gradle` deliberately excludes them). The Kokoro engine (~380 MiB per
-OS) is **not** bundled: `EngineInstaller` downloads it at runtime from GitHub Releases and
-verifies it against the SHA-256 in `engine-manifest.json` before extracting.
+OS) is **not** bundled: `EngineInstaller` fetches the `engine-manifest.json` for this
+build's version from the matching GitHub Release, downloads the per-OS engine bundle, and
+verifies it against the SHA-256 in that manifest before extracting.
 
 ## Hub listing text (for the descriptor / properties)
 

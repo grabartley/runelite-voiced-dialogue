@@ -57,6 +57,26 @@ tasks.withType(JavaCompile).configureEach {
 	options.release.set(17)
 }
 
+// Stamp the build version into a bundled resource so EngineInstaller resolves the engine release
+// (v<version>) matching the running jar. A release jar (-PreleaseVersion) gets its real version; a
+// plain/dev build stays 1.0-SNAPSHOT, which has no matching release and degrades to "no engine".
+def versionResourceDir = layout.buildDirectory.dir('generated/plugin-version')
+
+tasks.register('generateVersionResource') {
+	def outDir = versionResourceDir
+	def stampedVersion = version.toString()
+	inputs.property('version', stampedVersion)
+	outputs.dir(outDir)
+	doLast {
+		def file = outDir.get().file('plugin-version.txt').asFile
+		file.parentFile.mkdirs()
+		file.text = stampedVersion
+	}
+}
+
+sourceSets.main.resources.srcDir(versionResourceDir)
+tasks.named('processResources') { dependsOn 'generateVersionResource' }
+
 tasks.register('shadowJar', Jar) {
 	dependsOn configurations.testRuntimeClasspath
 	manifest {
