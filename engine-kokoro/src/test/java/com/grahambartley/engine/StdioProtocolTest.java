@@ -12,36 +12,41 @@ import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 
 /**
- * Framing conformance for the {@code --stdio} protocol: a request decodes to the right voice and a
- * synthesized frame round-trips through the header + little-endian float32 encoding the plugin's
- * {@code ExternalEngineClient} expects. This runs without the native model so it is part of the
- * normal test suite on every runner.
+ * Framing conformance for the {@code --stdio} protocol: a request decodes to the text, speed, and
+ * explicit speaker id the engine renders, and a synthesized frame round-trips through the header +
+ * little-endian float32 encoding the plugin's {@code ExternalEngineClient} expects. This runs
+ * without the native model so it is part of the normal test suite on every runner.
  */
 public class StdioProtocolTest {
 
   @Test
-  public void decodesNpcVoiceRequest() {
+  public void decodesTextSpeedAndSpeakerId() {
     Request req =
         StdioProtocol.decodeRequest(
-            "{\"text\":\"hello there\",\"voice\":{\"race\":\"ELF\",\"gender\":\"FEMALE\",\"player\":false},\"emotion\":\"HAPPY\",\"speed\":1.0}");
+            "{\"text\":\"hello there\",\"voice\":{\"race\":\"ELF\",\"gender\":\"FEMALE\",\"player\":false},\"emotion\":\"HAPPY\",\"speed\":1.0,\"speakerId\":21}");
     assertEquals("hello there", req.text);
-    assertEquals(false, req.player);
-    assertEquals("ELF", req.race);
-    assertEquals("FEMALE", req.gender);
     assertEquals(1.0f, req.speed, 0.0001f);
-    // ELF/FEMALE resolves to a concrete Kokoro speaker id from the shared matrix.
     assertEquals(21, req.speakerId());
   }
 
   @Test
-  public void decodesPlayerVoiceAndIgnoresEmotion() {
+  public void absentSpeedDefaultsToOne() {
+    // Absent speed defaults to 1.0 so the engine never feeds a zero rate to sherpa-onnx.
     Request req =
         StdioProtocol.decodeRequest(
-            "{\"text\":\"my move\",\"voice\":{\"race\":\"HUMAN\",\"gender\":\"MALE\",\"player\":true},\"emotion\":\"ANGRY\"}");
-    assertTrue(req.player);
-    assertEquals(16, req.speakerId()); // player male
-    // Absent speed defaults to 1.0 so the engine never feeds a zero rate to sherpa-onnx.
+            "{\"text\":\"my move\",\"speakerId\":24,\"emotion\":\"ANGRY\"}");
+    assertEquals(24, req.speakerId());
     assertEquals(1.0f, req.speed, 0.0001f);
+  }
+
+  @Test
+  public void voiceObjectIsIgnored() {
+    // The plugin owns voice selection and sends the resolved speaker id; the engine renders that id
+    // and never maps the voice object's race/gender to a voice itself.
+    Request req =
+        StdioProtocol.decodeRequest(
+            "{\"text\":\"x\",\"voice\":{\"race\":\"BANANA\",\"gender\":\"MALE\",\"player\":false},\"speakerId\":25}");
+    assertEquals(25, req.speakerId());
   }
 
   @Test
@@ -83,39 +88,21 @@ public class StdioProtocolTest {
   }
 
   @Test
-  public void unknownRaceFallsBackToHuman() {
-    Request req =
-        StdioProtocol.decodeRequest(
-            "{\"text\":\"x\",\"voice\":{\"race\":\"BANANA\",\"gender\":\"MALE\",\"player\":false}}");
-    assertEquals(14, req.speakerId()); // human male fallback
-  }
-
-  @Test
-  public void explicitSpeakerIdIsHonoredOverTheMatrix() {
-    // Per-NPC voice variety (issue #78): the plugin sends an explicit speakerId so two human-male
-    // NPCs no longer both collapse to am_fenrir (14). The engine voices the exact id sent.
-    Request req =
-        StdioProtocol.decodeRequest(
-            "{\"text\":\"hi\",\"voice\":{\"race\":\"HUMAN\",\"gender\":\"MALE\",\"player\":false},\"speakerId\":17}");
+  public void explicitSpeakerIdIsRendered() {
+    Request req = StdioProtocol.decodeRequest("{\"text\":\"hi\",\"speakerId\":17}");
     assertEquals(17, req.speakerId());
   }
 
   @Test
-  public void absentSpeakerIdFallsBackToTheMatrix() {
-    // Backward compatibility: an older plugin that never sends speakerId keeps the matrix voice.
-    Request req =
-        StdioProtocol.decodeRequest(
-            "{\"text\":\"hi\",\"voice\":{\"race\":\"HUMAN\",\"gender\":\"MALE\",\"player\":false}}");
+  public void absentSpeakerIdFallsBackToDefault() {
+    Request req = StdioProtocol.decodeRequest("{\"text\":\"hi\"}");
     assertEquals(StdioProtocol.NO_SPEAKER_ID, req.explicitSpeakerId);
-    assertEquals(14, req.speakerId()); // human male matrix fallback
+    assertEquals(StdioProtocol.DEFAULT_SPEAKER, req.speakerId());
   }
 
   @Test
   public void negativeSpeakerIdIsTreatedAsAbsent() {
-    // A negative explicit id is a non-choice and must not be voiced; the matrix wins.
-    Request req =
-        StdioProtocol.decodeRequest(
-            "{\"text\":\"hi\",\"voice\":{\"race\":\"ELF\",\"gender\":\"FEMALE\",\"player\":false},\"speakerId\":-1}");
-    assertEquals(21, req.speakerId()); // elf female matrix value
+    Request req = StdioProtocol.decodeRequest("{\"text\":\"hi\",\"speakerId\":-1}");
+    assertEquals(StdioProtocol.DEFAULT_SPEAKER, req.speakerId());
   }
 }

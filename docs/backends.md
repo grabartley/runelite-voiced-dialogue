@@ -140,14 +140,14 @@ cloud calls.
 - **British-only by design.** Kokoro has no accent parameter: accent is baked into the chosen speaker
   id, and the model loads a US-English lexicon, so its realistic range is American vs British with a
   small British bank. Rather than wire the cloud accent system into it, every Local voice is British
-  (this is a British medieval fantasy world): the per-NPC variety pools keep only the `bm_`/`bf_`
-  voices, and the player plus every fallback resolve to a British voice. Gender-correctness and
-  per-NPC variety (hashing within the British bank) both survive; only accent variety goes away. The
-  plugin's `VoiceProfile` table and the engine's `SpeakerMatrix` stay in lockstep (the #36 drift test
-  pins them), so British-only comes purely from which speaker id the plugin sends, never from
-  relabeling the race/gender matrix. Accents, emotion, spoken language, speaking styles, free-text
-  persona, and the character cap are Cloud-only: each needs a network or LLM hop, or a capability the
-  neutral local model lacks.
+  (this is a British medieval fantasy world). The plugin's `KokoroVoice` bank holds only the British
+  (`bm_`/`bf_`) voices, split into a male pool and a female pool; race never selects a Local voice,
+  only gender does. Each NPC hashes its composition id (or name) into the gender pool for a stable,
+  distinct voice, and the player resolves to a fixed British voice by gender. Gender-correctness and
+  per-NPC variety survive; only accent and race-character variety go away. The plugin resolves the
+  speaker id and sends it explicitly, so the engine just renders it and owns no voice mapping of its
+  own. Accents, emotion, spoken language, speaking styles, free-text persona, and the character cap
+  are Cloud-only: each needs a network or LLM hop, or a capability the neutral local model lacks.
 - **Speaking pace.** **Speaking Pace** is sent to the engine as the `speed` field on every request, so
   the offline voice actually speeds up or slows down. `cacheVariant` folds the pace into the cache key
   only when it is not 100, so a pace change never replays stale Local audio while the default stays on

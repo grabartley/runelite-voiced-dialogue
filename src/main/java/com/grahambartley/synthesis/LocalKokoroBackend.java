@@ -18,9 +18,8 @@ import lombok.extern.slf4j.Slf4j;
  * the pipeline thread) via {@link EngineInstaller} and spawns the child process via {@link
  * ExternalEngineClient}. Each {@link #synthesize} writes the request to the engine and decodes the
  * returned PCM frame, which carries the engine-reported sample rate so playback never pitch-shifts.
- * The voice mapping is carried as {@code race}/{@code gender}/{@code player} on the wire; the
- * engine's {@code SpeakerMatrix} (kept in lockstep with the plugin's {@code VoiceProfile} by the
- * #36 drift test) turns it into a concrete speaker id.
+ * The plugin resolves the British Kokoro speaker id and sends it explicitly on the wire, so the
+ * engine simply renders that voice.
  *
  * <p>Kokoro is deliberately neutral-only ({@link Emotion#NEUTRAL}); emotional delivery is reserved
  * for the cloud backend, so this backend advertises only neutral and {@link BackendProvider}
