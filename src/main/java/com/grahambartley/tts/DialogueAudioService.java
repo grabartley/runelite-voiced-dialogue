@@ -12,6 +12,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -55,6 +56,9 @@ public final class DialogueAudioService {
    * Bounded prefetch backlog; excess speculative work is dropped rather than queued unboundedly.
    */
   private static final int PREFETCH_QUEUE_CAPACITY = 16;
+
+  /** Character budget for the abbreviated text preview in debug logs. */
+  private static final int LOG_TEXT_PREVIEW_LENGTH = 40;
 
   private final BackendProvider backends;
   private final AudioOutput output;
@@ -383,6 +387,15 @@ public final class DialogueAudioService {
     }
   }
 
+  /** A factory for daemon threads with the given name, so the JVM can exit without joining them. */
+  private static ThreadFactory daemonThreadFactory(String name) {
+    return r -> {
+      Thread t = new Thread(r, name);
+      t.setDaemon(true);
+      return t;
+    };
+  }
+
   private static ExecutorService buildExecutor(int queueCapacity) {
     return new ThreadPoolExecutor(
         1,
@@ -390,11 +403,7 @@ public final class DialogueAudioService {
         0L,
         TimeUnit.MILLISECONDS,
         new ArrayBlockingQueue<>(queueCapacity),
-        r -> {
-          Thread t = new Thread(r, "dialogue-audio");
-          t.setDaemon(true);
-          return t;
-        },
+        daemonThreadFactory("dialogue-audio"),
         // Drop the oldest queued line under backpressure (newer dialogue supersedes it), but log it
         // so QA can tell whether the queue is actually saturating in practice.
         (r, exec) -> {
@@ -416,11 +425,7 @@ public final class DialogueAudioService {
         0L,
         TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<>(),
-        r -> {
-          Thread t = new Thread(r, "dialogue-warm");
-          t.setDaemon(true);
-          return t;
-        });
+        daemonThreadFactory("dialogue-warm"));
   }
 
   /**
@@ -436,15 +441,13 @@ public final class DialogueAudioService {
         0L,
         TimeUnit.MILLISECONDS,
         new ArrayBlockingQueue<>(PREFETCH_QUEUE_CAPACITY),
-        r -> {
-          Thread t = new Thread(r, "dialogue-prefetch");
-          t.setDaemon(true);
-          return t;
-        },
+        daemonThreadFactory("dialogue-prefetch"),
         new ThreadPoolExecutor.DiscardOldestPolicy());
   }
 
   private static String abbreviate(String text) {
-    return text.length() <= 40 ? text : text.substring(0, 40) + "...";
+    return text.length() <= LOG_TEXT_PREVIEW_LENGTH
+        ? text
+        : text.substring(0, LOG_TEXT_PREVIEW_LENGTH) + "...";
   }
 }

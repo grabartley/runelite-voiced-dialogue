@@ -97,6 +97,16 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   private static final long BACKOFF_MAX_MILLIS = 30_000;
 
+  /** Speaking pace as a percentage of normal: the default (skipped on the wire) and clamp range. */
+  private static final int DEFAULT_SPEED_PERCENT = 100;
+
+  private static final int MIN_SPEED_PERCENT = 50;
+
+  private static final int MAX_SPEED_PERCENT = 200;
+
+  /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
+  private static final int BODY_SNIPPET_MAX_BYTES = 300;
+
   /**
    * User-facing notice shown when Cloud is selected but no API key is set. Shared with the plugin's
    * startup check so the two paths never drift.
@@ -209,7 +219,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     StringBuilder variant =
         new StringBuilder(MODEL).append('|').append(voiceMap.voiceFor(request.voice()));
     int speed = speedPercent();
-    if (speed != 100) {
+    if (speed != DEFAULT_SPEED_PERCENT) {
       variant.append("|s").append(speed);
     }
     int cap = config.cloudMaxChars();
@@ -338,12 +348,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", RESPONSE_FORMAT);
     int speed = speedPercent();
-    if (speed != 100) {
+    if (speed != DEFAULT_SPEED_PERCENT) {
       // The model may ignore speed; sending it only when non-default keeps the default request body
       // identical to before and avoids paying for a param the model might not honour.
-      payload.addProperty("speed", speed / 100.0);
+      double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
+      payload.addProperty("speed", speedRatio);
       if (config.debugMode()) {
-        log.info("[TTS cloud] speed {}", speed / 100.0);
+        log.info("[TTS cloud] speed {}", speedRatio);
       }
     }
     // A translated line gets a BCP-47 language_code from the base language (not the quirk), so the
@@ -476,14 +487,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
   }
 
-  /** The configured pace as a percentage of normal, clamped to the supported 50-200 range. */
+  /** The configured pace as a percentage of normal, clamped to the supported range. */
   private int speedPercent() {
     int percent = config.speakingPace();
-    if (percent < 50) {
-      return 50;
+    if (percent < MIN_SPEED_PERCENT) {
+      return MIN_SPEED_PERCENT;
     }
-    if (percent > 200) {
-      return 200;
+    if (percent > MAX_SPEED_PERCENT) {
+      return MAX_SPEED_PERCENT;
     }
     return percent;
   }
@@ -547,7 +558,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   /** First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. */
   private static String bodySnippet(byte[] bytes) {
-    int n = Math.min(bytes.length, 300);
+    int n = Math.min(bytes.length, BODY_SNIPPET_MAX_BYTES);
     String text =
         new String(bytes, 0, n, StandardCharsets.UTF_8).replaceAll("\\p{Cntrl}+", " ").trim();
     return bytes.length > n ? text + "..." : text;

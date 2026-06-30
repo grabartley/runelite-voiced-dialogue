@@ -23,30 +23,44 @@ final class ModelLocator {
 
   static final String MODEL_NAME = "kokoro-multi-lang-v1_0";
 
+  static final String MODEL_FILE = "model.onnx";
+  static final String VOICES_FILE = "voices.bin";
+  static final String TOKENS_FILE = "tokens.txt";
+
+  private static final String MODEL_DIR_ENV = "KOKORO_MODEL_DIR";
+  private static final String IMAGE_MODEL_SUBDIR = "model";
+  private static final String LIB_SUBDIR = "lib";
+
   private ModelLocator() {}
 
   /** Resolves the model directory, or throws if no candidate contains the core files. */
   static Path resolve() {
-    String env = System.getenv("KOKORO_MODEL_DIR");
+    String env = System.getenv(MODEL_DIR_ENV);
     if (env != null && !env.isEmpty()) {
       Path p = Paths.get(env);
       if (hasModel(p)) {
         return p;
       }
       throw new IllegalStateException(
-          "KOKORO_MODEL_DIR=" + env + " does not contain the Kokoro model files");
+          MODEL_DIR_ENV + "=" + env + " does not contain the Kokoro model files");
     }
 
-    Path imageModel = imageDir().resolve("model");
+    Path imageModel = imageDir().resolve(IMAGE_MODEL_SUBDIR);
     if (hasModel(imageModel)) {
       return imageModel;
     }
     throw new IllegalStateException(
         "Could not locate the "
             + MODEL_NAME
-            + " model. Checked KOKORO_MODEL_DIR (unset or empty) and the bundled image model at '"
+            + " model. Checked "
+            + MODEL_DIR_ENV
+            + " (unset or empty) and the bundled image model at '"
             + imageModel
-            + "'. Set KOKORO_MODEL_DIR or ship a 'model' directory beside the engine image.");
+            + "'. Set "
+            + MODEL_DIR_ENV
+            + " or ship a '"
+            + IMAGE_MODEL_SUBDIR
+            + "' directory beside the engine image.");
   }
 
   /** Directory the running engine jar lives in, used as the anchor for the bundled model. */
@@ -56,7 +70,9 @@ final class ModelLocator {
           Paths.get(ModelLocator.class.getProtectionDomain().getCodeSource().getLocation().toURI());
       Path dir = Files.isDirectory(codeSource) ? codeSource : codeSource.getParent();
       // Jars live under <image>/lib; the model sits at <image>/model, one level up from lib.
-      if (dir != null && dir.getFileName() != null && dir.getFileName().toString().equals("lib")) {
+      if (dir != null
+          && dir.getFileName() != null
+          && dir.getFileName().toString().equals(LIB_SUBDIR)) {
         return dir.getParent();
       }
       return dir != null ? dir : Paths.get("").toAbsolutePath();
@@ -67,8 +83,8 @@ final class ModelLocator {
 
   private static boolean hasModel(Path dir) {
     return dir != null
-        && Files.isRegularFile(dir.resolve("model.onnx"))
-        && Files.isRegularFile(dir.resolve("voices.bin"))
-        && Files.isRegularFile(dir.resolve("tokens.txt"));
+        && Files.isRegularFile(dir.resolve(MODEL_FILE))
+        && Files.isRegularFile(dir.resolve(VOICES_FILE))
+        && Files.isRegularFile(dir.resolve(TOKENS_FILE));
   }
 }

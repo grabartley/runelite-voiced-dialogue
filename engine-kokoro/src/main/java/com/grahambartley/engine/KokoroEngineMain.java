@@ -21,6 +21,8 @@ import java.nio.charset.StandardCharsets;
  */
 public final class KokoroEngineMain {
 
+  private static final String SELF_TEST_PHRASE = "Conformance check. The engine is alive.";
+
   private KokoroEngineMain() {}
 
   public static void main(String[] args) throws Exception {
@@ -74,7 +76,7 @@ public final class KokoroEngineMain {
     try {
       KokoroEngine.Pcm pcm =
           engine.synthesize(
-              "Conformance check. The engine is alive.", StdioProtocol.DEFAULT_SPEAKER, 1.0f);
+              SELF_TEST_PHRASE, StdioProtocol.DEFAULT_SPEAKER, StdioProtocol.DEFAULT_SPEED);
       System.out.println("sampleRate=" + pcm.sampleRate + " samples=" + pcm.samples.length);
       if (pcm.sampleRate <= 0 || pcm.samples.length == 0) {
         System.err.println("Self-test produced empty audio");

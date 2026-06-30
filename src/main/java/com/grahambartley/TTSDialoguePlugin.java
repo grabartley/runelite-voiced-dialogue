@@ -336,7 +336,7 @@ public class TTSDialoguePlugin extends Plugin {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
     VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
-    boolean player = "player".equals(speaker);
+    boolean player = VoiceManager.SPEAKER_PLAYER.equals(speaker);
     dispatch(
         new SynthesisRequest(
             text,
@@ -355,13 +355,13 @@ public class TTSDialoguePlugin extends Plugin {
    * guard, profile resolution, and cache/queue behaviour with dialogue.
    */
   private void speakPublicChat(String text) {
-    VoiceSpec voice = voiceManager.resolveVoice("player", null);
+    VoiceSpec voice = voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null);
     dispatch(
         new SynthesisRequest(
             text,
             voice,
             Emotion.NEUTRAL,
-            resolveProfile("player", null),
+            resolveProfile(VoiceManager.SPEAKER_PLAYER, null),
             /* skipTranslation= */ true,
             /* player= */ true));
   }
@@ -529,7 +529,7 @@ public class TTSDialoguePlugin extends Plugin {
         String cleaned = cleanDialogueText(text);
         String npcName = getCurrentNPCName();
         int headAnimationId = readHeadAnimationId(InterfaceID.ChatLeft.HEAD);
-        speakWithTTS(cleaned, "npc", npcName, headAnimationId);
+        speakWithTTS(cleaned, VoiceManager.SPEAKER_NPC, npcName, headAnimationId);
       }
     }
 
@@ -541,7 +541,7 @@ public class TTSDialoguePlugin extends Plugin {
         String cleaned = cleanDialogueText(text);
         int headAnimationId = readHeadAnimationId(InterfaceID.ChatRight.HEAD);
         // No NPC name needed for player lines.
-        speakWithTTS(cleaned, "player", null, headAnimationId);
+        speakWithTTS(cleaned, VoiceManager.SPEAKER_PLAYER, null, headAnimationId);
       }
     }
 
@@ -643,8 +643,8 @@ public class TTSDialoguePlugin extends Plugin {
     if (children == null || children.length == 0) {
       return;
     }
-    VoiceSpec voice = voiceManager.resolveVoice("player", null);
-    CharacterProfile profile = resolveProfile("player", null);
+    VoiceSpec voice = voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null);
+    CharacterProfile profile = resolveProfile(VoiceManager.SPEAKER_PLAYER, null);
     List<SynthesisRequest> candidates = new ArrayList<>(children.length);
     for (Widget child : children) {
       if (child == null) {

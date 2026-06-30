@@ -17,6 +17,12 @@ import java.nio.file.Path;
  */
 final class KokoroEngine {
 
+  private static final int NUM_THREADS = 2;
+  private static final String PROVIDER = "cpu";
+  private static final float DEFAULT_SPEED = 1.0f;
+  private static final String ESPEAK_DATA_DIR = "espeak-ng-data";
+  private static final String LEXICON_FILE = "lexicon-us-en.txt";
+
   private OfflineTts tts;
 
   /** Loads the model now so the first request does not pay the cold-start cost mid-stream. */
@@ -27,7 +33,7 @@ final class KokoroEngine {
   /** Synthesizes {@code text} for {@code speakerId} at {@code speed}, returning mono float PCM. */
   synchronized Pcm synthesize(String text, int speakerId, float speed) {
     OfflineTts engine = ensureLoaded();
-    float effectiveSpeed = speed > 0 ? speed : 1.0f;
+    float effectiveSpeed = speed > 0 ? speed : DEFAULT_SPEED;
     GeneratedAudio audio = engine.generate(text, speakerId, effectiveSpeed);
     return new Pcm(audio.getSamples(), audio.getSampleRate());
   }
@@ -51,19 +57,19 @@ final class KokoroEngine {
 
     OfflineTtsKokoroModelConfig kokoro =
         OfflineTtsKokoroModelConfig.builder()
-            .setModel(modelDir.resolve("model.onnx").toString())
-            .setVoices(modelDir.resolve("voices.bin").toString())
-            .setTokens(modelDir.resolve("tokens.txt").toString())
-            .setDataDir(modelDir.resolve("espeak-ng-data").toString())
-            .setLexicon(modelDir.resolve("lexicon-us-en.txt").toString())
+            .setModel(modelDir.resolve(ModelLocator.MODEL_FILE).toString())
+            .setVoices(modelDir.resolve(ModelLocator.VOICES_FILE).toString())
+            .setTokens(modelDir.resolve(ModelLocator.TOKENS_FILE).toString())
+            .setDataDir(modelDir.resolve(ESPEAK_DATA_DIR).toString())
+            .setLexicon(modelDir.resolve(LEXICON_FILE).toString())
             .build();
 
     OfflineTtsModelConfig modelConfig =
         OfflineTtsModelConfig.builder()
             .setKokoro(kokoro)
-            .setNumThreads(2)
+            .setNumThreads(NUM_THREADS)
             .setDebug(false)
-            .setProvider("cpu")
+            .setProvider(PROVIDER)
             .build();
 
     OfflineTtsConfig config = OfflineTtsConfig.builder().setModel(modelConfig).build();
