@@ -31,7 +31,7 @@ import okhttp3.ResponseBody;
 public final class WikiNpcClient {
 
   private static final String PRODUCTION_API = "https://oldschool.runescape.wiki/api.php";
-  private static final String USER_AGENT = "tts-dialogue-runelite";
+  private static final String USER_AGENT = "runelite-voiced-dialogue";
   private static final Duration CALL_TIMEOUT = Duration.ofSeconds(8);
 
   private static final Pattern RACE = field("race");

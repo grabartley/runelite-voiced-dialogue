@@ -3,7 +3,7 @@ package com.grahambartley.voice;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.VoiceSpec;
 import com.grahambartley.voice.VoiceManager.KokoroVoice;
 import com.grahambartley.voice.VoiceManager.NPCGender;
@@ -24,7 +24,7 @@ public class VoiceManagerTest {
    * Minimal config used to drive voice resolution without the RuneLite client. Only the toggles the
    * mapping reads are overridden; everything else keeps its interface default.
    */
-  private static final class TestConfig implements TTSDialogueConfig {
+  private static final class TestConfig implements VoicedDialogueConfig {
     private final PlayerVoice playerVoice;
 
     TestConfig(PlayerVoice playerVoice) {

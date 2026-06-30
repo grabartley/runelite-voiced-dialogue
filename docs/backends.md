@@ -89,7 +89,7 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   which then carries a BCP-47 `language_code` derived from the base language. The language (with any
   quirk) is folded into the cache key, so a line is translated and billed at most once per
   language/quirk; a failed translation fails the line gracefully rather than voicing the wrong
-  language. **Spoken Language** is a fixed dropdown (the `SpokenLanguage` enum in `TTSDialogueConfig`,
+  language. **Spoken Language** is a fixed dropdown (the `SpokenLanguage` enum in `VoicedDialogueConfig`,
   one entry per supported language), so every selection carries a known-good BCP-47 `language_code`;
   the enum is the single source of truth for both the options and their codes.
 - **Player / NPC Speaking Style.** Two independent settings, one for your own lines (**Player

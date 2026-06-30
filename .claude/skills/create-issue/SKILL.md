@@ -1,11 +1,11 @@
 ---
 name: create-issue
-description: Create GitHub issues for tts-dialogue-runelite and link them to the project board. Use when asked to create, draft, scope, or file an issue in this repo.
+description: Create GitHub issues for runelite-voiced-dialogue and link them to the project board. Use when asked to create, draft, scope, or file an issue in this repo.
 ---
 
 # Create Issue
 
-Use this skill when the user wants a new GitHub issue created for `grabartley/tts-dialogue-runelite`.
+Use this skill when the user wants a new GitHub issue created for `grabartley/runelite-voiced-dialogue`.
 
 ## Defaults
 
@@ -55,7 +55,7 @@ Before creating a new issue, always check whether one already exists for the sam
 Minimum check:
 
 ```bash
-gh issue list --repo grabartley/tts-dialogue-runelite --state all --limit 200 --json number,title
+gh issue list --repo grabartley/runelite-voiced-dialogue --state all --limit 200 --json number,title
 ```
 
 If the request is broad, ambiguous, or likely to overlap with earlier work, also search by keyword in issue titles and bodies before creating anything new.
@@ -118,7 +118,7 @@ Create the issue:
 
 ```bash
 gh issue create \
---repo grabartley/tts-dialogue-runelite \
+--repo grabartley/runelite-voiced-dialogue \
 --title "<brief title>" \
 --body-file .claude/tmp/issue-body.md
 ```
@@ -127,7 +127,7 @@ If the user asked to assign the issue to themselves, resolve their login with `g
 
 ```bash
 gh issue edit <issue-number> \
---repo grabartley/tts-dialogue-runelite \
+--repo grabartley/runelite-voiced-dialogue \
 --add-assignee <github-login>
 ```
 
@@ -155,7 +155,7 @@ Current project metadata, baked in for speed. If any GraphQL or `gh project` cal
 Look up the added project item for the issue, then set the status:
 
 ```bash
-gh api graphql -f query='query($owner:String!, $repo:String!, $number:Int!) { repository(owner:$owner, name:$repo) { issue(number:$number) { projectItems(first:20) { nodes { id project { id } } } } } }' -f owner=grabartley -f repo=tts-dialogue-runelite -F number=<issue-number>
+gh api graphql -f query='query($owner:String!, $repo:String!, $number:Int!) { repository(owner:$owner, name:$repo) { issue(number:$number) { projectItems(first:20) { nodes { id project { id } } } } } }' -f owner=grabartley -f repo=runelite-voiced-dialogue -F number=<issue-number>
 
 gh project item-edit \
 --id <project-item-id> \

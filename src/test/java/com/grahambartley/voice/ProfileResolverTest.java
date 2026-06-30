@@ -7,7 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.CharacterProfile;
 import org.junit.Test;
 
@@ -19,7 +19,7 @@ import org.junit.Test;
 public class ProfileResolverTest {
 
   private final VoiceManager voiceManager = mock(VoiceManager.class);
-  private final TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+  private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final ProfileResolver resolver = new ProfileResolver(voiceManager, config);
 
   @Test

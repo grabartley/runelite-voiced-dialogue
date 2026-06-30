@@ -8,7 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.data.NPCAttributes;
 import com.grahambartley.data.NPCDemographicAnalyzer;
 import com.grahambartley.data.NpcLearningService;
@@ -21,7 +21,7 @@ import org.junit.Test;
 /** NPC name to {@link VoiceSpec} resolution, including detection-failure fallbacks and learning. */
 public class NpcVoiceResolverTest {
 
-  private final TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+  private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final NPCDemographicAnalyzer analyzer = mock(NPCDemographicAnalyzer.class);
   private final NpcFinder finder = mock(NpcFinder.class);
   private final NpcVoiceResolver resolver = new NpcVoiceResolver(config, analyzer, finder);

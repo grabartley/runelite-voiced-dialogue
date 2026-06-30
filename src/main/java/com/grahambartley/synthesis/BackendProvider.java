@@ -1,7 +1,7 @@
 package com.grahambartley.synthesis;
 
-import com.grahambartley.TTSDialogueConfig;
-import com.grahambartley.TTSDialogueConfig.VoiceBackend;
+import com.grahambartley.VoicedDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.tts.Pcm;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Single point of truth for which {@link SynthesisBackend} is active and how emotion is downgraded.
  *
- * <p>The active backend is resolved from {@link TTSDialogueConfig#voiceBackend()} on every call, so
- * switching the backend in the config panel takes effect immediately without a client restart. The
- * two backends are kept strictly separate: the selected backend is the only one that ever runs.
+ * <p>The active backend is resolved from {@link VoicedDialogueConfig#voiceBackend()} on every call,
+ * so switching the backend in the config panel takes effect immediately without a client restart.
+ * The two backends are kept strictly separate: the selected backend is the only one that ever runs.
  * Cloud means cloud only and Local means local only; there is no cross-backend fallback. A line the
  * selected backend cannot voice is simply not voiced.
  *
@@ -27,7 +27,7 @@ public final class BackendProvider {
   /** Id of the offline Kokoro backend, selected when Voice Backend is Local. */
   public static final String LOCAL_KOKORO_ID = "local-kokoro";
 
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
   private final Map<String, SynthesisBackend> backends = new LinkedHashMap<>();
 
   /**
@@ -35,7 +35,7 @@ public final class BackendProvider {
    * @param backendList the registered backends; one of them must have id {@code local-kokoro} so
    *     the Local selection always resolves
    */
-  public BackendProvider(TTSDialogueConfig config, SynthesisBackend... backendList) {
+  public BackendProvider(VoicedDialogueConfig config, SynthesisBackend... backendList) {
     this.config = config;
     boolean hasLocalKokoro = false;
     for (SynthesisBackend backend : backendList) {

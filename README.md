@@ -1,8 +1,8 @@
 # Voiced Dialogue
 
 <p align="center">
-<a href="https://github.com/grabartley/tts-dialogue-runelite/stargazers"><img src="https://img.shields.io/github/stars/grabartley/tts-dialogue-runelite?logo=github&label=Stars&color=4078c0" alt="GitHub stars"></a>
-<a href="https://github.com/grabartley/tts-dialogue-runelite/actions/workflows/cicd.yml"><img src="https://github.com/grabartley/tts-dialogue-runelite/actions/workflows/cicd.yml/badge.svg" alt="Build"></a>
+<a href="https://github.com/grabartley/runelite-voiced-dialogue/stargazers"><img src="https://img.shields.io/github/stars/grabartley/runelite-voiced-dialogue?logo=github&label=Stars&color=4078c0" alt="GitHub stars"></a>
+<a href="https://github.com/grabartley/runelite-voiced-dialogue/actions/workflows/cicd.yml"><img src="https://github.com/grabartley/runelite-voiced-dialogue/actions/workflows/cicd.yml/badge.svg" alt="Build"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="License: MIT"></a>
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
@@ -33,7 +33,7 @@ Install from the **RuneLite Plugin Hub**: open RuneLite, click the wrench (Confi
 Then pick how it sounds under the **Voice Backend** setting:
 
 - **Cloud** (default): the full experience with emotion and accents. It needs a free [OpenRouter](https://openrouter.ai) API key. Create one, paste it into the config, and you are away. Until a key is set, cloud lines stay silent and a one-time notice points you to the key (or to Local).
-- **Local**: a free, offline, no-key voice. Neutral and British, and nothing ever leaves your machine. On first use it quietly downloads a small engine for your OS into `~/.runelite/tts-dialogue/` and reuses it from then on.
+- **Local**: a free, offline, no-key voice. Neutral and British, and nothing ever leaves your machine. On first use it quietly downloads a small engine for your OS into `~/.runelite/voiced-dialogue/` and reuses it from then on.
 
 The two backends are kept strictly separate: the one you choose is the only one that runs, and neither falls back to the other.
 
@@ -107,7 +107,7 @@ Profanity filtering is always on, for everyone, with no toggle and no opt-out. E
 <details>
 <summary><b>Performance</b></summary>
 
-Synthesis and playback run off the game thread, so the client stays responsive and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on backend, model, voice, emotion, and text: an in-memory layer for the session, plus a size-bounded on-disk cache under `~/.runelite/tts-dialogue/cache/` that survives restarts. The disk cache is capped by **Cache Size Limit**, evicts oldest-first, and keeps Cloud from being re-billed for audio you have already generated.
+Synthesis and playback run off the game thread, so the client stays responsive and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on backend, model, voice, emotion, and text: an in-memory layer for the session, plus a size-bounded on-disk cache under `~/.runelite/voiced-dialogue/cache/` that survives restarts. The disk cache is capped by **Cache Size Limit**, evicts oldest-first, and keeps Cloud from being re-billed for audio you have already generated.
 
 Cloud adds a few cost and latency guards: each line is capped at **Max Characters Per Line** and truncated at a sentence or word boundary, calls carry a 10-second timeout, a response that lands after you have skipped ahead is dropped, and two identical lines in flight share a single call. Requests reuse a keepalive connection pool and a byte-stable per-speaker profile block so Gemini's implicit prompt cache hits on repeats. Speculative prefetch (**Prefetch Dialogue**) warms the cache for the options you can see, so the line you pick next plays instantly.
 
@@ -167,12 +167,12 @@ Settings mirror the in-game panel: **General** (shared), **Cloud Voice (OpenRout
 **Requirements:** Java 17 and Gradle (wrapper included).
 
 ```bash
-git clone https://github.com/grabartley/tts-dialogue-runelite.git
-cd tts-dialogue-runelite
+git clone https://github.com/grabartley/runelite-voiced-dialogue.git
+cd runelite-voiced-dialogue
 ./gradlew build
 ```
 
-Run the `com.grahambartley.TTSDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. The standalone TTS engine lives under `engine-kokoro/`, built and published to GitHub Releases by a manual workflow and resolved at runtime through the bundled `engine-manifest.json`. For how the jar and engine fit together and the release runbook, see [docs/engine-pipeline.md](docs/engine-pipeline.md).
+Run the `com.grahambartley.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. The standalone TTS engine lives under `engine-kokoro/`, built and published to GitHub Releases by a manual workflow and resolved at runtime through the bundled `engine-manifest.json`. For how the jar and engine fit together and the release runbook, see [docs/engine-pipeline.md](docs/engine-pipeline.md).
 
 **Tech stack:** Java, Kokoro-82M for the local voice, sherpa-onnx for ONNX inference, the OpenRouter speech API for the cloud voice, and the RuneLite plugin framework.
 
@@ -182,7 +182,7 @@ Voiced Dialogue stands on the shoulders of others: [hexgrad](https://huggingface
 
 ## Contribute
 
-Got ideas or found a bug? [Open an issue](https://github.com/grabartley/tts-dialogue-runelite/issues) and let's talk.
+Got ideas or found a bug? [Open an issue](https://github.com/grabartley/runelite-voiced-dialogue/issues) and let's talk.
 
 ## License
 

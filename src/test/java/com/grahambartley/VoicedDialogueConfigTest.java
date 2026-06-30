@@ -4,13 +4,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.TTSDialogueConfig.SpokenLanguage;
+import com.grahambartley.VoicedDialogueConfig.SpokenLanguage;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
 /** Invariants of the {@link SpokenLanguage} dropdown: the single source of truth for languages. */
-public class TTSDialogueConfigTest {
+public class VoicedDialogueConfigTest {
 
   @Test
   public void englishIsTheDefaultNoTranslationLanguage() {

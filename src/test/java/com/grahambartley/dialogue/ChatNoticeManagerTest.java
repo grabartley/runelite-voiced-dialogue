@@ -10,8 +10,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.TTSDialogueConfig;
-import com.grahambartley.TTSDialogueConfig.VoiceBackend;
+import com.grahambartley.VoicedDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -32,7 +32,7 @@ public class ChatNoticeManagerTest {
   private final Client client = mock(Client.class);
   private final ConfigManager configManager = mock(ConfigManager.class);
   private final ClientThread clientThread = mock(ClientThread.class);
-  private final TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+  private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final ChatNoticeManager manager =
       new ChatNoticeManager(client, configManager, clientThread, config);
 
@@ -75,7 +75,7 @@ public class ChatNoticeManagerTest {
 
   @Test
   public void onboardingPostsOnceOnFreshInstallAndPersistsTheFlag() {
-    when(configManager.getConfiguration("ttsDialogue", "onboardingSeen", Boolean.class))
+    when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
         .thenReturn(null);
 
     manager.maybeShowOnboarding();
@@ -84,19 +84,19 @@ public class ChatNoticeManagerTest {
     verify(client, times(1))
         .addChatMessage(
             eq(ChatMessageType.GAMEMESSAGE), eq(""), contains("Voiced Dialogue is on"), isNull());
-    verify(configManager, times(1)).setConfiguration("ttsDialogue", "onboardingSeen", true);
+    verify(configManager, times(1)).setConfiguration("voicedDialogue", "onboardingSeen", true);
   }
 
   @Test
   public void onboardingStaysQuietOnceSeen() {
-    when(configManager.getConfiguration("ttsDialogue", "onboardingSeen", Boolean.class))
+    when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
         .thenReturn(true);
 
     manager.maybeShowOnboarding();
 
     verify(client, never())
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), contains(""), isNull());
-    verify(configManager, never()).setConfiguration("ttsDialogue", "onboardingSeen", true);
+    verify(configManager, never()).setConfiguration("voicedDialogue", "onboardingSeen", true);
   }
 
   @Test

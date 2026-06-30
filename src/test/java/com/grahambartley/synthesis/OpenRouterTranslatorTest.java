@@ -9,7 +9,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -24,7 +24,7 @@ public class OpenRouterTranslatorTest {
   private MockWebServer server;
   private OkHttpClient client;
   private final Gson gson = new Gson();
-  private final TTSDialogueConfig config = new TTSDialogueConfig() {};
+  private final VoicedDialogueConfig config = new VoicedDialogueConfig() {};
 
   @Before
   public void setUp() throws Exception {
@@ -78,6 +78,10 @@ public class OpenRouterTranslatorTest {
     RecordedRequest recorded = server.takeRequest();
     assertEquals("POST", recorded.getMethod());
     assertEquals("Bearer sk-or-abc", recorded.getHeader("Authorization"));
+    assertEquals(
+        "the OpenRouter app name is attributed",
+        "RuneLite Voiced Dialogue",
+        recorded.getHeader("X-Title"));
     JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
     assertEquals("google/gemini-3.1-flash-lite-preview", body.get("model").getAsString());
     assertEquals(

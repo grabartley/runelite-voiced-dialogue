@@ -6,8 +6,8 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.TTSDialogueConfig;
-import com.grahambartley.TTSDialogueConfig.VoiceBackend;
+import com.grahambartley.VoicedDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.runelite.api.Client;
@@ -83,7 +83,7 @@ public class CaveEchoPolicyTest {
   @Test
   public void isUndergroundReadsTheLivePlayerLocation() {
     Client client = mock(Client.class);
-    TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+    VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
     CaveEchoPolicy policy = new CaveEchoPolicy(client, config);
 
     when(client.getLocalPlayer()).thenReturn(null);
@@ -103,7 +103,7 @@ public class CaveEchoPolicyTest {
   @Test
   public void shouldEchoCombinesBackendToggleAndLocation() {
     Client client = mock(Client.class);
-    TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+    VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
     Player player = mock(Player.class);
     when(client.getLocalPlayer()).thenReturn(player);
     when(client.isInInstancedRegion()).thenReturn(false);

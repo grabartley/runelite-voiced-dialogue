@@ -10,7 +10,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
@@ -34,13 +34,13 @@ import org.junit.runner.RunWith;
 public class OpenRouterTtsBackendTest {
 
   /** Config with a settable key, char cap, and pace; everything else uses interface defaults. */
-  private static final class TestConfig implements TTSDialogueConfig {
+  private static final class TestConfig implements VoicedDialogueConfig {
     String key = "";
     int maxChars = 600;
     int speedPercent = 100;
-    TTSDialogueConfig.SpokenLanguage language = TTSDialogueConfig.SpokenLanguage.ENGLISH;
-    TTSDialogueConfig.SpeakingStyle playerQuirk = TTSDialogueConfig.SpeakingStyle.NONE;
-    TTSDialogueConfig.SpeakingStyle npcQuirk = TTSDialogueConfig.SpeakingStyle.NONE;
+    VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
+    VoicedDialogueConfig.SpeakingStyle playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
+    VoicedDialogueConfig.SpeakingStyle npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
 
     @Override
     public String openRouterApiKey() {
@@ -58,17 +58,17 @@ public class OpenRouterTtsBackendTest {
     }
 
     @Override
-    public TTSDialogueConfig.SpokenLanguage cloudLanguage() {
+    public VoicedDialogueConfig.SpokenLanguage cloudLanguage() {
       return language;
     }
 
     @Override
-    public TTSDialogueConfig.SpeakingStyle cloudPlayerSpeakingStyle() {
+    public VoicedDialogueConfig.SpeakingStyle cloudPlayerSpeakingStyle() {
       return playerQuirk;
     }
 
     @Override
-    public TTSDialogueConfig.SpeakingStyle cloudNpcSpeakingStyle() {
+    public VoicedDialogueConfig.SpeakingStyle cloudNpcSpeakingStyle() {
       return npcQuirk;
     }
   }
@@ -204,6 +204,10 @@ public class OpenRouterTtsBackendTest {
         "a JSON content type is sent",
         recorded.getHeader("Content-Type").startsWith("application/json"));
     assertNotNull("a User-Agent is sent", recorded.getHeader("User-Agent"));
+    assertEquals(
+        "the OpenRouter app name is attributed",
+        "RuneLite Voiced Dialogue",
+        recorded.getHeader("X-Title"));
 
     JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
     assertEquals("google/gemini-3.1-flash-tts-preview", body.get("model").getAsString());
@@ -496,25 +500,27 @@ public class OpenRouterTtsBackendTest {
   @Test
   @Parameters(method = "combineLanguageCases")
   public void combineLanguageAppendsTheQuirkOnlyWhenSet(
-      String language, TTSDialogueConfig.SpeakingStyle style, String expected) {
+      String language, VoicedDialogueConfig.SpeakingStyle style, String expected) {
     assertEquals(expected, OpenRouterTtsBackend.combineLanguage(language, style));
   }
 
   private Object[] combineLanguageCases() {
     return new Object[] {
-      new Object[] {"English", TTSDialogueConfig.SpeakingStyle.NONE, "English"},
-      new Object[] {"English", TTSDialogueConfig.SpeakingStyle.GEN_Z, "English Gen Z slang"},
-      new Object[] {"French", TTSDialogueConfig.SpeakingStyle.PIRATE, "French pirate speak"},
-      new Object[] {"  ", TTSDialogueConfig.SpeakingStyle.GEN_Z, "English Gen Z slang"},
+      new Object[] {"English", VoicedDialogueConfig.SpeakingStyle.NONE, "English"},
+      new Object[] {"English", VoicedDialogueConfig.SpeakingStyle.GEN_Z, "English Gen Z slang"},
+      new Object[] {"French", VoicedDialogueConfig.SpeakingStyle.PIRATE, "French pirate speak"},
+      new Object[] {"  ", VoicedDialogueConfig.SpeakingStyle.GEN_Z, "English Gen Z slang"},
       new Object[] {
-        "English", TTSDialogueConfig.SpeakingStyle.UK_SLANG, "English with London Roadman Slang"
+        "English", VoicedDialogueConfig.SpeakingStyle.UK_SLANG, "English with London Roadman Slang"
       },
       new Object[] {
-        "English", TTSDialogueConfig.SpeakingStyle.IRISH_SLANG, "English with Dublin Slang"
+        "English", VoicedDialogueConfig.SpeakingStyle.IRISH_SLANG, "English with Dublin Slang"
       },
-      new Object[] {"English", TTSDialogueConfig.SpeakingStyle.RHYMING, "English as rhyming verse"},
       new Object[] {
-        "French", TTSDialogueConfig.SpeakingStyle.SURFER, "French with laid-back surfer slang"
+        "English", VoicedDialogueConfig.SpeakingStyle.RHYMING, "English as rhyming verse"
+      },
+      new Object[] {
+        "French", VoicedDialogueConfig.SpeakingStyle.SURFER, "French with laid-back surfer slang"
       },
     };
   }
@@ -524,8 +530,8 @@ public class OpenRouterTtsBackendTest {
       throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    config.language = TTSDialogueConfig.SpokenLanguage.ENGLISH;
-    config.npcQuirk = TTSDialogueConfig.SpeakingStyle.GEN_Z;
+    config.language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     // Even with English as the base, the NPC style forces the translation hop; it is served first.
     server.enqueue(
         new MockResponse().setResponseCode(200).setBody(chatResponse("no cap, well met")));
@@ -569,7 +575,7 @@ public class OpenRouterTtsBackendTest {
     String plain = backend.cacheVariant(line);
     assertFalse("plain English with no style adds no language fragment", plain.contains("|l"));
 
-    config.npcQuirk = TTSDialogueConfig.SpeakingStyle.GEN_Z;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     assertNotEquals(
         "a style must not collide with the unstyled line", plain, backend.cacheVariant(line));
   }
@@ -578,8 +584,8 @@ public class OpenRouterTtsBackendTest {
   public void speakerClassPicksTheStyleForTranslation() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    config.playerQuirk = TTSDialogueConfig.SpeakingStyle.GEN_Z;
-    config.npcQuirk = TTSDialogueConfig.SpeakingStyle.NONE;
+    config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
     VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
 
     // The NPC line: NPC style None -> straight to speech, a single call, no translation hop.
@@ -622,8 +628,8 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void perSpeakerClassStylePartitionsTheCacheKey() {
     TestConfig config = new TestConfig();
-    config.playerQuirk = TTSDialogueConfig.SpeakingStyle.GEN_Z;
-    config.npcQuirk = TTSDialogueConfig.SpeakingStyle.PIRATE;
+    config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
     OpenRouterTtsBackend backend = backend(config);
     VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
     SynthesisRequest playerLine =
@@ -640,8 +646,8 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void styleOnOneClassLeavesTheOtherClassUntranslated() {
     TestConfig config = new TestConfig();
-    config.playerQuirk = TTSDialogueConfig.SpeakingStyle.NONE;
-    config.npcQuirk = TTSDialogueConfig.SpeakingStyle.GEN_Z;
+    config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     OpenRouterTtsBackend backend = backend(config);
     VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
     SynthesisRequest playerLine =
@@ -684,7 +690,7 @@ public class OpenRouterTtsBackendTest {
     String english = backend.cacheVariant(line);
     assertFalse("English (default) adds no language fragment", english.contains("|l"));
 
-    config.language = TTSDialogueConfig.SpokenLanguage.FRENCH;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     String french = backend.cacheVariant(line);
     assertNotEquals(
         "the same line in another language must not share a cache key", english, french);
@@ -695,7 +701,7 @@ public class OpenRouterTtsBackendTest {
   public void nonEnglishTargetTranslatesBeforeVoicingAndSetsLanguageCode() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    config.language = TTSDialogueConfig.SpokenLanguage.FRENCH;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     // The translator call is served first, then the speech call (same mock server, queue order).
     server.enqueue(new MockResponse().setResponseCode(200).setBody(chatResponse("Bonjour")));
     server.enqueue(
@@ -727,8 +733,8 @@ public class OpenRouterTtsBackendTest {
   public void skipTranslationVoicesVerbatimUnderANonEnglishTarget() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    config.language = TTSDialogueConfig.SpokenLanguage.FRENCH;
-    config.npcQuirk = TTSDialogueConfig.SpeakingStyle.GEN_Z;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     // A skip-translation line bypasses the hop entirely, so only the speech call is enqueued.
     server.enqueue(
         new MockResponse()
@@ -762,7 +768,7 @@ public class OpenRouterTtsBackendTest {
   public void normalLineStillTranslatesWhenSkipTranslationIsOff() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    config.language = TTSDialogueConfig.SpokenLanguage.FRENCH;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(new MockResponse().setResponseCode(200).setBody(chatResponse("Bonjour")));
     server.enqueue(
         new MockResponse()
@@ -787,7 +793,7 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void skipTranslationOmitsTheLanguageFragmentFromTheCacheVariant() {
     TestConfig config = new TestConfig();
-    config.language = TTSDialogueConfig.SpokenLanguage.FRENCH;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     OpenRouterTtsBackend backend = backend(config);
     VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
 
@@ -811,7 +817,7 @@ public class OpenRouterTtsBackendTest {
   public void translationFailureFailsTheLineWithoutCallingSpeech() {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    config.language = TTSDialogueConfig.SpokenLanguage.FRENCH;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(new MockResponse().setResponseCode(500).setBody("translation down"));
 
     int[] notices = {0};

@@ -6,7 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.ProfanityFilter;
 import com.grahambartley.synthesis.SynthesisBackend;
@@ -32,7 +32,7 @@ public class DialoguePrefetchCoordinatorTest {
   private final DialoguePrefetcher prefetcher = mock(DialoguePrefetcher.class);
   private final BackendProvider backendProvider = mock(BackendProvider.class);
   private final SynthesisBackend backend = mock(SynthesisBackend.class);
-  private final TTSDialogueConfig config = mock(TTSDialogueConfig.class);
+  private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
 
   private final DialoguePrefetchCoordinator coordinator =
       new DialoguePrefetchCoordinator(

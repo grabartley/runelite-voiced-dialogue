@@ -33,7 +33,7 @@ import okhttp3.ResponseBody;
  * never {@code new OkHttpClient()}), parses it with the injected {@link Gson}, resolves the current
  * OS/arch to a platform id ({@code osx-aarch64 | linux-x64 | win-x64} are the built targets),
  * downloads that artifact from its manifest {@code url}, verifies its sha256 against the manifest,
- * and extracts it under {@code ~/.runelite/tts-dialogue/engines/<engine>-<version>/}. The shadow
+ * and extracts it under {@code ~/.runelite/voiced-dialogue/engines/<engine>-<version>/}. The shadow
  * jar and the engine bundles ship in that same matching release, so a given build always resolves
  * the engine it was released with. The archive format is inferred from the artifact filename:
  * win-x64 bundles are {@code .zip} (extracted with {@link ZipInputStream}) and
@@ -60,7 +60,7 @@ public class EngineInstaller {
   static final String VERSION_RESOURCE = "/plugin-version.txt";
 
   /** Repository whose GitHub Releases host the per-version engine bundles + manifest asset. */
-  static final String REPO = "grabartley/tts-dialogue-runelite";
+  static final String REPO = "grabartley/runelite-voiced-dialogue";
 
   /** Asset name of the engine manifest published into each release. */
   static final String MANIFEST_ASSET = "engine-manifest.json";
@@ -97,7 +97,7 @@ public class EngineInstaller {
   /**
    * @param httpClient the injected OkHttp client (Hub rule: never {@code new OkHttpClient()})
    * @param gson the injected Gson
-   * @param enginesRoot base dir, typically {@code ~/.runelite/tts-dialogue/engines}
+   * @param enginesRoot base dir, typically {@code ~/.runelite/voiced-dialogue/engines}
    */
   public EngineInstaller(OkHttpClient httpClient, Gson gson, Path enginesRoot) {
     this.httpClient = httpClient;

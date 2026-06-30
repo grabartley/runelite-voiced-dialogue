@@ -1,6 +1,6 @@
 package com.grahambartley.synthesis;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.CaveEchoPolicy;
 import com.grahambartley.tts.DialogueAudioService;
 import com.grahambartley.voice.EmotionResolver;
@@ -21,7 +21,7 @@ public final class SynthesisDispatcher {
   private final EmotionResolver emotionResolver;
   private final ProfileResolver profileResolver;
   private final CaveEchoPolicy caveEchoPolicy;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
   private final BackendProvider backendProvider;
   private final DialogueAudioService audioService;
 
@@ -30,7 +30,7 @@ public final class SynthesisDispatcher {
       EmotionResolver emotionResolver,
       ProfileResolver profileResolver,
       CaveEchoPolicy caveEchoPolicy,
-      TTSDialogueConfig config,
+      VoicedDialogueConfig config,
       BackendProvider backendProvider,
       DialogueAudioService audioService) {
     this.voiceManager = voiceManager;

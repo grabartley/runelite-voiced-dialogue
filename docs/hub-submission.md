@@ -71,7 +71,7 @@ Create `plugins/voiced-dialogue` (no file extension) by copying
 placeholder with the sha from Step 1:
 
 ```
-repository=https://github.com/grabartley/tts-dialogue-runelite.git
+repository=https://github.com/grabartley/runelite-voiced-dialogue.git
 commit=<full 40-char sha from `git rev-parse v1.0.0`>
 authors=grabartley
 warning=With the Cloud (OpenRouter) voice backend selected, the dialogue text being spoken is sent to OpenRouter over HTTPS using your API key. The local backend stays fully offline and sends nothing off your machine.

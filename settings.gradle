@@ -1,4 +1,4 @@
-rootProject.name = 'tTSDialogue'
+rootProject.name = 'voicedDialogue'
 
 // The external Kokoro TTS engine ships as its own self-contained runtime, separate from the
 // Plugin Hub jar. It is built and released by the manual workflow_dispatch pipeline (issue #36)

@@ -2,7 +2,7 @@ package com.grahambartley.synthesis;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -41,7 +41,7 @@ import okhttp3.ResponseBody;
  * GeminiEmotionStyle#SUPPORTED} and {@link BackendProvider} downgrades anything outside it to
  * {@link Emotion#NEUTRAL}, which carries no tag.
  *
- * <p>It is selected when {@link TTSDialogueConfig#voiceBackend()} is {@code CLOUD} and reports
+ * <p>It is selected when {@link VoicedDialogueConfig#voiceBackend()} is {@code CLOUD} and reports
  * {@link #isAvailable()} only when an API key is set. Every failure path (missing key, non-2xx,
  * network error, empty/undecodable body) returns {@code null} and surfaces a one-time notice rather
  * than throwing, so the line is left unvoiced without crashing or blocking the game thread.
@@ -53,7 +53,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   public static final String ID = "cloud-openrouter";
 
   private static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/audio/speech";
-  private static final String USER_AGENT = "tts-dialogue-runelite";
+  private static final String USER_AGENT = "runelite-voiced-dialogue";
+
+  /** OpenRouter app-attribution headers, shown as the app name/URL in its usage dashboard. */
+  private static final String APP_TITLE = "RuneLite Voiced Dialogue";
+
+  private static final String APP_URL = "https://github.com/grabartley/runelite-voiced-dialogue";
+
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   /**
@@ -97,7 +103,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       "Add an OpenRouter API key to use cloud voices, or switch Voice Backend to Local.";
 
   private final OkHttpClient httpClient;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
   private final TtsModelStrategy model = new GeminiTtsModel();
@@ -118,7 +124,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /** Guards the one-time notice so a sustained outage does not spam the chat box. */
   private boolean warned;
 
-  public OpenRouterTtsBackend(OkHttpClient httpClient, TTSDialogueConfig config, Gson gson) {
+  public OpenRouterTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
   }
 
@@ -127,7 +133,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * host while exercising the real header, JSON body, decode, and error handling.
    */
   OpenRouterTtsBackend(
-      OkHttpClient httpClient, TTSDialogueConfig config, Gson gson, String endpoint) {
+      OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
     // Derive a long-lived keepalive client from the injected one (Hub rule: never new an
     // OkHttpClient). newBuilder() shares the dispatcher cheaply; we give it our own warm connection
     // pool so back-to-back lines skip the TCP/TLS handshake, and our own connect/read/call timeouts
@@ -220,7 +226,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * skips the hop while the other class can still be styled.
    */
   String effectiveSpokenLanguage(SynthesisRequest request) {
-    TTSDialogueConfig.SpeakingStyle style =
+    VoicedDialogueConfig.SpeakingStyle style =
         request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
     return combineLanguage(config.cloudLanguage().label(), style);
   }
@@ -228,7 +234,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /**
    * Appends a non-empty quirk phrase to the (blank-safe) base language, e.g. "French pirate speak".
    */
-  static String combineLanguage(String language, TTSDialogueConfig.SpeakingStyle quirk) {
+  static String combineLanguage(String language, VoicedDialogueConfig.SpeakingStyle quirk) {
     String base = language == null || language.trim().isEmpty() ? "English" : language.trim();
     if (quirk == null || quirk.isNone()) {
       return base;
@@ -328,6 +334,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             .url(endpoint)
             .addHeader("Authorization", "Bearer " + key)
             .addHeader("User-Agent", USER_AGENT)
+            .addHeader("HTTP-Referer", APP_URL)
+            .addHeader("X-Title", APP_TITLE)
             .post(
                 RequestBody.create(
                     JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))

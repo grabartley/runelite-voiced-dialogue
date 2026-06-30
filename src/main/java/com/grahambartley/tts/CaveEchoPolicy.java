@@ -1,6 +1,6 @@
 package com.grahambartley.tts;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -28,9 +28,9 @@ public final class CaveEchoPolicy {
       Set.of(7257, 7534, 7535, 7790, 7791, 8046, 8047, 8302, 8303);
 
   private final Client client;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
 
-  public CaveEchoPolicy(Client client, TTSDialogueConfig config) {
+  public CaveEchoPolicy(Client client, VoicedDialogueConfig config) {
     this.client = client;
     this.config = config;
   }
@@ -45,8 +45,8 @@ public final class CaveEchoPolicy {
    * while the player is underground.
    */
   static boolean shouldEchoLine(
-      TTSDialogueConfig.VoiceBackend backend, boolean caveEchoEnabled, boolean underground) {
-    return backend == TTSDialogueConfig.VoiceBackend.CLOUD && caveEchoEnabled && underground;
+      VoicedDialogueConfig.VoiceBackend backend, boolean caveEchoEnabled, boolean underground) {
+    return backend == VoicedDialogueConfig.VoiceBackend.CLOUD && caveEchoEnabled && underground;
   }
 
   /**

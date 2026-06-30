@@ -1,11 +1,11 @@
 ---
 name: run-tests
-description: Run and write tests for the TTS Dialogue RuneLite plugin (unit tests, manual testing). Use when asked to test, run tests, write tests, or verify changes.
+description: Run and write tests for the Voiced Dialogue RuneLite plugin (unit tests, manual testing). Use when asked to test, run tests, write tests, or verify changes.
 ---
 
 # Run Tests
 
-Run unit tests and manual tests for the TTS Dialogue RuneLite plugin.
+Run unit tests and manual tests for the Voiced Dialogue RuneLite plugin.
 
 ## Quick Commands
 
@@ -20,12 +20,12 @@ Run unit tests and manual tests for the TTS Dialogue RuneLite plugin.
 ./gradlew clean build
 
 # Manual testing in the RuneLite dev client
-# (run via the TTSDialoguePluginTest entry point; --developer-mode is required for login, --debug is optional)
+# (run via the VoicedDialoguePluginTest entry point; --developer-mode is required for login, --debug is optional)
 ./gradlew shadowJar
-java -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED -jar build/libs/tTSDialogue-1.0-SNAPSHOT-all.jar --developer-mode --debug
+java -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED -jar build/libs/voicedDialogue-1.0-SNAPSHOT-all.jar --developer-mode --debug
 ```
 
-In-process Kokoro TTS is on by default, so manual audio testing needs no voice server running. The model downloads once (~349 MB) into `~/.runelite/tts-dialogue/` on first launch.
+In-process Kokoro TTS is on by default, so manual audio testing needs no voice server running. The model downloads once (~349 MB) into `~/.runelite/voiced-dialogue/` on first launch.
 
 ## Test Types
 

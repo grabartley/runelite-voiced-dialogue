@@ -1,6 +1,6 @@
 package com.grahambartley.voice;
 
-import com.grahambartley.TTSDialogueConfig;
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.CharacterProfile;
 
 /**
@@ -11,9 +11,9 @@ import com.grahambartley.synthesis.CharacterProfile;
 public final class ProfileResolver {
 
   private final VoiceManager voiceManager;
-  private final TTSDialogueConfig config;
+  private final VoicedDialogueConfig config;
 
-  public ProfileResolver(VoiceManager voiceManager, TTSDialogueConfig config) {
+  public ProfileResolver(VoiceManager voiceManager, VoicedDialogueConfig config) {
     this.voiceManager = voiceManager;
     this.config = config;
   }
