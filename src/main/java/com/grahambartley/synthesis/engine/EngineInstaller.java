@@ -28,13 +28,15 @@ import okhttp3.ResponseBody;
  * Resolves, downloads, verifies, and extracts the per-OS external engine bundle the {@link
  * ExternalEngineClient} launches.
  *
- * <p>It reads the bundled {@code /engine-manifest.json} resource (produced by issue #36) with the
- * injected {@link Gson}, resolves the current OS/arch to a platform id ({@code osx-aarch64 |
- * linux-x64 | win-x64} are the built targets), downloads that artifact from its manifest {@code
- * url} with the injected {@link OkHttpClient} (Hub rule: never {@code new OkHttpClient()}),
- * verifies its sha256 against the manifest, and extracts it under {@code
- * ~/.runelite/tts-dialogue/engines/<engine>-<version>/}. The archive format is inferred from the
- * artifact filename: win-x64 bundles are {@code .zip} (extracted with {@link ZipInputStream}) and
+ * <p>It fetches {@code engine-manifest.json} from the GitHub Release whose tag matches THIS build's
+ * plugin version ({@code v<version>}), over HTTPS with the injected {@link OkHttpClient} (Hub rule:
+ * never {@code new OkHttpClient()}), parses it with the injected {@link Gson}, resolves the current
+ * OS/arch to a platform id ({@code osx-aarch64 | linux-x64 | win-x64} are the built targets),
+ * downloads that artifact from its manifest {@code url}, verifies its sha256 against the manifest,
+ * and extracts it under {@code ~/.runelite/tts-dialogue/engines/<engine>-<version>/}. The shadow
+ * jar and the engine bundles ship in that same matching release, so a given build always resolves
+ * the engine it was released with. The archive format is inferred from the artifact filename:
+ * win-x64 bundles are {@code .zip} (extracted with {@link ZipInputStream}) and
  * osx-aarch64/linux-x64 bundles are {@code .tar.gz} (extracted with the system {@code tar}). On
  * macOS it clears the {@code com.apple.quarantine} xattr on the extracted files so Gatekeeper does
  * not block an unsigned/non-notarized binary.
@@ -43,19 +45,25 @@ import okhttp3.ResponseBody;
  * downloaded, verified against its sha256, and extracted directly.
  *
  * <p>It is idempotent: a bundle already extracted with a present launcher is reused without a
- * re-download. The dev manifest ships empty urls/sha256 (a real release has not been published
- * yet); that case is treated as "no installable engine" and surfaces as {@link #install()}
- * returning {@code null}, never a crash. A platform with no manifest entry at all (e.g. Intel Mac,
- * which resolves to {@code osx-x64} but ships no bundle) is likewise treated as "no installable
- * engine" -> {@code null}, not an error. Any download failure or hash mismatch fails cleanly to
- * {@code null} (backend unavailable) with no partial install. All of this is blocking I/O and is
- * expected to run off the game thread (the pipeline executor, via the backend's {@code warmUp}).
+ * re-download. A dev/{@code SNAPSHOT} build has no matching published release, so the manifest
+ * fetch is skipped and {@link #install()} returns {@code null} (local backend unavailable), never a
+ * crash. A platform with no manifest entry at all (e.g. Intel Mac, which resolves to {@code
+ * osx-x64} but ships no bundle) is likewise treated as "no installable engine" -> {@code null}, not
+ * an error. Any fetch/download failure or hash mismatch fails cleanly to {@code null} (backend
+ * unavailable) with no partial install. All of this is blocking I/O and is expected to run off the
+ * game thread (the pipeline executor, via the backend's {@code warmUp}).
  */
 @Slf4j
 public class EngineInstaller {
 
-  /** The Kokoro engine manifest resource on the classpath. */
-  public static final String KOKORO_MANIFEST_RESOURCE = "/engine-manifest.json";
+  /** Resource holding this build's plugin version, stamped into the jar by Gradle at build time. */
+  static final String VERSION_RESOURCE = "/plugin-version.txt";
+
+  /** Repository whose GitHub Releases host the per-version engine bundles + manifest asset. */
+  static final String REPO = "grabartley/tts-dialogue-runelite";
+
+  /** Asset name of the engine manifest published into each release. */
+  static final String MANIFEST_ASSET = "engine-manifest.json";
 
   private final OkHttpClient httpClient;
   private final Gson gson;
@@ -217,23 +225,67 @@ public class EngineInstaller {
   }
 
   /**
-   * Reads and parses the bundled {@code /engine-manifest.json} resource, or {@code null} if
-   * absent/unparseable. Overridable so tests can supply a synthetic manifest without touching the
-   * committed dev resource.
+   * Fetches and parses {@code engine-manifest.json} from the GitHub Release matching this build's
+   * version, or {@code null} when there is no matching release (dev/{@code SNAPSHOT} build,
+   * unpublished version, or a network failure). Overridable so tests can supply a synthetic
+   * manifest without the network.
    */
   protected JsonObject readManifest() {
-    try (InputStream in = EngineInstaller.class.getResourceAsStream(KOKORO_MANIFEST_RESOURCE)) {
-      if (in == null) {
-        log.warn("engine manifest resource {} not found on classpath", KOKORO_MANIFEST_RESOURCE);
-        return null;
-      }
-      try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-        return gson.fromJson(reader, JsonObject.class);
-      }
-    } catch (IOException | RuntimeException e) {
-      log.warn("Could not read engine-manifest.json: {}", e.getMessage());
+    String version = ownVersion();
+    if (version == null || version.isEmpty() || version.endsWith("-SNAPSHOT")) {
+      log.info(
+          "Plugin version '{}' has no matching published engine release (dev build); local backend"
+              + " unavailable.",
+          version);
       return null;
     }
+    String url = manifestUrl(version);
+    try {
+      Request request = new Request.Builder().url(url).build();
+      try (Response response = httpClient.newCall(request).execute()) {
+        if (!response.isSuccessful()) {
+          log.info(
+              "No engine manifest for version {} (HTTP {} at {}); local backend unavailable.",
+              version,
+              response.code(),
+              url);
+          return null;
+        }
+        ResponseBody body = response.body();
+        if (body == null) {
+          return null;
+        }
+        try (Reader reader = new InputStreamReader(body.byteStream(), StandardCharsets.UTF_8)) {
+          return gson.fromJson(reader, JsonObject.class);
+        }
+      }
+    } catch (IOException | RuntimeException e) {
+      log.warn("Could not fetch engine-manifest.json from {}: {}", url, e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * This build's plugin version, stamped into the jar by Gradle ({@code /plugin-version.txt}), or
+   * {@code null} if absent. Overridable in tests.
+   */
+  protected String ownVersion() {
+    try (InputStream in = EngineInstaller.class.getResourceAsStream(VERSION_RESOURCE)) {
+      if (in == null) {
+        return null;
+      }
+      return new String(in.readAllBytes(), StandardCharsets.UTF_8).trim();
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  /**
+   * The {@code engine-manifest.json} release-asset URL for a plugin version (tag {@code
+   * v<version>}). Overridable in tests to point at a local server.
+   */
+  protected String manifestUrl(String version) {
+    return "https://github.com/" + REPO + "/releases/download/v" + version + "/" + MANIFEST_ASSET;
   }
 
   /** Downloads {@code url} to {@code target} using the injected OkHttp client. */

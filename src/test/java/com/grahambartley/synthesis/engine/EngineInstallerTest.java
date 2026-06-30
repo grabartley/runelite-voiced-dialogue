@@ -241,35 +241,73 @@ public class EngineInstallerTest {
     assertNull(installer.install());
   }
 
+  // --- manifest resolution by matching version ---------------------------------------------------
+
   @Test
-  public void bundledKokoroManifestResourceIsWellFormedForBuiltTargets() {
-    // The committed /engine-manifest.json now points at the published Kokoro v0.1.0 release (#61),
-    // so it is no longer a dev placeholder. Assert the resource parses and carries a real artifact
-    // (url + sha256 + launcher) for each built target, and that the osx-aarch64/linux-x64 urls are
-    // .tar.gz while win-x64 is .zip -- the exact distinction the installer must dispatch on (#66).
-    // This stays offline: it inspects the manifest rather than running a real ~385 MB install.
-    com.google.gson.JsonObject manifest =
-        gson.fromJson(
-            new java.io.InputStreamReader(
-                EngineInstaller.class.getResourceAsStream(EngineInstaller.KOKORO_MANIFEST_RESOURCE),
-                StandardCharsets.UTF_8),
-            com.google.gson.JsonObject.class);
-    com.google.gson.JsonObject artifacts = manifest.getAsJsonObject("artifacts");
-    for (String target : new String[] {"osx-aarch64", "linux-x64", "win-x64"}) {
-      com.google.gson.JsonObject entry = artifacts.getAsJsonObject(target);
-      assertTrue(
-          target + " must have a non-empty url", entry.get("url").getAsString().length() > 0);
-      assertTrue(
-          target + " must have a non-empty sha256", entry.get("sha256").getAsString().length() > 0);
-      assertTrue(
-          target + " must declare a launcher",
-          entry.has("launcher") && entry.get("launcher").getAsString().length() > 0);
-      boolean expectTarGz = !target.startsWith("win");
-      assertEquals(
-          target + " archive format",
-          expectTarGz,
-          EngineInstaller.isTarGz(entry.get("url").getAsString()));
-    }
+  public void readManifestFetchesTheReleaseMatchingOwnVersion() throws Exception {
+    // The jar resolves the engine release whose tag matches its own stamped version: it must GET
+    // engine-manifest.json from .../releases/download/v<version>/ and parse it.
+    String manifestJson =
+        manifest("linux-x64", "https://example/bundle.tar.gz", "abc", "kokoro-engine");
+    String path = "/grabartley/tts-dialogue-runelite/releases/download/v1.2.3/engine-manifest.json";
+    String base = serveText(path, manifestJson);
+
+    StringBuilder requested = new StringBuilder();
+    EngineInstaller installer =
+        new EngineInstaller(new OkHttpClient(), gson, tmp.newFolder("engines").toPath()) {
+          @Override
+          protected String ownVersion() {
+            return "1.2.3";
+          }
+
+          @Override
+          protected String manifestUrl(String version) {
+            requested.append(version);
+            return base + path;
+          }
+        };
+
+    com.google.gson.JsonObject parsed = installer.readManifest();
+    assertNotNull("a matching release manifest must be fetched and parsed", parsed);
+    assertEquals("1.2.3", requested.toString());
+    assertEquals("kokoro", parsed.get("engine").getAsString());
+  }
+
+  @Test
+  public void readManifestSkipsTheNetworkForSnapshotBuilds() {
+    // A dev/SNAPSHOT build has no matching release, so no fetch is attempted (server would 404).
+    EngineInstaller installer =
+        new EngineInstaller(new OkHttpClient(), gson, tmp.getRoot().toPath()) {
+          @Override
+          protected String ownVersion() {
+            return "1.0-SNAPSHOT";
+          }
+
+          @Override
+          protected String manifestUrl(String version) {
+            throw new AssertionError("must not build a manifest URL for a SNAPSHOT build");
+          }
+        };
+    assertNull(installer.readManifest());
+  }
+
+  @Test
+  public void readManifestReturnsNullWhenNoMatchingReleaseExists() throws Exception {
+    // The matching-version URL 404s (release not published): degrade to null, not a crash.
+    String base = serve404("/releases/download/v9.9.9/engine-manifest.json");
+    EngineInstaller installer =
+        new EngineInstaller(new OkHttpClient(), gson, tmp.newFolder("engines").toPath()) {
+          @Override
+          protected String ownVersion() {
+            return "9.9.9";
+          }
+
+          @Override
+          protected String manifestUrl(String version) {
+            return base + "/releases/download/v9.9.9/engine-manifest.json";
+          }
+        };
+    assertNull(installer.readManifest());
   }
 
   // --- helpers -----------------------------------------------------------------------------------
@@ -374,6 +412,35 @@ public class EngineInstallerTest {
         });
     server.start();
     return "http://127.0.0.1:" + server.getAddress().getPort() + path;
+  }
+
+  /** Serves {@code body} at {@code path} and returns the server base URL (no path). */
+  private String serveText(String path, String body) throws IOException {
+    byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+    server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        path,
+        exchange -> {
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+          }
+        });
+    server.start();
+    return "http://127.0.0.1:" + server.getAddress().getPort();
+  }
+
+  /** Serves a 404 at {@code path} and returns the server base URL (no path). */
+  private String serve404(String path) throws IOException {
+    server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        path,
+        exchange -> {
+          exchange.sendResponseHeaders(404, -1);
+          exchange.close();
+        });
+    server.start();
+    return "http://127.0.0.1:" + server.getAddress().getPort();
   }
 
   private static String sha256HexOf(byte[] data) throws Exception {
