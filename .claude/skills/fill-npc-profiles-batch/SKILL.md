@@ -191,7 +191,7 @@ British medieval fantasy: commoners common British; royalty/knights/nobles posh
 via **style register**, not a new accent; distinctive races and lore creatures
 keep their racial accents (handled by the race layer, do not restate them in a
 `byId` accent); `ethnicity` = origin, following the real-world cultures the OSRS
-locations are based on. Phrase accents positively, never mention America. No
+locations are based on. Phrase accents positively, never by negation. No
 transient comments. Gemini renders British/European accents reliably, foreign
 ones inconsistently, do not over-invest where the model cannot deliver.
 

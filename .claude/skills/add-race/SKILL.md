@@ -43,7 +43,7 @@ The local Kokoro bank `kokoro-multi-lang-v1_0` exposes English voices at ids 0-2
 24 bm_daniel 25 bm_fable 26 bm_george 27 bm_lewis
 ```
 
-Pick two **unused** ids: one `am_`/`bm_` for male, one `af_`/`bf_` for female, with a timbre that fits the race. Each speaker id must be unique across the whole `VoiceProfile` enum (`VoiceManagerTest.everyCategoryMapsToADistinctSpeaker` asserts the count, so bump that number by 2). To find free ids: list the ids already used in `VoiceProfile` and take the gaps. Warmer/relaxed races lean American (`am_`/`af_`); refined races lean British (`bm_`/`bf_`).
+Pick two **unused** ids: one `am_`/`bm_` for male, one `af_`/`bf_` for female, with a timbre that fits the race. Each speaker id must be unique across the whole `VoiceProfile` enum (`VoiceManagerTest.everyCategoryMapsToADistinctSpeaker` asserts the count, so bump that number by 2). To find free ids: list the ids already used in `VoiceProfile` and take the gaps. Warmer/relaxed races lean toward the `am_`/`af_` voices; refined races lean British (`bm_`/`bf_`).
 
 ## Gemini (cloud) sub-pool rule
 
@@ -80,7 +80,7 @@ Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`), `VoiceManagerTest` (dist
 
 ## World rules (non-negotiable prose constraints)
 
-- **Phrase accents positively.** Name the wanted accent ("the lilting Bajan English of Barbados"); never describe by negation and never reference America. Gemini renders British/European accents reliably but foreign accents only partially, so make `style` carry the character so the line still reads well if the accent lands only halfway.
+- **Phrase accents positively.** Name the wanted accent ("the lilting Bajan English of Barbados"); never describe by negation. Gemini renders British/European accents reliably but foreign accents only partially, so make `style` carry the character so the line still reads well if the accent lands only halfway.
 - **Keep all prose timeless.** No rollout/batch/PR/date/"for now" references in code, JSON, or comments.
 - **British medieval-fantasy default.** Everything is British unless lore or trope says otherwise.
 

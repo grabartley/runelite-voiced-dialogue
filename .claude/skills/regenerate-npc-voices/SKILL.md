@@ -31,7 +31,7 @@ Quick partial run for testing: `--limit 500`. Commit the regenerated
 
 - Layers combine: `default -> byRace -> byEthnicity (plain folk only) -> byCategory (every keyword match) -> byId`. `style` accumulates; `name`/`accent`/`pace` take the most specific layer.
 - `tools/profiles.json` = delivery prose (accent/style/pace). `tools/overrides.json` = classification (race/gender/ethnicity), which also feeds the offline Local backend's voice.
-- British world: commoners common British, royalty/knights/nobles posh via style register; distinctive races and lore creatures keep their accents; ethnicity = origin (corrected in overrides for foreigners); never mention America; no transient comments.
+- British world: commoners common British, royalty/knights/nobles posh via style register; distinctive races and lore creatures keep their accents; ethnicity = origin (corrected in overrides for foreigners); never by negation; no transient comments.
 
 ## Notes / known limits
 
