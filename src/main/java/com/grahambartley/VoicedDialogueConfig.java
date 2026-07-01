@@ -359,7 +359,7 @@ public interface VoicedDialogueConfig extends Config {
           "Language dialogue is spoken in. English (default) speaks the original line directly. Any"
               + " other language routes each line through a translation model first, preserving"
               + " names, places, and item terms, then voices the translation. Adds a translation"
-              + " request per new line.",
+              + " request per new line (which increases latency).",
       position = 1,
       section = deliverySection)
   default SpokenLanguage cloudLanguage() {
@@ -373,8 +373,8 @@ public interface VoicedDialogueConfig extends Config {
           "Optional delivery register layered onto your own dialogue lines, on top of the Spoken"
               + " Language. None (default) changes nothing; any other value rewrites your lines in"
               + " that style (Gen Z slang, pirate speak, and so on) via the translation model, so"
-              + " they route through that hop even for English. Leave this on None with English to"
-              + " skip the translation model entirely for your lines.",
+              + " they route through that hop even for English (which increases latency). Leave this"
+              + " on None with English to skip the translation model entirely for your lines.",
       position = 2,
       section = deliverySection)
   default SpeakingStyle cloudPlayerSpeakingStyle() {
@@ -388,8 +388,8 @@ public interface VoicedDialogueConfig extends Config {
           "Optional delivery register layered onto NPC dialogue lines, on top of the Spoken"
               + " Language. None (default) changes nothing; any other value rewrites NPC lines in"
               + " that style (Gen Z slang, pirate speak, and so on) via the translation model, so"
-              + " they route through that hop even for English. Leave this on None with English to"
-              + " skip the translation model entirely for NPC lines.",
+              + " they route through that hop even for English (which increases latency). Leave this"
+              + " on None with English to skip the translation model entirely for NPC lines.",
       position = 3,
       section = deliverySection)
   default SpeakingStyle cloudNpcSpeakingStyle() {

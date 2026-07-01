@@ -136,9 +136,9 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Emotional Delivery** | `On` | Carries the emotion detected from the speaker's chat-head animation through to the voice. Off voices every line as Neutral. |
-| **Spoken Language** | `English` | Language dialogue is spoken in, from a dropdown of supported languages. `English` voices the original line; anything else translates each line first (preserving names, places, and item terms), then voices it. |
-| **Player Speaking Style** | `None` | Optional delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). Set independently of the NPC style. |
-| **NPC Speaking Style** | `None` | Optional delivery register layered onto NPC lines, from the same set. Language-agnostic, so it composes with any Spoken Language. |
+| **Spoken Language** | `English` | Language dialogue is spoken in, from a dropdown of supported languages. `English` voices the original line; anything else translates each line first (preserving names, places, and item terms), then voices it (which increases latency). |
+| **Player Speaking Style** | `None` | Optional delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). Routes lines through the translation model (which increases latency). Set independently of the NPC style. |
+| **NPC Speaking Style** | `None` | Optional delivery register layered onto NPC lines, from the same set. Routes lines through the translation model (which increases latency). Language-agnostic, so it composes with any Spoken Language. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
 | **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). Applied at playback, so cached audio is unchanged. |
 
