@@ -86,7 +86,7 @@ line stays silent with a one-time "add your OpenRouter API key" notice.
 ### No secrets or large binaries in the built jar
 
 **Verified by inspecting `build/libs` after `./gradlew jar`.** The jar is ~362 KiB
-(well under the Hub's 10 MiB limit) and contains only compiled classes plus four data
+(well under the Hub's 10 MiB limit) and contains only compiled classes plus three data
 resources, all loaded via `getResourceAsStream`:
 
 | Resource | Size | What it is |
@@ -94,7 +94,6 @@ resources, all loaded via `getResourceAsStream`:
 | `npc-voices.json` | ~2.0 MiB uncompressed | Precomputed NPC race/gender/ethnicity + voice profile table |
 | `expression-emotions.json` | ~1.5 KiB | Chat-head animation → emotion map |
 | `profanity.txt` | ~1.0 KiB | Offline profanity blocklist |
-| `plugin-version.txt` | ~10 B | This build's version, used for the release tag and `checkVersionConsistency` |
 
 No API keys, no model files, no native libraries, and no synthesis engine of any kind: the
 plugin is Cloud-only and voices dialogue over HTTPS, so there is nothing to bundle and nothing

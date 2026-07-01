@@ -1,14 +1,23 @@
 name: Release
 
-# workflow_dispatch is the single deploy: it reads the source-pinned version (the committed
-# src/main/resources/plugin-version.txt, via `./gradlew printVersion`), runs the gate, builds the
-# thin + shadow jars, then publishes ONE GitHub release under one v<version> tag carrying the jars.
-# The Hub builds its own jar from this source at the tagged commit, so it carries the same version.
-# The plugin is Cloud-only: no engine bundles, no per-OS assets, no manifest. The PR build/test gate
-# lives in ci.yml.
+# workflow_dispatch is the single deploy. It computes the next version from the latest v* tag and the
+# dispatched bump (patch/minor/major), writes it into runelite-plugin.properties (the single source
+# the Hub reads when it builds from source), commits that back to main, tags it v<version>, then
+# builds and publishes the plugin jars under that tag. The version is never hand-maintained. The
+# plugin is Cloud-only: no engine bundles, no per-OS assets, no manifest. The PR build/test gate lives
+# in ci.yml.
 on:
   workflow_dispatch:
     inputs:
+      bump:
+        description: "Version bump"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
       release_type:
         description: "Release type"
         required: true
@@ -23,11 +32,8 @@ permissions:
   contents: write
 
 jobs:
-  # ---------- Deploy: read source version, gate, build thin + shadow jars ----------
-  plugin:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout repository
@@ -61,57 +67,51 @@ jobs:
           detailed_summary: true
           include_passed: true
 
-      - name: Read source-pinned version
+      - name: Compute next version
         id: version
         run: |
-          VERSION=$(./gradlew -q printVersion | tail -1 | tr -d '[:space:]')
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not read the project version from src/main/resources/plugin-version.txt"
-            exit 1
-          fi
-          if [[ "$VERSION" == *-SNAPSHOT ]]; then
-            echo "::error::Refusing to release a SNAPSHOT version ($VERSION). Set a release version in src/main/resources/plugin-version.txt on the commit you are releasing."
-            exit 1
-          fi
-          echo "Releasing version: ${VERSION}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match='v*' 2>/dev/null || echo "v0.0.0")
+          LATEST_VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "Previous: ${LATEST_VERSION}"
+          echo "New:      ${NEW_VERSION}"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Pin version and tag the release commit
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # runelite-plugin.properties is the version the Hub builds from, so the tagged commit must
+          # carry it. Write it, commit it back to main, and tag that commit v<version>.
+          sed -i -E "s/^version=.*/version=${NEW_VERSION}/" runelite-plugin.properties
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add runelite-plugin.properties
+          git commit -m "chore: release v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin HEAD:main
+          git push origin "v${NEW_VERSION}"
 
       - name: Build shadow JAR
         run: ./gradlew shadowJar
 
-      - name: Upload plugin jars
-        uses: actions/upload-artifact@v4
-        with:
-          name: plugin-jar
-          path: build/libs/*.jar
-
-  # ---------- Deploy: one tagged release carrying the plugin jars ----------
-  publish:
-    name: Publish release
-    needs: plugin
-    runs-on: ubuntu-latest
-    env:
-      VERSION: v${{ needs.plugin.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download release shadow JAR
-        uses: actions/download-artifact@v4
-        with:
-          name: plugin-jar
-          path: plugin-dist
-
       - name: Generate changelog
         env:
           GH_TOKEN: ${{ github.token }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           gh api \
             --method POST \
             /repos/${{ github.repository }}/releases/generate-notes \
-            -f tag_name=${{ env.VERSION }} \
+            -f tag_name="v${NEW_VERSION}" \
             --jq .body > release-notes.md
 
           if [ ! -s release-notes.md ]; then
@@ -125,25 +125,15 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
+          NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           PRERELEASE_FLAG=""
           if [ "${{ inputs.release_type }}" != "stable" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
-          # Re-runnable: create the release if missing, otherwise refresh its assets.
-          if gh release view "${{ env.VERSION }}" >/dev/null 2>&1; then
-            echo "Release exists, refreshing assets"
-          else
-            gh release create "${{ env.VERSION }}" \
-              --title "Voiced Dialogue ${{ env.VERSION }}" \
-              --notes-file release-notes.md \
-              $PRERELEASE_FLAG
-          fi
-          # Attach both plugin jars (thin + shadow). A per-file loop (not find -exec) so any failed
-          # upload fails the step.
-          while IFS= read -r -d '' f; do
-            gh release upload "${{ env.VERSION }}" "$f" --clobber \
-              || { echo "::error::release asset upload failed for $f"; exit 1; }
-          done < <(find plugin-dist -type f -name '*.jar' -print0)
+          gh release create "v${NEW_VERSION}" \
+            --title "Voiced Dialogue v${NEW_VERSION}" \
+            --notes-file release-notes.md \
+            $PRERELEASE_FLAG \
+            build/libs/*.jar

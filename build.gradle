@@ -41,38 +41,19 @@ dependencies {
 
 group = 'com.grahambartley'
 
-// The committed src/main/resources/plugin-version.txt is the single source of truth for the
-// version. build.gradle reads it here for the release tag and checkVersionConsistency; the Hub's
-// build=standard ships it verbatim from src/main/resources. This avoids a Gradle-generated
-// resource, which build=standard would not run.
-version = file('src/main/resources/plugin-version.txt').text.trim()
+// runelite-plugin.properties is the single source of truth for the version: the Hub reads its
+// `version` when it builds from source, and build.gradle reads the same field here so the jar and the
+// release tag always agree with what the Hub ships. It is written by the release workflow (from the
+// dispatched bump), so the version is never hand-maintained.
+def pluginProperties = new Properties()
+file('runelite-plugin.properties').withInputStream { pluginProperties.load(it) }
+version = pluginProperties.getProperty('version')?.trim()
 
 tasks.register('printVersion') {
 	doLast {
 		println version
 	}
 }
-
-// Fail the build if runelite-plugin.properties (read by the Hub, and unable to share a source with
-// build.gradle) drifts from plugin-version.txt. Keeps the two hand-edited version strings honest.
-tasks.register('checkVersionConsistency') {
-	def pluginProps = file('runelite-plugin.properties')
-	def expected = version.toString()
-	inputs.file(pluginProps)
-	inputs.property('version', expected)
-	doLast {
-		def props = new Properties()
-		pluginProps.withInputStream { props.load(it) }
-		def declared = props.getProperty('version')?.trim()
-		if (declared != expected) {
-			throw new GradleException(
-					"runelite-plugin.properties version='${declared}' does not match "
-							+ "plugin-version.txt='${expected}'. Set both to the same value.")
-		}
-	}
-}
-
-tasks.named('check') { dependsOn 'checkVersionConsistency' }
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
