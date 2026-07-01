@@ -71,18 +71,22 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          LATEST_TAG=$(git describe --tags --abbrev=0 --match='v*' 2>/dev/null || echo "v0.0.0")
-          LATEST_VERSION=${LATEST_TAG#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
+          # The last deployed release tag, or empty on the very first release. It seeds the version
+          # bump and, in the changelog step, is the baseline the notes are computed against.
+          PREV_TAG=$(git describe --tags --abbrev=0 --match='v*' 2>/dev/null || true)
+          BASE_VERSION=${PREV_TAG#v}
+          BASE_VERSION=${BASE_VERSION:-0.0.0}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
           case "${{ inputs.bump }}" in
             major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
             minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
             patch) PATCH=$((PATCH + 1)) ;;
           esac
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "Previous: ${LATEST_VERSION}"
-          echo "New:      ${NEW_VERSION}"
+          echo "Previous tag: ${PREV_TAG:-<none>}"
+          echo "New:          ${NEW_VERSION}"
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Pin version and tag the release commit
         env:
@@ -90,14 +94,20 @@ jobs:
         run: |
           set -euo pipefail
           # runelite-plugin.properties is the version the Hub builds from, so the tagged commit must
-          # carry it. Write it, commit it back to main, and tag that commit v<version>.
+          # carry it. Write it, commit the change back to main only if it actually differs (the
+          # computed version can already match, e.g. the first release after the file was set by
+          # hand), then always tag the current commit (which now carries the version) and push it.
           sed -i -E "s/^version=.*/version=${NEW_VERSION}/" runelite-plugin.properties
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add runelite-plugin.properties
-          git commit -m "chore: release v${NEW_VERSION}"
+          if git diff --cached --quiet; then
+            echo "runelite-plugin.properties already at ${NEW_VERSION}; tagging without a commit"
+          else
+            git commit -m "chore: release v${NEW_VERSION}"
+            git push origin HEAD:main
+          fi
           git tag "v${NEW_VERSION}"
-          git push origin HEAD:main
           git push origin "v${NEW_VERSION}"
 
       - name: Build shadow JAR
@@ -107,11 +117,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NEW_VERSION: ${{ steps.version.outputs.version }}
+          PREV_TAG: ${{ steps.version.outputs.prev_tag }}
         run: |
+          set -euo pipefail
+          # Notes for everything deployed since the last release tag. On the first release there is
+          # no previous tag, so previous_tag_name is omitted and GitHub includes every commit on
+          # main up to this release.
+          ARGS=(-f tag_name="v${NEW_VERSION}")
+          if [ -n "${PREV_TAG}" ]; then
+            ARGS+=(-f previous_tag_name="${PREV_TAG}")
+            echo "Changelog: ${PREV_TAG}..v${NEW_VERSION}"
+          else
+            echo "Changelog: all commits on main (no previous release tag)"
+          fi
           gh api \
             --method POST \
             /repos/${{ github.repository }}/releases/generate-notes \
-            -f tag_name="v${NEW_VERSION}" \
+            "${ARGS[@]}" \
             --jq .body > release-notes.md
 
           if [ ! -s release-notes.md ]; then
