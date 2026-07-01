@@ -33,10 +33,13 @@ import lombok.extern.slf4j.Slf4j;
  * never pitch-shifts. An {@code {"error":...}} header line is surfaced as a failed request without
  * killing the process.
  *
- * <p>This client is <em>thread-confined</em>: it is driven only from the single dialogue pipeline
- * thread, so there is never more than one in-flight request and stdin/stdout framing stays
- * unambiguous. The child is started lazily and restarted transparently if it has died (crash or
- * exit) before a request, so a one-off engine crash self-heals on the next line.
+ * <p>Every stateful entry point ({@link #start}, {@link #synthesize}, {@link #stop}, health checks)
+ * is {@code synchronized} on this client, so the write-request/read-response round-trip is atomic
+ * and stdin/stdout framing stays unambiguous even when the synthesis pool drives it from more than
+ * one worker: concurrent callers serialize on the monitor rather than interleaving on the pipe (in
+ * practice same-line calls are de-duped upstream, so contention is rare). The child is started
+ * lazily and restarted transparently if it has died (crash or exit) before a request, so a one-off
+ * engine crash self-heals on the next line.
  */
 @Slf4j
 public final class ExternalEngineClient {
@@ -132,7 +135,8 @@ public final class ExternalEngineClient {
   /**
    * Synthesizes one request through the engine, returning the decoded {@link Pcm} or {@code null}
    * on failure (engine error line, process death, malformed frame). Restarts the engine first if it
-   * has died since the last call. Must be called from the single pipeline thread.
+   * has died since the last call. Synchronized, so concurrent synthesis-pool workers serialize on
+   * the round-trip rather than interleaving on the pipe.
    */
   public synchronized Pcm synthesize(SynthesisRequest request) {
     if (request == null || request.text() == null || request.text().isEmpty()) {
