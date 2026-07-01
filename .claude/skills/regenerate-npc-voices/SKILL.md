@@ -19,10 +19,37 @@ python3 tools/generate_npc_voices.py        # needs network access to the wiki
 Quick partial run for testing: `--limit 500`. Commit the regenerated
 `npc-voices.json` alongside any `overrides.json` / `profiles.json` edits.
 
+For an overrides/profiles-only change, prefer `--base src/main/resources/npc-voices.json`
+(offline, no wiki fetch) so the diff is exactly your intended edits with **no
+wiki-freshness drift** (newly released NPCs, unrelated reclassifications). A full
+online run is only for a deliberate table/coverage refresh.
+
 After regenerating, update the NPC counts in `README.md` to match the new
 table: the total entry count (`_meta.count`) and the bespoke-personality count
 (`profiles.byId` length). Read both from the regenerated `npc-voices.json` and
 edit the README figures in the same commit so they never drift.
+
+## Mandatory: verify every changed NPC before committing
+
+Any NPC whose entry changes in the regenerated `npc-voices.json` — via override
+edits, wiki drift, a summary refresh, or a logic change — must be **100% hand
+verified against the OSRS Wiki** before commit. The burden of verification is on
+you; do not rubber-stamp the diff.
+
+1. Diff the new `npcs` map against the committed one (`git show HEAD:...`) to list
+   every changed id, and dedupe by character to get the real work list.
+2. For each changed character, confirm `race`/`gender`/`ethnicity` against the wiki
+   using the process in `find-npc-true-origin` (true origin, not just found-region).
+   Fix anything wrong in `overrides.json` and regenerate.
+3. **Present a change table to the developer** before committing, one row per
+   change, so they can see exactly what was done:
+
+   | id(s) | name | race (old → new) | ethnicity (old → new) | why |
+   |-------|------|------------------|-----------------------|-----|
+
+   Include drift-introduced changes too; if a full online run pulled in new NPCs
+   or reclassifications you did not intend, either verify them or switch to
+   `--base` to exclude them.
 
 ## What the generator does
 

@@ -375,19 +375,35 @@ def fill_from_summary(table, name_map, summary):
 
 
 def apply_overrides(table, overrides):
+    """Patch each override's fields over the wiki-inferred entry (not a wholesale replace).
+
+    Per field, an override that names it wins; one that omits it inherits the wiki base; one
+    that sets it to ``null`` clears it. So omitting ``ethnicity`` keeps the wiki-inferred accent
+    (the common case), while ``"ethnicity": null`` drops a wrong one (a foreigner). ``race`` and
+    ``gender`` are optional too, but the post-merge entry must still carry both, else the wiki
+    never supplied one and we raise rather than emit a malformed entry.
+    """
     override_npcs = overrides.get("npcs", {})
     for key, entry in override_npcs.items():
         npc_id = int(key)
-        race = entry["race"]
-        gender = entry["gender"]
-        if race not in VALID_RACES:
-            raise ValueError(f"Override {key} has invalid race '{race}'")
-        if gender not in VALID_GENDERS:
-            raise ValueError(f"Override {key} has invalid gender '{gender}'")
-        merged = {"race": race, "gender": gender}
-        ethnicity = entry.get("ethnicity")
-        if ethnicity:
-            merged["ethnicity"] = ethnicity
+        merged = dict(table.get(npc_id, {}))  # copy: wiki entries are shared across sibling ids
+        for field in ("race", "gender", "ethnicity"):
+            if field not in entry:
+                continue  # absent: inherit the wiki-inferred value
+            value = entry[field]
+            if value is None:
+                merged.pop(field, None)  # explicit null: clear the field
+                continue
+            if field == "race" and value not in VALID_RACES:
+                raise ValueError(f"Override {key} has invalid race '{value}'")
+            if field == "gender" and value not in VALID_GENDERS:
+                raise ValueError(f"Override {key} has invalid gender '{value}'")
+            merged[field] = value
+        missing = [f for f in ("race", "gender") if f not in merged]
+        if missing:
+            raise ValueError(
+                f"Override {key} leaves {'/'.join(missing)} unset and no wiki base supplies "
+                f"{'them' if len(missing) > 1 else 'it'}")
         table[npc_id] = merged
     return len(override_npcs)
 
