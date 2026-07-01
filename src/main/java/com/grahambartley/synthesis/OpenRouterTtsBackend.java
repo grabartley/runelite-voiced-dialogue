@@ -65,7 +65,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   /**
-   * Per-call ceiling so a hung cloud request cannot pin the single synthesis thread indefinitely. A
+   * Per-call ceiling so a hung cloud request cannot pin a synthesis-pool worker indefinitely. A
    * line that does not return within this window is abandoned (left unvoiced). Sized comfortably
    * above {@link #READ_TIMEOUT} so the per-read budget is actually reachable (it caps connect plus
    * the full streamed read, not a single read), giving a slow-but-valid gemini-tts generation room
@@ -503,7 +503,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // A read/call timeout (InterruptedIOException / SocketTimeoutException) or a transient
         // blip:
         // a slow generation deserves a backed-off retry rather than being dropped on the first
-        // failure (#196). The sleep runs on the dedicated synthesis thread, never the game thread.
+        // failure (#196). The sleep runs on a synthesis-pool worker, never the game thread, and a
+        // second worker keeps serving the next line while this one waits.
         long elapsedMs = elapsedMs(attemptStart);
         if (attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
@@ -553,9 +554,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /**
    * Spaces a retry after a transient network failure: an exponential base ({@code base * 2^(attempt
    * - 1)}) plus a small random jitter, so a brief blip or a slow generation gets a real second
-   * chance without a tight retry storm and concurrent lines do not retry in lockstep. Runs on the
-   * dedicated synthesis thread, never the game thread. Returns {@code false} if interrupted, in
-   * which case the caller abandons the line rather than retrying.
+   * chance without a tight retry storm and concurrent lines do not retry in lockstep. Runs on a
+   * synthesis-pool worker, never the game thread, so a second worker keeps serving the next line
+   * while this one waits. Returns {@code false} if interrupted, in which case the caller abandons
+   * the line rather than retrying.
    */
   private boolean backoffBeforeNetworkRetry(int attempt) {
     long base = networkRetryBaseMillis << (attempt - 1);

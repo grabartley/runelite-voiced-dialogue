@@ -53,9 +53,11 @@ Because the cloud backend is billed per character, several guards keep cost boun
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
 - **Timeout and stale-drop.** Cloud calls carry a 30-second `callTimeout` (sized above the 15-second
-  `readTimeout` so the read budget is actually reachable) so a hung request cannot pin the single
-  synthesis thread, and the pipeline's epoch check drops any response that arrives after the dialogue
-  has advanced, so stale audio never plays late.
+  `readTimeout` so the read budget is actually reachable) so a hung request cannot pin a
+  synthesis-pool worker, and the pipeline's epoch check drops any response that arrives after the
+  dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
+  sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
+  result still caches) does not block the next line: the free worker picks it up.
 - **Speaking pace.** The shared **Speaking Pace** setting (General section) is sent as the OpenRouter
   `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
   model may ignore it. The Local backend reads the same setting and always sends it.

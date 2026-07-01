@@ -19,8 +19,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -456,6 +458,68 @@ public class DialogueAudioServiceTest {
         "two simultaneous identical requests issue exactly one backend call", 1, calls.get());
     assertNotNull("the owner produced audio", first.get());
     assertSame("the waiter reuses the owner's audio", first.get(), second.get());
+  }
+
+  @Test
+  public void aBlockedLineDoesNotStallTheNextLineOnTheSynthesisPool() throws Exception {
+    // A slow/blocked synth (e.g. a backed-off cloud retry that is left running so its result still
+    // caches) holds one pool worker; a second, different line must still synthesize and play on the
+    // free worker rather than queueing behind it (#196).
+    CountDownLatch blockerEntered = new CountDownLatch(1);
+    CountDownLatch releaseBlocker = new CountDownLatch(1);
+    Pcm canned = new Pcm(new float[] {0.3f, -0.3f}, 24_000);
+    SynthesisBackend backend =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return BackendProvider.LOCAL_KOKORO_ID;
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            if ("Blocker".equals(request.text())) {
+              blockerEntered.countDown();
+              try {
+                releaseBlocker.await(2, TimeUnit.SECONDS);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+              }
+            }
+            return canned;
+          }
+        };
+    ThreadPoolExecutor pool =
+        new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(8));
+    FakeOutput output = new FakeOutput();
+    DialogueAudioService svc = service(provider(backend), output, pool, 8, 100);
+    try {
+      svc.speak(req("Blocker", NPCRace.HUMAN, NPCGender.MALE));
+      assertTrue("the blocker occupied a worker", blockerEntered.await(2, TimeUnit.SECONDS));
+
+      svc.speak(req("Second", NPCRace.HUMAN, NPCGender.MALE));
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+      while (output.streamCalls == 0 && System.nanoTime() < deadline) {
+        Thread.onSpinWait();
+      }
+      assertEquals(
+          "the second line played on the free worker while the first was still blocked",
+          1,
+          output.streamCalls);
+    } finally {
+      releaseBlocker.countDown();
+      pool.shutdownNow();
+      pool.awaitTermination(2, TimeUnit.SECONDS);
+    }
   }
 
   @Test
