@@ -16,9 +16,9 @@ import lombok.experimental.Accessors;
  * called.
  *
  * <p>The profile is the resolved per-speaker delivery template ({@link CharacterProfile}); it is
- * {@code null} when character profiles are off or no profile applies. Only the cloud backend
- * renders it (as a leading AUDIO PROFILE block); the local backend ignores it. A {@code null}
- * profile leaves the request body byte-for-byte as before, so existing cache entries stay valid.
+ * {@code null} when character profiles are off or no profile applies. The cloud backend renders it
+ * as a leading AUDIO PROFILE block. A {@code null} profile leaves the request body byte-for-byte as
+ * before, so existing cache entries stay valid.
  *
  * <p>{@code skipTranslation} forces the line to be voiced verbatim even when a non-English spoken
  * language or a global quirk is configured: the cloud backend skips the translation hop and the

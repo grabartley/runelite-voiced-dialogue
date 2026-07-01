@@ -24,10 +24,8 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok:1.18.30'
 	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
-	// Kokoro synthesis now runs as an external --stdio engine process (the bundle is downloaded by
-	// EngineInstaller, built/released by issue #36). The plugin jar therefore ships NO sherpa-onnx
-	// native libraries and NO model: there are deliberately no sherpa or model-extraction
-	// dependencies here.
+	// The plugin is Cloud-only: dialogue is voiced through OpenRouter over the injected OkHttp
+	// client. The jar ships no synthesis engine, no native libraries, and no model.
 
 	testImplementation 'junit:junit:4.12'
 	// Method-level data providers for case-driven tests (@Parameters), so repeated case assertions
@@ -39,22 +37,14 @@ dependencies {
 	testImplementation 'com.squareup.okhttp3:mockwebserver:3.14.9'
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
-	// Put ONLY the standalone engine's compiled classes on the plugin test classpath so the drift
-	// guard (SpeakerMatrixVoiceProfileDriftTest) can load the real SpeakerMatrix alongside the
-	// plugin's VoiceManager.VoiceProfile. The engine's own sherpa-onnx runtime deps are excluded so
-	// they never leak into the plugin's testRuntimeClasspath (and thus the shadow jar): SpeakerMatrix
-	// is a pure mapping class with no sherpa imports, so the drift test needs none of them.
-	testImplementation(project(':engine-kokoro')) {
-		transitive = false
-	}
 }
 
 group = 'com.grahambartley'
 
 // The committed src/main/resources/plugin-version.txt is the single source of truth for the
-// version. build.gradle reads it here; EngineInstaller reads the same bundled resource at runtime to
-// resolve its engine release (v<version>); and the Hub's build=standard ships it verbatim from
-// src/main/resources. This avoids a Gradle-generated resource, which build=standard would not run.
+// version. build.gradle reads it here for the release tag and checkVersionConsistency; the Hub's
+// build=standard ships it verbatim from src/main/resources. This avoids a Gradle-generated
+// resource, which build=standard would not run.
 version = file('src/main/resources/plugin-version.txt').text.trim()
 
 tasks.register('printVersion') {
@@ -91,8 +81,8 @@ tasks.withType(JavaCompile).configureEach {
 
 // The Plugin Hub's build=standard compiles the plugin's main sources at Java 11 (its injected
 // build.gradle hard-sets options.release=11 and discards ours). Pin our own main compile to 11 too
-// so CI catches any Java 12+ syntax or API here rather than only when the Hub build fails. Tests and
-// the engine subproject keep 17: the Hub never builds them.
+// so CI catches any Java 12+ syntax or API here rather than only when the Hub build fails. Tests
+// keep 17: the Hub never builds them.
 tasks.named('compileJava') {
 	options.release.set(11)
 }

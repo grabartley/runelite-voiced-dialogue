@@ -15,15 +15,11 @@ import net.runelite.api.NPC;
 /**
  * Resolves an NPC (or the player) to a backend-neutral {@link VoiceSpec} and the per-speaker {@link
  * CharacterProfile}. A thin facade over focused collaborators: NPC lookup ({@link NpcFinder}),
- * voice resolution ({@link NpcVoiceResolver}), Kokoro speaker selection ({@link
- * KokoroSpeakerPool}), and trace formatting ({@link VoiceTraceFormatter}).
+ * voice resolution ({@link NpcVoiceResolver}), and trace formatting ({@link VoiceTraceFormatter}).
  *
  * <p>The spec carries the detected race and gender so the cloud backend can map them to its own
- * voice bank. The local Kokoro backend is British-only by design (#150): Kokoro bakes accent into
- * the chosen speaker and this is a British medieval fantasy world, so accents are a Cloud-only
- * feature. Local picks a voice from the {@link KokoroVoice} British bank by gender alone; race
- * never selects a Local voice. The plugin sends the chosen speaker id explicitly, so the engine
- * just renders it.
+ * voice bank, plus a stable per-NPC variety seed so same-race/gender NPCs are spread across a
+ * sub-pool and sound distinct (#78).
  */
 @Slf4j
 public class VoiceManager {
@@ -55,61 +51,9 @@ public class VoiceManager {
   }
 
   /**
-   * The British Kokoro voice bank used for every Local line (British-only by design, #150). Kokoro
-   * has no accent control, so in this British medieval fantasy world every voice is British and
-   * accents are reserved for the cloud backend. The bank is small and shared across all races: race
-   * never picks a Local voice, only gender does, with per-NPC variety coming from hashing into the
-   * gender pool. The ids are the engine model's own speaker indices, sent on the wire verbatim.
-   */
-  public enum KokoroVoice {
-    BM_DANIEL(24, "bm_daniel", NPCGender.MALE),
-    BM_FABLE(25, "bm_fable", NPCGender.MALE),
-    BM_GEORGE(26, "bm_george", NPCGender.MALE),
-    BM_LEWIS(27, "bm_lewis", NPCGender.MALE),
-    BF_ALICE(20, "bf_alice", NPCGender.FEMALE),
-    BF_EMMA(21, "bf_emma", NPCGender.FEMALE),
-    BF_ISABELLA(22, "bf_isabella", NPCGender.FEMALE);
-
-    private final int speakerId;
-    private final String voiceName;
-    private final NPCGender gender;
-
-    KokoroVoice(int speakerId, String voiceName, NPCGender gender) {
-      this.speakerId = speakerId;
-      this.voiceName = voiceName;
-      this.gender = gender;
-    }
-
-    /** The Kokoro speaker id sent on the wire and rendered by the engine. */
-    public int getSpeakerId() {
-      return speakerId;
-    }
-
-    /** The underlying Kokoro voice name (for docs and logs). */
-    public String getVoiceName() {
-      return voiceName;
-    }
-
-    /** The gender this voice belongs to. */
-    public NPCGender getGender() {
-      return gender;
-    }
-
-    /** The voice name for a speaker id, or a bare {@code "id=<n>"} when outside the bank. */
-    static String nameFor(int speakerId) {
-      for (KokoroVoice voice : values()) {
-        if (voice.speakerId == speakerId) {
-          return voice.voiceName;
-        }
-      }
-      return "id=" + speakerId;
-    }
-  }
-
-  /**
    * The two selectable player voices, kept deliberately opaque ("Type A" / "Type B") so the config
-   * exposes a simple either/or. Each just fixes the player's gender, which then drives the British
-   * Local voice and the cloud voice.
+   * exposes a simple either/or. Each just fixes the player's gender, which then drives the cloud
+   * voice.
    */
   public enum PlayerVoice {
     TYPE_A(NPCGender.MALE, "Type A"),
@@ -123,7 +67,7 @@ public class VoiceManager {
       this.label = label;
     }
 
-    /** The gender this player voice fixes for voice resolution on both backends. */
+    /** The gender this player voice fixes for cloud voice resolution. */
     public NPCGender getGender() {
       return gender;
     }
@@ -164,8 +108,7 @@ public class VoiceManager {
    * Resolves the {@link CharacterProfile} steering a line's delivery: the player's configured
    * profile for player lines, or the NPC profile built by combining every matching layer (default,
    * race, every keyword category that matches, and any per-NPC override) keyed on the NPC's
-   * composition id and display name. Never returns {@code null}. Only the cloud backend renders the
-   * profile; the local backend ignores it.
+   * composition id and display name. Never returns {@code null}.
    */
   public CharacterProfile resolveProfile(String speaker, String npcName) {
     if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
@@ -212,9 +155,8 @@ public class VoiceManager {
 
   /**
    * Resolves a backend-neutral {@link VoiceSpec} for a line of dialogue. The player uses the gender
-   * of the configured player voice; an NPC uses its detected race and gender. Both carry an
-   * explicit British Kokoro speaker so the local engine renders that exact voice; the cloud backend
-   * reads the race/gender and uses the speaker id only as a per-NPC variety seed.
+   * of the configured player voice; an NPC uses its detected race and gender plus a stable per-NPC
+   * variety seed the cloud backend spreads across its voice sub-pool.
    */
   public VoiceSpec resolveVoice(String speaker, String npcName) {
     if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
@@ -222,24 +164,9 @@ public class VoiceManager {
       if (config != null && config.debugMode()) {
         log.info(VoiceTraceFormatter.buildPlayerTrace(gender));
       }
-      return VoiceSpec.player(gender, KokoroSpeakerPool.playerSpeaker(gender));
+      return VoiceSpec.player(gender);
     }
     return npcVoiceResolver.resolve(npcName);
-  }
-
-  /**
-   * The Kokoro speaker id for a resolved {@link VoiceSpec}, used only by the local Kokoro backend.
-   * The player resolves to its gender's British voice; an NPC keeps the explicit speaker it was
-   * stamped with, or falls back to a gender-correct British pool pick for a bare spec.
-   */
-  public int kokoroSpeakerId(VoiceSpec voice) {
-    if (voice.player()) {
-      return KokoroSpeakerPool.playerSpeaker(voice.gender());
-    }
-    if (voice.hasExplicitKokoroSpeakerId()) {
-      return voice.kokoroSpeakerId();
-    }
-    return KokoroSpeakerPool.pickNpcSpeakerId(voice.gender(), null, null);
   }
 
   /** Gender implied by the configured player voice. */

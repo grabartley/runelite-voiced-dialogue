@@ -72,35 +72,36 @@ public class VoiceSpecTest {
   }
 
   @Test
-  public void bareNpcSpecHasNoExplicitSpeaker() {
+  public void bareNpcSpecHasNoVoiceSeed() {
     VoiceSpec spec = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
-    assertFalse(spec.hasExplicitKokoroSpeakerId());
-    assertEquals(VoiceSpec.UNSPECIFIED_SPEAKER_ID, spec.kokoroSpeakerId());
+    assertFalse(spec.hasVoiceSeed());
+    assertEquals(VoiceSpec.UNSPECIFIED_SEED, spec.voiceSeed());
     assertEquals("npc:HUMAN:MALE", spec.key());
   }
 
   @Test
-  public void explicitSpeakerIsCarriedAndFoldedIntoKey() {
+  public void voiceSeedIsCarriedButNotFoldedIntoKey() {
     VoiceSpec spec = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, 17);
-    assertTrue(spec.hasExplicitKokoroSpeakerId());
-    assertEquals(17, spec.kokoroSpeakerId());
-    // The chosen speaker is folded into the cache key so two same-race/gender NPCs with different
-    // voices never share a cached frame.
-    assertEquals("npc:HUMAN:MALE#17", spec.key());
+    assertTrue(spec.hasVoiceSeed());
+    assertEquals(17, spec.voiceSeed());
+    // The seed drives per-NPC voice variety but is not part of the key: the cloud backend already
+    // folds the concrete resolved voice into its own cache variant.
+    assertEquals("npc:HUMAN:MALE", spec.key());
   }
 
   @Test
-  public void sameRaceGenderDifferentSpeakerProducesDifferentKeys() {
+  public void sameRaceGenderDifferentSeedShareKeyButDifferOnEquality() {
     VoiceSpec a = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, 14);
     VoiceSpec b = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, 17);
-    assertNotEquals(a.key(), b.key());
+    assertEquals(a.key(), b.key());
     assertNotEquals(a, b);
   }
 
   @Test
-  public void negativeSpeakerIsNormalisedToUnspecified() {
+  public void negativeSeedIsNormalisedToUnspecified() {
     VoiceSpec spec = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, -5);
-    assertFalse(spec.hasExplicitKokoroSpeakerId());
+    assertFalse(spec.hasVoiceSeed());
+    assertEquals(VoiceSpec.UNSPECIFIED_SEED, spec.voiceSeed());
     assertEquals("npc:HUMAN:MALE", spec.key());
   }
 }

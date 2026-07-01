@@ -9,79 +9,59 @@ import lombok.experimental.Accessors;
  * and gender.
  *
  * <p>This carries the resolved race/gender categories rather than any engine-specific voice id, so
- * every backend can map the same spec to its own voice bank. The Kokoro backend turns it into a
- * speaker id via {@link VoiceManager#kokoroSpeakerId(VoiceSpec)}; other backends map it
- * differently. {@link #key()} produces a stable, human-readable fragment used in the synthesis
- * cache key.
+ * the cloud backend can map the same spec to its own voice bank. {@link #key()} produces a stable,
+ * human-readable fragment used in the synthesis cache key.
  *
- * <p>For per-NPC voice variety (issue #78) an NPC spec may additionally carry an explicit {@code
- * kokoroSpeakerId} picked from a gender-appropriate pool, so two NPCs of the same race+gender can
- * speak with different (but stable) voices. The id is Kokoro-specific and purely advisory: backends
- * that map by race/gender (e.g. the cloud backend) ignore it, and {@link #UNSPECIFIED_SPEAKER_ID}
- * ({@code -1}) means "no explicit choice" so the engine falls back to its race/gender matrix
- * exactly as before.
+ * <p>For per-NPC voice variety (issue #78) an NPC spec may additionally carry a {@link #voiceSeed}:
+ * a stable, backend-neutral integer derived from the NPC's identity, so two NPCs of the same
+ * race+gender can be spread across a gender-appropriate sub-pool and sound different (but stable)
+ * from each other. {@link #UNSPECIFIED_SEED} ({@code -1}) means "no explicit choice" so the backend
+ * anchors the spec to the first voice of its race/gender pool.
  */
 @Value
 @Accessors(fluent = true)
 public class VoiceSpec {
 
-  /** No explicit Kokoro speaker id: the engine falls back to its race/gender matrix. */
-  public static final int UNSPECIFIED_SPEAKER_ID = -1;
+  /** No per-NPC variety seed: the backend anchors the spec to its race/gender pool. */
+  public static final int UNSPECIFIED_SEED = -1;
 
   boolean player;
   VoiceManager.NPCRace race;
   VoiceManager.NPCGender gender;
-  int kokoroSpeakerId;
+  int voiceSeed;
 
   /** A player voice of the given gender. Race is not meaningful for the player. */
   public static VoiceSpec player(VoiceManager.NPCGender gender) {
-    return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SPEAKER_ID);
+    return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SEED);
   }
 
-  /**
-   * A player voice of the given gender carrying an explicit Kokoro {@code speakerId} (British-only
-   * Local, issue #150), so the local engine voices that exact British speaker instead of resolving
-   * the player through its matrix. The id is Local-specific and advisory: the cloud backend anchors
-   * the player to its configured voice and ignores it. A negative id is normalised to {@link
-   * #UNSPECIFIED_SPEAKER_ID}.
-   */
-  public static VoiceSpec player(VoiceManager.NPCGender gender, int speakerId) {
-    return new VoiceSpec(
-        true,
-        VoiceManager.NPCRace.HUMAN,
-        gender,
-        speakerId < 0 ? UNSPECIFIED_SPEAKER_ID : speakerId);
-  }
-
-  /** An NPC voice for the given race and gender, with no explicit per-NPC Kokoro speaker. */
+  /** An NPC voice for the given race and gender, with no per-NPC variety seed. */
   public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender) {
-    return new VoiceSpec(false, race, gender, UNSPECIFIED_SPEAKER_ID);
+    return new VoiceSpec(false, race, gender, UNSPECIFIED_SEED);
   }
 
   /**
-   * An NPC voice for the given race and gender carrying an explicit per-NPC Kokoro {@code
-   * speakerId} (issue #78). A negative id is normalised to {@link #UNSPECIFIED_SPEAKER_ID} so it is
-   * treated as absent.
+   * An NPC voice for the given race and gender carrying a stable per-NPC variety seed (issue #78),
+   * spreading same-race/gender NPCs across a gender sub-pool. A negative seed is normalised to
+   * {@link #UNSPECIFIED_SEED} so it is treated as absent.
    */
-  public static VoiceSpec npc(
-      VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int speakerId) {
-    return new VoiceSpec(false, race, gender, speakerId < 0 ? UNSPECIFIED_SPEAKER_ID : speakerId);
+  public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed) {
+    return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed);
   }
 
-  /** Whether this spec carries an explicit per-NPC Kokoro speaker id. */
-  public boolean hasExplicitKokoroSpeakerId() {
-    return kokoroSpeakerId >= 0;
+  /** Whether this spec carries a per-NPC variety seed. */
+  public boolean hasVoiceSeed() {
+    return voiceSeed >= 0;
   }
 
   /**
    * Stable cache-key fragment, e.g. {@code "npc:ELF:FEMALE"} or {@code "player:MALE"}. Two specs
-   * that resolve to the same voice produce the same key. When an explicit per-NPC Kokoro speaker id
-   * is present it is appended (e.g. {@code "npc:HUMAN:MALE#14"}) so two NPCs of the same
-   * race+gender that picked different voices never share a cached audio frame.
+   * that resolve to the same voice produce the same key. The per-NPC variety seed is deliberately
+   * not folded in here: the cloud backend already reflects the concrete resolved voice in its own
+   * cache variant, so two NPCs that map to different voices never share a cached frame anyway.
    */
   public String key() {
-    String base = player ? "player:" + gender : "npc:" + race + ":" + gender;
-    return hasExplicitKokoroSpeakerId() ? base + "#" + kokoroSpeakerId : base;
+    return player ? "player:" + gender : "npc:" + race + ":" + gender;
   }
 
   @Override

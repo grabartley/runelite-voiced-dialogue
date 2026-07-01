@@ -1,11 +1,11 @@
 ---
 name: add-race
-description: Add a brand-new first-class race (e.g. Tortugan, Monkey) to the plugin, wiring it through the Kokoro and cloud voice maps and the race->accent model, then assign every NPC of that race in overrides. Use when a species needs its own race + dedicated accent, not just a per-NPC or ethnicity tweak.
+description: Add a brand-new first-class race (e.g. Tortugan, Monkey) to the plugin, wiring it through the cloud voice map and the race->accent model, then assign every NPC of that race in overrides. Use when a species needs its own race + dedicated accent, not just a per-NPC or ethnicity tweak.
 ---
 
 # Add a first-class race
 
-Use this when a species should become a **first-class `NPCRace`** with its own dedicated voice on both backends and its own racial accent, the way Elf, Dwarf, Goblin, Monkey, Gorilla and Tortugan are. This is bigger than [[add-npc-profile]] (which only edits race/gender/ethnicity within the existing race set) and bigger than a region batch ([[fill-npc-profiles-batch]]). When you only need to make one NPC sound right, or push an accent via an existing ethnicity, use [[add-npc-profile]] instead.
+Use this when a species should become a **first-class `NPCRace`** with its own dedicated cloud voice and its own racial accent, the way Elf, Dwarf, Goblin, Monkey, Gorilla and Tortugan are. This is bigger than [[add-npc-profile]] (which only edits race/gender/ethnicity within the existing race set) and bigger than a region batch ([[fill-npc-profiles-batch]]). When you only need to make one NPC sound right, or push an accent via an existing ethnicity, use [[add-npc-profile]] instead.
 
 ## Inputs
 
@@ -15,35 +15,17 @@ Use this when a species should become a **first-class `NPCRace`** with its own d
 
 ## Resolution model (why each edit exists)
 
-Cloud profile resolution combines layers: `default -> byRace[race] -> byEthnicity[ethnicity] -> byCategory keyword matches -> byId[id]`. A distinctive race's accent lives in `byRace`, so it **wins over region** (`byEthnicity`): the race keeps its accent wherever its members are found. Do **not** set `ethnicity` on these NPCs (it is a no-op for a distinctive race). Voice timbre (Kokoro speaker id, Gemini sub-pool) is separate from accent and is keyed purely on race+gender.
+Cloud profile resolution combines layers: `default -> byRace[race] -> byEthnicity[ethnicity] -> byCategory keyword matches -> byId[id]`. A distinctive race's accent lives in `byRace`, so it **wins over region** (`byEthnicity`): the race keeps its accent wherever its members are found. Do **not** set `ethnicity` on these NPCs (it is a no-op for a distinctive race). Voice timbre (the Gemini voice sub-pool) is separate from accent and is keyed purely on race+gender.
 
 ## The wiring points (touch every one)
 
-1. **`src/main/java/com/grahambartley/VoiceManager.java`**
-   - Add the constant to the `NPCRace` enum, just before `UNKNOWN`.
-   - Add `<RACE>_MALE` and `<RACE>_FEMALE` to the `VoiceProfile` enum (Kokoro speaker ids + names, see Kokoro rule). Remember to flip the previous last entry's trailing `;` to `,`.
-   - Add a `case <RACE>:` to `getVoiceForRaceAndGender(...)` returning female/male profile.
-   - Add an `else if (raceLower.contains("..."))` arm to `convertToNPCRace(...)` so a raw wiki/learned race string still maps (the runtime auto-learn path uses this, not just the generator).
-2. **`engine-kokoro/src/main/java/com/grahambartley/engine/SpeakerMatrix.java`** — the standalone engine duplicates the speaker matrix. Add the two `private static final int <RACE>_MALE/FEMALE` ids (same ids as VoiceProfile) and a `case "<RACE>":` in `speakerId(...)`. `SpeakerMatrixVoiceProfileDriftTest` fails if these drift from VoiceProfile, so they must match exactly.
-3. **`src/main/java/com/grahambartley/synthesis/GeminiVoiceMap.java`** — add a `put(NPCRace.<RACE>, male(...), female(...))` in the constructor (see Gemini rule).
+1. **`src/main/java/com/grahambartley/voice/VoiceManager.java`** — add the constant to the `NPCRace` enum, just before `UNKNOWN`.
+2. **`src/main/java/com/grahambartley/voice/NpcDemographicParser.java`** — add an `else if (raceLower.contains("..."))` arm to `toRace(...)` so a raw wiki/learned race string still maps to the new `NPCRace` constant (the runtime auto-learn path uses this, not just the generator).
+3. **`src/main/java/com/grahambartley/synthesis/GeminiVoiceMap.java`** — add a `put(NPCRace.<RACE>, male(...), female(...))` in the constructor (see Gemini rule). This is the sole voice map and it keys the timbre on race+gender.
 4. **`tools/generate_npc_voices.py`** — add the race to `VALID_RACES`; add a `RACE_BUCKET_RULES` regex (ordered so it does not collide with a broader bucket); add a `CATEGORY_RACE_RULES` entry so Infobox-Monster pages (no race field) still bucket by category.
 5. **`tools/profiles.json`** — add a `byRace["<RACE>"]` entry: `name`, `accent`, `style`, `pace`. This is where the racial accent lives.
 6. **`tools/overrides.json`** — add the race to the `_comment` valid-race list, then one one-line `npcs[id]` entry per NPC id (race + gender, no ethnicity).
 7. **Docs** — `README.md` Voices table row + the "spans N races" count **and the NPC counts** (total `_meta.count`, bespoke `profiles.byId` length from the regenerated `npc-voices.json`); `docs/npc-voice-tooling.md` race note; the valid-race list in `.claude/skills/add-npc-profile/SKILL.md`.
-
-## Kokoro speaker id rule
-
-The local Kokoro bank `kokoro-multi-lang-v1_0` exposes English voices at ids 0-27, named **alphabetically**:
-
-```
-0 af_alloy   1 af_aoede   2 af_bella   3 af_heart   4 af_jessica  5 af_kore
-6 af_nicole  7 af_nova    8 af_river   9 af_sarah  10 af_sky     11 am_adam
-12 am_echo  13 am_eric   14 am_fenrir 15 am_liam   16 am_michael 17 am_onyx
-18 am_puck  19 am_santa  20 bf_alice  21 bf_emma   22 bf_isabella 23 bf_lily
-24 bm_daniel 25 bm_fable 26 bm_george 27 bm_lewis
-```
-
-Pick two **unused** ids: one `am_`/`bm_` for male, one `af_`/`bf_` for female, with a timbre that fits the race. Each speaker id must be unique across the whole `VoiceProfile` enum (`VoiceManagerTest.everyCategoryMapsToADistinctSpeaker` asserts the count, so bump that number by 2). To find free ids: list the ids already used in `VoiceProfile` and take the gaps. Warmer/relaxed races lean toward the `am_`/`af_` voices; refined races lean British (`bm_`/`bf_`).
 
 ## Gemini (cloud) sub-pool rule
 
@@ -61,7 +43,7 @@ The generator/runtime keys on the live `NPCComposition#getId`, and a race's memb
    Format is `id<TAB>internal_name`; the id is the first column (NOT the grep line number, which is off by one). Use `awk -F'\t' '$2 ~ /prefix/ {print $1"\t"$2}'`.
 2. **Wiki verify.** Cross-check the race's wiki page ("Known <race>s"), the location navbox, and each NPC's Infobox `id`. **Gotcha:** cache internal names can be role-based and misleading (a Tortugan elder was named `slayer_gryphon_guardian`; a Tortugan gardener was `farming_gardener_calquat_3`). Trust the **wiki Infobox `Race` + `id`** as the source of truth, not the internal name. When the internal name and the wiki disagree, list the id and flag it for in-game Debug Mode verification in the QA checklist.
 3. **Include all variants.** Combat/`_vis`/`_locked`/`_1op` variant ids of the same NPC all get the entry. Off-location members count too (verify nothing is missed outside the home region).
-4. **Gender.** Take the wiki Infobox gender when stated; when genuinely indeterminate default to **Male** (unknown gender routes to the male sub-pool on both backends, so Male is the consistent safe default). Confirm ambiguous ones via dialogue pronouns in Debug Mode where it matters.
+4. **Gender.** Take the wiki Infobox gender when stated; when genuinely indeterminate default to **Male** (unknown gender routes to the male sub-pool, so Male is the consistent safe default). Confirm ambiguous ones via dialogue pronouns in Debug Mode where it matters.
 5. **Exclude** non-members that share a prefix (creatures, humans, quest NPCs) explicitly.
 
 ## Regenerate + validate
@@ -78,7 +60,7 @@ Then:
 ```
 ./gradlew spotlessApply && ./gradlew test spotlessCheck
 ```
-Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`), `VoiceManagerTest` (distinct-speaker count), `NpcProfilesResourceTest` (`everyRaceBucketResolvesToItsOwnLayer` list + a stated-accent assertion). `SpeakerMatrixVoiceProfileDriftTest` covers the engine mapping automatically.
+Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`, `GEMINI_VOICE_CATALOG` if you introduce a new voice), `NpcProfilesResourceTest` (`everyRaceBucketResolvesToItsOwnLayer` list + a stated-accent assertion).
 
 ## World rules (non-negotiable prose constraints)
 
@@ -88,4 +70,4 @@ Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`), `VoiceManagerTest` (dist
 
 ## QA handoff
 
-In the manual QA checklist, call out: a same-race male and female NPC voice gender-correct on **both** backends; a line logging `source=byRace` with the new accent; and any id whose cache internal name disagreed with the wiki, for direct Debug Mode confirmation. To debug a wrong result, see [[diagnose-npc-voice]].
+In the manual QA checklist, call out: a same-race male and female NPC voice gender-correct; a line logging `source=byRace` with the new accent; and any id whose cache internal name disagreed with the wiki, for direct Debug Mode confirmation. To debug a wrong result, see [[diagnose-npc-voice]].

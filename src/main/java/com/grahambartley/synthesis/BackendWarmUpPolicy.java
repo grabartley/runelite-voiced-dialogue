@@ -11,17 +11,16 @@ import java.util.Set;
 public final class BackendWarmUpPolicy {
 
   /**
-   * Config keys that change which backend is selected or whether it can become available. {@code
-   * voiceBackend} switches the selection; {@code openRouterApiKey} lets a previously-unavailable
-   * Cloud selection become available once a key is entered.
+   * Config keys that change whether the backend can become available. {@code openRouterApiKey} lets
+   * a previously-unavailable backend become available once a key is entered.
    */
-  private static final Set<String> WARM_TRIGGER_KEYS = Set.of("voiceBackend", "openRouterApiKey");
+  private static final Set<String> WARM_TRIGGER_KEYS = Set.of("openRouterApiKey");
 
   private BackendWarmUpPolicy() {}
 
   /**
    * Returns {@code true} only when a changed config entry belongs to this plugin's group and its
-   * key affects backend selection or availability. Never throws; tolerates {@code null} group/key.
+   * key affects backend availability. Never throws; tolerates {@code null} group/key.
    */
   public static boolean affectsBackendWarmUp(String group, String key) {
     // key != null first: WARM_TRIGGER_KEYS is an immutable Set.of(...), whose contains(null)

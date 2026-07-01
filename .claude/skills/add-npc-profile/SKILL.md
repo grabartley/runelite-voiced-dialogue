@@ -14,7 +14,7 @@ The cloud (Gemini) backend voices each line from a bundled lookup,
 
 | File | Controls | Shape |
 |------|----------|-------|
-| `tools/overrides.json` | the NPC **classification** (`race`, `gender`, `ethnicity`) per id. Picks the voice timbre on **both** backends and selects which profile layers apply. | `npcs[id] = { race, gender, ethnicity? }` |
+| `tools/overrides.json` | the NPC **classification** (`race`, `gender`, `ethnicity`) per id. Picks the cloud voice timbre and selects which profile layers apply. | `npcs[id] = { race, gender, ethnicity? }` |
 | `tools/profiles.json` | the cloud **delivery** prose (`accent`, `style`, `pace`), in layers. | `default`, `player`, `byRace`, `byEthnicity`, `byCategory[]`, `byId{}` |
 
 ## How a profile resolves (combining, deepest wins per single-valued field)

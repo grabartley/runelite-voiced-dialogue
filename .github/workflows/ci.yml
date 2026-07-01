@@ -1,8 +1,7 @@
 name: CI
 
-# Pull requests are the build/test gate: compile the plugin, run the full test suite (plugin tests +
-# engine --stdio framing/manifest conformance), and build the standalone shadow jar as a downloadable
-# artifact. The manual release pipeline lives in release.yml.
+# Pull requests are the build/test gate: compile the plugin, run the full test suite, and build the
+# standalone shadow jar as a downloadable artifact. The manual release pipeline lives in release.yml.
 on:
   pull_request:
     branches:

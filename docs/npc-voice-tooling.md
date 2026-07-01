@@ -122,8 +122,7 @@ Alongside the `npcId -> {race, gender, ethnicity}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini) backend
 delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
 PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
-emotion is layered on top as a separate inline tag, so the two compose. The local
-Kokoro backend ignores profiles (it takes no prompt).
+emotion is layered on top as a separate inline tag, so the two compose.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners

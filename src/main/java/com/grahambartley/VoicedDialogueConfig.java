@@ -13,18 +13,14 @@ public interface VoicedDialogueConfig extends Config {
   /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
   String GROUP = "voicedDialogue";
 
-  @ConfigSection(
-      name = "General",
-      description = "Backend choice and settings shared by both voice backends",
-      position = 0)
+  @ConfigSection(name = "General", description = "Core voice settings", position = 0)
   String generalSection = "general";
 
   @ConfigSection(
       name = "Cloud Voice (OpenRouter)",
       description =
-          "Settings for the recommended Cloud backend, powered by OpenRouter. These apply only when"
-              + " Voice Backend is Cloud. While Cloud is active, your dialogue text is sent to"
-              + " OpenRouter to be voiced, so it leaves your machine.",
+          "Settings for the OpenRouter cloud voice that powers this plugin. Your dialogue text is"
+              + " sent to OpenRouter to be voiced, so it leaves your machine.",
       position = 1)
   String cloudSection = "cloud";
 
@@ -36,24 +32,13 @@ public interface VoicedDialogueConfig extends Config {
   String advancedSection = "advanced";
 
   /**
-   * Which synthesis backend dialogue routes through. {@code CLOUD} is the OpenRouter cloud backend
-   * (default, cloud-first): it warns once and leaves lines unvoiced when no API key is set. {@code
-   * LOCAL} is the offline, neutral-only Kokoro engine. The selected backend is the only one used;
-   * the two never fall back to each other.
-   */
-  enum VoiceBackend {
-    LOCAL,
-    CLOUD
-  }
-
-  /**
    * An optional delivery quirk layered onto a spoken line, selected per speaker class (Player vs
    * NPC). {@link #NONE} (the default) changes nothing; any other value appends its {@link
    * #phrase()} to the configured spoken language, so the line is routed through the translation
    * model and rewritten in that register (for example "English" plus Gen Z slang behaves like a
    * "English Gen Z slang" target). Every value is a register or tone, not a dialect, so it stays
    * language-agnostic and composes with any spoken language ("French pirate speak", "Japanese Gen Z
-   * slang"). Cloud only.
+   * slang").
    */
   enum SpeakingStyle {
     NONE("None", ""),
@@ -109,7 +94,6 @@ public interface VoicedDialogueConfig extends Config {
    * the natural name but is shortened for regional variants (e.g. {@code Spanish (LatAm)}) so the
    * combo box does not crowd out the setting label. {@link #ENGLISH} (the default) speaks the
    * original line directly; every other value routes the line through the translation hop first.
-   * Cloud only.
    */
   enum SpokenLanguage {
     ENGLISH("English", "en-GB"),
@@ -203,21 +187,6 @@ public interface VoicedDialogueConfig extends Config {
   // ---------------------------------------------------------------------------
 
   @ConfigItem(
-      keyName = "voiceBackend",
-      name = "Voice Backend",
-      description =
-          "Which engine voices dialogue. Cloud (recommended) uses OpenRouter for expressive,"
-              + " per-character voices: it needs a free OpenRouter API key, and while it is active"
-              + " your dialogue text is sent to OpenRouter to be voiced. Local is a free, offline,"
-              + " no-key voice that runs on your machine but is basic and neutral-only. Only the"
-              + " selected backend is used; the two never fall back to each other.",
-      position = 0,
-      section = generalSection)
-  default VoiceBackend voiceBackend() {
-    return VoiceBackend.CLOUD;
-  }
-
-  @ConfigItem(
       keyName = "playerVoice",
       name = "Player Voice",
       description = "The voice used for your own character's dialogue and public chat.",
@@ -255,8 +224,7 @@ public interface VoicedDialogueConfig extends Config {
       name = "Prefetch Dialogue",
       description =
           "Warm the audio cache for the dialogue options you can see, so the line you pick next"
-              + " plays instantly. Works on both backends. On Cloud it can raise spend on branches"
-              + " you never choose; the Local voice is free, so it only speeds things up.",
+              + " plays instantly. It can raise OpenRouter spend on branches you never choose.",
       position = 4,
       section = generalSection)
   default boolean prefetch() {
@@ -280,9 +248,8 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "speakingPace",
       name = "Speaking Pace",
       description =
-          "How fast dialogue is spoken, as a percentage of normal (100 = normal). Applies to both"
-              + " backends: Local speeds up or slows down the offline voice directly, while Cloud"
-              + " sends it to OpenRouter only when not 100 (the active model may ignore it).",
+          "How fast dialogue is spoken, as a percentage of normal (100 = normal). Sent to"
+              + " OpenRouter only when not 100 (the active model may ignore it).",
       position = 6,
       section = generalSection)
   @Range(min = 50, max = 200)
@@ -312,9 +279,8 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "playerAccent",
       name = "Your Accent",
       description =
-          "Accent for your character's Cloud voice. British by default; this is a British medieval"
-              + " fantasy world. Used only when Character Voices are on and the Cloud backend is"
-              + " active.",
+          "Accent for your character's voice. British by default; this is a British medieval"
+              + " fantasy world. Used only when Character Voices are on.",
       position = 1,
       section = cloudSection)
   default String playerAccent() {
@@ -325,8 +291,8 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "playerPersona",
       name = "Your Persona",
       description =
-          "Persona and delivery style for your character's Cloud voice. Describe who your adventurer"
-              + " is. Used only when Character Voices are on and the Cloud backend is active.",
+          "Persona and delivery style for your character's voice. Describe who your adventurer is."
+              + " Used only when Character Voices are on.",
       position = 2,
       section = cloudSection)
   default String playerPersona() {
@@ -337,8 +303,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "playerPace",
       name = "Your Pace",
       description =
-          "Speaking pace for your character's Cloud voice. Used only when Character Voices are on"
-              + " and the Cloud backend is active.",
+          "Speaking pace for your character's voice. Used only when Character Voices are on.",
       position = 3,
       section = cloudSection)
   default String playerPace() {
@@ -421,11 +386,9 @@ public interface VoicedDialogueConfig extends Config {
       description =
           "When an NPC isn't in the bundled voice table (e.g. one added to the game since the last"
               + " plugin update), look its race, gender and ethnicity up on the Old School RuneScape"
-              + " Wiki once, then cache the result locally so it voices correctly from then on. Helps"
-              + " both backends: the learned race and gender pick the right Local voice too, not just"
-              + " the Cloud character. The first line for such an NPC still uses the default voice"
-              + " while the lookup runs. Off by default; when on it makes a network request (the"
-              + " NPC's name) to the wiki.",
+              + " Wiki once, then cache the result locally so it voices correctly from then on. The"
+              + " first line for such an NPC still uses the default voice while the lookup runs. Off"
+              + " by default; when on it makes a network request (the NPC's name) to the wiki.",
       position = 9,
       section = cloudSection)
   default boolean autoLearnNewNpcs() {
@@ -438,8 +401,8 @@ public interface VoicedDialogueConfig extends Config {
       description =
           "Add a cave echo to dialogue spoken underground. When you are below the overworld (a cave,"
               + " dungeon, sewer or basement), spoken lines get a decaying echo so they sound"
-              + " enclosed. Cloud backend only; off by default. The echo is added at playback, so"
-              + " cached audio is unchanged and nothing is re-billed.",
+              + " enclosed. Off by default. The echo is added at playback, so cached audio is"
+              + " unchanged and nothing is re-billed.",
       position = 10,
       section = cloudSection)
   default boolean cloudCaveEcho() {

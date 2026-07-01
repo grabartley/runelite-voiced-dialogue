@@ -86,8 +86,7 @@ public class NpcVoiceResolverTest {
     assertEquals(NPCRace.HUMAN, spec.race());
     assertEquals(NPCGender.MALE, spec.gender());
     assertFalse("default voice is not a player spec", spec.player());
-    assertTrue(
-        "default voice still gets a per-NPC British speaker", spec.hasExplicitKokoroSpeakerId());
+    assertTrue("default voice still gets a per-NPC variety seed", spec.hasVoiceSeed());
   }
 
   private static NPCAttributes attributes(String race, String gender, String source) {

@@ -25,7 +25,7 @@ Run unit tests and manual tests for the Voiced Dialogue RuneLite plugin.
 java -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED -jar build/libs/voicedDialogue-1.0-SNAPSHOT-all.jar --developer-mode --debug
 ```
 
-In-process Kokoro TTS is on by default, so manual audio testing needs no voice server running. The model downloads once (~349 MB) into `~/.runelite/voiced-dialogue/` on first launch.
+The plugin voices dialogue through OpenRouter (cloud), so manual audio testing needs an OpenRouter API key set in the plugin config. There is no engine download or bundled model: the client stays silent until a key is supplied.
 
 ## Test Types
 
@@ -36,7 +36,7 @@ In-process Kokoro TTS is on by default, so manual audio testing needs no voice s
 
 ## Java toolchain and language level
 
-Build with a Java 17 toolchain (tests and the `engine-kokoro` subproject compile at release 17). Ensure it is active:
+Build with a Java 17 toolchain (tests compile at release 17). Ensure it is active:
 - **jenv**: `jenv local 17`
 - **SDKMAN**: `sdk use java 17-amzn`
 
