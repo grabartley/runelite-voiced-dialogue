@@ -8,8 +8,8 @@ The project produces two artifacts. They are built and released **together** und
 
 | Artifact | What it is | Built/tested by | Published by |
 |----------|------------|-----------------|--------------|
-| **Plugin jar** | Pure-JVM RuneLite plugin. Ships with no engine binary and no voice model. The Hub builds the thin jar from source; the deploy also builds a standalone `*-all.jar` shadow jar (runnable via `VoicedDialoguePluginRunner`). | `.github/workflows/cicd.yml` on every PR (thin jar + shadow jar) | The **RuneLite Plugin Hub** builds the thin jar from source at a tagged commit. Both jars are also attached to the GitHub Release (the shadow jar is the standalone/sideload artifact). |
-| **Engine bundles** | Self-contained per-OS engine processes (jlink runtime + native libs + model + licenses). | `.github/workflows/cicd.yml` matrix on the manual deploy | This repo's **GitHub Releases**, in the same release as the jars. |
+| **Plugin jar** | Pure-JVM RuneLite plugin. Ships with no engine binary and no voice model. The Hub builds the thin jar from source; the deploy also builds a standalone `*-all.jar` shadow jar (runnable via `VoicedDialoguePluginRunner`). | `.github/workflows/ci.yml` on every PR (thin jar + shadow jar) | The **RuneLite Plugin Hub** builds the thin jar from source at a tagged commit. Both jars are also attached to the GitHub Release (the shadow jar is the standalone/sideload artifact). |
+| **Engine bundles** | Self-contained per-OS engine processes (jlink runtime + native libs + model + licenses). | `.github/workflows/release.yml` matrix on the manual deploy | This repo's **GitHub Releases**, in the same release as the jars. |
 
 The thin jar is what a user installs from the Hub. The engine bundle is what that jar downloads at runtime. Both jars and the engine bundles ride one GitHub Release under one `v<version>` tag, and the manifest below is the contract that binds a jar build to the engine bundles in that release.
 
@@ -17,22 +17,22 @@ The local backend is served by a single engine family:
 
 | Engine | Backend | Runtime | Bundle contents | Built by | Manifest |
 |--------|---------|---------|-----------------|----------|----------|
-| **Kokoro** (CPU) | `local-kokoro` (default `LOCAL`) | jlink JVM + sherpa-onnx native libs (ONNX) | engine jars, native libs, jlink runtime, Kokoro model, licenses | `cicd.yml` deploy (`engine-kokoro/` Gradle module) | `engine-manifest.json` |
+| **Kokoro** (CPU) | `local-kokoro` (default `LOCAL`) | jlink JVM + sherpa-onnx native libs (ONNX) | engine jars, native libs, jlink runtime, Kokoro model, licenses | `release.yml` deploy (`engine-kokoro/` Gradle module) | `engine-manifest.json` |
 
 The engine speaks the `--stdio` wire protocol (`ExternalEngineClient` drives it). Kokoro is a JVM engine in the `engine-kokoro/` Gradle subproject. (The emotional Cloud backend is a separate HTTP path with no external engine bundle.)
 
 ## CI vs deploy
 
-`cicd.yml` is the only plugin workflow. It runs in two modes off the trigger.
+The plugin has two workflows: `ci.yml` (the PR build/test gate) and `release.yml` (the manual deploy).
 
-### Pull requests — the build/test gate
+### Pull requests — the build/test gate (`ci.yml`)
 
 - Trigger: `on: pull_request` (to `main`).
 - Validates the Gradle wrapper, runs `./gradlew spotlessCheck`, then `./gradlew build`, which compiles the plugin **and** the `:engine-kokoro` module and runs the full test suite. That includes the engine's `--stdio` framing/manifest conformance tests (`EngineConformanceTest`).
 - Publishes the JUnit report, then builds the standalone shadow jar (`./gradlew shadowJar`) and uploads it as a downloadable CI artifact.
 - It deliberately **never** builds the cross-platform engine bundles, signs, notarizes, tags, or publishes anything.
 
-### `workflow_dispatch` — the manual deploy (one tagged release)
+### `workflow_dispatch` — the manual deploy (`release.yml`, one tagged release)
 
 - Trigger: `on: workflow_dispatch` **only**. There is intentionally no `push`/tag trigger. The one input is a `release_type` (`alpha`/`beta`/`stable`, default `alpha`); `alpha`/`beta` publish a prerelease, `stable` a full release. The version is **not** a workflow input: it is read from the source-pinned `version` in `gradle.properties`, the same value the Hub build uses.
 - The `plugin` job reads that version (and refuses to release a `-SNAPSHOT`), runs the same Spotless + test gate, builds the thin jar (`./gradlew build`) and the shadow jar (`./gradlew shadowJar`), and exposes the version to the rest of the run. A cheap test failure here fast-fails before the expensive engine matrix runs.
@@ -63,7 +63,7 @@ A dev/`SNAPSHOT` build has no matching published release, so the fetch is skippe
 Releases are **never automatic**. Cut one in this order:
 
 1. **Bump `version` in `gradle.properties`** to the release version on the commit you intend to tag, and merge it. This is the single source of truth the Hub build, the deploy tag, and the engine release all share.
-2. **Dispatch `CI/CD`** from the Actions tab ("CI/CD" -> "Run workflow"), choosing the `release_type` (`alpha`/`beta`/`stable`). One run reads that version, builds and validates both jars and the three Kokoro bundles, signs the bundles if secrets are present, tags `v<version>`, and publishes a single GitHub Release carrying the thin jar, the shadow jar, the `engine-manifest.json` asset, and the bundles. No commit-back: the manifest is a release asset.
+2. **Dispatch `Release`** from the Actions tab ("Release" -> "Run workflow"), choosing the `release_type` (`alpha`/`beta`/`stable`). One run reads that version, builds and validates both jars and the three Kokoro bundles, signs the bundles if secrets are present, tags `v<version>`, and publishes a single GitHub Release carrying the thin jar, the shadow jar, the `engine-manifest.json` asset, and the bundles. No commit-back: the manifest is a release asset.
 3. **Submit/update the plugin in `runelite/plugin-hub`** at the tagged commit (see issue #31) so the Hub builds the thin jar from that source and serves it. The Hub-built jar carries the same `gradle.properties` version, so it resolves the engine published under the same tag. The shadow jar on the Release is the standalone/sideload artifact.
 4. **Users install.** On first use of the local voice, the jar fetches the `engine-manifest.json` for its own version from that Release, downloads the per-OS engine bundle, verifies its sha256, and runs it.
 
@@ -87,4 +87,4 @@ Windows SmartScreen may warn on an unsigned bundle; choose **More info -> Run an
 
 ## Versioning
 
-The plugin and engine ship under **one version**, source-pinned in `gradle.properties`. A single `v<version>` tag carries both jars, the engine bundles, and the `engine-manifest.json` asset, and every jar resolves the engine release matching its own version (stamped into the jar from `gradle.properties` at build time, including the Hub build). To cut a new version, bump `gradle.properties` on the commit you tag, then dispatch the `CI/CD` deploy; it rebuilds and republishes both jars, the engine bundles, and the manifest together under that tag. Submit that same commit to the Hub.
+The plugin and engine ship under **one version**, source-pinned in `gradle.properties`. A single `v<version>` tag carries both jars, the engine bundles, and the `engine-manifest.json` asset, and every jar resolves the engine release matching its own version (stamped into the jar from `gradle.properties` at build time, including the Hub build). To cut a new version, bump `gradle.properties` on the commit you tag, then dispatch the `Release` deploy; it rebuilds and republishes both jars, the engine bundles, and the manifest together under that tag. Submit that same commit to the Hub.
