@@ -32,7 +32,7 @@ repo; copy it into the fork and fill in the commit.
 - The repository is public.
 - A `LICENSE` exists at the repo root (this repo ships MIT).
 - A `v<version>` GitHub Release matching the `version` in `gradle.properties` is published, with
-  the engine bundles and the `engine-manifest.json` asset attached (the `CI/CD` deploy does this).
+  the engine bundles and the `engine-manifest.json` asset attached (the `Release` deploy does this).
   The Hub-built jar carries that same version and fetches the manifest from the matching release at
   runtime, so until that release is cut the local backend cannot install. Do not submit before the
   deploy has published the matching release.
@@ -44,8 +44,8 @@ repo; copy it into the fork and fill in the commit.
 
 ## Step 1: Cut the matching release
 
-The `CI/CD` deploy creates the tag and the release the descriptor points at. Bump `version` in
-`gradle.properties` to the release version, merge it, then dispatch `CI/CD` (Actions tab -> "Run
+The `Release` deploy creates the tag and the release the descriptor points at. Bump `version` in
+`gradle.properties` to the release version, merge it, then dispatch `Release` (Actions tab -> "Run
 workflow") with the `release_type`. It tags `v<version>` and publishes the release with both jars,
 the engine bundles, and the `engine-manifest.json` asset. Then copy that tag's commit sha for the
 descriptor:
