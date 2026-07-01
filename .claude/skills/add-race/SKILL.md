@@ -72,6 +72,8 @@ python3 tools/generate_npc_voices.py --base /tmp/before.json   # offline, determ
 ```
 Use `--base` (see [[regenerate-npc-voices]]) for an overrides/profiles-only change: it re-applies overrides + the embedded `byRace` profile onto the existing table with a minimal diff and no network. Then confirm **only** your ids changed (diff each entry against the base) and that `byRace["<RACE>"]` is embedded. A full network run is only needed if you also want the wiki to auto-classify members by their Infobox race.
 
+**Every NPC whose entry changes in the regenerated `npc-voices.json` must be 100% hand verified against the wiki before commit, and a change table presented to the developer** (one row per change: id(s), name, race old→new, ethnicity old→new, why). See [[regenerate-npc-voices]] and [[find-npc-true-origin]]. The burden of verification is on you.
+
 Then:
 ```
 ./gradlew spotlessApply && ./gradlew test spotlessCheck
