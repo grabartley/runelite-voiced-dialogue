@@ -31,7 +31,7 @@
       "fremennik": 638,
       "kandarin": 1047,
       "karamja": 175,
-      "kharidian": 537,
+      "kharidian": 539,
       "kourend": 776,
       "menaphite": 132,
       "misthalin": 852,
@@ -38050,7 +38050,8 @@
     },
     "2877": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kharidian"
     },
     "2878": {
       "race": "Human",
@@ -39481,7 +39482,8 @@
     },
     "3231": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kharidian"
     },
     "3232": {
       "race": "Human",
