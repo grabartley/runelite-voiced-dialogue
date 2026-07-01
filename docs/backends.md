@@ -52,7 +52,7 @@ Because the cloud backend is billed per character, several guards keep cost boun
   dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
   sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
   result still caches) does not block the next line: the free worker picks it up.
-- **Speaking pace.** The **Speaking Pace** setting (General section) is sent as the OpenRouter
+- **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter
   `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
   model may ignore it.
 - **Keepalive connection.** The backend reuses one long-lived client derived from the injected one

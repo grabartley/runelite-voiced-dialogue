@@ -13,21 +13,31 @@ public interface VoicedDialogueConfig extends Config {
   /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
   String GROUP = "voicedDialogue";
 
-  @ConfigSection(name = "General", description = "Core voice settings", position = 0)
+  @ConfigSection(
+      name = "General",
+      description =
+          "Your OpenRouter API key plus playback and caching. Dialogue text is sent to OpenRouter"
+              + " over HTTPS with your key to be voiced, so it leaves your machine.",
+      position = 0)
   String generalSection = "general";
 
   @ConfigSection(
-      name = "Cloud Voice (OpenRouter)",
-      description =
-          "Settings for the OpenRouter cloud voice that powers this plugin. Your dialogue text is"
-              + " sent to OpenRouter to be voiced, so it leaves your machine.",
+      name = "Voices",
+      description = "Who speaks and how they sound: your own character and the NPCs around you.",
       position = 1)
-  String cloudSection = "cloud";
+  String voicesSection = "voices";
+
+  @ConfigSection(
+      name = "Delivery",
+      description =
+          "How each line is delivered: emotion, spoken language, speaking style, pace, and effects.",
+      position = 2)
+  String deliverySection = "delivery";
 
   @ConfigSection(
       name = "Advanced",
       description = "Niche tuning and diagnostics most players never need to touch",
-      position = 2,
+      position = 3,
       closedByDefault = true)
   String advancedSection = "advanced";
 
@@ -187,20 +197,24 @@ public interface VoicedDialogueConfig extends Config {
   // ---------------------------------------------------------------------------
 
   @ConfigItem(
-      keyName = "playerVoice",
-      name = "Player Voice",
-      description = "The voice used for your own character's dialogue and public chat.",
-      position = 1,
+      keyName = "openRouterApiKey",
+      name = "OpenRouter API Key",
+      description =
+          "Your OpenRouter API key, required to voice dialogue. Create a free key at openrouter.ai"
+              + " and paste it here. Stored locally and never bundled with the plugin. Without a"
+              + " key, lines stay silent with a one-time notice.",
+      position = 0,
+      secret = true,
       section = generalSection)
-  default VoiceManager.PlayerVoice playerVoice() {
-    return VoiceManager.PlayerVoice.TYPE_A;
+  default String openRouterApiKey() {
+    return "";
   }
 
   @ConfigItem(
       keyName = "volume",
       name = "Dialogue Volume",
       description = "Loudness of the spoken dialogue, from 0 (muted) to 100.",
-      position = 2,
+      position = 1,
       section = generalSection)
   @Range(min = 0, max = 100)
   default int volume() {
@@ -213,7 +227,7 @@ public interface VoicedDialogueConfig extends Config {
       description =
           "Speak your own public chat messages aloud using your player voice. Voiced exactly as"
               + " typed: spoken language and speaking style are never applied to public chat.",
-      position = 3,
+      position = 2,
       section = generalSection)
   default boolean voicePublicChat() {
     return false;
@@ -225,7 +239,7 @@ public interface VoicedDialogueConfig extends Config {
       description =
           "Warm the audio cache for the dialogue options you can see, so the line you pick next"
               + " plays instantly. It can raise OpenRouter spend on branches you never choose.",
-      position = 4,
+      position = 3,
       section = generalSection)
   default boolean prefetch() {
     return true;
@@ -236,43 +250,26 @@ public interface VoicedDialogueConfig extends Config {
       name = "Save Audio To Disk",
       description =
           "Save synthesized dialogue to disk so repeated lines play instantly across sessions and"
-              + " the Cloud backend is not re-billed for audio you have already heard. The cache"
-              + " lives in ~/.runelite/voiced-dialogue/cache and is size-bounded.",
-      position = 5,
+              + " OpenRouter is not re-billed for audio you have already heard. The cache lives in"
+              + " ~/.runelite/voiced-dialogue/cache and is size-bounded.",
+      position = 4,
       section = generalSection)
   default boolean persistentCache() {
     return true;
   }
 
-  @ConfigItem(
-      keyName = "speakingPace",
-      name = "Speaking Pace",
-      description =
-          "How fast dialogue is spoken, as a percentage of normal (100 = normal). Sent to"
-              + " OpenRouter only when not 100 (the active model may ignore it).",
-      position = 6,
-      section = generalSection)
-  @Range(min = 50, max = 200)
-  default int speakingPace() {
-    return 100;
-  }
-
   // ---------------------------------------------------------------------------
-  // Cloud Voice (OpenRouter)
+  // Voices
   // ---------------------------------------------------------------------------
 
   @ConfigItem(
-      keyName = "openRouterApiKey",
-      name = "OpenRouter API Key",
-      description =
-          "Your OpenRouter API key, required for the Cloud voice. Create a free key at"
-              + " openrouter.ai and paste it here. Stored locally and never bundled with the"
-              + " plugin. Without a key, Cloud lines stay silent with a one-time notice.",
+      keyName = "playerVoice",
+      name = "Player Voice",
+      description = "The voice used for your own character's dialogue and public chat.",
       position = 0,
-      secret = true,
-      section = cloudSection)
-  default String openRouterApiKey() {
-    return "";
+      section = voicesSection)
+  default VoiceManager.PlayerVoice playerVoice() {
+    return VoiceManager.PlayerVoice.TYPE_A;
   }
 
   @ConfigItem(
@@ -282,7 +279,7 @@ public interface VoicedDialogueConfig extends Config {
           "Accent for your character's voice. British by default; this is a British medieval"
               + " fantasy world. Used only when Character Voices are on.",
       position = 1,
-      section = cloudSection)
+      section = voicesSection)
   default String playerAccent() {
     return "British English, as spoken in Cambridge, England.";
   }
@@ -294,7 +291,7 @@ public interface VoicedDialogueConfig extends Config {
           "Persona and delivery style for your character's voice. Describe who your adventurer is."
               + " Used only when Character Voices are on.",
       position = 2,
-      section = cloudSection)
+      section = voicesSection)
   default String playerPersona() {
     return "Friendly, plucky, warm, and enthusiastic.";
   }
@@ -305,7 +302,7 @@ public interface VoicedDialogueConfig extends Config {
       description =
           "Speaking pace for your character's voice. Used only when Character Voices are on.",
       position = 3,
-      section = cloudSection)
+      section = voicesSection)
   default String playerPace() {
     return "Normal.";
   }
@@ -315,23 +312,42 @@ public interface VoicedDialogueConfig extends Config {
       name = "Character Voices",
       description =
           "Give each speaker a distinct voice (accent, style, pace) drawn from the bundled character"
-              + " table, instead of one shared voice for everyone. Adds a little to each Cloud"
-              + " request; turn off for the cheapest, plainest delivery.",
+              + " table, instead of one shared voice for everyone. Adds a little to each request;"
+              + " turn off for the cheapest, plainest delivery.",
       position = 4,
-      section = cloudSection)
+      section = voicesSection)
   default boolean cloudCharacterProfiles() {
     return true;
   }
 
   @ConfigItem(
+      keyName = "autoLearnNewNpcs",
+      name = "Auto-learn New NPCs",
+      description =
+          "When an NPC isn't in the bundled voice table (e.g. one added to the game since the last"
+              + " plugin update), look its race, gender and ethnicity up on the Old School RuneScape"
+              + " Wiki once, then cache the result locally so it voices correctly from then on. The"
+              + " first line for such an NPC still uses the default voice while the lookup runs. Off"
+              + " by default; when on it makes a network request (the NPC's name) to the wiki.",
+      position = 5,
+      section = voicesSection)
+  default boolean autoLearnNewNpcs() {
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delivery
+  // ---------------------------------------------------------------------------
+
+  @ConfigItem(
       keyName = "cloudEmotion",
       name = "Emotional Delivery",
       description =
-          "Carry the emotion read from the speaker's chat-head animation through to the Cloud voice,"
-              + " so lines are delivered happy, sad, angry, or scared. Turn this off to voice every"
+          "Carry the emotion read from the speaker's chat-head animation through to the voice, so"
+              + " lines are delivered happy, sad, angry, or scared. Turn this off to voice every"
               + " line neutrally.",
-      position = 5,
-      section = cloudSection)
+      position = 0,
+      section = deliverySection)
   default boolean cloudEmotion() {
     return true;
   }
@@ -344,8 +360,8 @@ public interface VoicedDialogueConfig extends Config {
               + " other language routes each line through a translation model first, preserving"
               + " names, places, and item terms, then voices the translation. Adds a translation"
               + " request per new line.",
-      position = 6,
-      section = cloudSection)
+      position = 1,
+      section = deliverySection)
   default SpokenLanguage cloudLanguage() {
     return SpokenLanguage.ENGLISH;
   }
@@ -359,8 +375,8 @@ public interface VoicedDialogueConfig extends Config {
               + " that style (Gen Z slang, pirate speak, and so on) via the translation model, so"
               + " they route through that hop even for English. Leave this on None with English to"
               + " skip the translation model entirely for your lines.",
-      position = 7,
-      section = cloudSection)
+      position = 2,
+      section = deliverySection)
   default SpeakingStyle cloudPlayerSpeakingStyle() {
     return SpeakingStyle.NONE;
   }
@@ -374,25 +390,23 @@ public interface VoicedDialogueConfig extends Config {
               + " that style (Gen Z slang, pirate speak, and so on) via the translation model, so"
               + " they route through that hop even for English. Leave this on None with English to"
               + " skip the translation model entirely for NPC lines.",
-      position = 8,
-      section = cloudSection)
+      position = 3,
+      section = deliverySection)
   default SpeakingStyle cloudNpcSpeakingStyle() {
     return SpeakingStyle.NONE;
   }
 
   @ConfigItem(
-      keyName = "autoLearnNewNpcs",
-      name = "Auto-learn New NPCs",
+      keyName = "speakingPace",
+      name = "Speaking Pace",
       description =
-          "When an NPC isn't in the bundled voice table (e.g. one added to the game since the last"
-              + " plugin update), look its race, gender and ethnicity up on the Old School RuneScape"
-              + " Wiki once, then cache the result locally so it voices correctly from then on. The"
-              + " first line for such an NPC still uses the default voice while the lookup runs. Off"
-              + " by default; when on it makes a network request (the NPC's name) to the wiki.",
-      position = 9,
-      section = cloudSection)
-  default boolean autoLearnNewNpcs() {
-    return false;
+          "How fast dialogue is spoken, as a percentage of normal (100 = normal). Sent to"
+              + " OpenRouter only when not 100 (the active model may ignore it).",
+      position = 4,
+      section = deliverySection)
+  @Range(min = 50, max = 200)
+  default int speakingPace() {
+    return 100;
   }
 
   @ConfigItem(
@@ -403,8 +417,8 @@ public interface VoicedDialogueConfig extends Config {
               + " dungeon, sewer or basement), spoken lines get a decaying echo so they sound"
               + " enclosed. Off by default. The echo is added at playback, so cached audio is"
               + " unchanged and nothing is re-billed.",
-      position = 10,
-      section = cloudSection)
+      position = 5,
+      section = deliverySection)
   default boolean cloudCaveEcho() {
     return false;
   }
@@ -432,11 +446,10 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "cloudMaxChars",
       name = "Max Characters Per Line",
       description =
-          "Hard cap on how many characters of a single dialogue line are sent to the Cloud backend."
-              + " Cloud TTS is billed per character, so a positive cap truncates an unusually long"
-              + " line at a sentence or word boundary before sending. 0 (default) sends the whole"
-              + " line uncapped; OSRS lines are short, so set a cap only to bound pathological"
-              + " cases.",
+          "Hard cap on how many characters of a single dialogue line are sent to OpenRouter, which"
+              + " bills per character, so a positive cap truncates an unusually long line at a"
+              + " sentence or word boundary before sending. 0 (default) sends the whole line"
+              + " uncapped; OSRS lines are short, so set a cap only to bound pathological cases.",
       position = 1,
       section = advancedSection)
   @Range(min = 0, max = 5000)

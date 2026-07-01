@@ -29,7 +29,7 @@ Walk up, talk, and listen. That is the whole setup.
 
 Install from the **RuneLite Plugin Hub**: open RuneLite, click the wrench (Configuration) icon, open the **Plugin Hub**, search for **Voiced Dialogue**, and install.
 
-Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRouter](https://openrouter.ai) API key. Create one, paste it into the plugin's **Cloud Voice (OpenRouter)** settings, and you are away. Until a key is set, lines stay silent and a one-time notice points you to the key.
+Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRouter](https://openrouter.ai) API key. Create one, paste it into the **OpenRouter API Key** field in the plugin's **General** settings, and you are away. Until a key is set, lines stay silent and a one-time notice points you to the key.
 
 ## How it sounds
 
@@ -101,37 +101,45 @@ Cloud adds a few cost and latency guards: each line is capped at **Max Character
 
 ## Configuration
 
-Settings mirror the in-game panel: **General**, **Cloud Voice (OpenRouter)**, and **Advanced** (niche tuning).
+Settings mirror the in-game panel: **General** (key, playback, caching), **Voices** (who sounds like what), **Delivery** (how each line is spoken), and **Advanced** (niche tuning).
 
 <details>
 <summary><b>General</b></summary>
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Player Voice** | `Type A` | The voice used for your own character's dialogue and public chat. |
+| **OpenRouter API Key** | empty | Your OpenRouter API key, required to voice dialogue. Create a free key at openrouter.ai and paste it here; stored locally, never bundled with the plugin. Until it is set, lines stay silent. |
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
 | **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice. Only your own messages are voiced, and chat is spoken exactly as typed (Spoken Language and Speaking Style are never applied to it). |
 | **Prefetch Dialogue** | `On` | Warms the audio cache for the dialogue options you can see, so the line you pick next plays instantly. It can raise OpenRouter spend on branches you never choose. |
 | **Save Audio To Disk** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and OpenRouter is not re-billed. |
-| **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
 
 </details>
 
 <details>
-<summary><b>Cloud Voice (OpenRouter)</b></summary>
+<summary><b>Voices</b></summary>
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **OpenRouter API Key** | empty | Your OpenRouter API key, required for the Cloud voice. Create a free key at openrouter.ai and paste it here; stored locally, never bundled with the plugin. |
+| **Player Voice** | `Type A` | The voice used for your own character's dialogue and public chat. |
 | **Your Accent** | British (Cambridge) | Accent for your character's voice. Used with Character Voices on. |
 | **Your Persona** | friendly and plucky | Persona and delivery style for your character's voice. |
 | **Your Pace** | Normal | Speaking pace for your character's voice. |
 | **Character Voices** | `On` | Gives each speaker a distinct voice (accent, style, pace) from the bundled table instead of one shared voice. Emotion still layers on top. Off gives the plainest, cheapest delivery. |
+| **Auto-learn New NPCs** | `Off` | For an NPC not in the bundled table, looks its race, gender, and origin up on the OSRS Wiki once and caches it. The first line still uses the default voice while the lookup runs. |
+
+</details>
+
+<details>
+<summary><b>Delivery</b></summary>
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
 | **Emotional Delivery** | `On` | Carries the emotion detected from the speaker's chat-head animation through to the voice. Off voices every line as Neutral. |
 | **Spoken Language** | `English` | Language dialogue is spoken in, from a dropdown of supported languages. `English` voices the original line; anything else translates each line first (preserving names, places, and item terms), then voices it. |
 | **Player Speaking Style** | `None` | Optional delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). Set independently of the NPC style. |
 | **NPC Speaking Style** | `None` | Optional delivery register layered onto NPC lines, from the same set. Language-agnostic, so it composes with any Spoken Language. |
-| **Auto-learn New NPCs** | `Off` | For an NPC not in the bundled table, looks its race, gender, and origin up on the OSRS Wiki once and caches it. The first line still uses the default voice while the lookup runs. |
+| **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
 | **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). Applied at playback, so cached audio is unchanged. |
 
 </details>
@@ -142,7 +150,7 @@ Settings mirror the in-game panel: **General**, **Cloud Voice (OpenRouter)**, an
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Cache Size Limit (MiB)** | `1024` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest are deleted first. Set to `0` for no limit. Only applies when Save Audio To Disk is on. |
-| **Max Characters Per Line** | `0` | Caps how many characters of a line are sent to Cloud, truncating at a sentence or word boundary. `0` sends the whole line; set a positive value to bound worst-case per-line cost. |
+| **Max Characters Per Line** | `0` | Caps how many characters of a line are sent to OpenRouter, truncating at a sentence or word boundary. `0` sends the whole line; set a positive value to bound worst-case per-line cost. |
 | **Debug Logging** | `Off` | Logs the full resolved decision per line (one `[TTS line]` record with backend, kind, name, emotion, race, gender, seed, profile, and accent), plus per-operation latency, cache hits/misses by tier, and timed/numbered synth attempts. |
 
 </details>
