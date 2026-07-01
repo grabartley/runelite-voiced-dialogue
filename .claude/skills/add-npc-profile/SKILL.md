@@ -30,8 +30,8 @@ default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory keyword ma
 ## Decide what to change
 
 1. **Wrong/missing race, gender, or origin accent** (e.g. a woman voiced male, a talkable monster with no race, a foreigner sounding like the locals) -> `tools/overrides.json`.
-   - An override **replaces** the table entry, so it must carry `race` + `gender`. `race` must be one of Human, Elf, Dwarf, Goblin, Gnome, Monkey, Gorilla, Troll, Undead, Demon, Wizard, Tortugan; map a wiki race that is not one of these (Dorgeshuun -> Goblin, Vampyre -> Undead, Imp -> Demon, ape -> Gorilla, ...). A truly unmappable species (Serpent, Merfolk, ...) gets a `byId` style only.
-   - Set `ethnicity` to a `byEthnicity` key to fix where they're from; **omit** `ethnicity` to clear a wrong one the wiki inferred (a foreigner in Morytania -> drop it -> British default). Ethnicity is a no-op for non-human races (the racial accent wins), so only set it on Human/Unknown NPCs.
+   - An override **patches** the wiki-inferred entry per field: a field you set wins, a field you omit inherits the wiki value, a field set to `null` is cleared. `race`/`gender` are optional (they inherit), but the entry must end up with both, so set them for ids the wiki does not document. `race` must be one of Human, Elf, Dwarf, Goblin, Gnome, Monkey, Gorilla, Troll, Undead, Demon, Wizard, Tortugan; map a wiki race that is not one of these (Dorgeshuun -> Goblin, Vampyre -> Undead, Imp -> Demon, ape -> Gorilla, ...). A truly unmappable species (Serpent, Merfolk, ...) gets a `byId` style only.
+   - Set `ethnicity` to a `byEthnicity` key to fix where they're from; **omit** `ethnicity` to inherit the wiki-inferred accent (from where they're found); set `ethnicity: null` to clear a wrong wiki-inferred one (a foreigner in Morytania -> `null` -> British default). Ethnicity is a no-op for non-human races (the racial accent wins), so only set it on Human/Unknown NPCs.
    - This is also how you make a non-region accent land via a dedicated ethnicity (e.g. Ak-Haranu -> `ethnicity: easternlands`).
 2. **A unique personality / a quirk accent that is not an ethnicity** -> `tools/profiles.json` `byId[id]`. Sparse: usually just `name` + `style`. Only set `accent`/`pace` for a genuine per-character quirk (most origin accents belong in `overrides.json` ethnicity instead, so you do not repeat an accent string across variant ids).
 3. **A whole new creature/lore accent** (vampyre, leprechaun, ...) -> add a `byCategory` entry (keywords match the display name, word-bounded, case-insensitive). Creature categories **define** the accent; **social-role** categories (royalty, knight, noble, monk, wizard) are **style-only** so the ethnicity accent shows through.
@@ -63,9 +63,15 @@ blank on many genuine talkers (monster-infobox bosses, cave goblins). See
 In both sources, `byId` and `npcs` entries are **one-line objects** (`"id": { ... }`); keep that shape so the diff stays small.
 
 ```bash
-python3 tools/generate_npc_voices.py        # regenerates npc-voices.json (needs network)
+python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json  # offline, no drift
 ./gradlew test spotlessCheck
 ```
+
+Use `--base` for an overrides/profiles-only edit so the diff is just your change
+with no wiki drift. **Any NPC whose entry changes in the regenerated
+`npc-voices.json` must be 100% hand verified against the wiki, and a change table
+presented to the developer, before committing** (see `regenerate-npc-voices`, and
+`find-npc-true-origin` for deciding an NPC's real accent). The burden is on you.
 
 Then confirm in-game with the `run-game-client` skill and **Debug Mode** on: the
 log line `[TTS profile] npc='...' ... -> '...' (source=..., accent='...')` shows

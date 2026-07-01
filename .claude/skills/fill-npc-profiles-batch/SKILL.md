@@ -227,11 +227,16 @@ ones inconsistently, do not over-invest where the model cannot deliver.
 ## 6. Regenerate, verify, ship
 
 ```bash
-python3 tools/generate_npc_voices.py
+python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json  # offline, no drift
 ./gradlew test spotlessCheck
 ```
 
-Spot-check resolutions with `run-game-client` + Debug Mode (`diagnose-npc-voice`),
+**Every NPC whose entry changes in the regenerated `npc-voices.json` must be 100%
+hand verified against the wiki before commit, and a change table presented to the
+developer** (see `regenerate-npc-voices`; decide real origins via
+`find-npc-true-origin`). Use `--base` so wiki drift does not sneak unverified
+NPCs into the diff. The burden of verification is on you. Then spot-check
+resolutions with `run-game-client` + Debug Mode (`diagnose-npc-voice`),
 checking a local commoner, a flagged foreigner, a corrected non-human, and a
 quirk NPC. Update the NPC counts in `README.md` to match the regenerated table
 (total `_meta.count` and bespoke `profiles.byId` length) in the same commit. Then
