@@ -29,8 +29,8 @@ pool, derives from it via `newBuilder()` (allowed):
 
 ### All network and synthesis stays off the game thread
 
-**Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors (a single
-bounded synthesis thread, a warm-up thread for engine install/download, and a 2-thread
+**Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors (a 2-thread
+bounded synthesis pool, a warm-up thread for engine install/download, and a 2-thread
 prefetch pool); the OpenRouter HTTP calls execute on those threads. NPC auto-learn lookups
 run on their own `tts-wiki-learn` daemon thread. User-facing notices are hopped back to the
 client thread via `clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread

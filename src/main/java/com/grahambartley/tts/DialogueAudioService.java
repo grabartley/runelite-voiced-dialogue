@@ -23,7 +23,8 @@ import lombok.extern.slf4j.Slf4j;
  * Drives synthesis and playback off the game thread.
  *
  * <p>The game thread only calls {@link #speak} / {@link #interrupt}; everything heavy runs on a
- * single background thread fed by a small bounded queue. Synthesis is delegated to the active
+ * small background pool ({@code SYNTH_THREADS} workers) fed by a bounded queue, so a line stuck
+ * retrying a slow cloud call does not stall the next line. Synthesis is delegated to the active
  * {@link SynthesisBackend} via {@link BackendProvider}, and repeated lines are served from an
  * {@link LruCache} keyed on {@code (backendId, voiceKey, emotion, text)} so a different backend,
  * voice, or emotion never serves stale audio. Behind that sits an optional persistent {@link
@@ -48,6 +49,15 @@ public final class DialogueAudioService {
   record CacheKey(String backendId, String voiceKey, Emotion emotion, String text) {}
 
   /**
+   * Worker threads for the live synthesis pool. Two, sharing one queue, so a line stuck retrying a
+   * slow cloud call (which is left running so its result still caches) does not block the next
+   * line: the free worker picks it up. Concurrent same-key calls are still de-duped, cloud calls
+   * each get their own pooled HTTP/1.1 connection, and the local engine's synth round-trip is
+   * synchronized, so two workers never contend on shared state (#196).
+   */
+  private static final int SYNTH_THREADS = 2;
+
+  /**
    * Hard ceiling on concurrent prefetch synths, so speculative warming never floods the backend.
    */
   private static final int PREFETCH_THREADS = 2;
@@ -63,10 +73,10 @@ public final class DialogueAudioService {
   private final BackendProvider backends;
   private final AudioOutput output;
   private final Executor executor;
-  // Engine install/model-load runs here, NOT on the single synthesis thread, so a long bundle
+  // Engine install/model-load runs here, NOT on the synthesis pool, so a long bundle
   // download cannot block dialogue playback through an already-warm backend.
   private final Executor warmExecutor;
-  // Speculative dialogue-tree prefetch runs here, off the single synthesis thread, so warming the
+  // Speculative dialogue-tree prefetch runs here, off the synthesis pool, so warming the
   // next likely line never delays the line the player is actually hearing. Small fixed pool so no
   // more than PREFETCH_THREADS prefetch calls are ever in flight at once.
   private final Executor prefetchExecutor;
@@ -136,8 +146,8 @@ public final class DialogueAudioService {
 
   /**
    * Runs a one-off warm-up task (engine install/model load) on the dedicated warm-up thread, kept
-   * separate from the single synthesis thread so a long engine download never blocks dialogue
-   * playback through an already-warm backend.
+   * separate from the synthesis pool so a long engine download never blocks dialogue playback
+   * through an already-warm backend.
    */
   public void prewarm(Runnable warm) {
     warmExecutor.execute(warm);
@@ -417,8 +427,8 @@ public final class DialogueAudioService {
 
   private static ExecutorService buildExecutor(int queueCapacity) {
     return new ThreadPoolExecutor(
-        1,
-        1,
+        SYNTH_THREADS,
+        SYNTH_THREADS,
         0L,
         TimeUnit.MILLISECONDS,
         new ArrayBlockingQueue<>(queueCapacity),
