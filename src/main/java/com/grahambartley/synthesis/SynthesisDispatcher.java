@@ -97,7 +97,7 @@ public final class SynthesisDispatcher {
     }
     if (config.debugMode()) {
       // The effective emotion is what the backend will actually voice after the downgrade rule, so
-      // the record reflects the real decision (e.g. Local always renders NEUTRAL).
+      // the record reflects the real decision.
       Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
       CharacterProfile profile = request.profile();
       log.info(
@@ -108,7 +108,7 @@ public final class SynthesisDispatcher {
               effective.name(),
               request.voice().race(),
               request.voice().gender(),
-              request.voice().kokoroSpeakerId(),
+              request.voice().voiceSeed(),
               profile == null ? null : profile.name(),
               profile == null ? null : profile.accent()));
     }

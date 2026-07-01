@@ -7,7 +7,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.runelite.api.Client;
@@ -66,18 +65,17 @@ public class CaveEchoPolicyTest {
 
   private Object[] shouldEchoLineCases() {
     return new Object[] {
-      new Object[] {VoiceBackend.CLOUD, true, true, true},
-      new Object[] {VoiceBackend.LOCAL, true, true, false},
-      new Object[] {VoiceBackend.CLOUD, false, true, false},
-      new Object[] {VoiceBackend.CLOUD, true, false, false},
+      new Object[] {true, true, true},
+      new Object[] {false, true, false},
+      new Object[] {true, false, false},
     };
   }
 
   @Test
   @Parameters(method = "shouldEchoLineCases")
-  public void shouldEchoLineGatesOnCloudBackendToggleAndUnderground(
-      VoiceBackend backend, boolean caveEchoEnabled, boolean underground, boolean expected) {
-    assertEquals(expected, CaveEchoPolicy.shouldEchoLine(backend, caveEchoEnabled, underground));
+  public void shouldEchoLineGatesOnToggleAndUnderground(
+      boolean caveEchoEnabled, boolean underground, boolean expected) {
+    assertEquals(expected, CaveEchoPolicy.shouldEchoLine(caveEchoEnabled, underground));
   }
 
   @Test
@@ -101,14 +99,13 @@ public class CaveEchoPolicyTest {
   }
 
   @Test
-  public void shouldEchoCombinesBackendToggleAndLocation() {
+  public void shouldEchoCombinesToggleAndLocation() {
     Client client = mock(Client.class);
     VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
     Player player = mock(Player.class);
     when(client.getLocalPlayer()).thenReturn(player);
     when(client.isInInstancedRegion()).thenReturn(false);
     when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, 9000, 0));
-    when(config.voiceBackend()).thenReturn(VoiceBackend.CLOUD);
     when(config.cloudCaveEcho()).thenReturn(true);
 
     assertTrue(new CaveEchoPolicy(client, config).shouldEcho());

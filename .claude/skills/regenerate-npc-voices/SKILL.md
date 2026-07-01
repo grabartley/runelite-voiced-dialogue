@@ -62,7 +62,7 @@ you; do not rubber-stamp the diff.
 ## Profile architecture (for reference)
 
 - Layers combine: `default -> byRace -> byEthnicity (plain folk only) -> byCategory (every keyword match) -> byId`. `style` accumulates; `name`/`accent`/`pace` take the most specific layer.
-- `tools/profiles.json` = delivery prose (accent/style/pace). `tools/overrides.json` = classification (race/gender/ethnicity), which also feeds the offline Local backend's voice.
+- `tools/profiles.json` = delivery prose (accent/style/pace). `tools/overrides.json` = classification (race/gender/ethnicity), which also picks the cloud voice timbre.
 - British world: commoners common British, royalty/knights/nobles posh via style register; distinctive races and lore creatures keep their accents; ethnicity = origin (corrected in overrides for foreigners); never by negation; no transient comments.
 
 ## Notes / known limits

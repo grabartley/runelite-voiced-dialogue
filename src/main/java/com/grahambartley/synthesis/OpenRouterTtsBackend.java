@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -43,15 +44,15 @@ import okhttp3.ResponseBody;
  * GeminiEmotionStyle#SUPPORTED} and {@link BackendProvider} downgrades anything outside it to
  * {@link Emotion#NEUTRAL}, which carries no tag.
  *
- * <p>It is selected when {@link VoicedDialogueConfig#voiceBackend()} is {@code CLOUD} and reports
- * {@link #isAvailable()} only when an API key is set. Every failure path (missing key, non-2xx,
- * network error, empty/undecodable body) returns {@code null} and surfaces a one-time notice rather
- * than throwing, so the line is left unvoiced without crashing or blocking the game thread.
+ * <p>This is the plugin's only backend and reports {@link #isAvailable()} only when an API key is
+ * set. Every failure path (missing key, non-2xx, network error, empty/undecodable body) returns
+ * {@code null} and surfaces a one-time notice rather than throwing, so the line is left unvoiced
+ * without crashing or blocking the game thread.
  */
 @Slf4j
 public final class OpenRouterTtsBackend implements SynthesisBackend {
 
-  /** Stable backend id, matched by {@link BackendProvider} when {@code CLOUD} is selected. */
+  /** Stable backend id, folded into the synthesis cache key. */
   public static final String ID = "cloud-openrouter";
 
   private static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/audio/speech";
@@ -112,11 +113,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private static final int BODY_SNIPPET_MAX_BYTES = 300;
 
   /**
-   * User-facing notice shown when Cloud is selected but no API key is set. Shared with the plugin's
-   * startup check so the two paths never drift.
+   * User-facing notice shown when no API key is set. Shared with the plugin's startup check so the
+   * two paths never drift.
    */
   public static final String NO_KEY_NOTICE =
-      "Add an OpenRouter API key to use cloud voices, or switch Voice Backend to Local.";
+      "Add your OpenRouter API key in the Voiced Dialogue settings to hear dialogue; without a key,"
+          + " lines are not voiced.";
 
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
@@ -503,14 +505,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // A read/call timeout (InterruptedIOException / SocketTimeoutException) or a transient
         // blip:
         // a slow generation deserves a backed-off retry rather than being dropped on the first
-        // failure (#196). The sleep runs on a synthesis-pool worker, never the game thread, and a
-        // second worker keeps serving the next line while this one waits.
+        // failure (#196). The backoff waits on a synthesis-pool worker, never the game thread, and
+        // a second worker keeps serving the next line while this one waits.
         long elapsedMs = elapsedMs(attemptStart);
         if (attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          if (backoffBeforeNetworkRetry(attempt)) {
-            continue;
-          }
+          backoffBeforeNetworkRetry(attempt);
+          continue;
         }
         warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
         log.warn(
@@ -554,24 +555,27 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /**
    * Spaces a retry after a transient network failure: an exponential base ({@code base * 2^(attempt
    * - 1)}) plus a small random jitter, so a brief blip or a slow generation gets a real second
-   * chance without a tight retry storm and concurrent lines do not retry in lockstep. Runs on a
+   * chance without a tight retry storm and concurrent lines do not retry in lockstep. Waits on a
    * synthesis-pool worker, never the game thread, so a second worker keeps serving the next line
-   * while this one waits. Returns {@code false} if interrupted, in which case the caller abandons
-   * the line rather than retrying.
+   * while this one waits.
+   *
+   * <p>The wait is a delayed {@link CompletableFuture} joined to completion rather than a sleeping
+   * pool thread: the plugin uses no blocking sleep and no thread interrupt (a Hub constraint), and
+   * {@link CompletableFuture#join()} parks the worker without either.
    */
-  private boolean backoffBeforeNetworkRetry(int attempt) {
+  private void backoffBeforeNetworkRetry(int attempt) {
     long base = networkRetryBaseMillis << (attempt - 1);
     long jitter =
         networkRetryJitterMillis <= 0
             ? 0
             : ThreadLocalRandom.current().nextLong(networkRetryJitterMillis + 1);
-    try {
-      Thread.sleep(base + jitter);
-      return true;
-    } catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-      return false;
+    long delayMillis = base + jitter;
+    if (delayMillis <= 0) {
+      return;
     }
+    CompletableFuture.runAsync(
+            () -> {}, CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS))
+        .join();
   }
 
   @Override

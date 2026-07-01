@@ -28,11 +28,9 @@ public final class ChatNoticeManager {
   private static final String CHAT_NOTICE_COLOR = "ff3333";
 
   private static final String ONBOARDING_MESSAGE =
-      "Voiced Dialogue is on. The Cloud voice (recommended) needs a free OpenRouter API key: get"
-          + " one at openrouter.ai and paste it into the plugin's Cloud Voice settings. While Cloud"
-          + " is active your dialogue text is sent to OpenRouter to be voiced. Prefer to stay"
-          + " offline? Set Voice Backend to Local for a free, no-key voice (basic and"
-          + " neutral-only).";
+      "Voiced Dialogue is on. It needs a free OpenRouter API key to voice dialogue: get one at"
+          + " openrouter.ai and paste it into the plugin's Cloud Voice settings. Your dialogue text"
+          + " is then sent to OpenRouter to be voiced. Until a key is set, lines stay silent.";
 
   private final Client client;
   private final ConfigManager configManager;
@@ -90,27 +88,23 @@ public final class ChatNoticeManager {
   }
 
   /**
-   * Posts the missing-cloud-key notice once per session when running Cloud-with-no-key, so a player
-   * who selected Cloud but never set a key is told their voice is effectively off. Must be called
-   * on the game thread. {@code keyAvailable} is the active backend's availability.
+   * Posts the missing-cloud-key notice once per session when no key is set, so a player who never
+   * set a key is told their voice is effectively off. Must be called on the game thread. {@code
+   * keyAvailable} is the backend's availability.
    */
   public void maybeWarnMissingCloudKey(boolean keyAvailable) {
     if (cloudKeyNoticeChecked) {
       return;
     }
     cloudKeyNoticeChecked = true;
-    if (shouldWarnMissingCloudKey(config.voiceBackend(), keyAvailable)) {
+    if (shouldWarnMissingCloudKey(keyAvailable)) {
       addGameMessage(OpenRouterTtsBackend.NO_KEY_NOTICE);
     }
   }
 
-  /**
-   * Pure decision for {@link #maybeWarnMissingCloudKey}: warn only when Cloud is the active backend
-   * and its key is unavailable. Local needs no key, so it never warns.
-   */
-  static boolean shouldWarnMissingCloudKey(
-      VoicedDialogueConfig.VoiceBackend backend, boolean keyAvailable) {
-    return backend == VoicedDialogueConfig.VoiceBackend.CLOUD && !keyAvailable;
+  /** Pure decision for {@link #maybeWarnMissingCloudKey}: warn only when the key is unavailable. */
+  static boolean shouldWarnMissingCloudKey(boolean keyAvailable) {
+    return !keyAvailable;
   }
 
   /**

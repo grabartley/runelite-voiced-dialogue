@@ -6,8 +6,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.SynthesisBackend;
@@ -42,8 +40,7 @@ public class DialogueAudioServiceTest {
     volatile boolean throttled;
 
     FakeBackend(EnumSet<Emotion> supported) {
-      // Use the fallback id so a default-LOCAL config resolves straight to this backend.
-      this(BackendProvider.LOCAL_KOKORO_ID, supported);
+      this("cloud-openrouter", supported);
     }
 
     FakeBackend(String id, EnumSet<Emotion> supported) {
@@ -120,20 +117,8 @@ public class DialogueAudioServiceTest {
     }
   }
 
-  /**
-   * Config whose only meaningful answer is the backend selection; everything else uses defaults.
-   */
-  private static final class TestConfig implements VoicedDialogueConfig {
-    private VoiceBackend backend = VoiceBackend.LOCAL;
-
-    @Override
-    public VoiceBackend voiceBackend() {
-      return backend;
-    }
-  }
-
   private static BackendProvider provider(SynthesisBackend backend) {
-    return new BackendProvider(new TestConfig(), backend);
+    return new BackendProvider(backend);
   }
 
   private static DialogueAudioService service(
@@ -251,7 +236,7 @@ public class DialogueAudioServiceTest {
         new SynthesisBackend() {
           @Override
           public String id() {
-            return BackendProvider.LOCAL_KOKORO_ID;
+            return "cloud-openrouter";
           }
 
           @Override
@@ -309,39 +294,8 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void switchingBackendInvalidatesCacheAndResynthesizesOnTheNewBackend() {
-    // Two backends, both available: the local fallback and a cloud backend. The backend id is part
-    // of the cache key, so speaking the same line after switching the config backend must re-synth
-    // on the new backend rather than replaying the cached local PCM.
-    FakeBackend local = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
-    FakeBackend cloud = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
-    TestConfig config = new TestConfig();
-    BackendProvider provider = new BackendProvider(config, local, cloud);
-    FakeOutput output = new FakeOutput();
-    DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = service(provider, output, executor, 8, 100);
-
-    SynthesisRequest line = req("Well met", NPCRace.HUMAN, NPCGender.MALE, Emotion.NEUTRAL);
-
-    config.backend = VoiceBackend.LOCAL;
-    svc.speak(line);
-    executor.runAll();
-
-    config.backend = VoiceBackend.CLOUD;
-    svc.speak(line);
-    executor.runAll();
-
-    assertEquals("local backend synthesizes the first line", 1, local.requests.size());
-    assertEquals(
-        "switching to cloud must re-synth, not serve the cached local PCM",
-        1,
-        cloud.requests.size());
-    assertEquals("both lines still play", 2, output.streamCalls);
-  }
-
-  @Test
   public void unsupportedEmotionDowngradesToNeutralAndSharesCacheEntry() {
-    // Kokoro-style backend: NEUTRAL only. An ANGRY line downgrades and collides with the NEUTRAL
+    // A NEUTRAL-only backend. An ANGRY line downgrades and collides with the NEUTRAL
     // one, proving the downgrade happens before the cache key is built.
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
@@ -406,7 +360,7 @@ public class DialogueAudioServiceTest {
         new SynthesisBackend() {
           @Override
           public String id() {
-            return BackendProvider.LOCAL_KOKORO_ID;
+            return "cloud-openrouter";
           }
 
           @Override
@@ -435,7 +389,7 @@ public class DialogueAudioServiceTest {
         service(provider(blocking), new FakeOutput(), new DeferredExecutor(), 8, 100);
     DialogueAudioService.CacheKey key =
         new DialogueAudioService.CacheKey(
-            BackendProvider.LOCAL_KOKORO_ID, "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
+            "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
     SynthesisRequest request = req("Echo", NPCRace.HUMAN, NPCGender.MALE);
 
     AtomicReference<Pcm> first = new AtomicReference<>();
@@ -472,7 +426,7 @@ public class DialogueAudioServiceTest {
         new SynthesisBackend() {
           @Override
           public String id() {
-            return BackendProvider.LOCAL_KOKORO_ID;
+            return "cloud-openrouter";
           }
 
           @Override
@@ -533,7 +487,7 @@ public class DialogueAudioServiceTest {
         new SynthesisBackend() {
           @Override
           public String id() {
-            return BackendProvider.LOCAL_KOKORO_ID;
+            return "cloud-openrouter";
           }
 
           @Override
@@ -630,12 +584,10 @@ public class DialogueAudioServiceTest {
     // Prefetch writes through to disk too, so even a fresh in-memory tier serves the spoken line.
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     FakeBackend warm = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
-    TestConfig config = new TestConfig();
-    config.backend = VoiceBackend.CLOUD;
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc =
         new DialogueAudioService(
-            new BackendProvider(config, new FakeBackend(EnumSet.of(Emotion.NEUTRAL)), warm),
+            new BackendProvider(warm),
             new FakeOutput(),
             new DiskAudioCache(cacheDir),
             executor,
@@ -699,12 +651,10 @@ public class DialogueAudioServiceTest {
         req("Have you any quests?", NPCRace.HUMAN, NPCGender.MALE, Emotion.HAPPY);
 
     // Session 1 on the cloud backend: one paid synth call.
-    TestConfig config1 = new TestConfig();
-    config1.backend = VoiceBackend.CLOUD;
     DeferredExecutor exec1 = new DeferredExecutor();
     DialogueAudioService session1 =
         new DialogueAudioService(
-            new BackendProvider(config1, new FakeBackend(EnumSet.of(Emotion.NEUTRAL)), cloud),
+            new BackendProvider(cloud),
             new FakeOutput(),
             new DiskAudioCache(cacheDir),
             exec1,
@@ -716,12 +666,10 @@ public class DialogueAudioServiceTest {
     assertEquals("first hearing of the line costs exactly one API call", 1, afterFirstSession);
 
     // Session 2: fresh in-memory cache, same disk dir, same line. Must cost ZERO additional calls.
-    TestConfig config2 = new TestConfig();
-    config2.backend = VoiceBackend.CLOUD;
     DeferredExecutor exec2 = new DeferredExecutor();
     DialogueAudioService session2 =
         new DialogueAudioService(
-            new BackendProvider(config2, new FakeBackend(EnumSet.of(Emotion.NEUTRAL)), cloud),
+            new BackendProvider(cloud),
             new FakeOutput(),
             new DiskAudioCache(cacheDir),
             exec2,

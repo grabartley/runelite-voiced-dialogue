@@ -3,8 +3,10 @@
 Pre-submission audit of **Voiced Dialogue** (internal name `voiced-dialogue`) against the
 [RuneLite Plugin Hub](https://github.com/runelite/plugin-hub) rules, focused on the
 requirements the Hub review is strictest about: outbound network access, third-party API
-usage, user-provided secrets, bundled binaries, and user consent. The cloud backend adds
-outbound HTTPS to `openrouter.ai`, which is what this pass exists to cover.
+usage, user-provided secrets, bundled binaries, and user consent. The compliance story is
+**Cloud-only, no subprocess, no bundled binaries**: the plugin voices dialogue solely through
+outbound HTTPS to `openrouter.ai`, spawns no external process, and ships no engine, native
+library, or model.
 
 This is the verification record. The step-by-step submission flow lives in
 [`hub-submission.md`](hub-submission.md).
@@ -23,18 +25,27 @@ pool, derives from it via `newBuilder()` (allowed):
 - `OpenRouterTtsBackend.java` — derives a keepalive client via
   `httpClient.newBuilder()...build()`.
 - `OpenRouterTranslator.java` — derives a call-timeout client via `httpClient.newBuilder()`.
-- `EngineInstaller.java` — downloads the Kokoro engine bundle through the injected client.
 - `data/WikiNpcClient.java` — optional NPC auto-learn lookups, also through the injected
   client.
 
 ### All network and synthesis stays off the game thread
 
 **Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors (a 2-thread
-bounded synthesis pool, a warm-up thread for engine install/download, and a 2-thread
+bounded synthesis pool, a warm-up thread for the cloud connection handshake, and a 2-thread
 prefetch pool); the OpenRouter HTTP calls execute on those threads. NPC auto-learn lookups
 run on their own `tts-wiki-learn` daemon thread. User-facing notices are hopped back to the
 client thread via `clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread
 never makes a network call or blocks on synthesis.
+
+### No subprocess, no `Thread.sleep`, no thread interrupt
+
+**Verified.** `src/main` spawns no external process (`grep -rn "ProcessBuilder\|Runtime.*exec"
+src/main` returns nothing), calls no `Thread.sleep` (`grep -rn "Thread.sleep(" src/main`
+returns nothing), and never interrupts a thread (`grep -rn "Thread.currentThread\|\.interrupt("
+src/main` returns nothing but the unrelated `DialogueAudioService.interrupt()` playback method).
+The cloud retry backoff waits on a delayed `CompletableFuture` joined to completion rather than
+a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which needs no
+`InterruptedException` handling and never re-raises the interrupt flag).
 
 ### API key is a secret, never logged, sent only to OpenRouter
 
@@ -52,16 +63,12 @@ never makes a network call or blocks on synthesis.
 
 ### In-plugin consent / privacy notice for cloud
 
-**Verified.** Enabling Cloud is disclosed in multiple places, each stating plainly that
-dialogue text leaves the machine:
+**Verified.** That dialogue text leaves the machine is disclosed in multiple places:
 
-- First-run onboarding chat notice (`ChatNoticeManager`): "...While Cloud is active your
-  dialogue text is sent to OpenRouter to be voiced. Prefer to stay offline? Set Voice
-  Backend to Local..."
-- Voice Backend setting description (`VoicedDialogueConfig`): "...while it is active your
-  dialogue text is sent to OpenRouter to be voiced..."
-- Cloud Voice section header (`VoicedDialogueConfig`): "...While Cloud is active, your dialogue
-  text is sent to OpenRouter to be voiced, so it leaves your machine."
+- First-run onboarding chat notice (`ChatNoticeManager`): "...Your dialogue text is then sent
+  to OpenRouter to be voiced. Until a key is set, lines stay silent."
+- General section header (`VoicedDialogueConfig`): "...Dialogue text is sent to OpenRouter over
+  HTTPS with your key to be voiced, so it leaves your machine."
 - API Key field description: key is "Stored locally and never bundled with the plugin."
 - The Hub listing itself carries the off-machine-data `warning=` in the descriptor (see
   [`hub-submission.md`](hub-submission.md) and
@@ -74,13 +81,12 @@ gates on `isAvailable()` (false when no key) and wraps every request in try/catc
 responses, empty/undecodable/truncated audio, `IOException`, and unexpected
 `RuntimeException` all return `null` after a one-time chat notice. A `null` synthesis result
 leaves the single line unvoiced; nothing is thrown to the game thread. With no key set, the
-line stays silent with a one-time "add an OpenRouter API key, or switch to Local" notice.
-The Local Kokoro backend stays fully offline and is the user's no-key, no-network option.
+line stays silent with a one-time "add your OpenRouter API key" notice.
 
 ### No secrets or large binaries in the built jar
 
 **Verified by inspecting `build/libs` after `./gradlew jar`.** The jar is ~362 KiB
-(well under the Hub's 10 MiB limit) and contains only compiled classes plus four data
+(well under the Hub's 10 MiB limit) and contains only compiled classes plus three data
 resources, all loaded via `getResourceAsStream`:
 
 | Resource | Size | What it is |
@@ -88,21 +94,18 @@ resources, all loaded via `getResourceAsStream`:
 | `npc-voices.json` | ~2.0 MiB uncompressed | Precomputed NPC race/gender/ethnicity + voice profile table |
 | `expression-emotions.json` | ~1.5 KiB | Chat-head animation → emotion map |
 | `profanity.txt` | ~1.0 KiB | Offline profanity blocklist |
-| `plugin-version.txt` | ~10 B | This build's version, used to resolve the matching engine release |
 
-No API keys, no model files, no native libraries, no `sherpa-onnx` or model-extraction
-dependencies (`build.gradle` deliberately excludes them). The Kokoro engine (~380 MiB per
-OS) is **not** bundled: `EngineInstaller` fetches the `engine-manifest.json` for this
-build's version from the matching GitHub Release, downloads the per-OS engine bundle, and
-verifies it against the SHA-256 in that manifest before extracting.
+No API keys, no model files, no native libraries, and no synthesis engine of any kind: the
+plugin is Cloud-only and voices dialogue over HTTPS, so there is nothing to bundle and nothing
+to download at runtime.
 
 ### Main sources compile under the Hub's Java 11 standard build
 
 **Verified.** `build=standard` discards our `build.gradle` and compiles `src/main` at
 `options.release=11`. Our own `compileJava` pins the same release level so a Java 12+ syntax or
 API in main sources fails locally before it reaches the Hub. `src/main` carries no records,
-pattern-matching `instanceof`, or other Java 12+ constructs; tests and the `engine-kokoro`
-subproject stay on release 17 and are never built by the Hub.
+pattern-matching `instanceof`, or other Java 12+ constructs; tests stay on release 17 and are
+never built by the Hub.
 
 ## Hub listing text (for the descriptor / properties)
 
@@ -111,25 +114,24 @@ From `runelite-plugin.properties`:
 - **displayName:** Voiced Dialogue
 - **author:** Graham Bartley
 - **support:** https://github.com/grabartley/runelite-voiced-dialogue
-- **description:** Voices NPC and player dialogue using local or cloud text-to-speech.
+- **description:** Voices NPC and player dialogue using cloud text-to-speech (OpenRouter).
 - **tags:** tts, voice, dialogue, audio, immersion, accessibility, npc, speech, talk, text-to-speech
 - **version:** 0.1.0
 - **build:** standard
 
 Descriptor `warning=` (off-machine-data disclosure, from
-[`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)): "With the
-Cloud (OpenRouter) voice backend selected, the dialogue text being spoken is sent to
-OpenRouter over HTTPS using your API key. The local backend stays fully offline and sends
-nothing off your machine."
+[`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)): "This plugin
+voices dialogue through the OpenRouter cloud service: the dialogue text being spoken is sent
+to OpenRouter over HTTPS using your own API key. A key is required and nothing is voiced
+without one."
 
 ## Manual QA still required before submission
 
 Code review confirms the above, but the network-blocked path and jar contents should be
 confirmed by hand on the target machine per `run-game-client`:
 
-1. Run with the network disabled or an invalid key, Cloud selected, and confirm dialogue
-   stays silent (or falls back to Local Kokoro) with a single chat notice, no crash, and no
-   game-thread exception in the logs.
+1. Run with the network disabled or an invalid key and confirm dialogue stays silent with a
+   single chat notice, no crash, and no game-thread exception in the logs.
 2. Inspect `build/libs/*.jar` contents and confirm no API key, no model binary, no
    disallowed dependency.
 3. Confirm the logs never print the API key.

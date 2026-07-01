@@ -32,9 +32,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Audio is stored in a tiny self-describing binary format (a 16-byte header carrying the sample
  * rate and sample count, then the float samples as little-endian float32) so a decoded entry always
- * carries the correct {@link Pcm} sample rate. This matters because backends synthesize at
- * different rates (Kokoro 24 kHz, the cloud backend may differ) and the player must not pitch-shift
- * a cached line.
+ * carries the correct {@link Pcm} sample rate, so the player never pitch-shifts a cached line.
  *
  * <p>Everything here is corruption-safe and never throws into the pipeline: writes go to a temp
  * file and are atomically renamed into place (no partial files), and any read that hits a missing,

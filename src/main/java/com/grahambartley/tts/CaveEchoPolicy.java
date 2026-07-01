@@ -10,10 +10,10 @@ import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 
 /**
- * Decides whether a line should be rendered with the cave echo: only on the Cloud backend, with the
- * toggle on, while the player is below the overworld (a cave, dungeon, sewer or basement). The
- * coordinate predicate and the echo gate are pure (client-free) so they are unit-testable; {@link
- * #isUnderground} reads the client and must be called on the game thread.
+ * Decides whether a line should be rendered with the cave echo: with the toggle on, while the
+ * player is below the overworld (a cave, dungeon, sewer or basement). The coordinate predicate and
+ * the echo gate are pure (client-free) so they are unit-testable; {@link #isUnderground} reads the
+ * client and must be called on the game thread.
  */
 @Slf4j
 public final class CaveEchoPolicy {
@@ -35,18 +35,16 @@ public final class CaveEchoPolicy {
     this.config = config;
   }
 
-  /** The live echo decision for the current line: Cloud + toggle on + underground. */
+  /** The live echo decision for the current line: toggle on + underground. */
   public boolean shouldEcho() {
-    return shouldEchoLine(config.voiceBackend(), config.cloudCaveEcho(), isUnderground());
+    return shouldEchoLine(config.cloudCaveEcho(), isUnderground());
   }
 
   /**
-   * Pure gate for the cave echo: render an echo only on the Cloud backend, with the toggle on,
-   * while the player is underground.
+   * Pure gate for the cave echo: render an echo with the toggle on while the player is underground.
    */
-  static boolean shouldEchoLine(
-      VoicedDialogueConfig.VoiceBackend backend, boolean caveEchoEnabled, boolean underground) {
-    return backend == VoicedDialogueConfig.VoiceBackend.CLOUD && caveEchoEnabled && underground;
+  static boolean shouldEchoLine(boolean caveEchoEnabled, boolean underground) {
+    return caveEchoEnabled && underground;
   }
 
   /**

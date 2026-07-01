@@ -9,7 +9,7 @@ import javax.sound.sampled.SourceDataLine;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Streams Kokoro PCM through a {@link SourceDataLine} instead of loading a whole {@code Clip}.
+ * Streams synthesized PCM through a {@link SourceDataLine} instead of loading a whole {@code Clip}.
  *
  * <p>Audio is written to the line in small chunks straight from memory, so nothing is ever staged
  * to a temp file on disk. A generation counter lets {@link #stop()} interrupt the in-flight line:
@@ -45,8 +45,8 @@ public class StreamingAudioPlayer implements AudioOutput {
       return;
     }
     long gen = generation.incrementAndGet();
-    byte[] pcm = KokoroAudio.toPcm16LE(samples);
-    AudioFormat format = KokoroAudio.format(sampleRate);
+    byte[] pcm = PcmAudio.toPcm16LE(samples);
+    AudioFormat format = PcmAudio.format(sampleRate);
     SourceDataLine open = null;
     try {
       open = lineFactory.getLine(format);

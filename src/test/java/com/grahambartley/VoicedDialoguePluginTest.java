@@ -2,7 +2,6 @@ package com.grahambartley;
 
 import static org.junit.Assert.assertEquals;
 
-import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.SynthesisBackend;
@@ -16,26 +15,25 @@ import net.runelite.client.events.ConfigChanged;
 import org.junit.Test;
 
 /**
- * Verifies the plugin's runtime backend-switch warm-up orchestration (#75): a {@link ConfigChanged}
- * for the plugin group and a backend-affecting key re-runs the active backend's off-thread warm-up
- * exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing. The pure
- * decision behind the trigger lives in {@link BackendWarmUpPolicy}.
+ * Verifies the plugin's runtime warm-up orchestration (#75): a {@link ConfigChanged} for the plugin
+ * group and a backend-affecting key (entering an OpenRouter key) re-runs the backend's off-thread
+ * warm-up exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing.
+ * The pure decision behind the trigger lives in {@link BackendWarmUpPolicy}.
  */
 public class VoicedDialoguePluginTest {
 
+  private static final String KEY_TRIGGER = "openRouterApiKey";
+
   /**
-   * A backend-key change in the plugin group drives the real off-thread pipeline end to end: {@code
-   * prewarm} -> executor -> {@code warmUpActive} -> the selected (non-Kokoro) backend's {@code
-   * warmUp}, exactly once.
+   * A key change in the plugin group drives the real off-thread pipeline end to end: {@code
+   * prewarm} -> executor -> {@code warmUpActive} -> the backend's {@code warmUp}, exactly once.
    */
   @Test
   public void backendKeyChangeWarmsActiveBackendOnce() throws Exception {
     AtomicInteger warmCalls = new AtomicInteger();
-    StubConfig config = new StubConfig();
-    config.backend = VoiceBackend.CLOUD; // so warmUpActive targets the non-Kokoro backend
-    Harness harness = harness(config, warmCalls);
+    Harness harness = harness(warmCalls);
 
-    harness.plugin.onConfigChanged(configChanged("voicedDialogue", "voiceBackend"));
+    harness.plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
     harness.audioService.awaitWarm();
 
     assertEquals(1, warmCalls.get());
@@ -45,12 +43,10 @@ public class VoicedDialoguePluginTest {
   @Test
   public void unrelatedKeyOrGroupDoesNotWarm() throws Exception {
     AtomicInteger warmCalls = new AtomicInteger();
-    StubConfig config = new StubConfig();
-    config.backend = VoiceBackend.CLOUD;
-    Harness harness = harness(config, warmCalls);
+    Harness harness = harness(warmCalls);
 
     harness.plugin.onConfigChanged(configChanged("voicedDialogue", "volume"));
-    harness.plugin.onConfigChanged(configChanged("otherPlugin", "voiceBackend"));
+    harness.plugin.onConfigChanged(configChanged("otherPlugin", KEY_TRIGGER));
 
     assertEquals(0, warmCalls.get());
   }
@@ -59,10 +55,10 @@ public class VoicedDialoguePluginTest {
    * A config change while the plugin is stopped/shutting down (null collaborators) no-ops safely.
    */
   @Test
-  public void configChangeWhileStoppedDoesNotThrow() throws Exception {
+  public void configChangeWhileStoppedDoesNotThrow() {
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     // audioService and backendProvider are null (never started / already shut down).
-    plugin.onConfigChanged(configChanged("voicedDialogue", "voiceBackend"));
+    plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
   }
 
   // --- helpers -------------------------------------------------------------
@@ -74,11 +70,10 @@ public class VoicedDialoguePluginTest {
     return event;
   }
 
-  /** Plugin wired with a real DialogueAudioService and BackendProvider over counting stubs. */
-  private static Harness harness(StubConfig config, AtomicInteger warmCalls) throws Exception {
-    SynthesisBackend kokoro = new StubBackend(BackendProvider.LOCAL_KOKORO_ID, warmCalls);
+  /** Plugin wired with a real DialogueAudioService and BackendProvider over a counting stub. */
+  private static Harness harness(AtomicInteger warmCalls) throws Exception {
     SynthesisBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
-    BackendProvider provider = new BackendProvider(config, kokoro, cloud);
+    BackendProvider provider = new BackendProvider(cloud);
     DialogueAudioService audioService =
         new DialogueAudioService(provider, null, null, 1, 1, () -> 100);
 
@@ -125,16 +120,7 @@ public class VoicedDialoguePluginTest {
     }
   }
 
-  private static final class StubConfig implements VoicedDialogueConfig {
-    private VoiceBackend backend = VoiceBackend.LOCAL;
-
-    @Override
-    public VoiceBackend voiceBackend() {
-      return backend;
-    }
-  }
-
-  /** Counts {@code warmUp} calls so the test can assert the active backend was warmed once. */
+  /** Counts {@code warmUp} calls so the test can assert the backend was warmed once. */
   private static final class StubBackend implements SynthesisBackend {
     private final String id;
     private final AtomicInteger warmCalls;

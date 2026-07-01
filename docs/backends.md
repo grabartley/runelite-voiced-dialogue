@@ -1,40 +1,34 @@
-# Synthesis backends
+# Synthesis backend
 
-The plugin routes every dialogue line through one `SynthesisBackend`, chosen by the **Voice Backend**
-config. `BackendProvider` resolves the active backend on every line and applies the emotion-downgrade
-rule. The two backends are strictly separate: the selected backend is the only one that runs, and an
-unavailable selection leaves its lines silent rather than switching to the other backend.
+The plugin is Cloud-only: every dialogue line is routed through the single OpenRouter
+`SynthesisBackend`. `BackendProvider` provides that backend and applies the emotion-downgrade rule (an
+emotion the model cannot voice is rewritten to Neutral before synthesis). A line the backend cannot
+voice (for example when no API key is set) is left silent rather than routed anywhere else.
 
-| Backend | Config value | Engine location | Emotion | Offline | Setup cost |
-|---------|--------------|-----------------|---------|---------|------------|
-| OpenRouter (Gemini) | `Cloud` (default) | OpenRouter speech API over HTTPS | Happy, Sad, Angry, Scared, Neutral | No | your own OpenRouter API key |
-| Kokoro | `Local` | external CPU `--stdio` engine | Neutral only | Yes | one-time engine + model download |
+| Backend | Engine location | Emotion | Setup cost |
+|---------|-----------------|---------|------------|
+| OpenRouter (Gemini) | OpenRouter speech API over HTTPS | Happy, Sad, Angry, Scared, Neutral | your own OpenRouter API key |
 
-Emotion is detected from each speaker's chat-head animation and rides in every request. The cloud
-backend renders it as an inline Gemini style tag on the spoken text (`[happy]`, `[sad]`, `[angry]`,
-`[fearful]`), so happy, sad, angry, and scared lines are audibly different; Neutral carries no tag. The
-local Kokoro voice is neutral-only, so `BackendProvider` downgrades every line to Neutral for it.
+Emotion is detected from each speaker's chat-head animation and rides in every request. The backend
+renders it as an inline Gemini style tag on the spoken text (`[happy]`, `[sad]`, `[angry]`,
+`[fearful]`), so happy, sad, angry, and scared lines are audibly different; Neutral carries no tag.
 
 ## Cloud (OpenRouter) backend
 
-The default (cloud-first). An OpenAI-compatible speech request over HTTPS to
-`https://openrouter.ai/api/v1/audio/speech`, selected when **Voice Backend** is `Cloud`. It needs an
-OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent (switch to
-the Local backend for a free offline voice). The
+An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It
+needs an OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent. The
 model is fixed to Google's **Gemini 3.1 Flash TTS**, the one OpenRouter speech model with both a voice
 catalog rich enough to map every race and gender and full emotion support. Each NPC gets a
 gender-correct Gemini voice by race, and two NPCs of the same race and gender are spread across a
-sub-pool so they sound distinct but stable. The detected emotion is prepended to `input` as an inline
-style tag (`GeminiEmotionStyle`); Neutral adds none. A per-speaker **character profile**
-(`CharacterProfile`, resolved by `NpcProfileTable`) is also rendered as a leading `AUDIO PROFILE`
-direction block setting accent/style/pace, so the profile sets the character and the emotion tag
-colours the moment; the local backend ignores it. The body requests `response_format: "pcm"`, a
-headerless 16-bit LE mono stream at 24 kHz decoded to the pipeline's native rate.
+sub-pool by a stable per-NPC seed so they sound distinct but stable. The detected emotion is prepended
+to `input` as an inline style tag (`GeminiEmotionStyle`); Neutral adds none. A per-speaker **character
+profile** (`CharacterProfile`, resolved by `NpcProfileTable`) is also rendered as a leading `AUDIO
+PROFILE` direction block setting accent/style/pace, so the profile sets the character and the emotion
+tag colours the moment. The body requests `response_format: "pcm"`, a headerless 16-bit LE mono stream
+at 24 kHz decoded to the pipeline's native rate.
 
-With this backend active, dialogue text leaves your machine and is sent to OpenRouter. A missing key,
-an API error, or a network problem fails that line gracefully (it is left unvoiced) and surfaces a
-one-time notice. There is no automatic switch to the local voice; the backends stay strictly
-separate.
+Dialogue text leaves your machine and is sent to OpenRouter. A missing key, an API error, or a network
+problem fails that line gracefully (it is left unvoiced) and surfaces a one-time notice.
 
 ### Cost and latency controls
 
@@ -58,9 +52,9 @@ Because the cloud backend is billed per character, several guards keep cost boun
   dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
   sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
   result still caches) does not block the next line: the free worker picks it up.
-- **Speaking pace.** The shared **Speaking Pace** setting (General section) is sent as the OpenRouter
+- **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter
   `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
-  model may ignore it. The Local backend reads the same setting and always sends it.
+  model may ignore it.
 - **Keepalive connection.** The backend reuses one long-lived client derived from the injected one
   (an 8-connection 5-minute keepalive pool, a 2s connect and 15s read budget), so back-to-back lines
   reuse a warm connection instead of re-handshaking. It is pinned to HTTP/1.1: the speech endpoint
@@ -120,14 +114,14 @@ epoch-based stale-drop for little perceived gain.
 
 The primary cost lever remains the persistent disk cache, on by default, which keeps any already-heard
 line from being billed again across sessions. Its footprint is bounded by the **Cache Size Limit**
-(default 256 MiB) and evicted oldest-first (FIFO) so it never grows past the configured limit; a read
+(default 1024 MiB) and evicted oldest-first (FIFO) so it never grows past the configured limit; a read
 never rescues an old entry, and the just-written clip always survives. Setting the limit to `0` opts
 out of eviction entirely, so the cache keeps every clip for users who would rather spend disk than
 ever re-bill a line.
 
 ### Cave echo
 
-**Cave Echo** (off by default, Cloud only) adds a decaying echo to lines spoken while the player is
+**Cave Echo** (off by default) adds a decaying echo to lines spoken while the player is
 underground, so dialogue in a cave, dungeon, sewer or basement sounds enclosed. Underground is a pure
 coordinate test: the player's mirror-corrected world `Y` at or above `Constants.OVERWORLD_MAX_Y`,
 since every cave and dungeon is displaced north of the overworld. The echo is local DSP (a damped
@@ -136,31 +130,9 @@ the dry line under the unchanged cache key, so toggling the effect never invalid
 cloud backend is never re-billed for it: it is free, adds no network call, and does not affect billing
 or privacy.
 
-## Local (Kokoro) backend
+## Audio playback
 
-An external CPU engine reached over a process transport (one JSON request line per synthesis, one
-header line plus a raw float PCM frame back), spawned lazily off the game thread and kept alive across
-lines. Neutral-only by deliberate design so the local voice stays clean neural output. It runs only
-when **Voice Backend** is `Local`, and is then the only backend used: it is fully offline and makes no
-cloud calls.
-
-- **British-only by design.** Kokoro has no accent parameter: accent is baked into the chosen speaker
-  id, and its English voices offer only a narrow accent range backed by a small British bank.
-  Rather than wire the cloud accent system into it, every Local voice is British
-  (this is a British medieval fantasy world). The plugin's `KokoroVoice` bank holds only the British
-  (`bm_`/`bf_`) voices, split into a male pool and a female pool; race never selects a Local voice,
-  only gender does. Each NPC hashes its composition id (or name) into the gender pool for a stable,
-  distinct voice, and the player resolves to a fixed British voice by gender. Gender-correctness and
-  per-NPC variety survive; only accent and race-character variety go away. The plugin resolves the
-  speaker id and sends it explicitly, so the engine just renders it and owns no voice mapping of its
-  own. Accents, emotion, spoken language, speaking styles, free-text persona, and the character cap
-  are Cloud-only: each needs a network or LLM hop, or a capability the neutral local model lacks.
-- **Speaking pace.** **Speaking Pace** is sent to the engine as the `speed` field on every request, so
-  the offline voice actually speeds up or slows down. `cacheVariant` folds the pace into the cache key
-  only when it is not 100, so a pace change never replays stale Local audio while the default stays on
-  a stable key.
-- **Unavailable notice.** If the engine cannot start (unsupported platform, or a failed
-  download/verify/spawn), the backend surfaces a chat notice telling the player Local lines will be
-  silent and to switch to Cloud, instead of failing quietly. It is posted once when warm-up first
-  finds the engine unavailable and again for each line that then cannot be voiced, mirroring the
-  cloud backend's missing-key notice.
+Synthesized audio (a `Pcm` of mono float samples) is played through `javax.sound.sampled.SourceDataLine`
+by `StreamingAudioPlayer`, converting to signed 16-bit LE PCM via `PcmAudio`. Nothing is staged to a
+temp file, and a generation counter lets a new line interrupt the one currently playing. The Plugin Hub
+maintainers accept this `javax.sound` use for the plugin's streaming and interruption needs.

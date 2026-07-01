@@ -14,12 +14,9 @@ import com.grahambartley.dialogue.DialogueWidgetReader;
 import com.grahambartley.dialogue.PublicChatPolicy;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.BackendWarmUpPolicy;
-import com.grahambartley.synthesis.LocalKokoroBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import com.grahambartley.synthesis.ProfanityFilter;
 import com.grahambartley.synthesis.SynthesisDispatcher;
-import com.grahambartley.synthesis.engine.EngineInstaller;
-import com.grahambartley.synthesis.engine.ExternalEngineClient;
 import com.grahambartley.tts.CaveEchoPolicy;
 import com.grahambartley.tts.DialogueAudioService;
 import com.grahambartley.tts.DiskAudioCache;
@@ -117,25 +114,14 @@ public class VoicedDialoguePlugin extends Plugin {
 
     noticeManager = new ChatNoticeManager(client, configManager, clientThread, config);
 
-    // The local Kokoro backend runs the engine as an external --stdio process. The installer
-    // resolves the per-OS bundle from the bundled manifest and downloads it (off the game thread,
-    // lazily on warm-up); the client spawns and drives that process. No model or native libs ship
-    // in the plugin jar.
-    EngineInstaller installer = new EngineInstaller(okHttpClient, gson, ttsDir.resolve("engines"));
-    LocalKokoroBackend localKokoro =
-        new LocalKokoroBackend(
-            installer,
-            launcher -> new ExternalEngineClient(launcher, gson, config::speakingPace),
-            config::speakingPace);
-    localKokoro.setNotice(noticeManager::notifyFromBackendThread);
-    // The cloud OpenRouter backend is registered alongside the local Kokoro backend and selected
-    // when Voice Backend is Cloud and an API key is set. The provider routes every line to the
-    // selected backend and applies the emotion-downgrade rule; the two backends stay separate.
+    // Cloud-only: dialogue is voiced through OpenRouter. The backend reports available only once an
+    // API key is set, and a line it cannot voice is left silent (with a one-time notice) rather
+    // than routed anywhere else. No model or native binaries ship in the plugin jar.
     OpenRouterTtsBackend cloudBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     cloudBackend.setNotice(noticeManager::notifyFromBackendThread);
-    backendProvider = new BackendProvider(config, localKokoro, cloudBackend);
-    // Persistent on-disk cache lives under the same RuneLite dir as the engine; on by default so
-    // repeated lines survive restarts and cloud backends are not re-billed. Opt-out via config.
+    backendProvider = new BackendProvider(cloudBackend);
+    // Persistent on-disk cache under the plugin's RuneLite dir; on by default so repeated lines
+    // survive restarts and the cloud backend is not re-billed. Opt-out via config.
     DiskAudioCache diskCache =
         config.persistentCache()
             ? new DiskAudioCache(ttsDir.resolve("cache"), config.cacheSizeLimitMiB() * 1024L * 1024)
@@ -148,8 +134,8 @@ public class VoicedDialoguePlugin extends Plugin {
             CACHE_SIZE,
             QUEUE_CAPACITY,
             config::volume);
-    // Warm only the selected backend off the game thread so the first line is not the one that pays
-    // the install/spawn (Cloud) or model-load (Local) cost, and the game thread never blocks on it.
+    // Warm the backend off the game thread so the first line is not the one that pays the cloud
+    // connection handshake, and the game thread never blocks on it.
     audioService.prewarm(backendProvider::warmUpActive);
     // Speculative prefetch warms the cache for the dialogue options the player can see; it shares
     // the audio service's dedup and both cache tiers, runs off the game thread, and is gated by the
@@ -243,11 +229,11 @@ public class VoicedDialoguePlugin extends Plugin {
   }
 
   /**
-   * Warms up the newly selected backend off the game thread when a backend-affecting config key
-   * changes at runtime, so switching Voice Backend (or entering an OpenRouter key) installs /
-   * spawns / handshakes the engine immediately rather than starting cold on the next line. The
-   * decision lives in {@link BackendWarmUpPolicy}; the work runs on the pipeline thread via {@link
-   * DialogueAudioService#prewarm}. No-ops safely when the plugin is disabled or mid-shutdown.
+   * Warms up the backend off the game thread when a backend-affecting config key changes at
+   * runtime, so entering an OpenRouter key does the cloud connection handshake immediately rather
+   * than starting cold on the next line. The decision lives in {@link BackendWarmUpPolicy}; the
+   * work runs on the pipeline thread via {@link DialogueAudioService#prewarm}. No-ops safely when
+   * the plugin is disabled or mid-shutdown.
    */
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {

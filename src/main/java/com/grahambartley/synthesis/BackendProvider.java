@@ -1,73 +1,32 @@
 package com.grahambartley.synthesis;
 
-import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.tts.Pcm;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Single point of truth for which {@link SynthesisBackend} is active and how emotion is downgraded.
+ * Single point of truth for the active {@link SynthesisBackend} and how emotion is downgraded.
  *
- * <p>The active backend is resolved from {@link VoicedDialogueConfig#voiceBackend()} on every call,
- * so switching the backend in the config panel takes effect immediately without a client restart.
- * The two backends are kept strictly separate: the selected backend is the only one that ever runs.
- * Cloud means cloud only and Local means local only; there is no cross-backend fallback. A line the
- * selected backend cannot voice is simply not voiced.
+ * <p>The plugin is Cloud-only: there is one backend (OpenRouter), which this simply provides. A
+ * line the backend cannot voice (for example when no API key is set) is left unvoiced rather than
+ * routed elsewhere.
  *
  * <p>The emotion-downgrade rule lives here and nowhere else: {@link #synthesize} rewrites a
- * request's emotion to {@link Emotion#NEUTRAL} whenever the active backend does not list it in
- * {@link SynthesisBackend#supportedEmotions()}, so individual backends never have to special-case
- * emotions they cannot voice.
+ * request's emotion to {@link Emotion#NEUTRAL} whenever the backend does not list it in {@link
+ * SynthesisBackend#supportedEmotions()}, so the backend never has to special-case an emotion it
+ * cannot voice.
  */
 @Slf4j
 public final class BackendProvider {
 
-  /** Id of the offline Kokoro backend, selected when Voice Backend is Local. */
-  public static final String LOCAL_KOKORO_ID = "local-kokoro";
+  private final SynthesisBackend backend;
 
-  private final VoicedDialogueConfig config;
-  private final Map<String, SynthesisBackend> backends = new LinkedHashMap<>();
-
-  /**
-   * @param config the live plugin config, read on every resolution so runtime switches apply
-   * @param backendList the registered backends; one of them must have id {@code local-kokoro} so
-   *     the Local selection always resolves
-   */
-  public BackendProvider(VoicedDialogueConfig config, SynthesisBackend... backendList) {
-    this.config = config;
-    boolean hasLocalKokoro = false;
-    for (SynthesisBackend backend : backendList) {
-      backends.put(backend.id(), backend);
-      if (LOCAL_KOKORO_ID.equals(backend.id())) {
-        hasLocalKokoro = true;
-      }
-    }
-    if (!hasLocalKokoro) {
-      throw new IllegalArgumentException(
-          "BackendProvider requires a '" + LOCAL_KOKORO_ID + "' backend");
-    }
+  public BackendProvider(SynthesisBackend backend) {
+    this.backend = backend;
   }
 
-  /** Maps the config selection to a backend id. */
-  private static String backendIdFor(VoiceBackend selection) {
-    switch (selection) {
-      case CLOUD:
-        return OpenRouterTtsBackend.ID;
-      case LOCAL:
-      default:
-        return LOCAL_KOKORO_ID;
-    }
-  }
-
-  /**
-   * Resolves the backend the config currently selects. The selection is authoritative: an
-   * unavailable selected backend is still returned (its lines stay silent) rather than swapped for
-   * the other backend, so Cloud and Local never bleed into each other.
-   */
+  /** The active synthesis backend. */
   public SynthesisBackend active() {
-    return backends.get(backendIdFor(config.voiceBackend()));
+    return backend;
   }
 
   /**
@@ -90,7 +49,6 @@ public final class BackendProvider {
    * backend reflected in the cache key is the one that actually runs.
    */
   public Pcm synthesize(SynthesisRequest request) {
-    SynthesisBackend backend = active();
     return backend.synthesize(downgradeFor(backend, request));
   }
 
@@ -103,26 +61,20 @@ public final class BackendProvider {
   }
 
   /**
-   * Warms up the selected backend on the pipeline thread, so a backend gets its off-thread
-   * install/spawn/handshake (or model load) before the first line. Only the selected backend is
-   * touched: selecting Cloud never warms the local engine, and selecting Local never reaches the
-   * cloud. Safe to call repeatedly: each backend's {@code warmUp} is idempotent.
+   * Warms up the backend on the pipeline thread, so it does its off-thread handshake before the
+   * first line and the game thread never blocks on it. Safe to call repeatedly: {@code warmUp} is
+   * idempotent.
    */
   public void warmUpActive() {
-    SynthesisBackend wanted = active();
-    if (wanted != null) {
-      wanted.warmUp();
-    }
+    backend.warmUp();
   }
 
-  /** Releases every registered backend. */
+  /** Releases the backend. */
   public void close() {
-    for (SynthesisBackend backend : backends.values()) {
-      try {
-        backend.close();
-      } catch (RuntimeException e) {
-        log.debug("Error closing backend {}: {}", backend.id(), e.getMessage());
-      }
+    try {
+      backend.close();
+    } catch (RuntimeException e) {
+      log.debug("Error closing backend {}: {}", backend.id(), e.getMessage());
     }
   }
 }

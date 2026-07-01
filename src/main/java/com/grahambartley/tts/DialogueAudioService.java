@@ -7,7 +7,6 @@ import com.grahambartley.synthesis.SynthesisRequest;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -60,9 +59,9 @@ public final class DialogueAudioService {
   /**
    * Worker threads for the live synthesis pool. Two, sharing one queue, so a line stuck retrying a
    * slow cloud call (which is left running so its result still caches) does not block the next
-   * line: the free worker picks it up. Concurrent same-key calls are still de-duped, cloud calls
-   * each get their own pooled HTTP/1.1 connection, and the local engine's synth round-trip is
-   * synchronized, so two workers never contend on shared state (#196).
+   * line: the free worker picks it up. Concurrent same-key calls are still de-duped and each cloud
+   * call gets its own pooled HTTP/1.1 connection, so two workers never contend on shared state
+   * (#196).
    */
   private static final int SYNTH_THREADS = 2;
 
@@ -82,8 +81,8 @@ public final class DialogueAudioService {
   private final BackendProvider backends;
   private final AudioOutput output;
   private final Executor executor;
-  // Engine install/model-load runs here, NOT on the synthesis pool, so a long bundle
-  // download cannot block dialogue playback through an already-warm backend.
+  // Backend warm-up (the cloud connection handshake) runs here, NOT on the synthesis pool, so it
+  // can never block dialogue playback through an already-warm backend.
   private final Executor warmExecutor;
   // Speculative dialogue-tree prefetch runs here, off the synthesis pool, so warming the
   // next likely line never delays the line the player is actually hearing. Small fixed pool so no
@@ -154,9 +153,9 @@ public final class DialogueAudioService {
   }
 
   /**
-   * Runs a one-off warm-up task (engine install/model load) on the dedicated warm-up thread, kept
-   * separate from the synthesis pool so a long engine download never blocks dialogue playback
-   * through an already-warm backend.
+   * Runs a one-off backend warm-up task (the cloud connection handshake) on the dedicated warm-up
+   * thread, kept separate from the synthesis pool so it never blocks dialogue playback through an
+   * already-warm backend.
    */
   public void prewarm(Runnable warm) {
     warmExecutor.execute(warm);
@@ -182,8 +181,8 @@ public final class DialogueAudioService {
     }
     long mine = epoch.incrementAndGet();
     output.stop();
-    // Resolve the active backend now so the cache key reflects the backend that will actually run,
-    // even if the user switches backend before this line reaches the pipeline thread.
+    // Resolve the active backend now so the cache key reflects the backend that will actually run
+    // this line on the pipeline thread.
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
@@ -283,7 +282,9 @@ public final class DialogueAudioService {
         // orphan it.
         es.awaitTermination(2, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
+        // Shutting down anyway; the plugin does not re-raise the thread interrupt flag (a Hub
+        // constraint), so just stop waiting.
+        log.debug("Interrupted while awaiting executor shutdown");
       }
     }
   }
@@ -400,12 +401,12 @@ public final class DialogueAudioService {
   }
 
   private static Pcm await(CompletableFuture<Pcm> future) {
+    // join() rather than get() so there is no InterruptedException to catch and no need to re-raise
+    // the thread interrupt flag (a Hub constraint); a failed synth surfaces as an unchecked
+    // CompletionException, which drops the line.
     try {
-      return future.get();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return null;
-    } catch (ExecutionException e) {
+      return future.join();
+    } catch (RuntimeException e) {
       return null;
     }
   }
@@ -452,10 +453,9 @@ public final class DialogueAudioService {
   }
 
   /**
-   * A single-thread executor dedicated to engine warm-up (install/download/model load). Separate
-   * from the synthesis executor so a multi-minute engine download cannot stall dialogue playback;
-   * its queue is unbounded because warm-up tasks are few (one per backend) and must never be
-   * dropped under synthesis backpressure.
+   * A single-thread executor dedicated to backend warm-up (the cloud connection handshake).
+   * Separate from the synthesis executor so warm-up never stalls dialogue playback; its queue is
+   * unbounded because warm-up tasks are few and must never be dropped under synthesis backpressure.
    */
   private static ExecutorService buildWarmExecutor() {
     return new ThreadPoolExecutor(

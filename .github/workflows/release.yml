@@ -1,16 +1,23 @@
 name: Release
 
-# workflow_dispatch is the single deploy: it reads the source-pinned version (the committed
-# src/main/resources/plugin-version.txt, via `./gradlew printVersion`),
-# runs the gate, builds the thin + shadow jars AND the cross-platform Kokoro engine bundles, then
-# publishes ONE GitHub release under one v<version> tag carrying both jars, the engine bundles, and
-# the engine-manifest.json asset. The Hub builds its own jar from this source at the tagged commit,
-# so it carries the same version and resolves the engine published under the same tag. There is no
-# separate engine-only or jar-only release, and no manifest commit-back. The PR build/test gate
-# lives in ci.yml.
+# workflow_dispatch is the single deploy. It computes the next version from the latest v* tag and the
+# dispatched bump (patch/minor/major), writes it into runelite-plugin.properties (the single source
+# the Hub reads when it builds from source), commits that back to main, tags it v<version>, then
+# builds and publishes the plugin jars under that tag. The version is never hand-maintained. The
+# plugin is Cloud-only: no engine bundles, no per-OS assets, no manifest. The PR build/test gate lives
+# in ci.yml.
 on:
   workflow_dispatch:
     inputs:
+      bump:
+        description: "Version bump"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
       release_type:
         description: "Release type"
         required: true
@@ -24,16 +31,9 @@ on:
 permissions:
   contents: write
 
-env:
-  SHERPA_ONNX_VERSION: v1.13.3
-  MODEL_NAME: kokoro-multi-lang-v1_0
-
 jobs:
-  # ---------- Deploy: read source version, gate, build thin + shadow jars ----------
-  plugin:
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout repository
@@ -67,319 +67,51 @@ jobs:
           detailed_summary: true
           include_passed: true
 
-      - name: Read source-pinned version
+      - name: Compute next version
         id: version
         run: |
-          VERSION=$(./gradlew -q printVersion | tail -1 | tr -d '[:space:]')
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not read the project version from src/main/resources/plugin-version.txt"
-            exit 1
-          fi
-          if [[ "$VERSION" == *-SNAPSHOT ]]; then
-            echo "::error::Refusing to release a SNAPSHOT version ($VERSION). Set a release version in src/main/resources/plugin-version.txt on the commit you are releasing."
-            exit 1
-          fi
-          echo "Releasing version: ${VERSION}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match='v*' 2>/dev/null || echo "v0.0.0")
+          LATEST_VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_VERSION"
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "Previous: ${LATEST_VERSION}"
+          echo "New:      ${NEW_VERSION}"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Pin version and tag the release commit
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # runelite-plugin.properties is the version the Hub builds from, so the tagged commit must
+          # carry it. Write it, commit it back to main, and tag that commit v<version>.
+          sed -i -E "s/^version=.*/version=${NEW_VERSION}/" runelite-plugin.properties
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add runelite-plugin.properties
+          git commit -m "chore: release v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin HEAD:main
+          git push origin "v${NEW_VERSION}"
 
       - name: Build shadow JAR
         run: ./gradlew shadowJar
 
-      - name: Upload plugin jars
-        uses: actions/upload-artifact@v4
-        with:
-          name: plugin-jar
-          path: build/libs/*.jar
-
-  # ---------- Deploy: cross-platform Kokoro engine bundles ----------
-  # One job per target, each on a runner whose OS/arch matches the bundle so the jlink runtime and
-  # native libs are native to that platform. Versioned from the plugin job so every artifact in the
-  # release shares one v<version> tag.
-  engine:
-    needs: plugin
-    name: Build engine ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux-x64
-            os: ubuntu-latest
-            archive: tar.gz
-          - platform: win-x64
-            os: windows-latest
-            archive: zip
-          - platform: osx-aarch64
-            os: macos-14
-            archive: tar.gz
-    runs-on: ${{ matrix.os }}
-    env:
-      VERSION: v${{ needs.plugin.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: "17"
-          distribution: temurin
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Stage engine image (jars + native libs + licenses)
-        shell: bash
-        run: ./gradlew :engine-kokoro:engineImage -PtargetPlatform="${{ matrix.platform }}" -PengineVersion="${{ env.VERSION }}"
-
-      - name: Download and extract the Kokoro model
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${MODEL_NAME}.tar.bz2"
-          echo "Downloading model bundle (~349 MB) from $URL"
-          curl -fL --retry 3 -o model.tar.bz2 "$URL"
-          mkdir -p "$IMG"
-          tar -xjf model.tar.bz2 -C "$IMG"
-          # The engine resolves a 'model' directory beside the image; the bundle extracts as
-          # kokoro-multi-lang-v1_0, so normalise the name.
-          mv "$IMG/${MODEL_NAME}" "$IMG/model"
-          rm -f model.tar.bz2
-          test -f "$IMG/model/model.onnx"
-
-      - name: Build a self-contained Java runtime (jlink)
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          # Minimal runtime carrying the JDK modules the engine + sherpa-onnx need at run time, so
-          # end users need no JDK installed.
-          jlink \
-            --add-modules java.base,java.logging,java.desktop,jdk.unsupported \
-            --strip-debug --no-header-files --no-man-pages --compress=2 \
-            --output "$IMG/runtime"
-
-      - name: Conformance test against the built engine (Linux only)
-        # The native conformance test runs where bundling the model into the image is cheapest. The
-        # other targets are validated by their own --selftest below; this asserts the full --stdio
-        # frame round-trips on at least one real built engine in CI.
-        if: matrix.platform == 'linux-x64'
-        shell: bash
-        run: |
-          set -euo pipefail
-          export KOKORO_MODEL_DIR="$PWD/engine-kokoro/build/engine-image/model"
-          ./gradlew :engine-kokoro:test --tests 'com.grahambartley.engine.EngineConformanceTest'
-
-      # Run the native --selftest BEFORE any signing/notarization so a self-test failure is cheap
-      # and fast-fails the job: a signed/notarized bundle then always implies "passed self-test".
-      - name: Engine self-test (native synthesis smoke)
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          if [ "${{ matrix.platform }}" = "win-x64" ]; then
-            # cmd.exe can't take a forward-slash relative path (it parses `/build` as a switch), so
-            # resolve the launcher to an absolute Windows path with cygpath before handing it to cmd.
-            cmd //c "$(cygpath -w "$IMG/kokoro-engine.bat") --selftest"
-          else
-            chmod +x "$IMG/kokoro-engine"
-            "$IMG/kokoro-engine" --selftest
-          fi
-
-      # ---- Optional macOS code-signing (gated on secrets) ----
-      # Absent these secrets the bundle ships UNSIGNED and the documented right-click -> Open
-      # first-run path (plus the quarantine-xattr clear EngineInstaller does) is the fallback.
-      # Signing and notarization are split into separate steps so a notarize failure after a
-      # successful codesign doesn't force re-signing every Mach-O from scratch on a re-run.
-      - name: Codesign (macOS)
-        if: startsWith(matrix.platform, 'osx') && env.APPLE_TEAM_ID != '' && env.MACOS_CERT_P12 != ''
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          KEYCHAIN="$RUNNER_TEMP/engine-signing.keychain-db"
-          security create-keychain -p actions "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p actions "$KEYCHAIN"
-          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions "$KEYCHAIN"
-          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | awk -F '"' 'NR==1{print $2}')
-          # Sign every Mach-O (native libs + runtime binaries) then the launcher.
-          find "$IMG" \( -name '*.dylib' -o -name '*.jnilib' -o -path '*/runtime/bin/*' \) -type f \
-            -exec codesign --force --options runtime --timestamp --sign "$IDENTITY" {} \;
-          codesign --force --options runtime --timestamp --sign "$IDENTITY" "$IMG/kokoro-engine" || true
-          # Mark codesigned outside the image (so it never ships in the bundle) for the summary step.
-          touch "$RUNNER_TEMP/codesigned"
-
-      - name: Notarize (macOS)
-        if: startsWith(matrix.platform, 'osx') && env.APPLE_ID != '' && env.APPLE_TEAM_ID != '' && env.APPLE_APP_PASSWORD != '' && env.MACOS_CERT_P12 != ''
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          # Notarize a zip of the (already codesigned) image. Stapling applies to app bundles; for a
-          # plain directory bundle the notarization ticket plus quarantine clear is the path.
-          ditto -c -k --keepParent "$IMG" "$RUNNER_TEMP/notarize.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
-            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
-          # The "signed" marker the package step + manifest generator key off is set only once both
-          # codesign and notarize succeeded.
-          touch "$IMG/signed"
-
-      - name: macOS signing summary
-        if: startsWith(matrix.platform, 'osx')
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          if [ -f "$IMG/signed" ]; then
-            MSG="macOS signing: applied (codesigned + notarized)"
-          elif [ -f "$RUNNER_TEMP/codesigned" ]; then
-            MSG="macOS signing: partial (codesigned, NOT notarized; check Apple notary secrets)"
-          else
-            MSG="macOS signing: skipped (APPLE_TEAM_ID / MACOS_CERT_P12 not set) -> bundle ships UNSIGNED"
-          fi
-          echo "$MSG"
-          echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
-
-      # ---- Optional Windows code-signing (gated on secrets) ----
-      - name: Sign (Windows)
-        if: matrix.platform == 'win-x64' && env.WINDOWS_CERT_PFX != ''
-        env:
-          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
-          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
-        shell: pwsh
-        run: |
-          $img = "engine-kokoro/build/engine-image"
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", [Convert]::FromBase64String($env:WINDOWS_CERT_PFX))
-          $targets = Get-ChildItem -Path $img -Recurse -Include *.exe,*.dll
-          foreach ($t in $targets) {
-            & signtool sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $t.FullName
-          }
-          New-Item -ItemType File -Path "$img/signed" -Force | Out-Null
-
-      - name: Windows signing summary
-        if: matrix.platform == 'win-x64'
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          if [ -f "$IMG/signed" ]; then
-            MSG="Windows signing: applied (signtool)"
-          else
-            MSG="Windows signing: skipped (WINDOWS_CERT_PFX not set) -> bundle ships UNSIGNED"
-          fi
-          echo "$MSG"
-          echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Package bundle + checksum
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMG="engine-kokoro/build/engine-image"
-          OUT="dist/${{ matrix.platform }}"
-          mkdir -p "$OUT"
-          BUNDLE="kokoro-engine-${{ env.VERSION }}-${{ matrix.platform }}"
-          if [ "${{ matrix.archive }}" = "zip" ]; then
-            # Archive the image CONTENTS at the bundle root (cd into the image, add "*"), so the
-            # layout matches the tar.gz branch below (-C "$IMG" .). Adding "engine-image/*" from the
-            # parent instead nests everything under an engine-image/ wrapper dir, which lands the
-            # launcher at installDir/engine-image/kokoro-engine.bat and makes EngineInstaller report
-            # the launcher as missing on Windows (the macOS/Linux tar.gz bundles were unaffected).
-            ( cd "$IMG" && 7z a -tzip "$GITHUB_WORKSPACE/$OUT/$BUNDLE.zip" "*" >/dev/null )
-            FILE="$OUT/$BUNDLE.zip"
-          else
-            tar -czf "$OUT/$BUNDLE.tar.gz" -C "$IMG" .
-            FILE="$OUT/$BUNDLE.tar.gz"
-          fi
-          # sha256, portable across runners.
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum "$FILE" | awk '{print $1}' > "$FILE.sha256"
-          else
-            shasum -a 256 "$FILE" | awk '{print $1}' > "$FILE.sha256"
-          fi
-          # Carry the signed marker (if any) so the manifest generator can flag it.
-          if [ -f "$IMG/signed" ]; then touch "$OUT/signed"; fi
-          echo "Built $FILE ($(cat "$FILE.sha256"))"
-
-      - name: Upload target artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: engine-${{ matrix.platform }}
-          path: dist/${{ matrix.platform }}/*
-
-  # ---------- Deploy: one tagged release with jar + engine bundles + manifest ----------
-  publish:
-    name: Publish release + manifest
-    needs: [plugin, engine]
-    runs-on: ubuntu-latest
-    env:
-      VERSION: v${{ needs.plugin.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Download release shadow JAR
-        uses: actions/download-artifact@v4
-        with:
-          name: plugin-jar
-          path: plugin-dist
-
-      - name: Download engine target artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: engine-*
-          path: release-artifacts
-
-      - name: Normalise artifact layout
-        shell: bash
-        run: |
-          set -euo pipefail
-          # download-artifact lays each out under release-artifacts/engine-<platform>/...; rename to
-          # the platform id the generator expects.
-          cd release-artifacts
-          for d in engine-*; do
-            mv "$d" "${d#engine-}"
-          done
-          ls -R .
-
-      - name: Generate engine-manifest.json
-        shell: bash
-        run: |
-          mkdir -p dist-manifest
-          python3 engine-kokoro/scripts/generate_manifest.py \
-            --version "${{ env.VERSION }}" \
-            --repo "${{ github.repository }}" \
-            --artifacts-dir release-artifacts \
-            --out dist-manifest/engine-manifest.json
-          cat dist-manifest/engine-manifest.json
-
       - name: Generate changelog
         env:
           GH_TOKEN: ${{ github.token }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           gh api \
             --method POST \
             /repos/${{ github.repository }}/releases/generate-notes \
-            -f tag_name=${{ env.VERSION }} \
+            -f tag_name="v${NEW_VERSION}" \
             --jq .body > release-notes.md
 
           if [ ! -s release-notes.md ]; then
@@ -393,27 +125,15 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
+          NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           PRERELEASE_FLAG=""
           if [ "${{ inputs.release_type }}" != "stable" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
-          # Re-runnable: create the release if missing, otherwise refresh its assets.
-          if gh release view "${{ env.VERSION }}" >/dev/null 2>&1; then
-            echo "Release exists, refreshing assets"
-          else
-            gh release create "${{ env.VERSION }}" \
-              --title "Voiced Dialogue ${{ env.VERSION }}" \
-              --notes-file release-notes.md \
-              $PRERELEASE_FLAG
-          fi
-          # Attach both plugin jars (thin + shadow), the engine-manifest.json asset, and every
-          # engine bundle + sha256. The plugin fetches engine-manifest.json from this release at
-          # runtime, so it is a release asset, not a committed resource: no manifest commit-back. A
-          # per-file loop (not find -exec) so any failed upload fails the step.
-          while IFS= read -r -d '' f; do
-            gh release upload "${{ env.VERSION }}" "$f" --clobber \
-              || { echo "::error::release asset upload failed for $f"; exit 1; }
-          done < <(find plugin-dist dist-manifest release-artifacts -type f \( -name '*.jar' -o -name 'engine-manifest.json' -o -name '*.tar.gz' -o -name '*.zip' -o -name '*.sha256' \) -print0)
+          gh release create "v${NEW_VERSION}" \
+            --title "Voiced Dialogue v${NEW_VERSION}" \
+            --notes-file release-notes.md \
+            $PRERELEASE_FLAG \
+            build/libs/*.jar

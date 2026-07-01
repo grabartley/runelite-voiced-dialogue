@@ -1,4 +1,4 @@
 repository=https://github.com/grabartley/runelite-voiced-dialogue.git
 commit=REPLACE_WITH_40_CHAR_RELEASE_COMMIT_SHA
 authors=grabartley
-warning=With the Cloud (OpenRouter) voice backend selected, the dialogue text being spoken is sent to OpenRouter over HTTPS using your API key. The local backend stays fully offline and sends nothing off your machine.
+warning=This plugin voices dialogue through the OpenRouter cloud service: the dialogue text being spoken is sent to OpenRouter over HTTPS using your own API key. A key is required and nothing is voiced without one.

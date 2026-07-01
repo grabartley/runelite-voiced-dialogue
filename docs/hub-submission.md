@@ -1,9 +1,8 @@
 # Plugin Hub submission runbook
 
 How to list **Voiced Dialogue** (internal name `voiced-dialogue`) on the official
-[RuneLite Plugin Hub](https://github.com/runelite/plugin-hub). This is a maintainer
-action performed once the engine release bundles exist; it is not part of the normal
-plugin build.
+[RuneLite Plugin Hub](https://github.com/runelite/plugin-hub). This is a maintainer action; it
+is not part of the normal plugin build.
 
 ## How the Hub consumes this repo
 
@@ -32,14 +31,13 @@ repo; copy it into the fork and fill in the commit.
 
 - The repository is public.
 - A `LICENSE` exists at the repo root (this repo ships MIT).
-- A `v<version>` GitHub Release matching the version in `src/main/resources/plugin-version.txt` is published, with
-  the engine bundles and the `engine-manifest.json` asset attached (the `Release` deploy does this).
-  The Hub-built jar carries that same version and fetches the manifest from the matching release at
-  runtime, so until that release is cut the local backend cannot install. Do not submit before the
-  deploy has published the matching release.
+- A `v<version>` GitHub Release exists, cut by the `Release` deploy. Its tagged commit carries the
+  matching `version` in `runelite-plugin.properties` (the deploy writes and commits it). Do not submit
+  before the deploy has published the release.
 - `runelite-plugin.properties` is non-placeholder (no `Example` / `Nobody` /
-  `An example greeter plugin`, which the packager rejects), and declares `build=standard`.
-  Its `version` matches `src/main/resources/plugin-version.txt` (the build fails otherwise).
+  `An example greeter plugin`, which the packager rejects), and declares `build=standard`. Its
+  `version` is the single source of truth, set by the deploy from the dispatched bump; you do not edit
+  it by hand.
 - The plugin jar builds clean: no native libraries, no model, well under the 10 MiB
   source/jar limit. `./gradlew jar` produces a ~362 KiB jar (mostly the bundled
   `npc-voices.json` data table).
@@ -47,16 +45,15 @@ repo; copy it into the fork and fill in the commit.
   `build.gradle` with the Hub's, which hard-sets `options.release=11`, so any Java 12+ syntax
   or API in main sources (records, pattern-matching `instanceof`, `Stream.toList()`, ...) fails
   the Hub build. Our own `compileJava` pins `options.release=11` to catch this locally; keep it
-  that way. Tests and the `engine-kokoro` subproject are unaffected (the Hub never builds them).
+  that way. Tests are unaffected (the Hub never builds them).
 
 ## Step 1: Cut the matching release
 
-The `Release` deploy creates the tag and the release the descriptor points at. Bump the version in
-`src/main/resources/plugin-version.txt` **and** `runelite-plugin.properties` (they must match or the
-build fails) to the release version, merge it, then dispatch `Release` (Actions tab -> "Run
-workflow") with the `release_type`. It tags `v<version>` and publishes the release with both jars,
-the engine bundles, and the `engine-manifest.json` asset. Then copy that tag's commit sha for the
-descriptor:
+The `Release` deploy creates the tag and the release the descriptor points at. Dispatch `Release`
+(Actions tab -> "Run workflow") with the `bump` (`patch`/`minor`/`major`) and the `release_type`. It
+computes the next version from the latest `v*` tag, writes it into `runelite-plugin.properties`,
+commits that back to `main`, tags the commit `v<version>`, and publishes the release with the plugin
+jars. You never edit a version number by hand. Then copy that tag's commit sha for the descriptor:
 
 ```bash
 git fetch --tags
@@ -82,7 +79,7 @@ placeholder with the sha from Step 1:
 repository=https://github.com/grabartley/runelite-voiced-dialogue.git
 commit=<full 40-char sha from `git rev-parse v1.0.0`>
 authors=grabartley
-warning=With the Cloud (OpenRouter) voice backend selected, the dialogue text being spoken is sent to OpenRouter over HTTPS using your API key. The local backend stays fully offline and sends nothing off your machine.
+warning=This plugin voices dialogue through the OpenRouter cloud service: the dialogue text being spoken is sent to OpenRouter over HTTPS using your own API key. A key is required and nothing is voiced without one.
 ```
 
 The descriptor file name **is** the internal plugin name and must be lowercase
@@ -113,7 +110,7 @@ Common automated-audit failures and how this repo already avoids them:
 
 | Check | Status here |
 |-------|-------------|
-| No bundled native libraries / no model in the jar | The engine + model are downloaded at runtime by `EngineInstaller`; the jar is classes + four JSON resources only. |
+| No bundled native libraries / no model in the jar | Cloud-only: there is no synthesis engine or model at all; the jar is classes + three data resources only. |
 | No `new OkHttpClient()` / `new OkHttpClient.Builder()` / `new Gson()` / `new GsonBuilder()` (disallowed APIs) | All HTTP/JSON uses the injected `OkHttpClient` / `Gson`. |
 | Resources via `getResourceAsStream` (jar not unpacked) | All bundled JSON loads via `getResourceAsStream`. |
 | Jar under 10 MiB | ~362 KiB. No `jarSizeLimitMiB` override needed. |
@@ -126,5 +123,5 @@ fresh branch off `upstream/master` and open another small PR.
 
 ## Out of scope for this runbook
 
-Cutting and signing the Kokoro engine release bundle (epic #34) is a separate
-operational step that must complete first. This runbook covers only the Hub listing.
+This runbook covers only the Hub listing. The plugin is Cloud-only, so there is no engine
+bundle to build or sign.

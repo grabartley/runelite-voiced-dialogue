@@ -12,10 +12,10 @@ import net.runelite.api.NPC;
 
 /**
  * Resolves an NPC name to a backend-neutral {@link VoiceSpec}: its detected race and gender plus a
- * stable, gender-correct per-NPC British speaker id. Detection failures voice as the default human
- * male (preserving the long-standing cloud fallback); the Local speaker depends only on gender. An
- * NPC unknown to the bundled table (and the learned cache) triggers a one-off background wiki
- * lookup so the next line voices it correctly. Emits the debug trace once with the chosen speaker.
+ * stable per-NPC variety seed. Detection failures voice as the default human male (preserving the
+ * long-standing cloud fallback). An NPC unknown to the bundled table (and the learned cache)
+ * triggers a one-off background wiki lookup so the next line voices it correctly. Emits the debug
+ * trace once.
  */
 @Slf4j
 final class NpcVoiceResolver {
@@ -66,29 +66,39 @@ final class NpcVoiceResolver {
     }
 
     // The spec carries the voice categories the cloud backend reads: an unrecognised race speaks as
-    // human and an unknown gender as male, matching the long-standing default. Local ignores race
-    // and picks purely on gender.
+    // human and an unknown gender as male, matching the long-standing default.
     NPCRace voiceRace = race == NPCRace.UNKNOWN ? NPCRace.HUMAN : race;
     NPCGender voiceGender = gender == NPCGender.FEMALE ? NPCGender.FEMALE : NPCGender.MALE;
-    int speakerId = KokoroSpeakerPool.pickNpcSpeakerId(voiceGender, npc.getId(), npcName);
+    int seed = voiceSeed(npc.getId(), npcName);
     if (config != null && config.debugMode()) {
-      log.info(
-          VoiceTraceFormatter.buildNpcTrace(npcName, npc.getId(), race, gender, source, speakerId));
+      log.info(VoiceTraceFormatter.buildNpcTrace(npcName, npc.getId(), race, gender, source, seed));
     }
-    return VoiceSpec.npc(voiceRace, voiceGender, speakerId);
+    return VoiceSpec.npc(voiceRace, voiceGender, seed);
   }
 
   /**
    * The default voice for an NPC whose race/gender could not be detected: the human male the cloud
-   * backend has always fallen back to, with a stable Local speaker keyed off the id or name.
+   * backend has always fallen back to, with a stable per-NPC variety seed keyed off the id or name.
    */
   private VoiceSpec defaultVoice(String npcName, Integer npcId, String source) {
-    int speakerId = KokoroSpeakerPool.pickNpcSpeakerId(NPCGender.MALE, npcId, npcName);
+    int seed = voiceSeed(npcId, npcName);
     if (config != null && config.debugMode()) {
       log.info(
           VoiceTraceFormatter.buildNpcTrace(
-              npcName, npcId, NPCRace.UNKNOWN, NPCGender.UNKNOWN, source, speakerId));
+              npcName, npcId, NPCRace.UNKNOWN, NPCGender.UNKNOWN, source, seed));
     }
-    return VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, speakerId);
+    return VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, seed);
+  }
+
+  /**
+   * A stable, non-negative per-NPC variety seed (#78). The composition id is preferred so the same
+   * NPC type always resolves the same voice regardless of how its name was presented; the
+   * normalised name is the fallback key. Kept non-negative so it is never treated as an absent
+   * seed.
+   */
+  private static int voiceSeed(Integer npcId, String npcName) {
+    int hash =
+        npcId != null ? Integer.hashCode(npcId) : NameNormalizer.normalize(npcName).hashCode();
+    return hash & Integer.MAX_VALUE;
   }
 }

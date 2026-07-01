@@ -11,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.VoicedDialogueConfig.VoiceBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -55,22 +54,17 @@ public class ChatNoticeManagerTest {
 
   private Object[] missingCloudKeyCases() {
     return new Object[] {
-      // Cloud with a blank key warns
-      new Object[] {VoiceBackend.CLOUD, false, true},
-      // Cloud with a key set stays quiet
-      new Object[] {VoiceBackend.CLOUD, true, false},
-      // Local needs no key, so it never warns
-      new Object[] {VoiceBackend.LOCAL, false, false},
-      // Local with a key set still never warns
-      new Object[] {VoiceBackend.LOCAL, true, false},
+      // a blank/missing key warns
+      new Object[] {false, true},
+      // a key set stays quiet
+      new Object[] {true, false},
     };
   }
 
   @Test
   @Parameters(method = "missingCloudKeyCases")
-  public void shouldWarnMissingCloudKeyOnlyForCloudWithNoKey(
-      VoiceBackend backend, boolean keySet, boolean expected) {
-    assertEquals(expected, ChatNoticeManager.shouldWarnMissingCloudKey(backend, keySet));
+  public void shouldWarnMissingCloudKeyOnlyWhenNoKey(boolean keySet, boolean expected) {
+    assertEquals(expected, ChatNoticeManager.shouldWarnMissingCloudKey(keySet));
   }
 
   @Test
@@ -100,9 +94,7 @@ public class ChatNoticeManagerTest {
   }
 
   @Test
-  public void missingKeyWarningPostsOnceForCloudWithNoKey() {
-    when(config.voiceBackend()).thenReturn(VoiceBackend.CLOUD);
-
+  public void missingKeyWarningPostsOnceWhenNoKey() {
     manager.maybeWarnMissingCloudKey(false);
     manager.maybeWarnMissingCloudKey(false);
 
@@ -116,8 +108,6 @@ public class ChatNoticeManagerTest {
 
   @Test
   public void missingKeyWarningStaysQuietWhenKeyAvailable() {
-    when(config.voiceBackend()).thenReturn(VoiceBackend.CLOUD);
-
     manager.maybeWarnMissingCloudKey(true);
 
     verify(client, never())
