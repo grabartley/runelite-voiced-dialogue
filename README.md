@@ -7,7 +7,6 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-> [!WARNING]
 > Voiced Dialogue leverages a cloud service ([OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. It requires usage credits: you pay only for the audio you generate, and the average line of dialogue costs $0.00247 (~€0.0023) to voice. See [Get started](#get-started) for setup.
 
 ## Gielinor, out loud

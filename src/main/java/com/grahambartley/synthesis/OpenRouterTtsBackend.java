@@ -6,6 +6,7 @@ import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
@@ -558,7 +559,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * generic check-your-key message with the code for context.
    */
   static String failureNotice(int httpCode) {
-    if (httpCode == 402) {
+    if (httpCode == HttpURLConnection.HTTP_PAYMENT_REQUIRED) {
       return OUT_OF_CREDITS_NOTICE;
     }
     return "OpenRouter TTS request failed (HTTP "
