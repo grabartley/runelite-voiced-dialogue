@@ -1,5 +1,10 @@
 package com.grahambartley.synthesis;
 
+import static com.grahambartley.synthesis.OpenRouterTtsBackend.HTTP_TOO_MANY_REQUESTS;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_PAYMENT_REQUIRED;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -175,7 +180,7 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     SynthesisRequest request =
@@ -196,7 +201,7 @@ public class OpenRouterTtsBackendTest {
     short[] samples = {0, 16384, -16384, 32767};
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(samples))));
 
     Pcm pcm = backend(config).synthesize(req());
@@ -212,7 +217,7 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-secret";
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config).synthesize(req());
@@ -243,7 +248,7 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     SynthesisRequest female =
@@ -294,7 +299,7 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config)
@@ -436,7 +441,7 @@ public class OpenRouterTtsBackendTest {
     config.maxChars = 30;
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     String longLine = "This is a long sentence. More text that should be dropped beyond the cap.";
@@ -459,7 +464,7 @@ public class OpenRouterTtsBackendTest {
 
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
     backend(config).synthesize(req());
     JsonObject defaultBody =
@@ -469,7 +474,7 @@ public class OpenRouterTtsBackendTest {
     config.speedPercent = 150;
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
     backend(config).synthesize(req());
     JsonObject fastBody =
@@ -487,7 +492,7 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config).synthesize(req());
@@ -508,7 +513,7 @@ public class OpenRouterTtsBackendTest {
     // translation hop, so a single enqueued speech response is enough.
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     assertNotNull(backend(config).synthesize(req()));
@@ -555,10 +560,10 @@ public class OpenRouterTtsBackendTest {
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     // Even with English as the base, the NPC style forces the translation hop; it is served first.
     server.enqueue(
-        new MockResponse().setResponseCode(200).setBody(chatResponse("no cap, well met")));
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("no cap, well met")));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config)
@@ -612,7 +617,7 @@ public class OpenRouterTtsBackendTest {
     // The NPC line: NPC style None -> straight to speech, a single call, no translation hop.
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
     backend(config)
         .synthesize(
@@ -625,10 +630,10 @@ public class OpenRouterTtsBackendTest {
 
     // The player line: player style Gen Z -> translation hop first, then speech.
     server.enqueue(
-        new MockResponse().setResponseCode(200).setBody(chatResponse("no cap, well met")));
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("no cap, well met")));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
     backend(config)
         .synthesize(
@@ -724,10 +729,10 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     // The translator call is served first, then the speech call (same mock server, queue order).
-    server.enqueue(new MockResponse().setResponseCode(200).setBody(chatResponse("Bonjour")));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Bonjour")));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config)
@@ -759,7 +764,7 @@ public class OpenRouterTtsBackendTest {
     // A skip-translation line bypasses the hop entirely, so only the speech call is enqueued.
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config)
@@ -790,10 +795,10 @@ public class OpenRouterTtsBackendTest {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    server.enqueue(new MockResponse().setResponseCode(200).setBody(chatResponse("Bonjour")));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Bonjour")));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
 
     backend(config)
@@ -839,7 +844,8 @@ public class OpenRouterTtsBackendTest {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    server.enqueue(new MockResponse().setResponseCode(500).setBody("translation down"));
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("translation down"));
 
     int[] notices = {0};
     OpenRouterTtsBackend backend = backend(config);
@@ -857,13 +863,13 @@ public class OpenRouterTtsBackendTest {
     OpenRouterTtsBackend backend = backend(config);
     assertFalse("a fresh backend is not throttled", backend.isThrottled());
 
-    server.enqueue(new MockResponse().setResponseCode(429).setBody("slow down"));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_TOO_MANY_REQUESTS).setBody("slow down"));
     backend.synthesize(req());
     assertTrue("a 429 opens a back-off window so prefetch holds off", backend.isThrottled());
 
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
     backend.synthesize(req());
     assertFalse("a clean call clears the back-off", backend.isThrottled());
@@ -873,7 +879,7 @@ public class OpenRouterTtsBackendTest {
   public void nonSuccessResponseReturnsNullWithOneNotice() {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    server.enqueue(new MockResponse().setResponseCode(401).setBody("Unauthorized"));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("Unauthorized"));
 
     int[] notices = {0};
     OpenRouterTtsBackend backend = backend(config);
@@ -886,14 +892,48 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void outOfCreditsResponseSurfacesTopUpNotice() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_PAYMENT_REQUIRED).setBody("Insufficient credits"));
+
+    String[] noticeText = {null};
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setNotice(msg -> noticeText[0] = msg);
+
+    Pcm pcm = backend.synthesize(req());
+
+    assertNull("a 402 fails the line gracefully", pcm);
+    assertEquals(
+        "a 402 surfaces the out-of-credits notice, not the key check",
+        OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE,
+        noticeText[0]);
+  }
+
+  @Test
+  public void failureNoticeSplitsOutOfCreditsFromGenericFailures() {
+    assertEquals(
+        "402 gets the dedicated top-up notice",
+        OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE,
+        OpenRouterTtsBackend.failureNotice(HTTP_PAYMENT_REQUIRED));
+    assertTrue(
+        "other codes keep the generic key-check notice with the code for context",
+        OpenRouterTtsBackend.failureNotice(HTTP_UNAUTHORIZED).contains("HTTP 401"));
+    assertFalse(
+        "the out-of-credits notice never blames the key",
+        OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE.contains("key"));
+  }
+
+  @Test
   public void transientEmptyBodyIsRetriedOnceAndRecovers() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
     // First call comes back as an empty 200 (the transient glitch); the immediate retry succeeds.
-    server.enqueue(new MockResponse().setResponseCode(200).setBody(""));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1, 2, 3}))));
 
     int[] notices = {0};
@@ -909,8 +949,8 @@ public class OpenRouterTtsBackendTest {
   public void repeatedEmptyBodyFailsAfterOneRetry() {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    server.enqueue(new MockResponse().setResponseCode(200).setBody(""));
-    server.enqueue(new MockResponse().setResponseCode(200).setBody(""));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
 
     int[] notices = {0};
     OpenRouterTtsBackend backend = backend(config);
@@ -942,11 +982,11 @@ public class OpenRouterTtsBackendTest {
     // The first line ends mid-utterance; the immediate retry returns a complete line.
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(completeAudio()))));
 
     int[] notices = {0};
@@ -964,11 +1004,11 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
 
     int[] notices = {0};
@@ -987,7 +1027,9 @@ public class OpenRouterTtsBackendTest {
     config.key = "sk-or-abc";
     // A 200 whose body is an odd byte count is not whole 16-bit PCM, so it fails to decode.
     server.enqueue(
-        new MockResponse().setResponseCode(200).setBody(new Buffer().write(new byte[] {1, 2, 3})));
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(new byte[] {1, 2, 3})));
 
     assertNull("undecodable audio fails the line gracefully", backend(config).synthesize(req()));
   }
@@ -1032,8 +1074,8 @@ public class OpenRouterTtsBackendTest {
   public void noticeFiresAtMostOnceAcrossRepeatedFailures() {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
-    server.enqueue(new MockResponse().setResponseCode(500));
-    server.enqueue(new MockResponse().setResponseCode(500));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
 
     int[] notices = {0};
     OpenRouterTtsBackend backend = backend(config);
@@ -1054,7 +1096,7 @@ public class OpenRouterTtsBackendTest {
     // The backed-off retry gets a clean line.
     server.enqueue(
         new MockResponse()
-            .setResponseCode(200)
+            .setResponseCode(HTTP_OK)
             .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1, 2, 3}))));
 
     int[] notices = {0};

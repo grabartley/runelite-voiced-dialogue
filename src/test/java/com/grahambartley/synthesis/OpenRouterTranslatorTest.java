@@ -1,5 +1,7 @@
 package com.grahambartley.synthesis;
 
+import static com.grahambartley.synthesis.OpenRouterTtsBackend.HTTP_TOO_MANY_REQUESTS;
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
@@ -69,7 +71,8 @@ public class OpenRouterTranslatorTest {
 
   @Test
   public void translatesAndReturnsTrimmedContent() throws Exception {
-    server.enqueue(new MockResponse().setResponseCode(200).setBody(chatResponse("  Bonjour  ")));
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("  Bonjour  ")));
 
     String result = translator().translate("Hello", "French", "sk-or-abc");
 
@@ -99,13 +102,14 @@ public class OpenRouterTranslatorTest {
 
   @Test
   public void nonSuccessReturnsNull() {
-    server.enqueue(new MockResponse().setResponseCode(429).setBody("rate limited"));
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_TOO_MANY_REQUESTS).setBody("rate limited"));
     assertNull(translator().translate("Hello", "French", "sk-or-abc"));
   }
 
   @Test
   public void unparseableOrEmptyBodyReturnsNull() {
-    server.enqueue(new MockResponse().setResponseCode(200).setBody("not json"));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("not json"));
     assertNull(translator().translate("Hello", "French", "sk-or-abc"));
   }
 

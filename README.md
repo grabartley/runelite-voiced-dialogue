@@ -7,6 +7,8 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
+> Voiced Dialogue leverages a cloud service ([OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
+
 ## Gielinor, out loud
 
 Every quest, every shopkeeper, every back-alley stranger: **now they actually talk.** Voiced Dialogue gives NPCs and your own adventurer real AI voices in real time, turning silent text boxes into a living, breathing world you can hear.
@@ -32,7 +34,7 @@ Install from the **RuneLite Plugin Hub**: open RuneLite, click the wrench (Confi
 Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRouter](https://openrouter.ai) API key. There is no subscription: you load a few euro of credit once and only pay for the audio you actually generate. Setup takes about two minutes:
 
 1. **Create an account.** Go to [openrouter.ai](https://openrouter.ai), click **Sign Up**, and pick **Sign in with Google** (GitHub or email work too).
-2. **Add credits.** Open your [Credits page](https://openrouter.ai/settings/credits) and top up. **€5 is plenty to start.**
+2. **Add credits.** Open your [Credits page](https://openrouter.ai/settings/credits) and top up. **€5 is plenty to start.** A line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice, so €5 covers over 2,000 lines.
 3. **Create an API key.** Open your [API Keys page](https://openrouter.ai/settings/keys), create a new key (name it anything, like `RuneLite`), and copy it.
 4. **Paste the key into the plugin.** In RuneLite, open the Voiced Dialogue settings and paste it into the **OpenRouter API Key** field under **General**.
 5. **Talk to someone.** Walk up to any NPC and start a conversation. If they answer out loud, you are done.
