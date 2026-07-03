@@ -195,8 +195,10 @@ public final class DialogueAudioService {
    * #speak}, it never plays audio and never touches the playback epoch, so it cannot interrupt or
    * be interrupted by the line currently playing. It shares the same in-flight dedup and both cache
    * tiers as {@link #speak}, so a prefetch and a real line for the same key never both bill the
-   * backend, and an already-cached line is a cheap no-op. Skipped when the active backend is
-   * unavailable or rate-limit backing off, so speculation never piles onto a 429.
+   * backend, and an already-cached line is a cheap no-op. Safe to call from the game thread: the
+   * pre-submit check reads only the in-memory tier, so the disk tier is never touched on the
+   * caller's thread. Skipped when the active backend is unavailable or rate-limit backing off, so
+   * speculation never piles onto a 429.
    */
   public void prefetch(SynthesisRequest request) {
     if (request == null || request.text() == null || request.text().isEmpty()) {
@@ -208,7 +210,10 @@ public final class DialogueAudioService {
     }
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
-    if (lookup(key) != null) {
+    // Memory tier only: prefetch is driven from the game thread, and a full lookup would read the
+    // disk tier synchronously there. A line cached only on disk is caught by the in-task re-check
+    // below, which runs on the prefetch pool.
+    if (cache.get(key) != null) {
       return;
     }
     long node = prefetchEpoch.get();

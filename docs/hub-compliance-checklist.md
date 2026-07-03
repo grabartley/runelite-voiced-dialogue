@@ -32,10 +32,12 @@ pool, derives from it via `newBuilder()` (allowed):
 
 **Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors (a 2-thread
 bounded synthesis pool, a warm-up thread for the cloud connection handshake, and a 2-thread
-prefetch pool); the OpenRouter HTTP calls execute on those threads. NPC auto-learn lookups
-run on their own `tts-wiki-learn` daemon thread. User-facing notices are hopped back to the
-client thread via `clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread
-never makes a network call or blocks on synthesis.
+prefetch pool); the OpenRouter HTTP calls execute on those threads. Disk cache I/O also stays
+on those pool threads: the prefetch fast-path checks only the in-memory tier, so the game
+thread never reads the on-disk cache. NPC auto-learn lookups run on their own
+`tts-wiki-learn` daemon thread. User-facing notices are hopped back to the client thread via
+`clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread never makes a network
+call, reads the disk cache, or blocks on synthesis.
 
 ### No subprocess, no `Thread.sleep`, no thread interrupt
 
