@@ -67,9 +67,7 @@ a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which
 
 - First-run onboarding chat notice (`ChatNoticeManager`): "...Your dialogue text is then sent
   to OpenRouter to be voiced. Until a key is set, lines stay silent."
-- General section header (`VoicedDialogueConfig`): "...Dialogue text is sent to OpenRouter over
-  HTTPS with your key to be voiced, so it leaves your machine."
-- API Key field description: key is "Stored locally and never bundled with the plugin."
+- General section header (`VoicedDialogueConfig`): "...Text is sent to OpenRouter."
 - The Hub listing itself carries the off-machine-data `warning=` in the descriptor (see
   [`hub-submission.md`](hub-submission.md) and
   [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)).
