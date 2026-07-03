@@ -886,6 +886,39 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void outOfCreditsResponseSurfacesTopUpNotice() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(new MockResponse().setResponseCode(402).setBody("Insufficient credits"));
+
+    String[] noticeText = {null};
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setNotice(msg -> noticeText[0] = msg);
+
+    Pcm pcm = backend.synthesize(req());
+
+    assertNull("a 402 fails the line gracefully", pcm);
+    assertEquals(
+        "a 402 surfaces the out-of-credits notice, not the key check",
+        OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE,
+        noticeText[0]);
+  }
+
+  @Test
+  public void failureNoticeSplitsOutOfCreditsFromGenericFailures() {
+    assertEquals(
+        "402 gets the dedicated top-up notice",
+        OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE,
+        OpenRouterTtsBackend.failureNotice(402));
+    assertTrue(
+        "other codes keep the generic key-check notice with the code for context",
+        OpenRouterTtsBackend.failureNotice(401).contains("HTTP 401"));
+    assertFalse(
+        "the out-of-credits notice never blames the key",
+        OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE.contains("key"));
+  }
+
+  @Test
   public void transientEmptyBodyIsRetriedOnceAndRecovers() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";

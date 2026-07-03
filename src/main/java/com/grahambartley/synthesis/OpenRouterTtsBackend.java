@@ -120,6 +120,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       "Add your OpenRouter API key in the Voiced Dialogue settings to hear dialogue; without a key,"
           + " lines are not voiced.";
 
+  /**
+   * User-facing notice for HTTP 402, OpenRouter's insufficient-credits rejection: the key is valid
+   * and the account balance is the problem, so the fix is a top-up rather than a key check.
+   */
+  static final String OUT_OF_CREDITS_NOTICE =
+      "Your OpenRouter account is out of credits, so dialogue cannot be voiced. Top up at"
+          + " openrouter.ai/settings/credits.";
+
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
   private final Gson gson;
@@ -406,10 +414,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           if (response.code() == 429) {
             backoff.recordRateLimited();
           }
-          warnOnce(
-              "OpenRouter TTS request failed (HTTP "
-                  + response.code()
-                  + "); check your API key. This line was not voiced.");
+          warnOnce(failureNotice(response.code()));
           logFailure(
               "non-2xx",
               attempt,
@@ -545,6 +550,20 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       }
     }
     return null;
+  }
+
+  /**
+   * The one-time user notice for a non-2xx speech response. A 402 is OpenRouter's
+   * insufficient-credits rejection and gets the dedicated top-up notice; anything else keeps the
+   * generic check-your-key message with the code for context.
+   */
+  static String failureNotice(int httpCode) {
+    if (httpCode == 402) {
+      return OUT_OF_CREDITS_NOTICE;
+    }
+    return "OpenRouter TTS request failed (HTTP "
+        + httpCode
+        + "); check your API key. This line was not voiced.";
   }
 
   /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
