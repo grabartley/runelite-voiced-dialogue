@@ -1474,6 +1474,21 @@
     "14469": {"name": "Queen Zyanyi Arkan", "race": "Human", "gender": "Female", "ethnicity": "varlamore"},
     "15711": {"name": "Demon butler", "race": "Demon", "gender": "Male"},
     "15941": {"name": "Efaritay Hallow", "race": "Human", "gender": "Female", "ethnicity": "morytania"},
-    "21273": {"name": "Skotos", "race": "Demon", "gender": "Male"}
+    "21273": {"name": "Skotos", "race": "Demon", "gender": "Male"},
+    "16204": {"name": "Lowerniel Drakan", "race": "Undead", "gender": "Male", "ethnicity": "morytania"},
+    "15911": {"name": "Vanescula Drakan", "race": "Undead", "gender": "Female", "ethnicity": "morytania"},
+    "15960": {"name": "Sugadinti Vitur", "race": "Undead", "gender": "Male", "ethnicity": "morytania"},
+    "15961": {"name": "Sugadinti Vitur", "race": "Undead", "gender": "Male", "ethnicity": "morytania"},
+    "15962": {"name": "Sugadinti Vitur", "race": "Undead", "gender": "Male", "ethnicity": "morytania"},
+    "15942": {"name": "Efaritay Hallow", "race": "Human", "gender": "Female", "ethnicity": "morytania"},
+    "15953": {"name": "Efaritay Hallow", "race": "Human", "gender": "Female", "ethnicity": "morytania"},
+    "16005": {"name": "Sarei", "race": "Human", "gender": "Female"},
+    "16006": {"name": "Sarei", "race": "Human", "gender": "Female"},
+    "16007": {"name": "Sarei", "race": "Human", "gender": "Female"},
+    "16008": {"name": "Sarei", "race": "Human", "gender": "Female"},
+    "16009": {"name": "Sarei", "race": "Human", "gender": "Female"},
+    "16242": {"name": "Sarei", "race": "Human", "gender": "Female"},
+    "16268": {"name": "Aranei", "race": "Human", "gender": "Female"},
+    "6161": {"name": "Sarius Guile", "race": "Human", "gender": "Female", "ethnicity": "morytania"}
   }
 }
