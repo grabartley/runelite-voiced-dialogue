@@ -579,6 +579,60 @@ public class DialogueAudioServiceTest {
     assertEquals("a cancelled prefetch never reaches the backend", 0, backend.requests.size());
   }
 
+  /** Counts disk-tier reads so a lookup on the wrong thread is observable. */
+  private static final class CountingDiskCache extends DiskAudioCache {
+    final AtomicInteger gets = new AtomicInteger();
+
+    CountingDiskCache(Path dir) {
+      super(dir);
+    }
+
+    @Override
+    public Pcm get(String backendId, String voiceKey, Emotion emotion, String text) {
+      gets.incrementAndGet();
+      return super.get(backendId, voiceKey, emotion, text);
+    }
+  }
+
+  @Test
+  public void prefetchEarlyOutNeverReadsTheDiskCacheOnTheCallingThread() {
+    // prefetch(...) is driven from the game thread, so its pre-submit early-out must stay
+    // memory-tier only. Seed the disk tier in one session, then prefetch in a fresh session whose
+    // memory tier is empty: everything before the executor drains runs on the caller's thread, so
+    // any disk read counted there is a game-thread disk read.
+    Path cacheDir = tmp.getRoot().toPath().resolve("cache");
+    SynthesisRequest line = req("Only on disk", NPCRace.HUMAN, NPCGender.MALE);
+    FakeBackend seedBackend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor seedExec = new DeferredExecutor();
+    DialogueAudioService seeder =
+        new DialogueAudioService(
+            provider(seedBackend),
+            new FakeOutput(),
+            new DiskAudioCache(cacheDir),
+            seedExec,
+            8,
+            () -> 100);
+    seeder.speak(line);
+    seedExec.runAll();
+    assertEquals("seeding session wrote the line", 1, seedBackend.requests.size());
+
+    CountingDiskCache disk = new CountingDiskCache(cacheDir);
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc =
+        new DialogueAudioService(provider(backend), new FakeOutput(), disk, executor, 8, () -> 100);
+
+    svc.prefetch(line);
+
+    assertEquals(
+        "the prefetch call must not read the disk tier on its own thread", 0, disk.gets.get());
+
+    executor.runAll();
+
+    assertTrue("the queued task reads the disk tier on the pool", disk.gets.get() >= 1);
+    assertEquals("the disk hit means the backend is never billed", 0, backend.requests.size());
+  }
+
   @Test
   public void prefetchedLineIsNotRebilledWhenSpokenAcrossTiers() {
     // Prefetch writes through to disk too, so even a fresh in-memory tier serves the spoken line.

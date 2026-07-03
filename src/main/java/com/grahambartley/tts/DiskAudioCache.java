@@ -46,7 +46,7 @@ import lombok.extern.slf4j.Slf4j;
  * old entry from being dropped; the just-written entry always survives because it is the newest.
  */
 @Slf4j
-public final class DiskAudioCache {
+public class DiskAudioCache {
 
   /**
    * Magic + version prefix so a future format change can be detected and treated as a miss rather
