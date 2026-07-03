@@ -113,6 +113,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
   private static final int BODY_SNIPPET_MAX_BYTES = 300;
 
+  /** RFC 6585 Too Many Requests, absent from {@link HttpURLConnection}'s status constants. */
+  static final int HTTP_TOO_MANY_REQUESTS = 429;
+
   /**
    * User-facing notice shown when no API key is set. Shared with the plugin's startup check so the
    * two paths never drift.
@@ -412,7 +415,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         long elapsedMs = elapsedMs(attemptStart);
 
         if (!response.isSuccessful()) {
-          if (response.code() == 429) {
+          if (response.code() == HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
           warnOnce(failureNotice(response.code()));

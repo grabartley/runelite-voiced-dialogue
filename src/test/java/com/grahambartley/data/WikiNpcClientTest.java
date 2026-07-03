@@ -1,5 +1,6 @@
 package com.grahambartley.data;
 
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -90,7 +91,7 @@ public class WikiNpcClientTest {
 
   @Test
   public void nonSuccessIsAMiss() {
-    server.enqueue(new MockResponse().setResponseCode(500));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
     assertNull(client.lookup("Anything"));
   }
 
