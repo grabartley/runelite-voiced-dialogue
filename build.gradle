@@ -43,8 +43,9 @@ group = 'com.grahambartley'
 
 // runelite-plugin.properties is the single source of truth for the version: the Hub reads its
 // `version` when it builds from source, and build.gradle reads the same field here so the jar and the
-// release tag always agree with what the Hub ships. It is written by the release workflow (from the
-// dispatched bump), so the version is never hand-maintained.
+// release tag always agree with what the Hub ships. The release workflow writes it (from the
+// dispatched bump) onto the tagged release commit only, never onto main, so the version is never
+// hand-maintained and the value on main stays a dev placeholder.
 def pluginProperties = new Properties()
 file('runelite-plugin.properties').withInputStream { pluginProperties.load(it) }
 version = pluginProperties.getProperty('version')?.trim()
