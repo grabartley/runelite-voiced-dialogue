@@ -2,10 +2,11 @@ name: Release
 
 # workflow_dispatch is the single deploy. It computes the next version from the latest v* tag and the
 # dispatched bump (patch/minor/major), writes it into runelite-plugin.properties (the single source
-# the Hub reads when it builds from source), commits that back to main, tags it v<version>, then
-# builds and publishes the plugin jars under that tag. The version is never hand-maintained. The
-# plugin is Cloud-only: no engine bundles, no per-OS assets, no manifest. The PR build/test gate lives
-# in ci.yml.
+# the Hub reads when it builds from source), commits that back to main, rebuilds the plugin jars from
+# that pinned tree, and publishes them. The v<version> tag is created together with the release at
+# publish time (gh release create --target <sha>), so a mid-run failure before publish never leaves a
+# dangling tag. The version is never hand-maintained. The plugin is Cloud-only: no engine bundles, no
+# per-OS assets, no manifest. The PR build/test gate lives in ci.yml.
 on:
   workflow_dispatch:
     inputs:
@@ -30,6 +31,12 @@ on:
 
 permissions:
   contents: write
+
+# Serialize dispatches. Two concurrent runs would compute the same version and race the push/tag;
+# cancel-in-progress: false lets an in-flight release finish before the next one starts.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -88,42 +95,51 @@ jobs:
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
           echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Pin version and tag the release commit
+      - name: Pin version and commit the release SHA
+        id: pin
         env:
           NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          # runelite-plugin.properties is the version the Hub builds from, so the tagged commit must
+          # runelite-plugin.properties is the version the Hub builds from, so the released commit must
           # carry it. Write it, commit the change back to main only if it actually differs (the
           # computed version can already match, e.g. the first release after the file was set by
-          # hand), then always tag the current commit (which now carries the version) and push it.
+          # hand), then record the resulting SHA. The tag is NOT created here: it is created together
+          # with the release at publish time, so a failure before publish leaves no dangling tag.
           sed -i -E "s/^version=.*/version=${NEW_VERSION}/" runelite-plugin.properties
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add runelite-plugin.properties
           if git diff --cached --quiet; then
-            echo "runelite-plugin.properties already at ${NEW_VERSION}; tagging without a commit"
+            echo "runelite-plugin.properties already at ${NEW_VERSION}; releasing current commit"
           else
             git commit -m "chore: release v${NEW_VERSION}"
             git push origin HEAD:main
           fi
-          git tag "v${NEW_VERSION}"
-          git push origin "v${NEW_VERSION}"
+          RELEASE_SHA=$(git rev-parse HEAD)
+          echo "Release SHA: ${RELEASE_SHA}"
+          echo "sha=${RELEASE_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Build shadow JAR
-        run: ./gradlew shadowJar
+      - name: Build release artifacts from pinned tree
+        run: |
+          set -euo pipefail
+          # clean removes any stale-version jar left in build/libs by the earlier test gate, so both
+          # published jars are rebuilt from the pinned tree and carry the new version.
+          ./gradlew clean jar shadowJar
 
       - name: Generate changelog
         env:
           GH_TOKEN: ${{ github.token }}
           NEW_VERSION: ${{ steps.version.outputs.version }}
           PREV_TAG: ${{ steps.version.outputs.prev_tag }}
+          RELEASE_SHA: ${{ steps.pin.outputs.sha }}
         run: |
           set -euo pipefail
-          # Notes for everything deployed since the last release tag. On the first release there is
-          # no previous tag, so previous_tag_name is omitted and GitHub includes every commit on
-          # main up to this release.
-          ARGS=(-f tag_name="v${NEW_VERSION}")
+          # Notes for everything deployed since the last release tag. The tag does not exist yet, so
+          # pass target_commitish (the release SHA) alongside tag_name. On the first release there is
+          # no previous tag, so previous_tag_name is omitted and GitHub includes every commit on main
+          # up to this release.
+          ARGS=(-f tag_name="v${NEW_VERSION}" -f target_commitish="${RELEASE_SHA}")
           if [ -n "${PREV_TAG}" ]; then
             ARGS+=(-f previous_tag_name="${PREV_TAG}")
             echo "Changelog: ${PREV_TAG}..v${NEW_VERSION}"
@@ -148,14 +164,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NEW_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_SHA: ${{ steps.pin.outputs.sha }}
         run: |
           set -euo pipefail
+          # gh release create --target <sha> creates the v<version> tag at that commit when it does
+          # not exist, so the tag and the release appear together. Upload explicit asset paths (not a
+          # *.jar glob) so exactly the two new-version jars ship and no stale jar can slip in.
           PRERELEASE_FLAG=""
           if [ "${{ inputs.release_type }}" != "stable" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
           gh release create "v${NEW_VERSION}" \
+            --target "${RELEASE_SHA}" \
             --title "Voiced Dialogue v${NEW_VERSION}" \
             --notes-file release-notes.md \
             $PRERELEASE_FLAG \
-            build/libs/*.jar
+            "build/libs/voicedDialogue-${NEW_VERSION}.jar" \
+            "build/libs/voicedDialogue-${NEW_VERSION}-all.jar"
