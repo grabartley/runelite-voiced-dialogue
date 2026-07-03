@@ -20,14 +20,17 @@ are no network calls or large downloads when choosing a voice.
 ## Data source
 
 The [Old School RuneScape Wiki](https://oldschool.runescape.wiki) is the
-authoritative, current source. Every NPC page transcludes `Template:Infobox NPC`,
+authoritative, current source. Talkable NPCs transclude `Template:Infobox NPC`,
 which exposes `race`, `gender`, `leagueRegion`, `location` and one or more cache
-`id`s. The generator:
+`id`s; talkable creatures transclude `Template:Infobox Monster`, which carries
+none of those, so their race comes from the page's categories. The generator:
 
-1. Enumerates every main-namespace page transcluding `Template:Infobox NPC` (via
-   the MediaWiki `embeddedin` API).
-2. Fetches each page's lead wikitext in batches and parses every infobox.
-3. Maps each cache id to `{race, gender, ethnicity}`.
+1. Enumerates every main-namespace page transcluding either infobox template
+   (via the MediaWiki `embeddedin` API).
+2. Fetches each page's lead wikitext and categories in batches and parses every
+   infobox.
+3. Maps each cache id to `{race, gender, ethnicity}`, deriving race from the
+   page categories when the infobox does not carry it.
 
 Because race and gender come straight from the wiki, townsfolk get the correct
 gender (e.g. Cecilia is Female) and newly released NPCs (Varlamore, etc.) are
@@ -42,10 +45,10 @@ name still resolves to a documented NPC is covered too.
 > **Coverage notes.** The live client reports a transformed/multiloc NPC's
 > *active* id, which can differ from its base composition id; the runtime resolves
 > by the active id first (then the base id) to match the wiki. Combat creatures use
-> a separate `Infobox Monster` that carries **no race/gender/ethnicity**, so they
-> cannot be auto-derived; the handful of *talkable* monsters (e.g. TzHaar-Mej) are
-> pinned in `overrides.json`. Anything still unknown (a brand-new NPC) is left to
-> the runtime auto-learn fallback.
+> a separate `Infobox Monster` that carries **no race/gender/ethnicity**, so their
+> race is derived from the page's categories (e.g. TzHaar-Mej); `overrides.json`
+> covers only the cases the categories get wrong. Anything still unknown (a
+> brand-new NPC) is left to the runtime auto-learn fallback.
 
 ## Mapping rules
 

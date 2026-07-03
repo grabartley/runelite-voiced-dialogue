@@ -38,7 +38,7 @@ This skill is used directly by humans and also as a handoff step from the build 
 
 - Always branch from latest `main`, never from other branches
 - Use a fresh worktree per PR, don't reuse worktrees across branches
-- Worktree path: `./.claude/worktrees/tts-<branch-name>` (sibling directory)
+- Worktree path: `./.claude/worktrees/tts-<branch-name>`
 - Branch names: kebab-case (e.g. `fix-voice-fallback`, `add-static-npc-map`)
 - Commit messages: `<type>: <lowercase description>`, no period at end
 - Types: feat, fix, refactor, test, docs, chore

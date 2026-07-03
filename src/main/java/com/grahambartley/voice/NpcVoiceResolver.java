@@ -12,10 +12,9 @@ import net.runelite.api.NPC;
 
 /**
  * Resolves an NPC name to a backend-neutral {@link VoiceSpec}: its detected race and gender plus a
- * stable per-NPC variety seed. Detection failures voice as the default human male (preserving the
- * long-standing cloud fallback). An NPC unknown to the bundled table (and the learned cache)
- * triggers a one-off background wiki lookup so the next line voices it correctly. Emits the debug
- * trace once.
+ * stable per-NPC variety seed. Detection failures voice as the default human male. An NPC unknown
+ * to the bundled table (and the learned cache) triggers a one-off background wiki lookup so the
+ * next line voices it correctly. Emits the debug trace once.
  */
 @Slf4j
 final class NpcVoiceResolver {

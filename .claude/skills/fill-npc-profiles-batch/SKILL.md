@@ -6,8 +6,8 @@ description: Bulk-author bespoke per-NPC voice profiles (and race/gender/ethnici
 # Fill in NPC profiles for a league region
 
 Bulk-add bespoke `byId` profiles and corrections for every talkable NPC in a
-**league region** at a time, themed by region to avoid overlap. The engine and
-per-NPC editing are covered by `add-npc-profile`; this skill is the **batch
+**league region** at a time, themed by region to avoid overlap. Per-NPC
+profile editing is covered by `add-npc-profile`; this skill is the **batch
 research + authoring** loop. Work in a fresh worktree (see the `worktree` skill)
 tied to the batch issue, and do every edit, regen, and commit **inside that
 worktree** (verify `pwd` and `git branch --show-current`; the shell can land you

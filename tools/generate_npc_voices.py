@@ -486,10 +486,12 @@ def main():
             "description": "Static precomputed npcId -> {race, gender, ethnicity?} lookup plus "
                            "cloud voice profiles, baked into the plugin. Generated offline by "
                            "tools/generate_npc_voices.py from the Old School RuneScape Wiki "
-                           "(Infobox NPC). Do not hand-edit; edit tools/overrides.json or "
+                           "(Infobox NPC and Infobox Monster pages; Monster races derive from "
+                           "page categories). Do not hand-edit; edit tools/overrides.json or "
                            "tools/profiles.json and regenerate.",
             "schema": "npcs[id] = { race, gender, ethnicity? }",
-            "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location), "
+            "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) "
+                      "and Infobox Monster (race from page categories), "
                       "cross-referenced by name against a full id dump for variant ids, "
                       "+ curated tools/overrides.json; profiles from tools/profiles.json.",
             "npc_pages": page_count,
