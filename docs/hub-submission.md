@@ -79,7 +79,7 @@ placeholder with the sha from Step 1:
 repository=https://github.com/grabartley/runelite-voiced-dialogue.git
 commit=<full 40-char sha from `git rev-parse v1.0.0`>
 authors=grabartley
-warning=This plugin voices dialogue through the OpenRouter cloud service: the dialogue text being spoken is sent to OpenRouter over HTTPS using your own API key. A key is required and nothing is voiced without one.
+warning=This plugin sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not controlled or verified by the RuneLite developers) over HTTPS, using your API key, to synthesize speech.
 ```
 
 The descriptor file name **is** the internal plugin name and must be lowercase

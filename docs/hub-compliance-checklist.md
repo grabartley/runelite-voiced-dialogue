@@ -119,9 +119,9 @@ From `runelite-plugin.properties`:
 
 Descriptor `warning=` (off-machine-data disclosure, from
 [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)): "This plugin
-voices dialogue through the OpenRouter cloud service: the dialogue text being spoken is sent
-to OpenRouter over HTTPS using your own API key. A key is required and nothing is voiced
-without one."
+sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not
+controlled or verified by the RuneLite developers) over HTTPS, using your API key, to
+synthesize speech."
 
 ## Manual QA still required before submission
 

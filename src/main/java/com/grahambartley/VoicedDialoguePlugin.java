@@ -190,7 +190,7 @@ public class VoicedDialoguePlugin extends Plugin {
       wikiExecutor.shutdownNow();
       wikiExecutor = null;
     }
-    log.info("TTS Plugin stopped");
+    log.info("VoicedDialogue stopped");
   }
 
   @Subscribe
