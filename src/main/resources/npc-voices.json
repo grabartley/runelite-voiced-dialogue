@@ -6,7 +6,7 @@
     "npc_pages": 5917,
     "count": 13711,
     "name_matched_ids": 713,
-    "overrides_applied": 1489,
+    "overrides_applied": 1490,
     "race_counts": {
       "Demon": 776,
       "Dwarf": 517,
@@ -22,8 +22,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1924,
-      "Male": 11787
+      "Female": 1923,
+      "Male": 11788
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -81360,7 +81360,7 @@
     },
     "13890": {
       "race": "Human",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "varlamore"
     },
     "13891": {
