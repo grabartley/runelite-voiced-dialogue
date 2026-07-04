@@ -83,7 +83,7 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   already-cached lines are skipped, and leaving the node cancels still-queued prefetches. Gated by
   **Prefetch Dialogue**.
 - **Optional translation.** With **Spoken Language** set to anything but English, `OpenRouterTranslator`
-  translates each line through `google/gemini-3.1-flash-lite-preview` (a fixed per-language system
+  translates each line through `google/gemini-3.1-flash-lite` (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,
   which then carries a BCP-47 `language_code` derived from the base language. The language (with any
   quirk) is folded into the cache key, so a line is translated and billed at most once per

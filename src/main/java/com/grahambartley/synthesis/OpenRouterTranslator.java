@@ -32,7 +32,7 @@ final class OpenRouterTranslator {
   /**
    * The lightweight model used for the translation hop: fast and cheap relative to the TTS call.
    */
-  static final String MODEL = "google/gemini-3.1-flash-lite-preview";
+  static final String MODEL = "google/gemini-3.1-flash-lite";
 
   static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
   private static final String USER_AGENT = "runelite-voiced-dialogue";
