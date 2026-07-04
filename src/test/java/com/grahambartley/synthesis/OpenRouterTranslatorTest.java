@@ -86,7 +86,7 @@ public class OpenRouterTranslatorTest {
         "RuneLite Voiced Dialogue",
         recorded.getHeader("X-Title"));
     JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
-    assertEquals("google/gemini-3.1-flash-lite-preview", body.get("model").getAsString());
+    assertEquals("google/gemini-3.1-flash-lite", body.get("model").getAsString());
     assertEquals(
         "throughput routing applies to the translation hop too",
         "throughput",
