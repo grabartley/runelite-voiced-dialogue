@@ -1,19 +1,16 @@
-# Synthesis backend
+# Synthesis architecture
 
-The plugin is Cloud-only: every dialogue line is routed through the single OpenRouter
-`SynthesisBackend`. `BackendProvider` provides that backend and applies the emotion-downgrade rule (an
-emotion the model cannot voice is rewritten to Neutral before synthesis). A line the backend cannot
-voice (for example when no API key is set) is left silent rather than routed anywhere else.
+Every dialogue line is voiced through a single pipeline: an OpenRouter speech call implemented by
+the `SynthesisBackend` that `BackendProvider` supplies. `BackendProvider` also applies the
+emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
+A line the pipeline cannot voice (for example when no API key is set) is left silent.
 
-| Backend | Engine location | Emotion | Setup cost |
-|---------|-----------------|---------|------------|
-| OpenRouter (Gemini) | OpenRouter speech API over HTTPS | Happy, Sad, Angry, Scared, Neutral | your own OpenRouter API key |
+Emotion is detected from each speaker's chat-head animation and rides in every request as one of
+Happy, Sad, Angry, Scared, or Neutral. It is rendered as an inline Gemini style tag on the spoken
+text (`[happy]`, `[sad]`, `[angry]`, `[fearful]`), so happy, sad, angry, and scared lines are
+audibly different; Neutral carries no tag.
 
-Emotion is detected from each speaker's chat-head animation and rides in every request. The backend
-renders it as an inline Gemini style tag on the spoken text (`[happy]`, `[sad]`, `[angry]`,
-`[fearful]`), so happy, sad, angry, and scared lines are audibly different; Neutral carries no tag.
-
-## Cloud (OpenRouter) backend
+## The OpenRouter speech call
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It
 needs an OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent. The
@@ -32,7 +29,7 @@ problem fails that line gracefully (it is left unvoiced) and surfaces a one-time
 
 ### Cost and latency controls
 
-Because the cloud backend is billed per character, several guards keep cost bounded and latency low:
+Because synthesis is billed per character, several guards keep cost bounded and latency low:
 
 - **Cache key.** `cacheVariant` folds in the model, the resolved Gemini voice, and (only when not at
   their defaults) the speaking pace, the character cap, the character profile, and a non-English
@@ -55,7 +52,7 @@ Because the cloud backend is billed per character, several guards keep cost boun
 - **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter
   `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
   model may ignore it.
-- **Keepalive connection.** The backend reuses one long-lived client derived from the injected one
+- **Keepalive connection.** The pipeline reuses one long-lived client derived from the injected one
   (an 8-connection 5-minute keepalive pool, a 2s connect and 15s read budget), so back-to-back lines
   reuse a warm connection instead of re-handshaking. It is pinned to HTTP/1.1: the speech endpoint
   streams raw PCM, and HTTP/2 would multiplex the prefetch pool and the live line onto one
@@ -127,7 +124,7 @@ coordinate test: the player's mirror-corrected world `Y` at or above `Constants.
 since every cave and dungeon is displaced north of the overworld. The echo is local DSP (a damped
 feedback comb) applied to a fresh buffer at playback, after both cache tiers. Both tiers still store
 the dry line under the unchanged cache key, so toggling the effect never invalidates the cache and the
-cloud backend is never re-billed for it: it is free, adds no network call, and does not affect billing
+line is never re-billed for it: it is free, adds no network call, and does not affect billing
 or privacy.
 
 ## Audio playback

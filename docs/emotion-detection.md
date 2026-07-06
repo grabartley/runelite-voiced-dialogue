@@ -3,8 +3,8 @@
 The plugin reads the speaker's chat-head animation off the dialogue widget
 (`InterfaceID.ChatLeft.HEAD` for NPC lines, `InterfaceID.ChatRight.HEAD` for player lines) via
 `Widget.getAnimationId()`, then maps that seq id to an `Emotion` through the bundled
-`src/main/resources/expression-emotions.json` table. The mapped emotion is what the cloud backend
-renders (see [backends.md](backends.md)). Any id not in the table, and `-1`, resolve to `NEUTRAL`.
+`src/main/resources/expression-emotions.json` table. The mapped emotion is what the synthesis
+pipeline renders (see [architecture.md](architecture.md)). Any id not in the table, and `-1`, resolve to `NEUTRAL`.
 
 ## How OSRS actually exposes dialogue expressions
 

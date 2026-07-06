@@ -15,17 +15,27 @@ Every quest, every shopkeeper, every back-alley stranger: **now they actually ta
 
 Walk up, talk, and listen. That is the whole setup.
 
+<!--
+## Hear it
+
+Template for embedded demo clips; uncomment once clips exist. Each slot is a short
+video or audio link with a one-line caption. Suggested slots: a quest conversation
+with distinct NPC voices, an angry chat-head delivering a furious line, and the same
+NPC in pirate speak or another language.
+-->
+
 ## What you get
 
 - **A voice for everyone.** NPCs and the player each get a distinct voice, so a goblin never sounds like a king.
-- **Thousands of NPCs, already voiced.** The plugin knows exactly who is speaking and picks the right voice from a bundled table of **nearly 13,700 NPCs**, matched by race and gender, with no lookups or lag mid-conversation. Bump into someone added in a future update? **Auto-learn** quietly looks them up on the wiki once and remembers them.
-- **Accents and personalities with real craft.** **12 races and 13 regional origins** each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **nearly 6,400 NPCs** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
+- **Over 13,700 NPCs, already voiced.** The plugin knows exactly who is speaking and instantly picks the right voice, matched by race and gender. Bump into someone added in a future game update? Flip on **Auto-learn** and the plugin works out who they are all by itself.
+- **Accents and personalities with real craft.** 12 races and 13 regional origins each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **over 6,400 NPCs** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
 - **Real emotion.** The plugin reads each speaker's chat-head expression and delivers the line happy, sad, angry, scared, or neutral, so a furious dwarf actually sounds furious.
 - **You star in it too.** Set your own hero's accent, persona, and pace and play the dashing knight, the gruff mercenary, or the chaos goblin of your dreams.
+- **Your chat, out loud.** Turn on **Voice My Public Chat** and everything you type in public chat is spoken in your character's voice.
 - **Speak any language, any vibe.** Pipe dialogue through another language, or drop a delivery style over it: be a roadman in Gen Z slang among posh nobles, or run the whole realm as a pirate crew.
 - **Atmosphere on tap.** Lines spoken underground pick up a cave echo, so dungeons and sewers feel enclosed.
 - **Clean by default.** Always-on, offline profanity filtering keeps things friendly with no setup.
-- **Fast and out of the way.** Synthesis and playback run off the game thread and replay from a cache, so the client stays snappy even when you mash through dialogue.
+- **Fast and out of the way.** Voices play in real time, and skipping a line cuts its audio instantly, so the client stays snappy even when you mash through dialogue.
 
 ## Get started
 
@@ -41,73 +51,41 @@ Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRoute
 
 Until a key is set, lines stay silent and a one-time notice points you to the key.
 
-## How it sounds
-
-| Voice | Where it runs | Emotion | Accents | Setup |
-|-------|---------------|---------|---------|-------|
-| **Cloud (OpenRouter)** | Gemini 3.1 Flash TTS over HTTPS | Yes (5 moods) | Yes | a free OpenRouter API key |
-
-> **Privacy:** the dialogue text being spoken is sent to OpenRouter over HTTPS using your key. A key is required and nothing is voiced without one. Audio you have already heard replays from a local cache instead of being re-generated.
-
-See [docs/backends.md](docs/backends.md) for the full architecture.
-
 ## The features, up close
 
 <details>
 <summary><b>Emotion from expressions</b></summary>
 
-Each new line's emotion is read from the speaker's chat-head expression animation (the NPC head for NPC lines, the player head for yours) and mapped to one of five moods: Neutral, Happy, Sad, Angry, Scared. That mood rides along as an inline style tag so happy, sad, angry, and scared delivery is audibly distinct. Controlled by the **Emotional Delivery** toggle (on by default); turn it off to voice everything neutral.
-
-The mapping is derived from the live OSRS cache and lives in [`src/main/resources/expression-emotions.json`](src/main/resources/expression-emotions.json). [docs/emotion-detection.md](docs/emotion-detection.md) covers exactly how it is harvested and regenerated.
+The plugin watches the speaker's chat-head as they talk (the NPC's head for their lines, yours for your own) and matches the voice to the expression: one of Neutral, Happy, Sad, Angry, or Scared. A cheerful greeting sounds bright, a threat sounds menacing, a plea sounds desperate. Controlled by the **Emotional Delivery** toggle; turn it off to voice everything neutral.
 
 </details>
 
 <details>
 <summary><b>Character profiles and accents</b></summary>
 
-Every speaker gets a **character profile** that steers an accent, a persona, and a pace. This is a **British** medieval fantasy world: commoners speak plain common British, while royalty, knights, and high society get posh Received Pronunciation, with lore-driven exceptions (leprechauns Irish, vampyres Dracula-esque, trolls South London, dwarves Scottish, goblins mischievous and high).
+Every speaker gets a **character profile** that steers an accent, a persona, and a pace. This is a British medieval fantasy world at heart: commoners speak plain common British while royalty, knights, and high society get posh Received Pronunciation, with lore-driven exceptions for the races and peoples of Gielinor.
 
-Accents also follow where a character is **from**, taking the real-world cultures the lands are based on: the Kharidian Desert Middle Eastern, Karamja West African, the Fremennik lands Norse, Morytania gothic Eastern European, Varlamore Mediterranean, while the central kingdoms use distinct English regional accents. It is an origin signal, not where the NPC is standing, so a Misthalin guard visiting Karamja still sounds like home.
+Accents also follow where a character is **from**, taking the real-world cultures the lands are based on: desert nomads, island chiefs, Norse raiders, and Mediterranean nobles all sound like home even when they are standing somewhere else entirely.
 
-Profiles combine layers: a global British default, a per-race profile, an origin-based accent, every matching name-keyword category, and a per-NPC hand-written override. So an unknown NPC still gets a sensible British voice, while iconic characters get a bespoke one on top. Your own hero is fully editable (**Your Accent**, **Your Persona**, **Your Pace**), defaulting to a friendly, plucky adventurer with a Cambridge British accent. Gated by **Character Voices** (on by default).
-
-NPCs added to the game since the last plugin update will not be in the bundled table. With **Auto-learn New NPCs** on (off by default), the plugin looks an unrecognised NPC's race, gender, and origin up on the wiki once in the background and caches it, so it voices correctly from the next line on.
+Profiles stack in layers, so an unknown NPC still gets a sensible voice while iconic characters get a bespoke one on top. Your own hero is fully editable (**Your Accent**, **Your Persona**, **Your Pace**), defaulting to a friendly, plucky adventurer with a Cambridge British accent. Gated by **Character Voices**.
 
 </details>
 
 <details>
 <summary><b>Languages and speaking styles</b></summary>
 
-Set **Spoken Language** to anything other than English and each line is translated before it is voiced, with names and RuneScape terms preserved and translations cached per language. On top of that, a **Speaking Style** (Gen Z slang, pirate speak, Shakespearean, cyberpunk, and more) layers a delivery register, set independently for your own lines (**Player Speaking Style**) and NPC lines (**NPC Speaking Style**). So you can be a roadman among posh nobles, or turn the realm into a pirate crew.
+Set **Spoken Language** to anything other than English and every line is spoken in that language, with names and RuneScape terms kept intact. Layer a **Speaking Style** on top (Gen Z slang, pirate speak, Shakespearean, cyberpunk, and more), set separately for your own lines and for NPCs, and mix them however you like: every combination of language and style works together.
 
 </details>
 
 <details>
-<summary><b>Voices</b></summary>
+<summary><b>Fast, cheap, and out of the way</b></summary>
 
-Each speaker is resolved by race and gender from a static, precomputed lookup table bundled with the plugin, so picking a voice is a single in-memory lookup with no network calls. An NPC missing from the table uses the default Human voice.
-
-The resolved race and gender map onto Gemini voices, giving each race its own character (gravelly dwarves and trolls, refined elves and wizards, bright goblins) with NPCs spread across a per-race sub-pool by a stable per-NPC seed so they still sound distinct. Accent, persona, and pace are then steered per character.
-
-The table is generated offline and can grow over time; see [docs/npc-voice-tooling.md](docs/npc-voice-tooling.md) for how it is built and extended.
+Everything runs off the game thread, so the client never stutters and skipping a line cuts its audio instantly. Every line you have heard is kept in a local cache and replays instantly and free, even across sessions. Turn on **Prefetch Dialogue** and the plugin pre-voices the dialogue options on your screen, so the line you pick next starts playing the moment you click it.
 
 </details>
 
-<details>
-<summary><b>Safety</b></summary>
-
-Profanity filtering is always on, for everyone, with no toggle and no opt-out. Every spoken line (NPC dialogue, your own options, and other players' public chat) runs through a bundled, offline wordlist that bleeps profanity and slurs to asterisks before synthesis. Matching normalizes common evasions like leetspeak and inserted separators, while whole-word matching leaves lore words untouched. The three free-text profile fields you can type are additionally neutralized so they cannot inject a forged direction into the cloud prompt. All of it is local, single-pass, and adds no network call and no perceptible latency.
-
-</details>
-
-<details>
-<summary><b>Performance</b></summary>
-
-Synthesis and playback run off the game thread, so the client stays responsive and skipping a line cancels its audio instantly. Repeated lines are served from a cache keyed on backend, model, voice, emotion, and text: an in-memory layer for the session, plus a size-bounded on-disk cache under `~/.runelite/voiced-dialogue/cache/` that survives restarts. The disk cache is capped by **Cache Size Limit**, evicts oldest-first, and keeps Cloud from being re-billed for audio you have already generated.
-
-Cloud adds a few cost and latency guards: each line is capped at **Max Characters Per Line** and truncated at a sentence or word boundary, calls carry a 30-second timeout and retry once on a slow or dropped response, a response that lands after you have skipped ahead is dropped, and two identical lines in flight share a single call. Requests reuse a keepalive connection pool and a byte-stable per-speaker profile block so Gemini's implicit prompt cache hits on repeats. Speculative prefetch (**Prefetch Dialogue**) warms the cache for the options you can see, so the line you pick next plays instantly.
-
-</details>
+> **Privacy:** only the dialogue text being spoken is sent to OpenRouter over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
 
 ## Configuration
 
@@ -118,11 +96,11 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **OpenRouter API Key** | empty | Your OpenRouter API key, required to voice dialogue. Create a free key at openrouter.ai and paste it here; stored locally, never bundled with the plugin. Until it is set, lines stay silent. |
+| **OpenRouter API Key** | empty | Your OpenRouter API key, required to voice dialogue; stored locally, never bundled with the plugin. |
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
-| **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice. Only your own messages are voiced, and chat is spoken exactly as typed (Spoken Language and Speaking Style are never applied to it). |
-| **Prefetch Dialogue** | `On` | Warms the audio cache for the dialogue options you can see, so the line you pick next plays instantly. It can raise OpenRouter spend on branches you never choose. |
-| **Save Audio To Disk** | `On` | Saves synthesized dialogue to disk so repeated lines play instantly across sessions and OpenRouter is not re-billed. |
+| **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice, exactly as typed. |
+| **Prefetch Dialogue** | `On` | Pre-voices the dialogue options you can see so your pick plays instantly; can spend credit on branches you never choose. |
+| **Save Audio To Disk** | `On` | Keeps synthesized audio on disk so repeated lines replay instantly and free across sessions. |
 
 </details>
 
@@ -132,11 +110,11 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice used for your own character's dialogue and public chat. |
-| **Your Accent** | British (Cambridge) | Accent for your character's voice. Used with Character Voices on. |
+| **Your Accent** | British (Cambridge) | Accent for your character's voice. |
 | **Your Persona** | friendly and plucky | Persona and delivery style for your character's voice. |
 | **Your Pace** | Normal | Speaking pace for your character's voice. |
-| **Character Voices** | `On` | Gives each speaker a distinct voice (accent, style, pace) from the bundled table instead of one shared voice. Emotion still layers on top. Off gives the plainest, cheapest delivery. |
-| **Auto-learn New NPCs** | `Off` | For an NPC not in the bundled table, looks its race, gender, and origin up on the OSRS Wiki once and caches it. The first line still uses the default voice while the lookup runs. |
+| **Character Voices** | `On` | Gives each speaker a distinct accent, style, and pace instead of one shared voice. Off gives the plainest, cheapest delivery. |
+| **Auto-learn New NPCs** | `Off` | For an NPC the plugin does not recognise, looks its race, gender, and origin up on the OSRS Wiki once and remembers it. The first line still uses the default voice while the lookup runs. |
 
 </details>
 
@@ -145,12 +123,12 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Emotional Delivery** | `On` | Carries the emotion detected from the speaker's chat-head animation through to the voice. Off voices every line as Neutral. |
-| **Spoken Language** | `English` | Language dialogue is spoken in, from a dropdown of supported languages. `English` voices the original line; anything else translates each line first (preserving names, places, and item terms), then voices it (which increases latency). |
-| **Player Speaking Style** | `None` | Optional delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). Routes lines through the translation model (which increases latency). Set independently of the NPC style. |
-| **NPC Speaking Style** | `None` | Optional delivery register layered onto NPC lines, from the same set. Routes lines through the translation model (which increases latency). Language-agnostic, so it composes with any Spoken Language. |
+| **Emotional Delivery** | `On` | Matches the voice to the emotion on the speaker's chat-head. Off voices every line as Neutral. |
+| **Spoken Language** | `English` | Speaks dialogue in another language, keeping names, places, and item terms intact. Translation adds a little latency per line. |
+| **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). |
+| **NPC Speaking Style** | `None` | The same set of styles, applied to NPC lines instead; composes with any Spoken Language. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
-| **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). Applied at playback, so cached audio is unchanged. |
+| **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). |
 
 </details>
 
@@ -159,9 +137,9 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Cache Size Limit (MiB)** | `1024` | Maximum size of the on-disk audio cache. When a new clip would exceed it, the oldest are deleted first. Set to `0` for no limit. Only applies when Save Audio To Disk is on. |
-| **Max Characters Per Line** | `0` | Caps how many characters of a line are sent to OpenRouter, truncating at a sentence or word boundary. `0` sends the whole line; set a positive value to bound worst-case per-line cost. |
-| **Debug Logging** | `Off` | Logs the full resolved decision per line (one `[TTS line]` record with backend, kind, name, emotion, race, gender, seed, profile, and accent), plus per-operation latency, cache hits/misses by tier, and timed/numbered synth attempts. |
+| **Cache Size Limit (MiB)** | `1024` | Maximum size of the on-disk audio cache; the oldest clips are deleted first. Set to `0` for no limit. |
+| **Max Characters Per Line** | `0` | Caps how many characters of a line are voiced, to bound worst-case per-line cost. `0` voices the whole line. |
+| **Debug Logging** | `Off` | Writes detailed per-line voice decisions and timing logs, for troubleshooting. |
 
 </details>
 
@@ -175,7 +153,7 @@ cd runelite-voiced-dialogue
 ./gradlew build
 ```
 
-Run the `com.grahambartley.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. The plugin is Cloud-only: it ships no synthesis engine, no native libraries, and no model, and voices dialogue through OpenRouter over the injected OkHttp client. See [docs/backends.md](docs/backends.md) for the architecture.
+Run the `com.grahambartley.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. See [docs/architecture.md](docs/architecture.md) for how the synthesis pipeline works end to end.
 
 **Tech stack:** Java, the OpenRouter speech API for the cloud voice, and the RuneLite plugin framework.
 
