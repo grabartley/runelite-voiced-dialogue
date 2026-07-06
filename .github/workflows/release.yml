@@ -79,9 +79,13 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          # The last deployed release tag, or empty on the very first release. It seeds the version
-          # bump and, in the changelog step, is the baseline the notes are computed against.
-          PREV_TAG=$(git describe --tags --abbrev=0 --match='v*' 2>/dev/null || true)
+          # The highest deployed release tag by semver, or empty on the very first release. It seeds
+          # the version bump and, in the changelog step, is the baseline the notes are computed
+          # against. Select by version sort across all v* tags rather than git describe: releases are
+          # pinned onto detached commits that never land on main (see #230), so a describe walk of
+          # HEAD's ancestry would miss every tag whose release commit is not an ancestor and keep
+          # seeding from whichever old tag happens to be reachable.
+          PREV_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n1)
           BASE_VERSION=${PREV_TAG#v}
           BASE_VERSION=${BASE_VERSION:-0.0.0}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
