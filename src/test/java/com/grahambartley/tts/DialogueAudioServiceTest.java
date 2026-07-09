@@ -82,11 +82,33 @@ public class DialogueAudioServiceTest {
     int lastVolume = -1;
     float[] lastSamples;
 
+    int beginStreamCalls;
+    int endStreamCalls;
+    int lastStreamVolume = -1;
+    final List<float[]> streamedChunks = new ArrayList<>();
+
     @Override
     public void stream(float[] samples, int sampleRate, int volumePercent) {
       streamCalls++;
       lastVolume = volumePercent;
       lastSamples = samples;
+    }
+
+    @Override
+    public AudioStream beginStream(int volumePercent) {
+      beginStreamCalls++;
+      lastStreamVolume = volumePercent;
+      return new AudioStream() {
+        @Override
+        public void write(float[] samples, int sampleRate) {
+          streamedChunks.add(samples);
+        }
+
+        @Override
+        public void end() {
+          endStreamCalls++;
+        }
+      };
     }
 
     @Override

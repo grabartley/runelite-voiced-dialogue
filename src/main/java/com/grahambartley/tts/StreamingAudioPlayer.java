@@ -85,6 +85,14 @@ public class StreamingAudioPlayer implements AudioOutput {
   }
 
   @Override
+  public AudioStream beginStream(int volumePercent) {
+    // Share the buffered path's generation counter, so a new line or stop() interrupts a streamed
+    // line and vice versa. The line itself is opened lazily on the first chunk (see LineStream).
+    long gen = generation.incrementAndGet();
+    return new LineStream(gen, volumePercent);
+  }
+
+  @Override
   public void stop() {
     // Invalidate the current generation so the streaming loop bails, then unblock any pending
     // write() by flushing and stopping the line.
@@ -103,6 +111,93 @@ public class StreamingAudioPlayer implements AudioOutput {
   @Override
   public void close() {
     stop();
+  }
+
+  /**
+   * A streamed line: chunks are written as they arrive and the {@link SourceDataLine} is opened
+   * lazily on the first non-empty chunk. Guarded by the shared {@link #generation} counter, so
+   * {@link #stop()} or a newer line makes {@link #write} drop its chunk and release the line at
+   * once, while the producer keeps handing over (now ignored) chunks so it can finish draining its
+   * source. Not thread-safe: one synthesis worker drives one instance.
+   */
+  private final class LineStream implements AudioStream {
+    private final long gen;
+    private final int volumePercent;
+    private SourceDataLine sdl;
+    private boolean released;
+
+    private LineStream(long gen, int volumePercent) {
+      this.gen = gen;
+      this.volumePercent = volumePercent;
+    }
+
+    @Override
+    public void write(float[] samples, int sampleRate) {
+      if (released) {
+        return;
+      }
+      if (generation.get() != gen) {
+        release();
+        return;
+      }
+      if (samples == null || samples.length == 0) {
+        return;
+      }
+      try {
+        if (sdl == null) {
+          AudioFormat format = PcmAudio.format(sampleRate);
+          SourceDataLine open = lineFactory.getLine(format);
+          open.open(format);
+          applyVolume(open, volumePercent);
+          open.start();
+          sdl = open;
+          line = open; // publish so stop() can flush the active line
+        }
+        byte[] pcm = PcmAudio.toPcm16LE(samples);
+        int offset = 0;
+        while (offset < pcm.length) {
+          if (generation.get() != gen) {
+            release();
+            return;
+          }
+          offset += sdl.write(pcm, offset, Math.min(CHUNK_BYTES, pcm.length - offset));
+        }
+      } catch (Exception e) {
+        log.warn("Audio streaming failed: {}", e.getMessage());
+        release();
+      }
+    }
+
+    @Override
+    public void end() {
+      try {
+        if (sdl != null && !released && generation.get() == gen) {
+          sdl.drain();
+        }
+      } catch (Exception ignored) {
+        // best-effort drain
+      } finally {
+        release();
+      }
+    }
+
+    private void release() {
+      released = true;
+      SourceDataLine current = sdl;
+      sdl = null;
+      if (current == null) {
+        return;
+      }
+      try {
+        current.stop();
+        current.close();
+      } catch (Exception ignored) {
+        // best-effort teardown
+      }
+      if (line == current) {
+        line = null;
+      }
+    }
   }
 
   private static void applyVolume(SourceDataLine line, int volumePercent) {

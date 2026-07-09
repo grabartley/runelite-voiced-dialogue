@@ -67,6 +67,68 @@ public class StreamingAudioPlayerTest {
   }
 
   @Test
+  public void streamedChunksOpenTheLineOnceThenDrainAndClose() throws Exception {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[] {0f, 0f, 0f}, 24_000); // opens the line + one write
+    stream.write(new float[] {0f, 0f}, 24_000); // second write, no re-open
+    stream.end();
+
+    ArgumentCaptor<AudioFormat> format = ArgumentCaptor.forClass(AudioFormat.class);
+    verify(line).open(format.capture());
+    assertEquals(24_000f, format.getValue().getSampleRate(), 0f);
+    verify(line).start();
+    verify(line, times(2)).write(any(byte[].class), anyInt(), anyInt());
+    verify(line).drain();
+    verify(line).close();
+  }
+
+  @Test
+  public void anEmptyLeadingChunkDoesNotOpenTheLine() {
+    StreamingAudioPlayer.LineFactory factory = mock(StreamingAudioPlayer.LineFactory.class);
+    StreamingAudioPlayer player = new StreamingAudioPlayer(factory);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[0], 24_000);
+    stream.write(null, 24_000);
+
+    verifyNoInteractions(factory);
+  }
+
+  @Test
+  public void stopMidStreamDropsRemainingChunksSkipsDrainAndReleases() {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[] {0f, 0f}, 24_000); // opens + writes once
+    player.stop(); // supersede mid-stream
+    stream.write(new float[] {0f, 0f}, 24_000); // dropped
+    stream.end(); // superseded, so no drain
+
+    verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
+    verify(line, never()).drain();
+    verify(line).close(); // the line is still released
+  }
+
+  @Test
+  public void aNewerLineSupersedesAnInProgressStream() {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream first = player.beginStream(100);
+    first.write(new float[] {0f, 0f}, 24_000);
+    player.beginStream(100); // a newer stream bumps the shared generation
+    first.write(new float[] {0f, 0f}, 24_000); // dropped by the old stream
+    first.end();
+
+    verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
+    verify(line, never()).drain();
+  }
+
+  @Test
   public void emptySamplesNeverTouchTheAudioLine() {
     StreamingAudioPlayer.LineFactory factory = mock(StreamingAudioPlayer.LineFactory.class);
     StreamingAudioPlayer player = new StreamingAudioPlayer(factory);
