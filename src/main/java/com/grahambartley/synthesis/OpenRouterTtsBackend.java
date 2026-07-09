@@ -489,9 +489,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               bytes);
           return null;
         }
-        log.debug(
-            CloudSynthTrace.success(
-                attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, bytes.length, generationId));
+        // Emitted at info under the plugin's Debug Logging toggle (like the other [TTS cloud]
+        // traces) so a successful line's latency is measurable, not just its failures; the record
+        // carries elapsedMs and attempt=N/2, so a line recovered on retry is visible as such.
+        if (config.debugMode()) {
+          log.info(
+              CloudSynthTrace.success(
+                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, bytes.length, generationId));
+        }
         return pcm;
       } catch (ConnectException e) {
         // The host is unreachable (connection refused / no route), almost certainly an offline
