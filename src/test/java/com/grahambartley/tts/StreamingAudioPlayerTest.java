@@ -129,6 +129,20 @@ public class StreamingAudioPlayerTest {
   }
 
   @Test
+  public void endReleasesASupersededStreamWithoutDrainingEvenWithNoInterveningWrite() {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[] {0f, 0f}, 24_000); // opens the line
+    player.stop(); // supersede; the producer sends no further chunk before finishing
+    stream.end();
+
+    verify(line, never()).drain();
+    verify(line).close(); // the line is still released via end()'s finally
+  }
+
+  @Test
   public void emptySamplesNeverTouchTheAudioLine() {
     StreamingAudioPlayer.LineFactory factory = mock(StreamingAudioPlayer.LineFactory.class);
     StreamingAudioPlayer player = new StreamingAudioPlayer(factory);

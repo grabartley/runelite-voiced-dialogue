@@ -1110,6 +1110,24 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void streamingTreatsAnOddLengthBodyAsIncompleteAndDoesNotCacheIt() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    // A complete-looking body plus one dangling byte: not a whole number of 16-bit samples, so the
+    // decoder ends with a pending byte and the line must not be cached (played once, re-fetched).
+    byte[] even = RawPcmDecoderTest.raw(completeAudio());
+    byte[] odd = java.util.Arrays.copyOf(even, even.length + 1);
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(new Buffer().write(odd)));
+
+    List<float[]> fed = new ArrayList<>();
+    Pcm result = backend(config).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
+
+    assertFalse("the whole samples still played as they streamed", fed.isEmpty());
+    assertNull("a misaligned (odd-length) stream is not returned for caching", result);
+    assertEquals("no retry once it has begun playing", 1, server.getRequestCount());
+  }
+
+  @Test
   public void truncatedAudioIsRetriedOnceAndRecovers() throws Exception {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";

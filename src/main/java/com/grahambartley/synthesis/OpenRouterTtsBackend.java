@@ -142,6 +142,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           + " openrouter.ai/settings/credits.";
 
   private final OkHttpClient httpClient;
+  // The streaming path paces the body read to real-time playback, so a long line's whole-call
+  // duration far exceeds the buffered callTimeout. This variant disables the call timeout and
+  // relies
+  // on the per-read readTimeout as the genuine stall guard: a paced read never trips readTimeout
+  // (bytes are already waiting when read() runs between plays), while a truly stalled generation
+  // still fails within the read budget. Without this, a line over ~callTimeout of audio is cut off
+  // mid-play and, being incomplete, never cached — re-billed on every replay.
+  private final OkHttpClient streamingHttpClient;
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
@@ -213,6 +221,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             .callTimeout(tuning.callTimeout)
             .retryOnConnectionFailure(true)
             .build();
+    // Same client, sharing its warm connection pool, but with the whole-call timeout disabled for
+    // the real-time-paced streaming read (see the field comment).
+    this.streamingHttpClient = this.httpClient.newBuilder().callTimeout(Duration.ZERO).build();
     this.networkRetryBaseMillis = tuning.retryBackoffBaseMillis;
     this.networkRetryJitterMillis = tuning.retryJitterMillis;
     this.config = config;
@@ -619,7 +630,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
       long attemptStart = System.nanoTime();
       boolean fedSink = false;
-      try (Response response = httpClient.newCall(httpRequest).execute()) {
+      try (Response response = streamingHttpClient.newCall(httpRequest).execute()) {
         String contentType = headerOrEmpty(response, "Content-Type");
         String generationId = headerOrEmpty(response, "X-Generation-Id");
         if (!response.isSuccessful()) {

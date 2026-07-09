@@ -380,8 +380,17 @@ public final class DialogueAudioService {
    * never re-billed (Option A). A line the backend deems incomplete is played but returns {@code
    * null}, so nothing clipped is persisted.
    */
-  private void runStreaming(
-      long mine, SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
+  // Package-private for the same reason as synthesizeDeduped: the dedup-degrades-to-buffered branch
+  // needs a concurrency test to drive it directly.
+  void runStreaming(long mine, SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
+    if (epoch.get() != mine) {
+      // Superseded between run()'s check and here (e.g. a slow disk lookup): do NOT open a stream,
+      // since beginStream bumps the shared playback generation and would cut the line that replaced
+      // us. Still warm both cache tiers so the line is free next time, matching the buffered path,
+      // where a line that goes stale mid-synth is cached but never played over the top.
+      synthesizeDeduped(backend, request, key);
+      return;
+    }
     CompletableFuture<Pcm> own = new CompletableFuture<>();
     CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
     if (running != null) {
@@ -395,15 +404,12 @@ public final class DialogueAudioService {
     AudioOutput.AudioStream stream = null;
     try {
       stream = output.beginStream(volume.getAsInt());
+      // Forward every chunk to the player: its generation counter drops post-skip chunks and
+      // releases the audio line at once (so a skipped line does not hold it open through the
+      // background drain), while the backend keeps draining the body so the finished line still
+      // caches (Option A).
       AudioOutput.AudioStream playing = stream;
-      PcmSink sink =
-          (samples, rate) -> {
-            // Feed the player only while this line is current; after a skip the player drops the
-            // chunk and the backend keeps draining the body, so the finished line still caches.
-            if (epoch.get() == mine) {
-              playing.write(samples, rate);
-            }
-          };
+      PcmSink sink = playing::write;
       full = backends.synthesizeStreamingWith(backend, request, sink);
       if (full != null) {
         cache.put(key, full);
