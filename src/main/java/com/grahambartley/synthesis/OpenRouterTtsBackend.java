@@ -361,10 +361,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", model.responseFormat());
     int speed = speedPercent();
+    double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
     if (speed != DEFAULT_SPEED_PERCENT) {
       // The model may ignore speed; sending it only when non-default keeps the default request body
       // identical to before and avoids paying for a param the model might not honour.
-      double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
       payload.addProperty("speed", speedRatio);
       if (config.debugMode()) {
         log.info("[TTS cloud] speed {}", speedRatio);
@@ -471,7 +471,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // below), but the model occasionally returns a line whose audio stops mid-utterance. A
         // complete line releases into trailing silence; one that does not is rejected so a clipped
         // clip is never cached or voiced. One retry recovers the common transient case.
-        if (PcmCompleteness.isTruncated(pcm)) {
+        if (PcmCompleteness.isTruncated(pcm, speedRatio)) {
           if (attempt < MAX_SPEECH_ATTEMPTS) {
             log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
