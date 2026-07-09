@@ -61,6 +61,17 @@ public final class BackendProvider {
   }
 
   /**
+   * Streams synthesis through a specific, already-resolved backend, feeding decoded chunks to
+   * {@code sink} as they arrive and returning the complete Pcm for caching. Mirrors {@link
+   * #synthesizeWith} (applying the same emotion downgrade) so the backend that runs matches the one
+   * in the cache key.
+   */
+  public Pcm synthesizeStreamingWith(
+      SynthesisBackend backend, SynthesisRequest request, PcmSink sink) {
+    return backend.synthesizeStreaming(downgradeFor(backend, request), sink);
+  }
+
+  /**
    * Warms up the backend on the pipeline thread, so it does its off-thread handshake before the
    * first line and the game thread never blocks on it. Safe to call repeatedly: {@code warmUp} is
    * idempotent.

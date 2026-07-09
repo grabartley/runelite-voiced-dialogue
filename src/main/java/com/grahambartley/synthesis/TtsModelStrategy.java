@@ -29,4 +29,10 @@ interface TtsModelStrategy {
 
   /** Decodes the model's audio response bytes into {@link Pcm}, or {@code null} if undecodable. */
   Pcm decodeResponse(byte[] bytes);
+
+  /**
+   * The sample rate (Hz) of the decoded PCM. The streaming path decodes the body incrementally and
+   * so must be told the rate out of band, since the raw stream carries no header.
+   */
+  int sampleRate();
 }
