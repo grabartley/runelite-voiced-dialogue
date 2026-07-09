@@ -2,6 +2,7 @@ package com.grahambartley.tts;
 
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
+import com.grahambartley.synthesis.PcmSink;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -15,6 +16,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 import lombok.Value;
 import lombok.experimental.Accessors;
@@ -91,6 +93,10 @@ public final class DialogueAudioService {
   private final LruCache<CacheKey, Pcm> cache;
   private final DiskAudioCache diskCache;
   private final IntSupplier volume;
+  // Read live so toggling "Stream Playback" takes effect on the next line. Only the live speak path
+  // consults it; prefetch always buffers (it never plays), and a cave-echo line always buffers (the
+  // echo needs the whole clip up front).
+  private final BooleanSupplier streamPlayback;
   private final AtomicLong epoch = new AtomicLong();
   // Bumped on dialogue close / NPC change so prefetch tasks queued for the old node drop instead of
   // spending on branches the player has already left. Separate from the playback epoch: a new
@@ -107,7 +113,8 @@ public final class DialogueAudioService {
       DiskAudioCache diskCache,
       int cacheSize,
       int queueCapacity,
-      IntSupplier volume) {
+      IntSupplier volume,
+      BooleanSupplier streamPlayback) {
     this(
         backends,
         output,
@@ -116,7 +123,8 @@ public final class DialogueAudioService {
         buildWarmExecutor(),
         buildPrefetchExecutor(),
         cacheSize,
-        volume);
+        volume,
+        streamPlayback);
   }
 
   /**
@@ -129,8 +137,31 @@ public final class DialogueAudioService {
       DiskAudioCache diskCache,
       Executor executor,
       int cacheSize,
+      IntSupplier volume,
+      BooleanSupplier streamPlayback) {
+    this(
+        backends,
+        output,
+        diskCache,
+        executor,
+        executor,
+        executor,
+        cacheSize,
+        volume,
+        streamPlayback);
+  }
+
+  /**
+   * Test seam with streaming off, so the buffered-playback and caching tests keep their behavior.
+   */
+  DialogueAudioService(
+      BackendProvider backends,
+      AudioOutput output,
+      DiskAudioCache diskCache,
+      Executor executor,
+      int cacheSize,
       IntSupplier volume) {
-    this(backends, output, diskCache, executor, executor, executor, cacheSize, volume);
+    this(backends, output, diskCache, executor, cacheSize, volume, () -> false);
   }
 
   private DialogueAudioService(
@@ -141,7 +172,8 @@ public final class DialogueAudioService {
       Executor warmExecutor,
       Executor prefetchExecutor,
       int cacheSize,
-      IntSupplier volume) {
+      IntSupplier volume,
+      BooleanSupplier streamPlayback) {
     this.backends = backends;
     this.output = output;
     this.diskCache = diskCache;
@@ -150,6 +182,7 @@ public final class DialogueAudioService {
     this.prefetchExecutor = prefetchExecutor;
     this.cache = new LruCache<>(cacheSize);
     this.volume = volume;
+    this.streamPlayback = streamPlayback;
   }
 
   /**
@@ -304,24 +337,89 @@ public final class DialogueAudioService {
       return;
     }
     Pcm pcm = lookup(key);
-    if (pcm == null) {
-      // Both cache tiers missed: synthesize once (de-duped against any concurrent identical synth)
-      // and write through to both tiers so the line is free next time, this session and every
-      // future one.
-      pcm = synthesizeDeduped(backend, request, key);
+    if (pcm != null) {
+      // A cache hit always plays buffered and instantly, no matter the streaming setting.
+      playBuffered(mine, pcm, applyEcho);
+      return;
     }
+    // Both cache tiers missed. Stream the line (start playing as it downloads) when the setting is
+    // on and there is no cave echo, since echo needs the whole clip up front; otherwise synthesize
+    // the whole buffer first. A cave-echo line and a toggled-off setting both keep the exact
+    // pre-streaming behavior.
+    if (streamPlayback.getAsBoolean() && !applyEcho) {
+      runStreaming(mine, backend, request, key);
+      return;
+    }
+    pcm = synthesizeDeduped(backend, request, key);
     if (pcm == null) {
       return;
     }
-    // Re-check after the (possibly slow) synth: the line may have been skipped meanwhile, so a
-    // cloud
-    // response that arrives after the dialogue advanced is dropped rather than played over the top.
+    playBuffered(mine, pcm, applyEcho);
+  }
+
+  /**
+   * Plays a fully-synthesized line, dropping it if the dialogue has advanced meanwhile. This
+   * re-check is what lets a slow cloud response land in the cache (in {@link #synthesizeDeduped})
+   * yet never play over the top of the line that superseded it.
+   */
+  private void playBuffered(long mine, Pcm pcm, boolean applyEcho) {
     if (epoch.get() != mine) {
       return;
     }
     // Echo is render-only on a fresh buffer; the dry pcm stays in both cache tiers untouched.
     Pcm toPlay = applyEcho ? CaveEcho.apply(pcm) : pcm;
     output.stream(toPlay.getSamples(), toPlay.getSampleRate(), volume.getAsInt());
+  }
+
+  /**
+   * Streams a cache-missed live line: playback starts on the first chunk and the whole line is teed
+   * into both cache tiers on a clean finish. Shares the in-flight dedup with the buffered path, so
+   * if a synth for this key is already running (for example a prefetch), this awaits it and plays
+   * it buffered rather than issuing a second billable call. After a skip the sink stops feeding the
+   * player while the backend keeps draining the body, so the finished line is still cached and
+   * never re-billed (Option A). A line the backend deems incomplete is played but returns {@code
+   * null}, so nothing clipped is persisted.
+   */
+  private void runStreaming(
+      long mine, SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
+    CompletableFuture<Pcm> own = new CompletableFuture<>();
+    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
+    if (running != null) {
+      Pcm pcm = await(running);
+      if (pcm != null) {
+        playBuffered(mine, pcm, false);
+      }
+      return;
+    }
+    Pcm full = null;
+    AudioOutput.AudioStream stream = null;
+    try {
+      stream = output.beginStream(volume.getAsInt());
+      AudioOutput.AudioStream playing = stream;
+      PcmSink sink =
+          (samples, rate) -> {
+            // Feed the player only while this line is current; after a skip the player drops the
+            // chunk and the backend keeps draining the body, so the finished line still caches.
+            if (epoch.get() == mine) {
+              playing.write(samples, rate);
+            }
+          };
+      full = backends.synthesizeStreamingWith(backend, request, sink);
+      if (full != null) {
+        cache.put(key, full);
+        if (diskCache != null) {
+          diskCache.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), full);
+        }
+      }
+    } finally {
+      if (stream != null) {
+        stream.end();
+      }
+      // Publish before deregistering so a waiter that already grabbed this future is never left
+      // blocked, mirroring synthesizeDeduped.
+      own.complete(full);
+      inFlight.remove(key, own);
+    }
   }
 
   /**

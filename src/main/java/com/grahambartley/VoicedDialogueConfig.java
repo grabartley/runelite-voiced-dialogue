@@ -245,6 +245,16 @@ public interface VoicedDialogueConfig extends Config {
     return true;
   }
 
+  @ConfigItem(
+      keyName = "streamPlayback",
+      name = "Stream Playback",
+      description = "Start playing a line as it downloads instead of waiting for the whole clip.",
+      position = 5,
+      section = generalSection)
+  default boolean streamPlayback() {
+    return true;
+  }
+
   // ---------------------------------------------------------------------------
   // Voices
   // ---------------------------------------------------------------------------

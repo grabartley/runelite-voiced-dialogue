@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
+import com.grahambartley.synthesis.PcmSink;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import com.grahambartley.synthesis.VoiceSpec;
@@ -145,8 +146,15 @@ public class DialogueAudioServiceTest {
 
   private static DialogueAudioService service(
       BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
-    // The existing in-memory cache tests do not exercise the disk layer; pass null for it.
+    // Buffered playback (streaming off, via the six-arg seam); the streaming path has its own tests
+    // below. No disk layer.
     return new DialogueAudioService(provider, output, null, executor, cacheSize, () -> volume);
+  }
+
+  private static DialogueAudioService streamingService(
+      BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
+    return new DialogueAudioService(
+        provider, output, null, executor, cacheSize, () -> volume, () -> true);
   }
 
   private static SynthesisRequest req(String text, NPCRace race, NPCGender gender) {
@@ -171,6 +179,141 @@ public class DialogueAudioServiceTest {
 
     assertEquals("second identical line should hit the cache", 1, backend.requests.size());
     assertEquals("both lines should still play", 2, output.streamCalls);
+  }
+
+  @Test
+  public void aLiveMissStreamsWhenStreamPlaybackIsOn() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Hello", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("a live miss opens a stream", 1, output.beginStreamCalls);
+    assertEquals("and never uses the buffered path", 0, output.streamCalls);
+    assertEquals("the stream is ended", 1, output.endStreamCalls);
+    assertEquals("the line is synthesized once", 1, backend.requests.size());
+    assertTrue("audio was handed to the stream", output.streamedChunks.size() >= 1);
+  }
+
+  @Test
+  public void aLiveMissBuffersWhenStreamPlaybackIsOff() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Hello", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("the toggle off keeps the buffered path", 1, output.streamCalls);
+    assertEquals("no stream is opened", 0, output.beginStreamCalls);
+  }
+
+  @Test
+  public void aStreamedLineIsCachedSoTheRepeatPlaysFromCacheBuffered() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Encore", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    svc.speak(req("Encore", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("the streamed line was cached, so only one synth", 1, backend.requests.size());
+    assertEquals("the first line streamed", 1, output.beginStreamCalls);
+    assertEquals("the repeat played from cache, buffered", 1, output.streamCalls);
+  }
+
+  @Test
+  public void aCaveEchoLineBuffersEvenWhenStreamingIsOn() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Boo", NPCRace.HUMAN, NPCGender.MALE), /* applyEcho= */ true);
+    executor.runAll();
+
+    assertEquals(
+        "an echo line never streams (echo needs the whole clip)", 0, output.beginStreamCalls);
+    assertEquals("it uses the buffered path", 1, output.streamCalls);
+  }
+
+  @Test
+  public void prefetchNeverStreamsEvenWhenStreamingIsOn() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+
+    svc.prefetch(req("Later", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("prefetch opens no stream", 0, output.beginStreamCalls);
+    assertEquals("and never plays", 0, output.streamCalls);
+    assertEquals("but it did synthesize and cache", 1, backend.requests.size());
+  }
+
+  @Test
+  public void aStreamSkippedMidLineStopsPlayingButStillCaches() {
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    List<String> synthed = new ArrayList<>();
+    Runnable[] skipHook = {() -> {}};
+    // A backend that streams two chunks and fires a hook between them, so a "skip" can land
+    // mid-line. It returns the complete line, which the service must still cache (Option A).
+    SynthesisBackend streaming =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return "cloud-openrouter";
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            synthed.add(request.text());
+            return new Pcm(new float[] {0.1f, 0.2f}, 24_000);
+          }
+
+          @Override
+          public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
+            synthed.add(request.text());
+            sink.accept(new float[] {0.1f}, 24_000);
+            skipHook[0].run(); // the player skips mid-line here
+            sink.accept(new float[] {0.2f}, 24_000);
+            return new Pcm(new float[] {0.1f, 0.2f}, 24_000);
+          }
+        };
+    DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
+    skipHook[0] = svc::interrupt; // interrupting advances the epoch, like a Continue-click
+
+    svc.speak(req("Skipme", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("only the pre-skip chunk reached the player", 1, output.streamedChunks.size());
+    assertEquals("the line was synthesized once", 1, synthed.size());
+
+    // The whole line was still cached despite the skip: a repeat is a cache hit, no re-synth.
+    svc.speak(req("Skipme", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("the skipped line was cached, so the repeat does not re-synth", 1, synthed.size());
+    assertEquals("the repeat plays from cache, buffered", 1, output.streamCalls);
   }
 
   @Test

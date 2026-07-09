@@ -133,7 +133,8 @@ public class VoicedDialoguePlugin extends Plugin {
             diskCache,
             CACHE_SIZE,
             QUEUE_CAPACITY,
-            config::volume);
+            config::volume,
+            config::streamPlayback);
     // Warm the backend off the game thread so the first line is not the one that pays the cloud
     // connection handshake, and the game thread never blocks on it.
     audioService.prewarm(backendProvider::warmUpActive);

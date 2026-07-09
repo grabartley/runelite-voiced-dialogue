@@ -75,7 +75,7 @@ public class VoicedDialoguePluginTest {
     SynthesisBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
     BackendProvider provider = new BackendProvider(cloud);
     DialogueAudioService audioService =
-        new DialogueAudioService(provider, null, null, 1, 1, () -> 100);
+        new DialogueAudioService(provider, null, null, 1, 1, () -> 100, () -> true);
 
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     setField(plugin, "audioService", audioService);
