@@ -18,6 +18,11 @@ public interface SynthesisBackend {
   /** Whether this backend can actually run right now (e.g. an API key is set). */
   boolean isAvailable();
 
+  /** User-facing guidance shown when this backend is selected without its required API key. */
+  default String missingKeyNotice() {
+    return "Add an API key for the selected TTS provider to hear dialogue.";
+  }
+
   /** The emotions this backend can voice. Requests outside this set are downgraded to neutral. */
   EnumSet<Emotion> supportedEmotions();
 

@@ -15,7 +15,7 @@ public interface VoicedDialogueConfig extends Config {
 
   @ConfigSection(
       name = "General",
-      description = "API key, playback, cache. Text is sent to OpenRouter.",
+      description = "Provider, API key, playback, and cache settings.",
       position = 0)
   String generalSection = "general";
 
@@ -37,6 +37,23 @@ public interface VoicedDialogueConfig extends Config {
       position = 3,
       closedByDefault = true)
   String advancedSection = "advanced";
+
+  /** Cloud service used for synthesis and optional translation. */
+  enum TtsProvider {
+    OPENROUTER("OpenRouter"),
+    GOOGLE_AI_STUDIO("Google AI Studio");
+
+    private final String label;
+
+    TtsProvider(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return label;
+    }
+  }
 
   /**
    * An optional delivery quirk layered onto a spoken line, selected per speaker class (Player vs
@@ -194,10 +211,20 @@ public interface VoicedDialogueConfig extends Config {
   // ---------------------------------------------------------------------------
 
   @ConfigItem(
+      keyName = "ttsProvider",
+      name = "TTS Provider",
+      description = "Cloud service used to voice dialogue.",
+      position = 0,
+      section = generalSection)
+  default TtsProvider ttsProvider() {
+    return TtsProvider.OPENROUTER;
+  }
+
+  @ConfigItem(
       keyName = "openRouterApiKey",
       name = "OpenRouter API Key",
-      description = "Required to voice dialogue. Free key at openrouter.ai.",
-      position = 0,
+      description = "Required when TTS Provider is OpenRouter.",
+      position = 1,
       secret = true,
       section = generalSection)
   default String openRouterApiKey() {
@@ -205,10 +232,21 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "googleAiStudioApiKey",
+      name = "Google AI Studio API Key",
+      description = "Required when TTS Provider is Google AI Studio.",
+      position = 2,
+      secret = true,
+      section = generalSection)
+  default String googleAiStudioApiKey() {
+    return "";
+  }
+
+  @ConfigItem(
       keyName = "volume",
       name = "Dialogue Volume",
       description = "Loudness of spoken dialogue, 0 (muted) to 100.",
-      position = 1,
+      position = 3,
       section = generalSection)
   @Range(min = 0, max = 100)
   default int volume() {
@@ -219,7 +257,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "voicePublicChat",
       name = "Voice My Public Chat",
       description = "Speak your own public chat in your player voice.",
-      position = 2,
+      position = 4,
       section = generalSection)
   default boolean voicePublicChat() {
     return false;
@@ -229,7 +267,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "prefetch",
       name = "Prefetch Dialogue",
       description = "Preload visible dialogue options; may raise spend.",
-      position = 3,
+      position = 5,
       section = generalSection)
   default boolean prefetch() {
     return true;
@@ -239,7 +277,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "persistentCache",
       name = "Save Audio To Disk",
       description = "Save audio to disk so repeat lines replay for free.",
-      position = 4,
+      position = 6,
       section = generalSection)
   default boolean persistentCache() {
     return true;

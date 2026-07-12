@@ -66,6 +66,21 @@ public class BackendProviderTest {
   }
 
   @Test
+  public void activeCanSelectBetweenConfiguredBackendsAtRuntime() {
+    StubBackend openRouter =
+        new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
+    StubBackend aiStudio =
+        new StubBackend("cloud-google-ai-studio", true, EnumSet.allOf(Emotion.class));
+    boolean[] useAiStudio = {false};
+    BackendProvider provider =
+        new BackendProvider(() -> useAiStudio[0] ? aiStudio : openRouter, openRouter, aiStudio);
+
+    assertSame(openRouter, provider.active());
+    useAiStudio[0] = true;
+    assertSame(aiStudio, provider.active());
+  }
+
+  @Test
   public void warmUpActiveWarmsTheBackend() {
     StubBackend cloud = new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
     BackendProvider provider = new BackendProvider(cloud);

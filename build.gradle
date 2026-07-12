@@ -24,15 +24,15 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok:1.18.30'
 	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
-	// The plugin is Cloud-only: dialogue is voiced through OpenRouter over the injected OkHttp
-	// client. The jar ships no synthesis engine, no native libraries, and no model.
+	// The plugin is Cloud-only: dialogue is voiced through OpenRouter or Google AI Studio over the
+	// injected OkHttp client. The jar ships no synthesis engine, native libraries, or model.
 
 	testImplementation 'junit:junit:4.12'
 	// Method-level data providers for case-driven tests (@Parameters), so repeated case assertions
 	// reuse one test body and each case is reported as its own row.
 	testImplementation 'pl.pragmatists:JUnitParams:1.1.1'
 	testImplementation 'org.mockito:mockito-core:5.12.0'
-	// OkHttp's MockWebServer drives the OpenRouter backend's HTTP path in tests with no live key. The
+	// OkHttp's MockWebServer drives the cloud backends' HTTP paths in tests with no live key. The
 	// version tracks the okhttp the RuneLite client pulls in (3.14.x) so the client and server agree.
 	testImplementation 'com.squareup.okhttp3:mockwebserver:3.14.9'
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion

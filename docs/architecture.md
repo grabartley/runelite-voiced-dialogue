@@ -1,9 +1,22 @@
 # Synthesis architecture
 
-Every dialogue line is voiced through a single pipeline: an OpenRouter speech call implemented by
-the `SynthesisBackend` that `BackendProvider` supplies. `BackendProvider` also applies the
+Every dialogue line is voiced through a single pipeline. `BackendProvider` supplies either the
+default OpenRouter backend or the Google AI Studio backend selected in configuration. It also applies the
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
 A line the pipeline cannot voice (for example when no API key is set) is left silent.
+
+## Google AI Studio speech
+
+When **TTS Provider** is Google AI Studio, `GeminiAiStudioTtsBackend` makes a synchronous
+`generateContent` request directly to Gemini with the user's Google AI Studio API key. It requests
+audio-only output from Gemini 3.1 Flash TTS, resolves voices through the same `GeminiVoiceMap` as
+the OpenRouter path, then decodes the returned base64 inline PCM at 24 kHz. The response is fully
+buffered before normal playback and cache storage; there is no streaming playback path.
+
+For a non-English language or configured speaking style, `GeminiAiStudioTranslator` first makes a
+direct Gemini Flash Lite request using the existing translation prompt. Plain English without a
+style continues straight to speech. The selected backend ID is part of every cache key, so clips
+from OpenRouter and Google AI Studio never collide.
 
 Emotion is detected from each speaker's chat-head animation and rides in every request as one of
 Happy, Sad, Angry, Scared, or Neutral. It is rendered as an inline Gemini style tag on the spoken

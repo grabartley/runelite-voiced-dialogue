@@ -1,7 +1,8 @@
 package com.grahambartley.dialogue;
 
 import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.synthesis.OpenRouterTtsBackend;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -28,9 +29,9 @@ public final class ChatNoticeManager {
   private static final String CHAT_NOTICE_COLOR = "ff3333";
 
   private static final String ONBOARDING_MESSAGE =
-      "Voiced Dialogue is on. It needs a free OpenRouter API key to voice dialogue: get one at"
-          + " openrouter.ai and paste it into the plugin's Cloud Voice settings. Your dialogue text"
-          + " is then sent to OpenRouter to be voiced. Until a key is set, lines stay silent.";
+      "Voiced Dialogue is on. Choose a TTS provider and add its API key in the plugin settings."
+          + " Dialogue text is sent to the selected provider to be voiced. Until a key is set,"
+          + " lines stay silent.";
 
   private final Client client;
   private final ConfigManager configManager;
@@ -38,7 +39,7 @@ public final class ChatNoticeManager {
   private final VoicedDialogueConfig config;
 
   private boolean onboardingChecked;
-  private boolean cloudKeyNoticeChecked;
+  private final Set<String> checkedBackendIds = new HashSet<>();
 
   public ChatNoticeManager(
       Client client,
@@ -52,7 +53,7 @@ public final class ChatNoticeManager {
   }
 
   /**
-   * Surfaces a one-time cloud-backend notice (e.g. "add an OpenRouter API key") to the player.
+   * Surfaces a one-time cloud-backend notice (e.g. "add your provider API key") to the player.
    * Fired from a backend thread, so the chat write is hopped onto the client thread.
    */
   public void notifyFromBackendThread(String message) {
@@ -92,14 +93,12 @@ public final class ChatNoticeManager {
    * set a key is told their voice is effectively off. Must be called on the game thread. {@code
    * keyAvailable} is the backend's availability.
    */
-  public void maybeWarnMissingCloudKey(boolean keyAvailable) {
-    if (cloudKeyNoticeChecked) {
+  public void maybeWarnMissingCloudKey(
+      String backendId, boolean keyAvailable, String missingKeyNotice) {
+    if (backendId == null || keyAvailable || !checkedBackendIds.add(backendId)) {
       return;
     }
-    cloudKeyNoticeChecked = true;
-    if (shouldWarnMissingCloudKey(keyAvailable)) {
-      addGameMessage(OpenRouterTtsBackend.NO_KEY_NOTICE);
-    }
+    addGameMessage(missingKeyNotice);
   }
 
   /** Pure decision for {@link #maybeWarnMissingCloudKey}: warn only when the key is unavailable. */

@@ -1,14 +1,16 @@
 package com.grahambartley.synthesis;
 
 import com.grahambartley.tts.Pcm;
+import java.util.Arrays;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Single point of truth for the active {@link SynthesisBackend} and how emotion is downgraded.
  *
- * <p>The plugin is Cloud-only: there is one backend (OpenRouter), which this simply provides. A
- * line the backend cannot voice (for example when no API key is set) is left unvoiced rather than
- * routed elsewhere.
+ * <p>The plugin is Cloud-only. The active backend may be fixed or selected from configured cloud
+ * providers at runtime. A line the selected backend cannot voice (for example when no API key is
+ * set) is left unvoiced rather than routed elsewhere.
  *
  * <p>The emotion-downgrade rule lives here and nowhere else: {@link #synthesize} rewrites a
  * request's emotion to {@link Emotion#NEUTRAL} whenever the backend does not list it in {@link
@@ -18,15 +20,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class BackendProvider {
 
-  private final SynthesisBackend backend;
+  private final Supplier<SynthesisBackend> activeBackend;
+  private final SynthesisBackend[] backends;
 
   public BackendProvider(SynthesisBackend backend) {
-    this.backend = backend;
+    this(() -> backend, backend);
+  }
+
+  public BackendProvider(Supplier<SynthesisBackend> activeBackend, SynthesisBackend... backends) {
+    this.activeBackend = activeBackend;
+    this.backends = Arrays.copyOf(backends, backends.length);
   }
 
   /** The active synthesis backend. */
   public SynthesisBackend active() {
-    return backend;
+    return activeBackend.get();
   }
 
   /**
@@ -49,6 +57,7 @@ public final class BackendProvider {
    * backend reflected in the cache key is the one that actually runs.
    */
   public Pcm synthesize(SynthesisRequest request) {
+    SynthesisBackend backend = active();
     return backend.synthesize(downgradeFor(backend, request));
   }
 
@@ -66,15 +75,17 @@ public final class BackendProvider {
    * idempotent.
    */
   public void warmUpActive() {
-    backend.warmUp();
+    active().warmUp();
   }
 
-  /** Releases the backend. */
+  /** Releases every configured backend. */
   public void close() {
-    try {
-      backend.close();
-    } catch (RuntimeException e) {
-      log.debug("Error closing backend {}: {}", backend.id(), e.getMessage());
+    for (SynthesisBackend backend : backends) {
+      try {
+        backend.close();
+      } catch (RuntimeException e) {
+        log.debug("Error closing backend {}: {}", backend.id(), e.getMessage());
+      }
     }
   }
 }

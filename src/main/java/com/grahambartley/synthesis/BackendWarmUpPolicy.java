@@ -10,11 +10,9 @@ import java.util.Set;
  */
 public final class BackendWarmUpPolicy {
 
-  /**
-   * Config keys that change whether the backend can become available. {@code openRouterApiKey} lets
-   * a previously-unavailable backend become available once a key is entered.
-   */
-  private static final Set<String> WARM_TRIGGER_KEYS = Set.of("openRouterApiKey");
+  /** Config keys that select a backend or change whether it can become available. */
+  private static final Set<String> WARM_TRIGGER_KEYS =
+      Set.of("ttsProvider", "openRouterApiKey", "googleAiStudioApiKey");
 
   private BackendWarmUpPolicy() {}
 

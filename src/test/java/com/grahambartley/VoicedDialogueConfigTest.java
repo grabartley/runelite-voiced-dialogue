@@ -13,6 +13,12 @@ import org.junit.Test;
 public class VoicedDialogueConfigTest {
 
   @Test
+  public void openRouterIsTheDefaultProvider() {
+    VoicedDialogueConfig config = new VoicedDialogueConfig() {};
+    assertEquals(VoicedDialogueConfig.TtsProvider.OPENROUTER, config.ttsProvider());
+  }
+
+  @Test
   public void englishIsTheDefaultNoTranslationLanguage() {
     assertEquals("en-GB", SpokenLanguage.ENGLISH.code());
     assertTrue("English is the no-translation default", SpokenLanguage.ENGLISH.isEnglish());

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.VoicedDialogueConfig;
+import com.grahambartley.synthesis.GeminiAiStudioTtsBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -95,8 +96,10 @@ public class ChatNoticeManagerTest {
 
   @Test
   public void missingKeyWarningPostsOnceWhenNoKey() {
-    manager.maybeWarnMissingCloudKey(false);
-    manager.maybeWarnMissingCloudKey(false);
+    manager.maybeWarnMissingCloudKey(
+        OpenRouterTtsBackend.ID, false, OpenRouterTtsBackend.NO_KEY_NOTICE);
+    manager.maybeWarnMissingCloudKey(
+        OpenRouterTtsBackend.ID, false, OpenRouterTtsBackend.NO_KEY_NOTICE);
 
     verify(client, times(1))
         .addChatMessage(
@@ -108,9 +111,25 @@ public class ChatNoticeManagerTest {
 
   @Test
   public void missingKeyWarningStaysQuietWhenKeyAvailable() {
-    manager.maybeWarnMissingCloudKey(true);
+    manager.maybeWarnMissingCloudKey(
+        OpenRouterTtsBackend.ID, true, OpenRouterTtsBackend.NO_KEY_NOTICE);
 
     verify(client, never())
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), contains(""), isNull());
+  }
+
+  @Test
+  public void switchingProviderChecksTheNewProvidersKey() {
+    manager.maybeWarnMissingCloudKey(
+        OpenRouterTtsBackend.ID, true, OpenRouterTtsBackend.NO_KEY_NOTICE);
+    manager.maybeWarnMissingCloudKey(
+        GeminiAiStudioTtsBackend.ID, false, GeminiAiStudioTtsBackend.NO_KEY_NOTICE);
+
+    verify(client, times(1))
+        .addChatMessage(
+            eq(ChatMessageType.GAMEMESSAGE),
+            eq(""),
+            contains(GeminiAiStudioTtsBackend.NO_KEY_NOTICE),
+            isNull());
   }
 }

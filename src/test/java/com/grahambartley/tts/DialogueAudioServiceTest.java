@@ -165,6 +165,27 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
+  public void switchingProvidersDoesNotReuseTheOtherProvidersCachedAudio() {
+    FakeBackend openRouter = new FakeBackend("cloud-openrouter", EnumSet.of(Emotion.NEUTRAL));
+    FakeBackend aiStudio = new FakeBackend("cloud-google-ai-studio", EnumSet.of(Emotion.NEUTRAL));
+    boolean[] useAiStudio = {false};
+    BackendProvider provider =
+        new BackendProvider(() -> useAiStudio[0] ? aiStudio : openRouter, openRouter, aiStudio);
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider, new FakeOutput(), executor, 8, 100);
+
+    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    useAiStudio[0] = true;
+    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("OpenRouter synthesized its own cache entry", 1, openRouter.requests.size());
+    assertEquals(
+        "AI Studio synthesized instead of reusing OpenRouter audio", 1, aiStudio.requests.size());
+  }
+
+  @Test
   public void sameTextDifferentVoiceIsSynthesizedSeparately() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();

@@ -17,7 +17,9 @@ public class BackendWarmUpPolicyTest {
   private Object[] warmUpCases() {
     return new Object[] {
       // Plugin group with a backend-affecting key warms.
+      new Object[] {"voicedDialogue", "ttsProvider", true},
       new Object[] {"voicedDialogue", "openRouterApiKey", true},
+      new Object[] {"voicedDialogue", "googleAiStudioApiKey", true},
       // Right group, key that does not affect backend availability.
       new Object[] {"voicedDialogue", "volume", false},
       // A backend key but a different plugin's config group.
