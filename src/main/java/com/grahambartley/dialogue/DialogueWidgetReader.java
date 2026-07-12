@@ -40,13 +40,18 @@ public final class DialogueWidgetReader {
     return head.getAnimationId();
   }
 
+  /** Whether a dialogue head widget is present (sprite/objectbox dialogue has none). */
+  boolean hasHead(int headWidgetId) {
+    return client.getWidget(headWidgetId) != null;
+  }
+
   /** Extracts the NPC name from the dialogue name widget, or the current interacting NPC. */
   String currentNpcName() {
     Widget npcNameWidget = client.getWidget(ComponentID.DIALOG_NPC_NAME);
     if (npcNameWidget != null && !npcNameWidget.isHidden()) {
       String npcName = npcNameWidget.getText();
       if (npcName != null && !npcName.isEmpty()) {
-        return npcName.trim();
+        return stripTags(npcName).trim();
       }
     }
 
@@ -58,5 +63,9 @@ public final class DialogueWidgetReader {
     }
 
     return UNKNOWN_NPC;
+  }
+
+  private static String stripTags(String text) {
+    return text.replaceAll("<[^>]+>", "");
   }
 }

@@ -89,4 +89,9 @@ public final class DialoguePrefetcher {
     }
     canceller.run();
   }
+
+  /** Cancels queued work for the previous node without resetting conversation spend. */
+  public void advanceNode() {
+    canceller.run();
+  }
 }

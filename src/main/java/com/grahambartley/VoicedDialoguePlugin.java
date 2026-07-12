@@ -33,6 +33,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -200,7 +201,17 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     noticeManager.maybeShowOnboarding();
     noticeManager.maybeWarnMissingCloudKey(backendProvider.active().isAvailable());
-    dialogueWatcher.tick();
+  }
+
+  /**
+   * Detect dialogue on the client tick instead of the 600 ms game tick, so synthesis starts within
+   * one UI update. {@link DialogueWatcher} deduplicates unchanged widget text.
+   */
+  @Subscribe
+  public void onClientTick(ClientTick tick) {
+    if (dialogueWatcher != null) {
+      dialogueWatcher.tick();
+    }
   }
 
   /**
