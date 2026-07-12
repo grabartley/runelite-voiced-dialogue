@@ -33,7 +33,7 @@ final class CloudCacheKeyBuilder {
     if (speedPercent != defaultSpeedPercent) {
       variant.append("|s").append(speedPercent);
     }
-    if (maxChars > 0 && text != null && text.length() > maxChars) {
+    if (maxChars > 0 && text != null && (text.length() > maxChars || languageFragment != null)) {
       variant.append("|c").append(maxChars);
     }
     if (profile != null) {

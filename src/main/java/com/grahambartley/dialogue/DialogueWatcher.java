@@ -37,6 +37,8 @@ public final class DialogueWatcher {
   private boolean wasDialogueOpen;
   private int closedClientTicks;
   private long dialoguePlaybackEpoch = -1;
+  private String previousDialogueText;
+  private boolean previousDialogueWasNpc;
   private String sessionNpc;
   private String headWaitLineKey;
   private int headWaitTicks;
@@ -75,9 +77,12 @@ public final class DialogueWatcher {
           if (stableNewLine(lineKey, sampleKey)) {
             long previousEpoch = dialoguePlaybackEpoch;
             beginSessionNode(npcName);
+            String cleaned = textCleaner.clean(text);
             boolean spoken =
                 dispatcher.speakDialogue(
-                    textCleaner.clean(text), VoiceManager.SPEAKER_NPC, npcName, headAnimationId);
+                    cleaned, VoiceManager.SPEAKER_NPC, npcName, headAnimationId);
+            previousDialogueText = cleaned;
+            previousDialogueWasNpc = true;
             if (spoken) {
               dialoguePlaybackEpoch = audioService.currentEpoch();
             } else if (previousEpoch >= 0) {
@@ -98,9 +103,16 @@ public final class DialogueWatcher {
           String sampleKey = lineKey + "\u0001" + headAnimationId;
           if (stableNewLine(lineKey, sampleKey)) {
             long previousEpoch = dialoguePlaybackEpoch;
+            String cleaned = textCleaner.clean(text);
             boolean spoken =
                 dispatcher.speakDialogue(
-                    textCleaner.clean(text), VoiceManager.SPEAKER_PLAYER, null, headAnimationId);
+                    cleaned,
+                    VoiceManager.SPEAKER_PLAYER,
+                    null,
+                    headAnimationId,
+                    previousDialogueWasNpc ? previousDialogueText : null);
+            previousDialogueText = cleaned;
+            previousDialogueWasNpc = false;
             if (spoken) {
               dialoguePlaybackEpoch = audioService.currentEpoch();
             } else if (previousEpoch >= 0) {
@@ -121,7 +133,11 @@ public final class DialogueWatcher {
       String signature = optionsSignature(options);
       if (!signature.equals(lastOptionsSignature)) {
         lastOptionsSignature = signature;
-        prefetchCoordinator.prefetchOptions(options);
+        if (previousDialogueWasNpc) {
+          prefetchCoordinator.prefetchOptions(options, previousDialogueText);
+        } else {
+          prefetchCoordinator.prefetchOptions(options);
+        }
       }
     } else {
       lastOptionsSignature = null;
@@ -145,6 +161,8 @@ public final class DialogueWatcher {
         wasDialogueOpen = false;
         closedClientTicks = 0;
         dialoguePlaybackEpoch = -1;
+        previousDialogueText = null;
+        previousDialogueWasNpc = false;
         sessionNpc = null;
         headWaitLineKey = null;
         headWaitTicks = 0;
@@ -199,6 +217,9 @@ public final class DialogueWatcher {
    * Cancels queued work for the prior node and resets the prefetch session when speakers change.
    */
   private void beginSessionNode(String npcName) {
+    if (npcName == null) {
+      return;
+    }
     if (sessionNpc != null
         && !sessionNpc.equals(npcName)
         && !"Unknown NPC".equals(npcName)
@@ -210,6 +231,14 @@ public final class DialogueWatcher {
     if (!"Unknown NPC".equals(npcName)) {
       sessionNpc = npcName;
     }
+  }
+
+  /** Re-arms the currently visible line after a player voice-profile setting changes. */
+  public void refreshVisibleLine() {
+    lastSpoken = "";
+    pendingLine = null;
+    headWaitLineKey = null;
+    headWaitTicks = 0;
   }
 
   private static String optionsSignature(Widget options) {

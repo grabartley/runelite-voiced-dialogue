@@ -185,7 +185,7 @@ public final class DialogueAudioService {
     // Resolve the active backend now so the cache key reflects the backend that will actually run
     // this line on the pipeline thread.
     SynthesisBackend backend = backends.active();
-    SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
+    SynthesisRequest effective = BackendProvider.downgradeFor(backend, backend.prepare(request));
     CacheKey key = keyFor(backend, effective);
     submit(() -> run(mine, backend, effective, key, applyEcho));
   }
@@ -209,7 +209,7 @@ public final class DialogueAudioService {
     if (!backend.isAvailable() || backend.isThrottled()) {
       return;
     }
-    SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
+    SynthesisRequest effective = BackendProvider.downgradeFor(backend, backend.prepare(request));
     CacheKey key = keyFor(backend, effective);
     // Memory tier only: prefetch is driven from the game thread, and a full lookup would read the
     // disk tier synchronously there. A line cached only on disk is caught by the in-task re-check

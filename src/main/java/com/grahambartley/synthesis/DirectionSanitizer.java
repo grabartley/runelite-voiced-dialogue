@@ -26,7 +26,8 @@ public final class DirectionSanitizer {
   static final int MAX_FIELD_LENGTH = 1000;
 
   /** Newlines and other control characters that could break out of the single-line field. */
-  private static final Pattern CONTROL = Pattern.compile("[\\u0000-\\u001F\\u007F]+");
+  private static final Pattern CONTROL =
+      Pattern.compile("[\\u0000-\\u001F\\u007F\\u0085\\u2028\\u2029]+");
 
   /**
    * The block's own framing tokens, removed case-insensitively so a user cannot forge the structure
@@ -37,7 +38,7 @@ public final class DirectionSanitizer {
       Pattern.compile(
           "(?i)(#+\\s*transcript|transcript\\s*####|audio\\s*profile|director'?s\\s*notes)");
 
-  private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+  private static final Pattern WHITESPACE = Pattern.compile("[\\s\\p{Z}]+");
 
   private final ProfanityFilter profanityFilter;
 
@@ -51,6 +52,11 @@ public final class DirectionSanitizer {
    * markers and profanity, capped at {@link #MAX_FIELD_LENGTH} characters.
    */
   public String sanitize(String field) {
+    return sanitize(field, false);
+  }
+
+  /** Keeps structural hardening while optionally allowing mature words in the resulting field. */
+  public String sanitize(String field, boolean allowProfanity) {
     if (field == null) {
       return null;
     }
@@ -60,6 +66,6 @@ public final class DirectionSanitizer {
     if (collapsed.length() > MAX_FIELD_LENGTH) {
       collapsed = collapsed.substring(0, MAX_FIELD_LENGTH).trim();
     }
-    return profanityFilter.mask(collapsed);
+    return allowProfanity ? profanityFilter.maskSlurs(collapsed) : profanityFilter.mask(collapsed);
   }
 }

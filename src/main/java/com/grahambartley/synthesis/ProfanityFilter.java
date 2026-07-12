@@ -76,6 +76,40 @@ public final class ProfanityFilter {
                   "shitake",
                   "dickens")));
 
+  private static final Set<String> SLURS =
+      Collections.unmodifiableSet(
+          new HashSet<>(
+              Arrays.asList(
+                  "chink",
+                  "chinks",
+                  "coon",
+                  "coons",
+                  "dyke",
+                  "dykes",
+                  "fag",
+                  "fags",
+                  "faggot",
+                  "faggots",
+                  "gook",
+                  "gooks",
+                  "kike",
+                  "kikes",
+                  "nigga",
+                  "niggas",
+                  "nigger",
+                  "niggers",
+                  "paki",
+                  "pakis",
+                  "retard",
+                  "retards",
+                  "retarded",
+                  "spastic",
+                  "spastics",
+                  "spic",
+                  "spics",
+                  "tranny",
+                  "trannies")));
+
   private final Set<String> blocklist;
 
   /** Loads the bundled wordlist. Falls back to an empty (pass-through) filter if it is missing. */
@@ -146,7 +180,16 @@ public final class ProfanityFilter {
    * unchanged. Idempotent: the asterisk runs it produces contain no maskable tokens.
    */
   public String mask(String text) {
-    if (text == null || text.isEmpty() || blocklist.isEmpty()) {
+    return mask(text, blocklist);
+  }
+
+  /** Allows ordinary profanity while retaining the stricter slur boundary. */
+  public String maskSlurs(String text) {
+    return mask(text, SLURS);
+  }
+
+  private String mask(String text, Set<String> blocked) {
+    if (text == null || text.isEmpty() || blocked.isEmpty()) {
       return text;
     }
     Matcher matcher = TOKEN.matcher(text);
@@ -155,9 +198,7 @@ public final class ProfanityFilter {
     while (matcher.find()) {
       String token = matcher.group();
       String normalized = normalize(token);
-      if (normalized.isEmpty()
-          || ALLOWLIST.contains(normalized)
-          || !blocklist.contains(normalized)) {
+      if (normalized.isEmpty() || ALLOWLIST.contains(normalized) || !blocked.contains(normalized)) {
         continue;
       }
       if (out == null) {

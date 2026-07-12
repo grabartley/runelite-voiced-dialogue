@@ -585,10 +585,7 @@ public class OpenRouterTtsBackendTest {
         "the rewritten line is what is voiced",
         "no cap, well met",
         speech.get("input").getAsString());
-    assertEquals(
-        "the language_code stays the base language, not the quirk",
-        "en-GB",
-        speech.get("language_code").getAsString());
+    assertFalse("styled English leaves pronunciation unconstrained", speech.has("language_code"));
   }
 
   @Test

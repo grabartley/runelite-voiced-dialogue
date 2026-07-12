@@ -72,7 +72,23 @@ public interface VoicedDialogueConfig extends Config {
     STREET("Street Slang", "casual street slang"),
     US_SLANG("US Slang", "with casual American slang"),
     UK_SLANG("UK Slang", "with London Roadman Slang"),
+    AUSTRALIAN_SLANG(
+        "AUS Slang",
+        "with broad Australian slang and mannerisms",
+        "Use a broad Australian accent while speaking English.",
+        true),
     IRISH_SLANG("Irish Slang", "with Dublin Slang"),
+    BOSTON(
+        "Heavy Boston",
+        "with heavy Boston slang and mannerisms",
+        "Use a heavy Boston accent while speaking English.",
+        true),
+    FRENCH_ACCENT(
+        "Heavy French",
+        "with French-influenced English expressions and mannerisms; keep the dialogue in English"
+            + " and do not translate it into French",
+        "Use a heavy French accent while speaking English.",
+        true),
     SURFER("Surfer", "with laid-back surfer slang"),
     VALLEY_GIRL("Valley Girl", "with Valley Girl slang"),
     FORMAL("Formal & Posh", "very formal and posh"),
@@ -83,14 +99,23 @@ public interface VoicedDialogueConfig extends Config {
     PIRATE("Pirate Speak", "pirate speak"),
     COWBOY("Cowboy", "with Wild West cowboy slang"),
     CYBERPUNK("Cyberpunk", "with gritty cyberpunk netrunner slang"),
-    RHYMING("Rhyming", "as rhyming verse");
+    RHYMING("Rhyming", "as rhyming verse"),
+    RANDOM("Random", "");
 
     private final String label;
     private final String phrase;
+    private final String voiceDirection;
+    private final boolean forcesEnglish;
 
     SpeakingStyle(String label, String phrase) {
+      this(label, phrase, "", false);
+    }
+
+    SpeakingStyle(String label, String phrase, String voiceDirection, boolean forcesEnglish) {
       this.label = label;
       this.phrase = phrase;
+      this.voiceDirection = voiceDirection;
+      this.forcesEnglish = forcesEnglish;
     }
 
     /** Whether this is the no-op default. */
@@ -101,6 +126,14 @@ public interface VoicedDialogueConfig extends Config {
     /** The style descriptor appended to the spoken language for the translation model. */
     public String phrase() {
       return phrase;
+    }
+
+    public String voiceDirection() {
+      return voiceDirection;
+    }
+
+    public boolean forcesEnglish() {
+      return forcesEnglish;
     }
 
     @Override
@@ -120,7 +153,11 @@ public interface VoicedDialogueConfig extends Config {
    * original line directly; every other value routes the line through the translation hop first.
    */
   enum SpokenLanguage {
-    ENGLISH("English", "en-GB"),
+    ENGLISH("English", "en-GB", "English (UK)", "Use natural British English pronunciation."),
+    AMERICAN_ENGLISH(
+        "English", "en-US", "English (US)", "Use natural American English pronunciation."),
+    AUSTRALIAN_ENGLISH(
+        "English", "en-AU", "English (AU)", "Use natural Australian English pronunciation."),
     SPANISH("Spanish", "es-ES"),
     LATIN_AMERICAN_SPANISH("Latin American Spanish", "es-419", "Spanish (LatAm)"),
     MEXICAN_SPANISH("Mexican Spanish", "es-MX", "Spanish (MX)"),
@@ -174,20 +211,26 @@ public interface VoicedDialogueConfig extends Config {
     private final String label;
     private final String code;
     private final String displayName;
+    private final String voiceDirection;
 
     SpokenLanguage(String label, String code) {
-      this(label, code, label);
+      this(label, code, label, "");
     }
 
     SpokenLanguage(String label, String code, String displayName) {
+      this(label, code, displayName, "");
+    }
+
+    SpokenLanguage(String label, String code, String displayName, String voiceDirection) {
       this.label = label;
       this.code = code;
       this.displayName = displayName;
+      this.voiceDirection = voiceDirection;
     }
 
     /** Whether this is English, the no-translation default. */
     public boolean isEnglish() {
-      return this == ENGLISH;
+      return this == ENGLISH || this == AMERICAN_ENGLISH || this == AUSTRALIAN_ENGLISH;
     }
 
     /** The natural language name fed to the translation model as the target language. */
@@ -200,10 +243,27 @@ public interface VoicedDialogueConfig extends Config {
       return code;
     }
 
+    public String pronunciationDirection() {
+      if (!voiceDirection.isEmpty()) {
+        return voiceDirection;
+      }
+      return isEnglish()
+          ? ""
+          : "Use native " + label + " pronunciation. Do not use an English accent.";
+    }
+
     @Override
     public String toString() {
       return displayName;
     }
+  }
+
+  static int normalizeDialogueCreativity(int value) {
+    if (value >= 0 && value <= 4) {
+      return value;
+    }
+    int legacy = Math.max(0, Math.min(100, value));
+    return Math.min(4, (legacy + 24) / 25);
   }
 
   // ---------------------------------------------------------------------------
@@ -392,10 +452,21 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "dialogueCreativity",
+      name = "Dialogue Creativity",
+      description = "0 literal, 1 near-literal, 2 restrained, 3 expressive, 4 creative.",
+      position = 4,
+      section = deliverySection)
+  @Range(min = 0, max = 4)
+  default int dialogueCreativity() {
+    return 1;
+  }
+
+  @ConfigItem(
       keyName = "speakingPace",
       name = "Speaking Pace",
       description = "Speech speed as % of normal (100 = normal).",
-      position = 4,
+      position = 5,
       section = deliverySection)
   @Range(min = 50, max = 200)
   default int speakingPace() {
@@ -406,7 +477,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "cloudCaveEcho",
       name = "Cave Echo",
       description = "Add a cave echo to dialogue spoken underground.",
-      position = 5,
+      position = 6,
       section = deliverySection)
   default boolean cloudCaveEcho() {
     return false;
@@ -445,6 +516,16 @@ public interface VoicedDialogueConfig extends Config {
       position = 2,
       section = advancedSection)
   default boolean debugMode() {
+    return false;
+  }
+
+  @ConfigItem(
+      keyName = "allowMaturePersonaAdlibs",
+      name = "Allow Mature Persona Ad-libs",
+      description = "Allows profanity and creative remarks requested by your player persona.",
+      position = 3,
+      section = advancedSection)
+  default boolean allowMaturePersonaAdlibs() {
     return false;
   }
 }

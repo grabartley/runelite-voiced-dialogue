@@ -114,7 +114,10 @@ public class VoiceManager {
     if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
       CharacterProfile profile =
           profileTable.resolvePlayer(
-              config.playerAccent(), config.playerPersona(), config.playerPace());
+              config.playerAccent(),
+              config.playerPersona(),
+              config.playerPace(),
+              config.allowMaturePersonaAdlibs());
       if (config.debugMode()) {
         log.info("[TTS profile] player -> '{}' accent='{}'", profile.name(), profile.accent());
       }

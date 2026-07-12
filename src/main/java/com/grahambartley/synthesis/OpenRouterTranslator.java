@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.grahambartley.VoicedDialogueConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.function.IntConsumer;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -48,6 +49,7 @@ final class OpenRouterTranslator {
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
+  private IntConsumer responseCodeListener = code -> {};
 
   OpenRouterTranslator(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
@@ -62,20 +64,28 @@ final class OpenRouterTranslator {
     this.endpoint = endpoint;
   }
 
+  void setResponseCodeListener(IntConsumer responseCodeListener) {
+    this.responseCodeListener = responseCodeListener == null ? code -> {} : responseCodeListener;
+  }
+
   /**
    * Returns {@code text} translated into {@code language}, or {@code null} on any failure (missing
    * key, non-2xx, network error, empty/unparseable body). The caller treats {@code null} as a
    * failed line rather than voicing untranslated text under a target-language cache key.
    */
   String translate(String text, String language, String apiKey) {
+    return translate(text, language, apiKey, null, 1);
+  }
+
+  String translate(String text, String language, String apiKey, String context, int creativity) {
     if (text == null || text.isEmpty()) {
       return text;
     }
     JsonObject payload = new JsonObject();
     payload.addProperty("model", MODEL);
     JsonArray messages = new JsonArray();
-    messages.add(message("system", systemPrompt(language)));
-    messages.add(message("user", text));
+    messages.add(message("system", systemPrompt(language, creativity)));
+    messages.add(message("user", contextualInput(text, context)));
     payload.add("messages", messages);
     OpenRouterProvider.apply(payload);
 
@@ -96,6 +106,7 @@ final class OpenRouterTranslator {
       ResponseBody body = response.body();
       String raw = body == null ? "" : body.string();
       long elapsedMs = elapsedMs(start);
+      responseCodeListener.accept(response.code());
       if (!response.isSuccessful()) {
         log.warn(
             "[TTS cloud] translate fail reason=non-2xx http={} elapsedMs={} inLen={} detail={}",
@@ -145,12 +156,55 @@ final class OpenRouterTranslator {
    * byte-identical prefix the model's prompt cache keys on.
    */
   static String systemPrompt(String language) {
+    return systemPrompt(language, 1);
+  }
+
+  static String systemPrompt(String language, int creativity) {
     return "You are a translation engine for an Old School RuneScape dialogue voice plugin."
         + " Translate the user's line into "
         + language
         + ". Preserve proper nouns, character names, place names, item names, and RuneScape"
-        + " terminology exactly as written. Output only the translation, with no quotes, notes,"
+        + " terminology exactly as written. "
+        + creativityInstruction(creativity)
+        + " Output only the transformed reply, with no quotes, notes,"
         + " explanations, or preamble.";
+  }
+
+  private static String creativityInstruction(int creativity) {
+    int level = VoicedDialogueConfig.normalizeDialogueCreativity(creativity);
+    if (level == 0) {
+      return "Creativity level 0/4: faithfully translate or repeat the source. Add, omit, reorder,"
+          + " or embellish nothing.";
+    }
+    if (level == 1) {
+      return "Creativity level 1/4: stay near-literal. Preserve every clause and factual detail."
+          + " Change wording only when necessary for grammatical, natural target-language speech. Do"
+          + " not add sentences, reactions, jokes, ad-libs, or new information unless the explicit"
+          + " in-character persona instruction permits them.";
+    }
+    if (level == 2) {
+      return "Creativity level 2/4: use restrained natural phrasing and light character diction"
+          + " while preserving every proposition and factual detail. Do not add new ideas, jokes,"
+          + " or ad-libs unless the explicit in-character persona instruction permits them.";
+    }
+    if (level == 3) {
+      return "Creativity level 3/4: use noticeable in-character phrasing while preserving the"
+          + " source intent, facts, questions, answers, names, and RuneScape terms. At most one"
+          + " very short non-factual reaction is allowed.";
+    }
+    return "Creativity level 4/4: use expressive in-character phrasing and, if it fits, add at"
+        + " most one short aside. Never add or change facts, requests, answers, named entities,"
+        + " required details, or the source intent.";
+  }
+
+  static String contextualInput(String text, String context) {
+    if (context == null || context.trim().isEmpty()) {
+      return text;
+    }
+    return "Previous dialogue for context only; do not repeat it:\n"
+        + context.trim()
+        + "\n\nTransform and output only this reply:\n"
+        + text;
   }
 
   private static JsonObject message(String role, String content) {

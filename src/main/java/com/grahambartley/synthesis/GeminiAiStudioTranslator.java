@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.grahambartley.VoicedDialogueConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.function.IntConsumer;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -29,6 +30,7 @@ final class GeminiAiStudioTranslator {
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
+  private IntConsumer responseCodeListener = code -> {};
 
   GeminiAiStudioTranslator(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
@@ -42,16 +44,24 @@ final class GeminiAiStudioTranslator {
     this.endpoint = endpoint;
   }
 
+  void setResponseCodeListener(IntConsumer responseCodeListener) {
+    this.responseCodeListener = responseCodeListener == null ? code -> {} : responseCodeListener;
+  }
+
   /** Returns the translated text, or {@code null} when the provider cannot translate the line. */
   String translate(String text, String language, String apiKey) {
+    return translate(text, language, apiKey, null, 1);
+  }
+
+  String translate(String text, String language, String apiKey, String context, int creativity) {
     if (text == null || text.isEmpty()) {
       return text;
     }
 
     JsonObject systemInstruction = new JsonObject();
-    systemInstruction.add("parts", parts(OpenRouterTranslator.systemPrompt(language)));
+    systemInstruction.add("parts", parts(OpenRouterTranslator.systemPrompt(language, creativity)));
     JsonObject content = new JsonObject();
-    content.add("parts", parts(text));
+    content.add("parts", parts(OpenRouterTranslator.contextualInput(text, context)));
     JsonArray contents = new JsonArray();
     contents.add(content);
     JsonObject payload = new JsonObject();
@@ -70,6 +80,7 @@ final class GeminiAiStudioTranslator {
     try (Response response = httpClient.newCall(request).execute()) {
       ResponseBody body = response.body();
       String raw = body == null ? "" : body.string();
+      responseCodeListener.accept(response.code());
       if (!response.isSuccessful()) {
         log.warn("[TTS AI Studio] translate failed with HTTP {}", response.code());
         return null;

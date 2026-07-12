@@ -165,6 +165,55 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
+  public void preparesRequestBeforeBuildingTheCacheKey() {
+    List<SynthesisRequest> rendered = new ArrayList<>();
+    SynthesisBackend backend =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return "prepared";
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public SynthesisRequest prepare(SynthesisRequest request) {
+            return request.withBackendSettings(
+                "French", "fr-FR", "native French", false, 2, 100, 0);
+          }
+
+          @Override
+          public String cacheVariant(SynthesisRequest request) {
+            return request.preparedLanguageCode();
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            rendered.add(request);
+            return new Pcm(new float[] {0.1f, -0.1f}, 24_000);
+          }
+        };
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.speak(req("Hello", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    svc.speak(req("Hello", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals(1, rendered.size());
+    assertEquals("fr-FR", rendered.get(0).preparedLanguageCode());
+  }
+
+  @Test
   public void switchingProvidersDoesNotReuseTheOtherProvidersCachedAudio() {
     FakeBackend openRouter = new FakeBackend("cloud-openrouter", EnumSet.of(Emotion.NEUTRAL));
     FakeBackend aiStudio = new FakeBackend("cloud-google-ai-studio", EnumSet.of(Emotion.NEUTRAL));

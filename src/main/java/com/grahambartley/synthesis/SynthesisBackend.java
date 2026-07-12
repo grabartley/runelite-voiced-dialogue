@@ -26,6 +26,11 @@ public interface SynthesisBackend {
   /** The emotions this backend can voice. Requests outside this set are downgraded to neutral. */
   EnumSet<Emotion> supportedEmotions();
 
+  /** Freezes backend-specific live configuration into a request before it is queued and keyed. */
+  default SynthesisRequest prepare(SynthesisRequest request) {
+    return request;
+  }
+
   /** Synthesizes the request to PCM, or returns {@code null} on failure. */
   Pcm synthesize(SynthesisRequest request);
 

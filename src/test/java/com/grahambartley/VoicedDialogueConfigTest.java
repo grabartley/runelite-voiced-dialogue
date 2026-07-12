@@ -24,8 +24,10 @@ public class VoicedDialogueConfigTest {
     assertTrue("English is the no-translation default", SpokenLanguage.ENGLISH.isEnglish());
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertEquals(
-          "English is the only language treated as no-translation",
-          language == SpokenLanguage.ENGLISH,
+          "English regional variants are all treated as no-translation",
+          language == SpokenLanguage.ENGLISH
+              || language == SpokenLanguage.AMERICAN_ENGLISH
+              || language == SpokenLanguage.AUSTRALIAN_ENGLISH,
           language.isEnglish());
     }
   }
@@ -53,7 +55,7 @@ public class VoicedDialogueConfigTest {
 
   @Test
   public void toStringShowsTheDisplayNameWithoutTheCode() {
-    assertEquals("English", SpokenLanguage.ENGLISH.toString());
+    assertEquals("English (UK)", SpokenLanguage.ENGLISH.toString());
     assertEquals("Spanish", SpokenLanguage.SPANISH.toString());
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertFalse(
@@ -68,5 +70,13 @@ public class VoicedDialogueConfigTest {
     assertEquals("Brazilian Portuguese", SpokenLanguage.BRAZILIAN_PORTUGUESE.label());
     assertEquals("Spanish (LatAm)", SpokenLanguage.LATIN_AMERICAN_SPANISH.toString());
     assertEquals("Latin American Spanish", SpokenLanguage.LATIN_AMERICAN_SPANISH.label());
+  }
+
+  @Test
+  public void legacyCreativityValuesMigrateToTheRestrainedScale() {
+    assertEquals(0, VoicedDialogueConfig.normalizeDialogueCreativity(0));
+    assertEquals(1, VoicedDialogueConfig.normalizeDialogueCreativity(20));
+    assertEquals(4, VoicedDialogueConfig.normalizeDialogueCreativity(100));
+    assertEquals(4, VoicedDialogueConfig.normalizeDialogueCreativity(999));
   }
 }

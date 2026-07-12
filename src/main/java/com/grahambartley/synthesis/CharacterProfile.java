@@ -91,6 +91,6 @@ public final class CharacterProfile {
    */
   public String cacheKey() {
     String joined = name + '' + accent + '' + style + '' + pace;
-    return Integer.toHexString(joined.hashCode());
+    return CacheVariantDigest.of(joined);
   }
 }

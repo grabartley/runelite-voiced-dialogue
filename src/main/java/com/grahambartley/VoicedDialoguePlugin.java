@@ -93,6 +93,7 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Override
   protected void startUp() {
+    migrateDialogueCreativity();
     VoiceManager voiceManager = new VoiceManager(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
@@ -261,13 +262,45 @@ public class VoicedDialoguePlugin extends Plugin {
    */
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {
-    if (!BackendWarmUpPolicy.affectsBackendWarmUp(event.getGroup(), event.getKey())) {
-      return;
-    }
     if (audioService == null || backendProvider == null) {
       return;
     }
-    audioService.prewarm(backendProvider::warmUpActive);
+    if (isPlayerProfileConfig(event.getGroup(), event.getKey())) {
+      audioService.interrupt();
+      if (dialogueWatcher != null) {
+        dialogueWatcher.refreshVisibleLine();
+      }
+    }
+    if (BackendWarmUpPolicy.affectsBackendWarmUp(event.getGroup(), event.getKey())) {
+      audioService.prewarm(backendProvider::warmUpActive);
+    }
+  }
+
+  private static boolean isPlayerProfileConfig(String group, String key) {
+    return VoicedDialogueConfig.GROUP.equals(group)
+        && ("playerAccent".equals(key)
+            || "playerPersona".equals(key)
+            || "playerPace".equals(key)
+            || "cloudCharacterProfiles".equals(key));
+  }
+
+  private void migrateDialogueCreativity() {
+    String raw =
+        configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, "dialogueCreativity", String.class);
+    if (raw == null) {
+      return;
+    }
+    try {
+      int stored = Integer.parseInt(raw);
+      int normalized = VoicedDialogueConfig.normalizeDialogueCreativity(stored);
+      if (stored != normalized) {
+        configManager.setConfiguration(
+            VoicedDialogueConfig.GROUP, "dialogueCreativity", normalized);
+      }
+    } catch (NumberFormatException ignored) {
+      // RuneLite falls back to the config default for malformed persisted input.
+    }
   }
 
   @Provides

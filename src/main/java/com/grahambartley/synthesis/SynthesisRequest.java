@@ -1,6 +1,5 @@
 package com.grahambartley.synthesis;
 
-import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -36,8 +35,10 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 @EqualsAndHashCode
 @ToString
-@AllArgsConstructor
 public final class SynthesisRequest {
+
+  private static final int MAX_CONTEXTUAL_REPLY_CHARS = 80;
+  private static final int MAX_CONTEXT_CHARS = 240;
 
   private final String text;
   private final VoiceSpec voice;
@@ -45,15 +46,23 @@ public final class SynthesisRequest {
   private final CharacterProfile profile;
   private final boolean skipTranslation;
   private final boolean player;
+  private final String context;
+  private final String preparedLanguage;
+  private final String preparedLanguageCode;
+  private final String preparedVoiceDirection;
+  private final boolean preparedMaturePersona;
+  private final int preparedCreativity;
+  private final int preparedSpeedPercent;
+  private final int preparedMaxChars;
 
   /** A request with no character profile (backward-compatible 3-arg form). */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
-    this(text, voice, emotion, null, false, false);
+    this(text, voice, emotion, null, false, false, null, null, null, null, false, -1, 0, -1);
   }
 
   /** A translating request with a character profile (backward-compatible 4-arg form). */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion, CharacterProfile profile) {
-    this(text, voice, emotion, profile, false, false);
+    this(text, voice, emotion, profile, false, false, null, null, null, null, false, -1, 0, -1);
   }
 
   /** A request with explicit translation behaviour but no speaker-class flag (5-arg form). */
@@ -63,7 +72,76 @@ public final class SynthesisRequest {
       Emotion emotion,
       CharacterProfile profile,
       boolean skipTranslation) {
-    this(text, voice, emotion, profile, skipTranslation, false);
+    this(
+        text,
+        voice,
+        emotion,
+        profile,
+        skipTranslation,
+        false,
+        null,
+        null,
+        null,
+        null,
+        false,
+        -1,
+        0,
+        -1);
+  }
+
+  public SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player) {
+    this(
+        text,
+        voice,
+        emotion,
+        profile,
+        skipTranslation,
+        player,
+        null,
+        null,
+        null,
+        null,
+        false,
+        -1,
+        0,
+        -1);
+  }
+
+  private SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player,
+      String context,
+      String preparedLanguage,
+      String preparedLanguageCode,
+      String preparedVoiceDirection,
+      boolean preparedMaturePersona,
+      int preparedCreativity,
+      int preparedSpeedPercent,
+      int preparedMaxChars) {
+    this.text = text;
+    this.voice = voice;
+    this.emotion = emotion;
+    this.profile = profile;
+    this.skipTranslation = skipTranslation;
+    this.player = player;
+    this.context = context;
+    this.preparedLanguage = preparedLanguage;
+    this.preparedLanguageCode = preparedLanguageCode;
+    this.preparedVoiceDirection = preparedVoiceDirection;
+    this.preparedMaturePersona = preparedMaturePersona;
+    this.preparedCreativity = preparedCreativity;
+    this.preparedSpeedPercent = preparedSpeedPercent;
+    this.preparedMaxChars = preparedMaxChars;
   }
 
   /**
@@ -74,6 +152,73 @@ public final class SynthesisRequest {
     if (newEmotion == emotion) {
       return this;
     }
-    return new SynthesisRequest(text, voice, newEmotion, profile, skipTranslation, player);
+    return new SynthesisRequest(
+        text,
+        voice,
+        newEmotion,
+        profile,
+        skipTranslation,
+        player,
+        context,
+        preparedLanguage,
+        preparedLanguageCode,
+        preparedVoiceDirection,
+        preparedMaturePersona,
+        preparedCreativity,
+        preparedSpeedPercent,
+        preparedMaxChars);
+  }
+
+  public SynthesisRequest withBackendSettings(
+      String language,
+      String languageCode,
+      String voiceDirection,
+      boolean maturePersona,
+      int creativity,
+      int speedPercent,
+      int maxChars) {
+    return new SynthesisRequest(
+        text,
+        voice,
+        emotion,
+        profile,
+        skipTranslation,
+        player,
+        context,
+        language,
+        languageCode,
+        voiceDirection,
+        maturePersona,
+        creativity,
+        speedPercent,
+        maxChars);
+  }
+
+  public SynthesisRequest withContext(String dialogueContext) {
+    String bounded = dialogueContext == null ? null : dialogueContext.trim();
+    if (!player
+        || text == null
+        || text.length() > MAX_CONTEXTUAL_REPLY_CHARS
+        || bounded == null
+        || bounded.isEmpty()) {
+      bounded = null;
+    } else if (bounded.length() > MAX_CONTEXT_CHARS) {
+      bounded = bounded.substring(0, MAX_CONTEXT_CHARS).trim();
+    }
+    return new SynthesisRequest(
+        text,
+        voice,
+        emotion,
+        profile,
+        skipTranslation,
+        player,
+        bounded,
+        preparedLanguage,
+        preparedLanguageCode,
+        preparedVoiceDirection,
+        preparedMaturePersona,
+        preparedCreativity,
+        preparedSpeedPercent,
+        preparedMaxChars);
   }
 }

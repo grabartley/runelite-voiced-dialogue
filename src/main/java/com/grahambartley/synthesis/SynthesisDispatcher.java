@@ -51,21 +51,27 @@ public final class SynthesisDispatcher {
    * @return {@code true} when the line was handed to the audio service
    */
   public boolean speakDialogue(String text, String speaker, String npcName, int headAnimationId) {
+    return speakDialogue(text, speaker, npcName, headAnimationId, null);
+  }
+
+  public boolean speakDialogue(
+      String text, String speaker, String npcName, int headAnimationId, String dialogueContext) {
     Emotion emotion = emotionResolver.resolve(headAnimationId, config.cloudEmotion());
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
     VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
     boolean player = VoiceManager.SPEAKER_PLAYER.equals(speaker);
-    return dispatch(
+    SynthesisRequest request =
         new SynthesisRequest(
-            text,
-            voice,
-            emotion,
-            profileResolver.resolve(speaker, npcName),
-            /* skipTranslation= */ false,
-            player),
-        npcName);
+                text,
+                voice,
+                emotion,
+                profileResolver.resolve(speaker, npcName),
+                /* skipTranslation= */ false,
+                player)
+            .withContext(dialogueContext);
+    return dispatch(request, npcName);
   }
 
   /**

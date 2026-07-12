@@ -11,11 +11,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.ConnectionPool;
@@ -138,6 +140,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private final String endpoint;
   private final TtsModelStrategy model = new GeminiTtsModel();
   private final OpenRouterTranslator translator;
+  private final ProfanityFilter profanityFilter = new ProfanityFilter();
 
   /**
    * Per-profile digest of the stable cacheable prefix, used only in debug mode to assert the prefix
@@ -157,7 +160,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private Consumer<String> notice = msg -> {};
 
   /** Guards the one-time notice so a sustained outage does not spam the chat box. */
-  private boolean warned;
+  private final AtomicBoolean warned = new AtomicBoolean();
 
   public OpenRouterTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
@@ -217,6 +220,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             ? endpoint.replace("/audio/speech", "/chat/completions")
             : OpenRouterTranslator.PRODUCTION_ENDPOINT;
     this.translator = new OpenRouterTranslator(this.httpClient, config, gson, translatorEndpoint);
+    this.translator.setResponseCodeListener(this::recordTranslationResponse);
   }
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
@@ -232,6 +236,44 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   @Override
   public boolean isAvailable() {
     return isNonBlank(config.openRouterApiKey());
+  }
+
+  @Override
+  public SynthesisRequest prepare(SynthesisRequest request) {
+    int creativity = VoicedDialogueConfig.normalizeDialogueCreativity(config.dialogueCreativity());
+    VoicedDialogueConfig.SpeakingStyle configured =
+        request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
+    VoicedDialogueConfig.SpeakingStyle style =
+        request.skipTranslation()
+            ? VoicedDialogueConfig.SpeakingStyle.NONE
+            : SpeakingStyleResolver.resolve(configured, request);
+    if (creativity == 0) {
+      style = VoicedDialogueConfig.SpeakingStyle.NONE;
+    }
+    String voiceDirection =
+        style.voiceDirection().isEmpty()
+            ? request.profile() != null
+                    && config.cloudLanguage() == VoicedDialogueConfig.SpokenLanguage.ENGLISH
+                ? ""
+                : config.cloudLanguage().pronunciationDirection()
+            : style.voiceDirection();
+    String language = combineLanguage(config.cloudLanguage().label(), style);
+    boolean maturePersona = creativity > 0 && PersonaRewriteTarget.enabled(config, request);
+    if (maturePersona) {
+      language = PersonaRewriteTarget.apply(config, request, language);
+    }
+    return request.withBackendSettings(
+        language,
+        request.skipTranslation()
+                || style.forcesEnglish()
+                || config.cloudLanguage() == VoicedDialogueConfig.SpokenLanguage.ENGLISH
+            ? null
+            : config.cloudLanguage().code(),
+        request.skipTranslation() ? "" : voiceDirection,
+        maturePersona,
+        creativity,
+        speedPercent(),
+        config.cloudMaxChars());
   }
 
   @Override
@@ -252,17 +294,21 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // text. Plain English with no quirk folds in no language fragment, so pre-translation cache
     // entries stay valid.
     String language = effectiveSpokenLanguage(request);
-    String languageFragment =
-        needsTranslation(language) && !request.skipTranslation() ? language.toLowerCase() : null;
-    return CloudCacheKeyBuilder.build(
-        model.modelId(),
-        model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
+    boolean rewritten =
+        (needsTranslation(language) || usesContext(request)) && !request.skipTranslation();
+    String languageFragment = rewritten ? language.toLowerCase(Locale.ROOT) : null;
+    String variant =
+        CloudCacheKeyBuilder.build(
+            model.modelId(),
+            model.voiceFor(request.voice()),
+            speedPercent(request),
+            DEFAULT_SPEED_PERCENT,
+            request.text(),
+            maxChars(request),
+            request.profile(),
+            languageFragment);
+    return creativityVariant(
+        request, rewritten, contextVariant(request, pronunciationVariant(request, variant)));
   }
 
   /** A target language other than English (case-insensitive, blank treated as English). */
@@ -281,6 +327,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * skips the hop while the other class can still be styled.
    */
   String effectiveSpokenLanguage(SynthesisRequest request) {
+    if (request.preparedLanguage() != null) {
+      return request.preparedLanguage();
+    }
     VoicedDialogueConfig.SpeakingStyle style =
         request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
     return combineLanguage(config.cloudLanguage().label(), style);
@@ -290,7 +339,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * Appends a non-empty quirk phrase to the (blank-safe) base language, e.g. "French pirate speak".
    */
   static String combineLanguage(String language, VoicedDialogueConfig.SpeakingStyle quirk) {
-    String base = language == null || language.trim().isEmpty() ? "English" : language.trim();
+    String base =
+        quirk != null && quirk.forcesEnglish()
+            ? "English"
+            : language == null || language.trim().isEmpty() ? "English" : language.trim();
     if (quirk == null || quirk.isNone()) {
       return base;
     }
@@ -306,7 +358,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
     String key = config.openRouterApiKey().trim();
     String voice = model.voiceFor(request.voice());
-    String cappedText = capLength(request.text(), config.cloudMaxChars());
+    String cappedText = capLength(request.text(), maxChars(request));
     // Optional first hop: a non-English target language (or a global quirk) routes the (already
     // capped) line through the translation model before it is voiced, so the spoken transcript is
     // the transformed text. A failed translation fails the line rather than voicing the wrong
@@ -314,16 +366,23 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // (public chat) is voiced exactly as typed, so it bypasses the hop even under a non-English
     // target or a global quirk.
     String language = effectiveSpokenLanguage(request);
-    boolean translating = needsTranslation(language) && !request.skipTranslation();
+    boolean translating =
+        (needsTranslation(language) || usesContext(request)) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
+      String translated =
+          translator.translate(
+              cappedText,
+              language.trim(),
+              key,
+              usesContext(request) ? request.context() : null,
+              creativity(request));
       if (translated == null) {
         warnOnce(
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");
         return null;
       }
-      spokenText = translated;
+      spokenText = capLength(filterGeneratedText(request, translated), maxChars(request));
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
     // The profile block sets the tone (accent/style/pace) and the emotion tag colours the moment;
@@ -331,7 +390,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // null
     // profile leaves the input exactly as the pre-profile backend produced it.
     CharacterProfile profile = request.profile();
-    String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
+    String input =
+        TtsPromptDirections.render(profile, styledInput, request.preparedVoiceDirection());
     if (profile != null) {
       assertStablePrefix(profile);
     }
@@ -365,7 +425,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     payload.addProperty("input", input);
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", model.responseFormat());
-    int speed = speedPercent();
+    int speed = speedPercent(request);
     if (speed != DEFAULT_SPEED_PERCENT) {
       // The model may ignore speed; sending it only when non-default keeps the default request body
       // identical to before and avoids paying for a param the model might not honour.
@@ -377,8 +437,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
     // A translated line gets a BCP-47 language_code from the base language (not the quirk), so the
     // voice pronounces the text natively rather than mis-reading it with an English phoneme set.
-    if (translating) {
-      payload.addProperty("language_code", config.cloudLanguage().code());
+    String languageCode = request.preparedLanguageCode();
+    if (translating && languageCode == null && request.preparedLanguage() == null) {
+      languageCode = config.cloudLanguage().isEnglish() ? null : config.cloudLanguage().code();
+    }
+    if (languageCode != null) {
+      payload.addProperty("language_code", languageCode);
     }
     // Route every call to the fastest provider (throughput sort, the :nitro equivalent). Identical
     // block on the translation hop, so routing is consistent.
@@ -643,6 +707,55 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     return percent;
   }
 
+  private int speedPercent(SynthesisRequest request) {
+    return request.preparedSpeedPercent() > 0 ? request.preparedSpeedPercent() : speedPercent();
+  }
+
+  private int maxChars(SynthesisRequest request) {
+    return request.preparedMaxChars() >= 0 ? request.preparedMaxChars() : config.cloudMaxChars();
+  }
+
+  private String filterGeneratedText(SynthesisRequest request, String text) {
+    return request.preparedMaturePersona()
+        ? profanityFilter.maskSlurs(text)
+        : profanityFilter.mask(text);
+  }
+
+  private static String pronunciationVariant(SynthesisRequest request, String variant) {
+    if ((request.preparedVoiceDirection() == null
+            || request.preparedVoiceDirection().trim().isEmpty())
+        && request.preparedLanguageCode() == null) {
+      return variant;
+    }
+    return variant
+        + "|accent-v4-"
+        + CacheVariantDigest.of(
+            String.valueOf(request.preparedVoiceDirection())
+                + '\u0001'
+                + String.valueOf(request.preparedLanguageCode()));
+  }
+
+  private static String contextVariant(SynthesisRequest request, String variant) {
+    return !usesContext(request)
+        ? variant
+        : variant + "|ctx" + CacheVariantDigest.of(request.context());
+  }
+
+  private static String creativityVariant(
+      SynthesisRequest request, boolean rewritten, String variant) {
+    return !rewritten || request.preparedCreativity() < 0
+        ? variant
+        : variant + "|creative-v2-" + creativity(request);
+  }
+
+  private static boolean usesContext(SynthesisRequest request) {
+    return request.context() != null && creativity(request) >= 2;
+  }
+
+  private static int creativity(SynthesisRequest request) {
+    return request.preparedCreativity() >= 0 ? request.preparedCreativity() : 1;
+  }
+
   /**
    * Truncates {@code text} to at most {@code maxChars} characters, cutting at the latest sentence
    * boundary in the kept window, or failing that the latest word boundary, so a capped line still
@@ -718,9 +831,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   private void warnOnce(String message) {
     log.debug(message);
-    if (!warned) {
-      warned = true;
+    if (warned.compareAndSet(false, true)) {
       notice.accept(message);
+    }
+  }
+
+  private void recordTranslationResponse(int code) {
+    if (code == HTTP_TOO_MANY_REQUESTS) {
+      backoff.recordRateLimited();
     }
   }
 

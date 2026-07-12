@@ -5,6 +5,12 @@ default OpenRouter backend or the Google AI Studio backend selected in configura
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
 A line the pipeline cannot voice (for example when no API key is set) is left silent.
 
+Before a line is queued, `SynthesisBackend.prepare` snapshots its provider-specific delivery state
+into the immutable `SynthesisRequest`. The audio service prepares before cache-key construction and
+both synthesis backends render only that prepared state. A config change therefore cannot make a
+queued request use a cache key for one delivery while sending another. Profile, language/pronunciation,
+style, context, and creativity variants are all part of the cache identity where they affect output.
+
 ## Google AI Studio speech
 
 When **TTS Provider** is Google AI Studio, `GeminiAiStudioTtsBackend` makes a synchronous
@@ -13,7 +19,8 @@ audio-only output from Gemini 3.1 Flash TTS, resolves voices through the same `G
 the OpenRouter path, then decodes the returned base64 inline PCM at 24 kHz. The response is fully
 buffered before normal playback and cache storage; there is no streaming playback path.
 
-For a non-English language or configured speaking style, `GeminiAiStudioTranslator` first makes a
+For a non-English language, configured speaking style, or eligible contextual player reply,
+`GeminiAiStudioTranslator` first makes a
 direct Gemini Flash Lite request using the existing translation prompt. Plain English without a
 style continues straight to speech. The selected backend ID is part of every cache key, so clips
 from OpenRouter and Google AI Studio never collide.
@@ -50,6 +57,17 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   voice, pace, profile, or language change therefore never replays the wrong audio, while a short
   English line stays on a stable key so changing a setting that cannot affect it does not force a
   needless re-bill.
+- **Prepared delivery controls.** Regional English variants use direct pronunciation guidance and
+  their BCP-47 code; translated languages override an English profile accent with native
+  pronunciation. Accent-oriented styles add both rewriting guidance and a direct TTS direction.
+  Random resolves deterministically before queueing, so prefetch, playback, and retries agree.
+- **Creativity and context.** Creativity is a bounded `0`-`4` setting: literal through creative.
+  A short player reply may include a bounded preceding NPC line as rewrite-only context at level 2
+  or above. The context and creativity are hashed into the variant, so a reply never reuses audio
+  produced for another question.
+- **Generated-text filtering.** Source text remains filtered at the dialogue boundary. Rewritten
+  text is filtered again before speech; the mature player-persona opt-in permits ordinary profanity
+  only for player rewrites at nonzero creativity and still masks slurs.
 - **Per-line character cap.** When **Max Characters Per Line** is a positive value, each line is
   truncated to it at a sentence boundary, or a word boundary if there is none, before sending. `0`
   (the default) sends the whole line uncapped. OSRS lines are short, so a cap only bounds pathological
@@ -112,15 +130,17 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   line of identical text under different styles. Either class can be `None` independently (e.g. a
   roadman player among posh NPCs).
 
+  Accent-oriented styles also direct the TTS voice, and can intentionally force English so an
+  accent is not undermined by translation. The selected style is part of prepared request state,
+  never read live during synthesis.
+
 The translation model is invoked only when there is something for it to do. For a given line, with
 that speaker class's Speaking Style on `None` and **Spoken Language** English, the effective target
 is plain English, so the line bypasses the model entirely and the source text goes straight to
 speech: no chat-completions request, no added latency or cost. Setting a non-English language, a
 style for that class, or both is what turns the hop on.
 
-Streaming the audio response to start playback sooner was evaluated and deferred: OSRS lines are short,
-the full-buffer decode is already fast, and streaming would complicate the raw-PCM decode and the
-epoch-based stale-drop for little perceived gain.
+The normal delivery path buffers a complete PCM response before playback and caching.
 
 The primary cost lever remains the persistent disk cache, on by default, which keeps any already-heard
 line from being billed again across sessions. Its footprint is bounded by the **Cache Size Limit**

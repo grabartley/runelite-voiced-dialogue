@@ -32,7 +32,7 @@ NPC in pirate speak or another language.
 - **Real emotion.** The plugin reads each speaker's chat-head expression and delivers the line happy, sad, angry, scared, or neutral, so a furious dwarf actually sounds furious.
 - **You star in it too.** Set your own hero's accent, persona, and pace and play the dashing knight, the gruff mercenary, or the chaos goblin of your dreams.
 - **Your chat, out loud.** Turn on **Voice My Public Chat** and everything you type in public chat is spoken in your character's voice.
-- **Speak any language, any vibe.** Pipe dialogue through another language, or drop a delivery style over it: be a roadman in Gen Z slang among posh nobles, or run the whole realm as a pirate crew.
+- **Speak any language, any vibe.** Pick UK, US, or Australian English pronunciation, translate dialogue, or use a delivery style from pirate to Random.
 - **Atmosphere on tap.** Lines spoken underground pick up a cave echo, so dungeons and sewers feel enclosed.
 - **Clean by default.** Always-on, offline profanity filtering keeps things friendly with no setup.
 - **Fast and out of the way.** Voices play in real time, and skipping a line cuts its audio instantly, so the client stays snappy even when you mash through dialogue.
@@ -79,7 +79,9 @@ Profiles stack in layers, so an unknown NPC still gets a sensible voice while ic
 <details>
 <summary><b>Languages and speaking styles</b></summary>
 
-Set **Spoken Language** to anything other than English and every line is spoken in that language, with names and RuneScape terms kept intact. Layer a **Speaking Style** on top (Gen Z slang, pirate speak, Shakespearean, cyberpunk, and more), set separately for your own lines and for NPCs, and mix them however you like: every combination of language and style works together.
+Set **Spoken Language** to a regional English voice or another language. Translated lines keep names and RuneScape terms intact and explicitly request native pronunciation. Layer a **Speaking Style** on top (Gen Z slang, pirate speak, Shakespearean, cyberpunk, accent styles, or deterministic per-line Random), set separately for your own lines and for NPCs.
+
+**Dialogue Creativity** controls rewriting from literal (`0`) through creative (`4`). Short player replies can use the preceding NPC line for context without repeating it. Public chat remains verbatim.
 
 </details>
 
@@ -90,9 +92,9 @@ Everything runs off the game thread, so the client never stutters and skipping a
 
 </details>
 
-> **Privacy:** the dialogue text being spoken is sent over HTTPS to the selected provider
-(OpenRouter or Google AI Studio). Lines already heard replay from the local cache without another
-request.
+> **Privacy:** dialogue text and voice directions (such as profile, emotion, language, and style)
+> are sent over HTTPS to the selected provider (OpenRouter or Google AI Studio). Lines already heard
+> replay from the local cache without another request.
 
 ## Configuration
 
@@ -133,9 +135,10 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Emotional Delivery** | `On` | Matches the voice to the emotion on the speaker's chat-head. Off voices every line as Neutral. |
-| **Spoken Language** | `English` | Speaks dialogue in another language, keeping names, places, and item terms intact. Translation adds a little latency per line. |
-| **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). |
-| **NPC Speaking Style** | `None` | The same set of styles, applied to NPC lines instead; composes with any Spoken Language. |
+| **Spoken Language** | `English (UK)` | Selects UK, US, or Australian English pronunciation, or translates dialogue into another language. |
+| **Player Speaking Style** | `None` | A delivery register layered onto your own lines, including accent/slang options and per-line Random. |
+| **NPC Speaking Style** | `None` | The same style table applied independently to NPC lines; composes with any Spoken Language. |
+| **Dialogue Creativity** | `1` | `0` literal, `1` near-literal, `2` restrained, `3` expressive, `4` creative. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
 | **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). |
 
@@ -149,6 +152,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | **Cache Size Limit (MiB)** | `1024` | Maximum size of the on-disk audio cache; the oldest clips are deleted first. Set to `0` for no limit. |
 | **Max Characters Per Line** | `0` | Caps how many characters of a line are voiced, to bound worst-case per-line cost. `0` voices the whole line. |
 | **Debug Logging** | `Off` | Writes detailed per-line voice decisions and timing logs, for troubleshooting. |
+| **Allow Mature Persona Ad-libs** | `Off` | Allows player persona rewrites to use ordinary profanity; slurs remain masked. |
 
 </details>
 

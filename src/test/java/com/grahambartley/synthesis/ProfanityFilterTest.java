@@ -18,6 +18,12 @@ public class ProfanityFilterTest {
 
   private final ProfanityFilter filter = new ProfanityFilter();
 
+  @Test
+  public void slurOnlyModeAllowsProfanityButMasksSlurs() {
+    assertEquals("cunt", filter.maskSlurs("cunt"));
+    assertEquals("****", filter.maskSlurs("spic"));
+  }
+
   private Object[] baseWordCases() {
     return new Object[] {
       new Object[] {"Oh shit off, adventurer.", "Oh **** off, adventurer."},

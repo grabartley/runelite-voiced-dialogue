@@ -46,6 +46,10 @@ public final class DialoguePrefetchCoordinator {
   }
 
   void prefetchOptions(Widget options) {
+    prefetchOptions(options, null);
+  }
+
+  void prefetchOptions(Widget options, String dialogueContext) {
     if (!config.prefetch() || !backendProvider.active().isAvailable()) {
       return;
     }
@@ -70,12 +74,13 @@ public final class DialoguePrefetchCoordinator {
       }
       candidates.add(
           new SynthesisRequest(
-              cleaned,
-              voice,
-              Emotion.NEUTRAL,
-              profile,
-              /* skipTranslation= */ false,
-              /* player= */ true));
+                  cleaned,
+                  voice,
+                  Emotion.NEUTRAL,
+                  profile,
+                  /* skipTranslation= */ false,
+                  /* player= */ true)
+              .withContext(dialogueContext));
     }
     prefetcher.offer(candidates);
   }

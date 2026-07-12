@@ -269,19 +269,24 @@ public final class NpcProfileTable {
    * emitting an empty direction. The player's name label is never overridden by config.
    */
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {
+    return resolvePlayer(accent, style, pace, false);
+  }
+
+  public CharacterProfile resolvePlayer(
+      String accent, String style, String pace, boolean allowProfanity) {
     CharacterProfile base = apply(defaultProfile, playerLayer);
     return new CharacterProfile(
         base.name(),
-        sanitizedOr(accent, base.accent()),
-        sanitizedOr(style, base.style()),
-        sanitizedOr(pace, base.pace()));
+        sanitizedOr(accent, base.accent(), allowProfanity),
+        sanitizedOr(style, base.style(), allowProfanity),
+        sanitizedOr(pace, base.pace(), allowProfanity));
   }
 
-  private String sanitizedOr(String configured, String fallback) {
+  private String sanitizedOr(String configured, String fallback, boolean allowProfanity) {
     if (isBlank(configured)) {
       return fallback;
     }
-    String sanitized = directionSanitizer.sanitize(configured);
+    String sanitized = directionSanitizer.sanitize(configured, allowProfanity);
     return isBlank(sanitized) ? fallback : sanitized;
   }
 
