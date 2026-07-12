@@ -792,6 +792,25 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
+  public void completedNeutralPrefetchServesEmotionalLiveLine() {
+    FakeBackend backend = new FakeBackend(EnumSet.allOf(Emotion.class));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+    SynthesisRequest neutral = req("Prefetched emotion", NPCRace.HUMAN, NPCGender.MALE);
+    SynthesisRequest angry =
+        req("Prefetched emotion", NPCRace.HUMAN, NPCGender.MALE, Emotion.ANGRY);
+
+    svc.prefetch(neutral);
+    executor.runAll();
+    svc.speak(angry);
+    executor.runAll();
+
+    assertEquals("neutral prefetch is synthesized once", 1, backend.requests.size());
+    assertEquals("emotional live line uses the ready neutral clip", 1, output.streamCalls);
+  }
+
+  @Test
   public void prefetchOfAnAlreadyCachedLineIsANoOp() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();

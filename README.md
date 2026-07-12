@@ -94,7 +94,8 @@ Everything runs off the game thread, so the client never stutters and skipping a
 
 > **Privacy:** dialogue text and voice directions (such as profile, emotion, language, and style)
 > are sent over HTTPS to the selected provider (OpenRouter or Google AI Studio). Lines already heard
-> replay from the local cache without another request.
+> replay from the local cache without another request. If **Predictive Wiki Prefetch** is enabled,
+> the current NPC name is also sent to the OSRS Wiki to fetch its public transcript page.
 
 ## Configuration
 
@@ -111,6 +112,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
 | **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice, exactly as typed. |
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options you can see so your pick plays instantly; can spend credit on branches you never choose. |
+| **Predictive Wiki Prefetch** | `Off` | Uses OSRS Wiki transcripts to pre-voice up to two likely next lines. Can spend credit on dialogue you never reach. |
 | **Save Audio To Disk** | `On` | Keeps synthesized audio on disk so repeated lines replay instantly and free across sessions. |
 
 </details>

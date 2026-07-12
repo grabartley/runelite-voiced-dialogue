@@ -17,6 +17,7 @@ public class VoicedDialogueConfigTest {
     VoicedDialogueConfig config = new VoicedDialogueConfig() {};
     assertEquals(VoicedDialogueConfig.TtsProvider.OPENROUTER, config.ttsProvider());
     assertFalse(config.experimentalStreamingPlayback());
+    assertFalse(config.predictiveWikiPrefetch());
   }
 
   @Test

@@ -118,6 +118,15 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   epoch. A small fixed pool caps it at two requests in flight, a per-conversation cap bounds spend,
   already-cached lines are skipped, and leaving the node cancels still-queued prefetches. Gated by
   **Prefetch Dialogue**.
+- **Predictive Wiki prefetch.** When explicitly enabled, `WikiTranscriptClient` fetches the current
+  NPC's public `Transcript:<name>` wikitext once per client session. `WikiTranscript` matches the
+  displayed line exactly and offers at most two immediate successors through the same
+  `DialoguePrefetcher`, sharing its cap, deduplication, rate-limit backoff, persistent cache, and
+  cancellation. Dynamic placeholder lines, ambiguous speakers, and deep lookahead are skipped.
+  Predicted NPC emotion is neutral because a future chat-head animation is unknowable. A completed
+  neutral clip produced by prefetch may serve the matching emotional live line as a latency-first
+  fallback; ordinary neutral cache entries are not eligible. Late Wiki results are rejected when the
+  line, NPC, or conversation changes.
 - **Optional translation.** With **Spoken Language** set to anything but English, `OpenRouterTranslator`
   translates each line through `google/gemini-3.1-flash-lite` (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,

@@ -30,6 +30,7 @@ public final class DialogueWatcher {
   private final DialoguePrefetchCoordinator prefetchCoordinator;
   private final DialoguePrefetcher prefetcher;
   private final DialogueAudioService audioService;
+  private final PredictiveDialoguePrefetcher predictivePrefetcher;
 
   private String lastSpoken = "";
   private String pendingLine;
@@ -51,6 +52,26 @@ public final class DialogueWatcher {
       DialoguePrefetchCoordinator prefetchCoordinator,
       DialoguePrefetcher prefetcher,
       DialogueAudioService audioService) {
+    this(
+        client,
+        textCleaner,
+        widgetReader,
+        dispatcher,
+        prefetchCoordinator,
+        prefetcher,
+        audioService,
+        null);
+  }
+
+  public DialogueWatcher(
+      Client client,
+      DialogueTextCleaner textCleaner,
+      DialogueWidgetReader widgetReader,
+      SynthesisDispatcher dispatcher,
+      DialoguePrefetchCoordinator prefetchCoordinator,
+      DialoguePrefetcher prefetcher,
+      DialogueAudioService audioService,
+      PredictiveDialoguePrefetcher predictivePrefetcher) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.widgetReader = widgetReader;
@@ -58,6 +79,7 @@ public final class DialogueWatcher {
     this.prefetchCoordinator = prefetchCoordinator;
     this.prefetcher = prefetcher;
     this.audioService = audioService;
+    this.predictivePrefetcher = predictivePrefetcher;
   }
 
   public void tick() {
@@ -89,6 +111,9 @@ public final class DialogueWatcher {
               audioService.interruptIfCurrent(previousEpoch);
               dialoguePlaybackEpoch = -1;
             }
+            if (predictivePrefetcher != null) {
+              predictivePrefetcher.onLine(cleaned, npcName);
+            }
           }
         }
       }
@@ -118,6 +143,9 @@ public final class DialogueWatcher {
             } else if (previousEpoch >= 0) {
               audioService.interruptIfCurrent(previousEpoch);
               dialoguePlaybackEpoch = -1;
+            }
+            if (predictivePrefetcher != null) {
+              predictivePrefetcher.onLine(cleaned, null);
             }
           }
         }
@@ -167,6 +195,9 @@ public final class DialogueWatcher {
         headWaitLineKey = null;
         headWaitTicks = 0;
         prefetcher.reset();
+        if (predictivePrefetcher != null) {
+          predictivePrefetcher.reset();
+        }
       }
     }
   }
@@ -225,6 +256,9 @@ public final class DialogueWatcher {
         && !"Unknown NPC".equals(npcName)
         && !"Unknown NPC".equals(sessionNpc)) {
       prefetcher.reset();
+      if (predictivePrefetcher != null) {
+        predictivePrefetcher.reset();
+      }
     } else {
       prefetcher.advanceNode();
     }

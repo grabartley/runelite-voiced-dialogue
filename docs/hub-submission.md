@@ -79,7 +79,7 @@ placeholder with the sha from Step 1:
 repository=https://github.com/grabartley/runelite-voiced-dialogue.git
 commit=<full 40-char sha from `git rev-parse v1.0.0`>
 authors=grabartley
-warning=This plugin sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not controlled or verified by the RuneLite developers) over HTTPS, using your API key, to synthesize speech.
+warning=This plugin sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not controlled or verified by the RuneLite developers) over HTTPS, using your API key, to synthesize speech. If predictive Wiki prefetch is enabled, it also sends the current NPC name to the OSRS Wiki to fetch its public transcript page.
 ```
 
 The descriptor file name **is** the internal plugin name and must be lowercase

@@ -334,10 +334,20 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "predictiveWikiPrefetch",
+      name = "Predictive Wiki Prefetch",
+      description = "Sends NPC names to OSRS Wiki; pre-voices likely lines and may raise spend.",
+      position = 6,
+      section = generalSection)
+  default boolean predictiveWikiPrefetch() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "persistentCache",
       name = "Save Audio To Disk",
       description = "Save audio to disk so repeat lines replay for free.",
-      position = 6,
+      position = 7,
       section = generalSection)
   default boolean persistentCache() {
     return true;

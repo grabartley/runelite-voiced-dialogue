@@ -5,6 +5,7 @@ import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.StreamingSynthesisBackend;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,6 +77,9 @@ public final class DialogueAudioService {
    */
   private static final int PREFETCH_QUEUE_CAPACITY = 16;
 
+  /** Bounds the in-memory eligibility markers for neutral predictive-prefetch fallbacks. */
+  private static final int PREFETCH_ELIGIBILITY_LIMIT = 1024;
+
   /** Character budget for the abbreviated text preview in debug logs. */
   private static final int LOG_TEXT_PREVIEW_LENGTH = 40;
 
@@ -97,10 +101,20 @@ public final class DialogueAudioService {
   // spending on branches the player has already left. Separate from the playback epoch: a new
   // spoken line must never cancel prefetch, and a prefetch must never cancel playback.
   private final AtomicLong prefetchEpoch = new AtomicLong();
+
   // Synths currently running, keyed by CacheKey, so a second task for the same line reuses the
   // pending result instead of issuing a duplicate (billable) backend call.
-  private final ConcurrentHashMap<CacheKey, CompletableFuture<Pcm>> inFlight =
-      new ConcurrentHashMap<>();
+  private static final class InFlight {
+    final CompletableFuture<Pcm> future = new CompletableFuture<>();
+    final boolean prefetchOwner;
+
+    InFlight(boolean prefetchOwner) {
+      this.prefetchOwner = prefetchOwner;
+    }
+  }
+
+  private final ConcurrentHashMap<CacheKey, InFlight> inFlight = new ConcurrentHashMap<>();
+  private final Set<CacheKey> prefetched = ConcurrentHashMap.newKeySet();
 
   public DialogueAudioService(
       BackendProvider backends,
@@ -224,7 +238,14 @@ public final class DialogueAudioService {
           // The player may have left this node, the backend may have hit a limit, or a real line
           // may
           // have warmed this key while we waited in the queue: re-check all three before spending.
-          if (prefetchEpoch.get() != node || backend.isThrottled() || lookup(key) != null) {
+          if (prefetchEpoch.get() != node || backend.isThrottled()) {
+            return;
+          }
+          if (lookup(key) != null) {
+            log.debug("[TTS prefetch] ready source=cache \"{}\"", abbreviate(key.text()));
+            return;
+          }
+          if (prefetchEpoch.get() != node || backend.isThrottled()) {
             return;
           }
           log.debug(
@@ -232,7 +253,14 @@ public final class DialogueAudioService {
               key.backendId(),
               key.voiceKey(),
               abbreviate(key.text()));
-          synthesizeDeduped(backend, effective, key);
+          long start = System.nanoTime();
+          Pcm pcm = synthesizePrefetch(backend, effective, key);
+          if (pcm != null) {
+            log.debug(
+                "[TTS prefetch] ready source=synth synthMs={} \"{}\"",
+                elapsedMs(start),
+                abbreviate(key.text()));
+          }
         });
   }
 
@@ -321,6 +349,20 @@ public final class DialogueAudioService {
       return;
     }
     Pcm pcm = lookup(key);
+    if (pcm == null && key.emotion() != Emotion.NEUTRAL) {
+      CacheKey neutral = new CacheKey(key.backendId(), key.voiceKey(), Emotion.NEUTRAL, key.text());
+      if (prefetched.contains(neutral)) {
+        pcm = lookup(neutral);
+        if (pcm != null) {
+          log.debug(
+              "[TTS prefetch] neutral fallback requestedEmotion={} \"{}\"",
+              key.emotion(),
+              abbreviate(key.text()));
+        } else {
+          prefetched.remove(neutral);
+        }
+      }
+    }
     AudioOutput.StreamSession[] stream = {null};
     if (pcm == null) {
       // Both cache tiers missed: synthesize once (de-duped against any concurrent identical synth)
@@ -416,15 +458,15 @@ public final class DialogueAudioService {
       SynthesisRequest request,
       CacheKey key,
       java.util.function.Consumer<Pcm> onChunk) {
-    CompletableFuture<Pcm> own = new CompletableFuture<>();
-    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
+    InFlight own = new InFlight(false);
+    InFlight running = inFlight.putIfAbsent(key, own);
     if (running != null) {
       log.debug(
           "[TTS synth] streaming dedup reuse ({}/{}) \"{}\"",
           key.backendId(),
           key.voiceKey(),
           abbreviate(key.text()));
-      return await(running);
+      return await(running.future);
     }
     Pcm pcm = null;
     try {
@@ -445,7 +487,7 @@ public final class DialogueAudioService {
         }
       }
     } finally {
-      own.complete(pcm);
+      own.future.complete(pcm);
       inFlight.remove(key, own);
     }
     return pcm;
@@ -458,15 +500,24 @@ public final class DialogueAudioService {
    * instead of issuing a second (billable) backend call. Returns {@code null} on synth failure.
    */
   Pcm synthesizeDeduped(SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
-    CompletableFuture<Pcm> own = new CompletableFuture<>();
-    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
+    return synthesizeBufferedDeduped(backend, request, key, false);
+  }
+
+  private Pcm synthesizePrefetch(SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
+    return synthesizeBufferedDeduped(backend, request, key, true);
+  }
+
+  private Pcm synthesizeBufferedDeduped(
+      SynthesisBackend backend, SynthesisRequest request, CacheKey key, boolean prefetchOwner) {
+    InFlight own = new InFlight(prefetchOwner);
+    InFlight running = inFlight.putIfAbsent(key, own);
     if (running != null) {
       log.debug(
           "[TTS synth] dedup reuse ({}/{}) \"{}\"",
           key.backendId(),
           key.voiceKey(),
           abbreviate(key.text()));
-      return await(running);
+      return await(running.future);
     }
     Pcm pcm = null;
     try {
@@ -485,6 +536,9 @@ public final class DialogueAudioService {
           abbreviate(key.text()));
       if (pcm != null) {
         cache.put(key, pcm);
+        if (own.prefetchOwner) {
+          markPrefetched(key);
+        }
         if (diskCache != null) {
           diskCache.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), pcm);
         }
@@ -492,7 +546,7 @@ public final class DialogueAudioService {
     } finally {
       // Publish before deregistering so a waiter that already grabbed this future is never left
       // blocked, and a fresh request right after sees a populated cache rather than re-synthing.
-      own.complete(pcm);
+      own.future.complete(pcm);
       inFlight.remove(key, own);
     }
     return pcm;
@@ -507,6 +561,13 @@ public final class DialogueAudioService {
     } catch (RuntimeException e) {
       return null;
     }
+  }
+
+  private void markPrefetched(CacheKey key) {
+    if (prefetched.size() >= PREFETCH_ELIGIBILITY_LIMIT) {
+      prefetched.clear();
+    }
+    prefetched.add(key);
   }
 
   private void submit(Runnable task) {

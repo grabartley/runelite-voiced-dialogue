@@ -120,4 +120,12 @@ public class DialoguePrefetcherTest {
     assertEquals("the same option remains deduplicated", 1, warmed.size());
     assertEquals("queued work is cancelled for the old node", 1, cancels);
   }
+
+  @Test
+  public void offerReturnsHowManyLinesWereAccepted() {
+    DialoguePrefetcher prefetcher = prefetcher();
+
+    assertEquals(2, prefetcher.offer(options("Yes.", "Yes.", "No.")));
+    assertEquals(0, prefetcher.offer(options("Yes.", "No.")));
+  }
 }

@@ -70,6 +70,8 @@ a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which
 - First-run onboarding chat notice (`ChatNoticeManager`): "...Your dialogue text is then sent
   to OpenRouter to be voiced. Until a key is set, lines stay silent."
 - General section header (`VoicedDialogueConfig`): "...Text is sent to OpenRouter."
+- Predictive Wiki prefetch is off by default; its setting and Hub warning disclose that enabling it
+  sends the current NPC name to the OSRS Wiki transcript API and may synthesize unused branches.
 - The Hub listing itself carries the off-machine-data `warning=` in the descriptor (see
   [`hub-submission.md`](hub-submission.md) and
   [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)).
@@ -123,7 +125,8 @@ Descriptor `warning=` (off-machine-data disclosure, from
 [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)): "This plugin
 sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not
 controlled or verified by the RuneLite developers) over HTTPS, using your API key, to
-synthesize speech."
+synthesize speech. If predictive Wiki prefetch is enabled, it also sends the current NPC name to
+the OSRS Wiki to fetch its public transcript page."
 
 ## Manual QA still required before submission
 

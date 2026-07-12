@@ -58,11 +58,14 @@ public final class DialoguePrefetcher {
    * Warms the reachable next lines that have not already been warmed this session, up to the
    * per-session cap. A no-op when prefetch is disabled or there are no candidates. Empty/blank
    * candidates and duplicates are skipped without consuming the cap.
+   *
+   * @return number of newly accepted lines offered to the warm sink
    */
-  public void offer(List<SynthesisRequest> candidates) {
+  public int offer(List<SynthesisRequest> candidates) {
     if (candidates == null || candidates.isEmpty() || !enabled.getAsBoolean()) {
-      return;
+      return 0;
     }
+    int accepted = 0;
     for (SynthesisRequest request : candidates) {
       if (count >= MAX_PER_SESSION) {
         break;
@@ -74,8 +77,10 @@ public final class DialoguePrefetcher {
         continue;
       }
       count++;
+      accepted++;
       sink.accept(request);
     }
+    return accepted;
   }
 
   /**
