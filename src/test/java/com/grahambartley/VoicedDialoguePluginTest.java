@@ -1,7 +1,10 @@
 package com.grahambartley;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
+import com.grahambartley.dialogue.DialogueWatcher;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.SynthesisBackend;
@@ -11,6 +14,7 @@ import com.grahambartley.tts.Pcm;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.runelite.api.events.ClientTick;
 import net.runelite.client.events.ConfigChanged;
 import org.junit.Test;
 
@@ -59,6 +63,17 @@ public class VoicedDialoguePluginTest {
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     // audioService and backendProvider are null (never started / already shut down).
     plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
+  }
+
+  @Test
+  public void clientTickScansDialogueWithoutWaitingForGameTick() throws Exception {
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    DialogueWatcher watcher = mock(DialogueWatcher.class);
+    setField(plugin, "dialogueWatcher", watcher);
+
+    plugin.onClientTick(new ClientTick());
+
+    verify(watcher).tick();
   }
 
   // --- helpers -------------------------------------------------------------

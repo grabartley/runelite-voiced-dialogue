@@ -14,6 +14,14 @@ public interface AudioOutput {
    */
   void stream(float[] samples, int sampleRate, int volumePercent);
 
+  /** Streams a complete buffer only if its dialogue generation is still current. */
+  default void stream(long streamId, float[] samples, int sampleRate, int volumePercent) {
+    stream(samples, sampleRate, volumePercent);
+  }
+
+  /** Marks the newest dialogue generation so delayed older streams can be rejected before opening. */
+  default void advance(long streamId) {}
+
   /** Interrupts the line currently playing (if any) so {@link #stream} returns promptly. */
   void stop();
 

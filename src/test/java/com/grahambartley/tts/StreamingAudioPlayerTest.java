@@ -67,6 +67,17 @@ public class StreamingAudioPlayerTest {
   }
 
   @Test
+  public void staleCompleteBufferIsRejectedBeforeItTouchesTheMixer() {
+    StreamingAudioPlayer.LineFactory factory = mock(StreamingAudioPlayer.LineFactory.class);
+    StreamingAudioPlayer player = new StreamingAudioPlayer(factory);
+    player.advance(2);
+
+    player.stream(1, new float[] {0f}, 24_000, 100);
+
+    verifyNoInteractions(factory);
+  }
+
+  @Test
   public void emptySamplesNeverTouchTheAudioLine() {
     StreamingAudioPlayer.LineFactory factory = mock(StreamingAudioPlayer.LineFactory.class);
     StreamingAudioPlayer player = new StreamingAudioPlayer(factory);

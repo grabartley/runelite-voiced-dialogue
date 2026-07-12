@@ -32,11 +32,30 @@ public class DialogueWidgetReaderTest {
   }
 
   @Test
+  public void reportsWhetherAChatHeadIsPresent() {
+    Widget head = mock(Widget.class);
+    when(client.getWidget(7)).thenReturn(head);
+
+    assertEquals(true, reader.hasHead(7));
+    assertEquals(false, reader.hasHead(8));
+  }
+
+  @Test
   public void nameWidgetTextIsTrimmed() {
     Widget nameWidget = mock(Widget.class);
     when(client.getWidget(ComponentID.DIALOG_NPC_NAME)).thenReturn(nameWidget);
     when(nameWidget.isHidden()).thenReturn(false);
     when(nameWidget.getText()).thenReturn(" Hans ");
+    assertEquals("Hans", reader.currentNpcName());
+  }
+
+  @Test
+  public void nameWidgetMarkupIsRemoved() {
+    Widget nameWidget = mock(Widget.class);
+    when(client.getWidget(ComponentID.DIALOG_NPC_NAME)).thenReturn(nameWidget);
+    when(nameWidget.isHidden()).thenReturn(false);
+    when(nameWidget.getText()).thenReturn("<col=ff0000>Hans</col>");
+
     assertEquals("Hans", reader.currentNpcName());
   }
 

@@ -30,6 +30,7 @@ public class StreamingAudioPlayer implements AudioOutput {
   private final LineFactory lineFactory;
   private final AtomicLong generation = new AtomicLong();
   private volatile SourceDataLine line;
+  private long latestStreamId = Long.MIN_VALUE;
 
   public StreamingAudioPlayer() {
     this(AudioSystem::getSourceDataLine);
@@ -41,19 +42,37 @@ public class StreamingAudioPlayer implements AudioOutput {
 
   @Override
   public void stream(float[] samples, int sampleRate, int volumePercent) {
+    streamInternal(null, samples, sampleRate, volumePercent);
+  }
+
+  @Override
+  public void stream(long streamId, float[] samples, int sampleRate, int volumePercent) {
+    streamInternal(streamId, samples, sampleRate, volumePercent);
+  }
+
+  private void streamInternal(Long streamId, float[] samples, int sampleRate, int volumePercent) {
     if (samples == null || samples.length == 0) {
       return;
     }
-    long gen = generation.incrementAndGet();
     byte[] pcm = PcmAudio.toPcm16LE(samples);
     AudioFormat format = PcmAudio.format(sampleRate);
     SourceDataLine open = null;
+    long gen;
     try {
-      open = lineFactory.getLine(format);
-      open.open(format);
-      applyVolume(open, volumePercent);
-      open.start();
-      this.line = open;
+      synchronized (this) {
+        if (streamId != null && streamId < latestStreamId) {
+          return;
+        }
+        if (streamId != null) {
+          latestStreamId = streamId;
+        }
+        gen = generation.incrementAndGet();
+        open = lineFactory.getLine(format);
+        open.open(format);
+        applyVolume(open, volumePercent);
+        open.start();
+        this.line = open;
+      }
 
       int offset = 0;
       while (offset < pcm.length) {
@@ -78,14 +97,21 @@ public class StreamingAudioPlayer implements AudioOutput {
           // best-effort line teardown
         }
       }
-      if (this.line == open) {
-        this.line = null;
+      synchronized (this) {
+        if (this.line == open) {
+          this.line = null;
+        }
       }
     }
   }
 
   @Override
-  public void stop() {
+  public synchronized void advance(long streamId) {
+    latestStreamId = Math.max(latestStreamId, streamId);
+  }
+
+  @Override
+  public synchronized void stop() {
     // Invalidate the current generation so the streaming loop bails, then unblock any pending
     // write() by flushing and stopping the line.
     generation.incrementAndGet();
@@ -94,8 +120,13 @@ public class StreamingAudioPlayer implements AudioOutput {
       try {
         current.stop();
         current.flush();
+        current.close();
       } catch (Exception ignored) {
         // best-effort interruption
+      } finally {
+        if (this.line == current) {
+          this.line = null;
+        }
       }
     }
   }

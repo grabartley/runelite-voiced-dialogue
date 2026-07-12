@@ -81,12 +81,25 @@ public class DialogueAudioServiceTest {
     int stopCalls;
     int lastVolume = -1;
     float[] lastSamples;
+    long lastStreamId = Long.MIN_VALUE;
+    long lastAdvancedId = Long.MIN_VALUE;
 
     @Override
     public void stream(float[] samples, int sampleRate, int volumePercent) {
       streamCalls++;
       lastVolume = volumePercent;
       lastSamples = samples;
+    }
+
+    @Override
+    public void stream(long streamId, float[] samples, int sampleRate, int volumePercent) {
+      lastStreamId = streamId;
+      stream(samples, sampleRate, volumePercent);
+    }
+
+    @Override
+    public void advance(long streamId) {
+      lastAdvancedId = streamId;
     }
 
     @Override
@@ -228,6 +241,40 @@ public class DialogueAudioServiceTest {
     assertTrue("interrupt should stop current audio", output.stopCalls >= 1);
     assertEquals("queued stale line should not synthesize", 0, backend.requests.size());
     assertEquals("queued stale line should not play", 0, output.streamCalls);
+  }
+
+  @Test
+  public void conditionalInterruptCannotStopANewerLine() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("First", NPCRace.HUMAN, NPCGender.MALE));
+    long first = svc.currentEpoch();
+    svc.speak(req("Newer public chat", NPCRace.HUMAN, NPCGender.MALE));
+    int stopsAfterNewer = output.stopCalls;
+
+    svc.interruptIfCurrent(first);
+    assertEquals("stale close cannot stop newer audio", stopsAfterNewer, output.stopCalls);
+
+    svc.interruptIfCurrent(svc.currentEpoch());
+    assertEquals(stopsAfterNewer + 1, output.stopCalls);
+  }
+
+  @Test
+  public void completeBufferPlaybackUsesTheCurrentEpoch() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Current", NPCRace.HUMAN, NPCGender.MALE));
+    long expected = svc.currentEpoch();
+    executor.runAll();
+
+    assertEquals(expected, output.lastStreamId);
+    assertEquals(expected, output.lastAdvancedId);
   }
 
   @Test

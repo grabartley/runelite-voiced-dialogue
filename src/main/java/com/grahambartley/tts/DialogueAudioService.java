@@ -180,6 +180,7 @@ public final class DialogueAudioService {
       return;
     }
     long mine = epoch.incrementAndGet();
+    output.advance(mine);
     output.stop();
     // Resolve the active backend now so the cache key reflects the backend that will actually run
     // this line on the pipeline thread.
@@ -258,12 +259,27 @@ public final class DialogueAudioService {
 
   /** Stops current playback and drops any queued lines for the now-stale dialogue. */
   public void interrupt() {
-    epoch.incrementAndGet();
+    long mine = epoch.incrementAndGet();
+    output.advance(mine);
     output.stop();
   }
 
+  /** Interrupts only when no newer dialogue or public-chat line superseded {@code expected}. */
+  public void interruptIfCurrent(long expected) {
+    if (!epoch.compareAndSet(expected, expected + 1)) {
+      return;
+    }
+    output.advance(expected + 1);
+    output.stop();
+  }
+
+  public long currentEpoch() {
+    return epoch.get();
+  }
+
   public void close() {
-    epoch.incrementAndGet();
+    long mine = epoch.incrementAndGet();
+    output.advance(mine);
     prefetchEpoch.incrementAndGet();
     output.stop();
     shutdown(executor);
@@ -321,7 +337,7 @@ public final class DialogueAudioService {
     }
     // Echo is render-only on a fresh buffer; the dry pcm stays in both cache tiers untouched.
     Pcm toPlay = applyEcho ? CaveEcho.apply(pcm) : pcm;
-    output.stream(toPlay.getSamples(), toPlay.getSampleRate(), volume.getAsInt());
+    output.stream(mine, toPlay.getSamples(), toPlay.getSampleRate(), volume.getAsInt());
   }
 
   /**

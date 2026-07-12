@@ -47,15 +47,17 @@ public final class SynthesisDispatcher {
    * Speaks a dialogue line. The caller passes the speaker's chat-head expression animation id (or
    * {@link DialogueWidgetReader#NO_EXPRESSION} when there is no head); it is resolved to an {@link
    * Emotion} and ridden into the request.
+   *
+   * @return {@code true} when the line was handed to the audio service
    */
-  public void speakDialogue(String text, String speaker, String npcName, int headAnimationId) {
+  public boolean speakDialogue(String text, String speaker, String npcName, int headAnimationId) {
     Emotion emotion = emotionResolver.resolve(headAnimationId, config.cloudEmotion());
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
     VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
     boolean player = VoiceManager.SPEAKER_PLAYER.equals(speaker);
-    dispatch(
+    return dispatch(
         new SynthesisRequest(
             text,
             voice,
@@ -89,11 +91,13 @@ public final class SynthesisDispatcher {
    * speak path needs: no-op when the active backend is unavailable. On dispatch (debug mode) it
    * emits one consolidated {@code [TTS line]} record of the whole resolved decision, so a single
    * grep gives the backend, emotion, and the full voice metadata used for synthesis.
+   *
+   * @return {@code true} when synthesis was queued
    */
-  private void dispatch(SynthesisRequest request, String npcName) {
+  private boolean dispatch(SynthesisRequest request, String npcName) {
     SynthesisBackend backend = backendProvider.active();
     if (!backend.isAvailable()) {
-      return;
+      return false;
     }
     if (config.debugMode()) {
       // The effective emotion is what the backend will actually voice after the downgrade rule, so
@@ -113,5 +117,6 @@ public final class SynthesisDispatcher {
               profile == null ? null : profile.accent()));
     }
     audioService.speak(request, caveEchoPolicy.shouldEcho());
+    return true;
   }
 }
