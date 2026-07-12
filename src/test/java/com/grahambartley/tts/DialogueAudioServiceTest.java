@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
+import com.grahambartley.synthesis.StreamingSynthesisBackend;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import com.grahambartley.synthesis.VoiceSpec;
@@ -79,6 +80,9 @@ public class DialogueAudioServiceTest {
   private static final class FakeOutput implements AudioOutput {
     int streamCalls;
     int stopCalls;
+    int openStreamCalls;
+    int streamWrites;
+    int streamFinishes;
     int lastVolume = -1;
     float[] lastSamples;
     long lastStreamId = Long.MIN_VALUE;
@@ -100,6 +104,25 @@ public class DialogueAudioServiceTest {
     @Override
     public void advance(long streamId) {
       lastAdvancedId = streamId;
+    }
+
+    @Override
+    public StreamSession openStream(long streamId, int sampleRate, int volumePercent) {
+      openStreamCalls++;
+      return new StreamSession() {
+        @Override
+        public void write(float[] samples) {
+          streamWrites++;
+        }
+
+        @Override
+        public void finish() {
+          streamFinishes++;
+        }
+
+        @Override
+        public void abort() {}
+      };
     }
 
     @Override
@@ -211,6 +234,119 @@ public class DialogueAudioServiceTest {
 
     assertEquals(1, rendered.size());
     assertEquals("fr-FR", rendered.get(0).preparedLanguageCode());
+  }
+
+  @Test
+  public void completeStreamingLinePlaysChunksAndCachesOnlyTheCompleteResult() {
+    AtomicInteger streamingCalls = new AtomicInteger();
+    StreamingSynthesisBackend backend =
+        new StreamingSynthesisBackend() {
+          @Override
+          public String id() {
+            return "cloud-google-ai-studio";
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public boolean streamingEnabled() {
+            return true;
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            throw new AssertionError("live streaming line must not use buffered synthesis");
+          }
+
+          @Override
+          public Pcm synthesizeStreaming(
+              SynthesisRequest request, java.util.function.Consumer<Pcm> onChunk) {
+            streamingCalls.incrementAndGet();
+            onChunk.accept(new Pcm(new float[] {0.1f}, 24_000));
+            onChunk.accept(new Pcm(new float[] {-0.1f}, 24_000));
+            return new Pcm(new float[] {0.1f, -0.1f}, 24_000);
+          }
+        };
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+    SynthesisRequest line = req("Stream me", NPCRace.HUMAN, NPCGender.MALE);
+
+    svc.speak(line);
+    executor.runAll();
+
+    assertEquals(1, streamingCalls.get());
+    assertEquals(1, output.openStreamCalls);
+    assertEquals(2, output.streamWrites);
+    assertEquals(1, output.streamFinishes);
+    assertEquals(0, output.streamCalls);
+
+    svc.speak(line);
+    executor.runAll();
+
+    assertEquals(1, streamingCalls.get());
+    assertEquals(1, output.streamCalls);
+  }
+
+  @Test
+  public void incompleteStreamingLinePlaysReceivedChunksButIsNotCached() {
+    AtomicInteger streamingCalls = new AtomicInteger();
+    StreamingSynthesisBackend backend =
+        new StreamingSynthesisBackend() {
+          @Override
+          public String id() {
+            return "cloud-google-ai-studio";
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public boolean streamingEnabled() {
+            return true;
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            return null;
+          }
+
+          @Override
+          public Pcm synthesizeStreaming(
+              SynthesisRequest request, java.util.function.Consumer<Pcm> onChunk) {
+            streamingCalls.incrementAndGet();
+            onChunk.accept(new Pcm(new float[] {0.1f}, 24_000));
+            return null;
+          }
+        };
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+    SynthesisRequest line = req("Partial", NPCRace.HUMAN, NPCGender.MALE);
+
+    svc.speak(line);
+    executor.runAll();
+    svc.speak(line);
+    executor.runAll();
+
+    assertEquals(2, streamingCalls.get());
+    assertEquals(2, output.streamWrites);
+    assertEquals(2, output.streamFinishes);
   }
 
   @Test

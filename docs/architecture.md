@@ -17,7 +17,15 @@ When **TTS Provider** is Google AI Studio, `GeminiAiStudioTtsBackend` makes a sy
 `generateContent` request directly to Gemini with the user's Google AI Studio API key. It requests
 audio-only output from Gemini 3.1 Flash TTS, resolves voices through the same `GeminiVoiceMap` as
 the OpenRouter path, then decodes the returned base64 inline PCM at 24 kHz. The response is fully
-buffered before normal playback and cache storage; there is no streaming playback path.
+buffered before normal playback and cache storage by default.
+
+When **Experimental Low-Latency Audio** is enabled, uncached live AI Studio lines use
+`streamGenerateContent?alt=sse` instead. Each SSE audio part is base64-decoded into PCM and appended
+to one incremental output session as soon as it arrives. The transport also accumulates the complete
+dry PCM: only a clean `STOP` response is cached, while incomplete streams may finish playing their
+received audio but are never cached. Prefetch and Cave Echo continue using complete-buffer synthesis.
+The output session queues chunks to a daemon writer, so HTTP ingestion is not blocked by speaker
+pacing; advancing dialogue aborts the session immediately.
 
 For a non-English language, configured speaking style, or eligible contextual player reply,
 `GeminiAiStudioTranslator` first makes a
@@ -163,6 +171,8 @@ or privacy.
 ## Audio playback
 
 Synthesized audio (a `Pcm` of mono float samples) is played through `javax.sound.sampled.SourceDataLine`
-by `StreamingAudioPlayer`, converting to signed 16-bit LE PCM via `PcmAudio`. Nothing is staged to a
-temp file, and a generation counter lets a new line interrupt the one currently playing. The Plugin Hub
-maintainers accept this `javax.sound` use for the plugin's streaming and interruption needs.
+by `StreamingAudioPlayer`, converting to signed 16-bit LE PCM via `PcmAudio`. The normal path writes
+one complete clip; low-latency AI Studio playback keeps one line open while incremental chunks queue
+to a daemon writer. Nothing is staged to a temp file, and a generation counter lets a new line
+interrupt either path. The Plugin Hub maintainers accept this `javax.sound` use for the plugin's
+streaming and interruption needs.

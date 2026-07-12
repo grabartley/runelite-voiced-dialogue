@@ -520,10 +520,20 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "experimentalStreamingPlayback",
+      name = "Experimental Low-Latency Audio",
+      description = "Play AI Studio audio as Gemini streams it. May be less reliable.",
+      position = 3,
+      section = advancedSection)
+  default boolean experimentalStreamingPlayback() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "allowMaturePersonaAdlibs",
       name = "Allow Mature Persona Ad-libs",
       description = "Allows profanity and creative remarks requested by your player persona.",
-      position = 3,
+      position = 4,
       section = advancedSection)
   default boolean allowMaturePersonaAdlibs() {
     return false;

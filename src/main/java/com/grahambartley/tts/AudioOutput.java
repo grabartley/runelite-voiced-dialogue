@@ -8,6 +8,18 @@ package com.grahambartley.tts;
  */
 public interface AudioOutput {
 
+  /** One incrementally written line of PCM audio. */
+  interface StreamSession {
+    /** Queues the next mono sample chunk without blocking the synthesis worker. */
+    void write(float[] samples);
+
+    /** Drains the completed line and releases its audio resources. */
+    void finish();
+
+    /** Releases resources without draining, used after interruption. */
+    void abort();
+  }
+
   /**
    * Streams the given mono float samples at {@code sampleRate} and {@code volumePercent} (0-100),
    * blocking the calling thread until playback finishes or is interrupted via {@link #stop()}.
@@ -17,6 +29,13 @@ public interface AudioOutput {
   /** Streams a complete buffer only if its dialogue generation is still current. */
   default void stream(long streamId, float[] samples, int sampleRate, int volumePercent) {
     stream(samples, sampleRate, volumePercent);
+  }
+
+  /**
+   * Opens an incremental stream, or returns {@code null} when only complete buffers are supported.
+   */
+  default StreamSession openStream(long streamId, int sampleRate, int volumePercent) {
+    return null;
   }
 
   /**

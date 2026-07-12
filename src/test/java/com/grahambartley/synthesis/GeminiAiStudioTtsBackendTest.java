@@ -13,7 +13,9 @@ import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -28,6 +30,7 @@ public class GeminiAiStudioTtsBackendTest {
   private static final class TestConfig implements VoicedDialogueConfig {
     String key = "";
     SpokenLanguage language = SpokenLanguage.ENGLISH;
+    boolean streaming;
 
     @Override
     public String googleAiStudioApiKey() {
@@ -37,6 +40,11 @@ public class GeminiAiStudioTtsBackendTest {
     @Override
     public SpokenLanguage cloudLanguage() {
       return language;
+    }
+
+    @Override
+    public boolean experimentalStreamingPlayback() {
+      return streaming;
     }
   }
 
@@ -128,6 +136,37 @@ public class GeminiAiStudioTtsBackendTest {
             .getAsString());
   }
 
+  @Test
+  public void streamingSseDecodesChunksSplitAcrossPcmSamples() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "google-key";
+    config.streaming = true;
+    byte[] pcm = RawPcmDecoderTest.raw(new short[] {0, 1000, -1000});
+    byte[] first = new byte[] {pcm[0], pcm[1], pcm[2]};
+    byte[] second = new byte[] {pcm[3], pcm[4], pcm[5]};
+    server.enqueue(
+        new MockResponse()
+            .setBody(
+                "data: "
+                    + streamingAudioResponse(first, null)
+                    + "\n\n"
+                    + "data: "
+                    + streamingAudioResponse(second, "STOP")
+                    + "\n\n"));
+    List<Pcm> chunks = new ArrayList<>();
+
+    Pcm complete = backend(config).synthesizeStreaming(request("Hello adventurer"), chunks::add);
+
+    assertNotNull(complete);
+    assertEquals(3, complete.getSamples().length);
+    assertEquals(2, chunks.size());
+    assertEquals(1, chunks.get(0).getSamples().length);
+    assertEquals(2, chunks.get(1).getSamples().length);
+    assertEquals(
+        "/v1beta/models/gemini-3.1-flash-tts-preview:streamGenerateContent?alt=sse",
+        server.takeRequest().getPath());
+  }
+
   private GeminiAiStudioTtsBackend backend(TestConfig config) {
     String base = server.url("/v1beta/models/").toString();
     return new GeminiAiStudioTtsBackend(
@@ -152,6 +191,27 @@ public class GeminiAiStudioTtsBackendTest {
     JsonArray parts = new JsonArray();
     parts.add(part);
     return candidateResponse(parts);
+  }
+
+  private static String streamingAudioResponse(byte[] audio, String finishReason) {
+    JsonObject inlineData = new JsonObject();
+    inlineData.addProperty("data", Base64.getEncoder().encodeToString(audio));
+    JsonObject part = new JsonObject();
+    part.add("inlineData", inlineData);
+    JsonArray parts = new JsonArray();
+    parts.add(part);
+    JsonObject content = new JsonObject();
+    content.add("parts", parts);
+    JsonObject candidate = new JsonObject();
+    candidate.add("content", content);
+    if (finishReason != null) {
+      candidate.addProperty("finishReason", finishReason);
+    }
+    JsonArray candidates = new JsonArray();
+    candidates.add(candidate);
+    JsonObject response = new JsonObject();
+    response.add("candidates", candidates);
+    return response.toString();
   }
 
   private static String textResponse(String text) {

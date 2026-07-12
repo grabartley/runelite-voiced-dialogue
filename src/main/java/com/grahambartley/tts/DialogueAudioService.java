@@ -2,6 +2,7 @@ package com.grahambartley.tts;
 
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
+import com.grahambartley.synthesis.StreamingSynthesisBackend;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -320,11 +321,42 @@ public final class DialogueAudioService {
       return;
     }
     Pcm pcm = lookup(key);
+    AudioOutput.StreamSession[] stream = {null};
     if (pcm == null) {
       // Both cache tiers missed: synthesize once (de-duped against any concurrent identical synth)
       // and write through to both tiers so the line is free next time, this session and every
       // future one.
-      pcm = synthesizeDeduped(backend, request, key);
+      if (!applyEcho
+          && backend instanceof StreamingSynthesisBackend
+          && ((StreamingSynthesisBackend) backend).streamingEnabled()) {
+        pcm =
+            synthesizeStreamingDeduped(
+                (StreamingSynthesisBackend) backend,
+                request,
+                key,
+                chunk -> {
+                  if (epoch.get() != mine) {
+                    return;
+                  }
+                  if (stream[0] == null) {
+                    stream[0] = output.openStream(mine, chunk.getSampleRate(), volume.getAsInt());
+                  }
+                  if (stream[0] != null) {
+                    stream[0].write(chunk.getSamples());
+                  }
+                });
+      } else {
+        pcm = synthesizeDeduped(backend, request, key);
+      }
+    }
+    if (stream[0] != null) {
+      if (epoch.get() == mine) {
+        // A partial stream is playable but deliberately returns null, so it is never cached.
+        stream[0].finish();
+      } else {
+        stream[0].abort();
+      }
+      return;
     }
     if (pcm == null) {
       return;
@@ -370,6 +402,51 @@ public final class DialogueAudioService {
             key.voiceKey(),
             abbreviate(key.text()));
       }
+    }
+    return pcm;
+  }
+
+  /**
+   * Shares the existing in-flight registry with buffered synthesis. The owning live request
+   * receives chunks immediately; a duplicate or prefetch waits for the complete result and uses
+   * normal buffered playback/cache behavior.
+   */
+  private Pcm synthesizeStreamingDeduped(
+      StreamingSynthesisBackend backend,
+      SynthesisRequest request,
+      CacheKey key,
+      java.util.function.Consumer<Pcm> onChunk) {
+    CompletableFuture<Pcm> own = new CompletableFuture<>();
+    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
+    if (running != null) {
+      log.debug(
+          "[TTS synth] streaming dedup reuse ({}/{}) \"{}\"",
+          key.backendId(),
+          key.voiceKey(),
+          abbreviate(key.text()));
+      return await(running);
+    }
+    Pcm pcm = null;
+    try {
+      long start = System.nanoTime();
+      pcm = backend.synthesizeStreaming(request, onChunk);
+      log.debug(
+          "[TTS synth] backend={} streaming=true ok={} synthMs={} ({}/{}) \"{}\"",
+          backend.id(),
+          pcm != null,
+          elapsedMs(start),
+          key.backendId(),
+          key.voiceKey(),
+          abbreviate(key.text()));
+      if (pcm != null) {
+        cache.put(key, pcm);
+        if (diskCache != null) {
+          diskCache.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), pcm);
+        }
+      }
+    } finally {
+      own.complete(pcm);
+      inFlight.remove(key, own);
     }
     return pcm;
   }

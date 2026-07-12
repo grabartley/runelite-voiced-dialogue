@@ -24,10 +24,11 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import okio.BufferedSource;
 
 /** Complete-buffer Gemini speech synthesis authenticated with a Google AI Studio API key. */
 @Slf4j
-public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
+public final class GeminiAiStudioTtsBackend implements StreamingSynthesisBackend {
 
   public static final String ID = "cloud-google-ai-studio";
   public static final String NO_KEY_NOTICE =
@@ -45,6 +46,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
+  private final String streamingEndpoint;
   private final GeminiTtsModel model = new GeminiTtsModel();
   private final GeminiAiStudioTranslator translator;
   private final ProfanityFilter profanityFilter = new ProfanityFilter();
@@ -76,6 +78,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
+    this.streamingEndpoint = streamingEndpoint(endpoint);
     this.translator =
         new GeminiAiStudioTranslator(this.httpClient, config, gson, translatorEndpoint);
   }
@@ -92,6 +95,11 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   @Override
   public boolean isAvailable() {
     return isNonBlank(config.googleAiStudioApiKey());
+  }
+
+  @Override
+  public boolean streamingEnabled() {
+    return config.experimentalStreamingPlayback();
   }
 
   @Override
@@ -217,7 +225,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     }
 
     Request httpRequest =
-        buildRequest(input, model.voiceFor(request.voice()), request.preparedLanguageCode(), key);
+        buildRequest(
+            endpoint, input, model.voiceFor(request.voice()), request.preparedLanguageCode(), key);
     try (Response response = httpClient.newCall(httpRequest).execute()) {
       ResponseBody body = response.body();
       String raw = body == null ? "" : body.string();
@@ -241,7 +250,102 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     }
   }
 
-  private Request buildRequest(String input, String voice, String languageCode, String key) {
+  @Override
+  public Pcm synthesizeStreaming(SynthesisRequest request, Consumer<Pcm> onChunk) {
+    if (!isAvailable()) {
+      warnOnce(NO_KEY_NOTICE);
+      return null;
+    }
+    String key = config.googleAiStudioApiKey().trim();
+    String text = OpenRouterTtsBackend.capLength(request.text(), maxChars(request));
+    String language = effectiveSpokenLanguage(request);
+    boolean translating =
+        (OpenRouterTtsBackend.needsTranslation(language) || usesContext(request))
+            && !request.skipTranslation();
+    if (translating) {
+      text =
+          translator.translate(
+              text,
+              language,
+              key,
+              usesContext(request) ? request.context() : null,
+              creativity(request));
+      if (text == null) {
+        warnOnce("Google AI Studio translation failed; this line was not voiced.");
+        return null;
+      }
+      text = OpenRouterTtsBackend.capLength(filterGeneratedText(request, text), maxChars(request));
+    }
+
+    String input = model.styleInput(text, request.emotion());
+    input = TtsPromptDirections.render(request.profile(), input, request.preparedVoiceDirection());
+    int speed = speedPercent(request);
+    if (speed != DEFAULT_SPEED_PERCENT) {
+      input = "SPEAKING PACE: " + speed + "% of normal.\n\n" + input;
+    }
+
+    Request httpRequest =
+        buildRequest(
+            streamingEndpoint,
+            input,
+            model.voiceFor(request.voice()),
+            request.preparedLanguageCode(),
+            key);
+    ByteArrayOutputStream complete = new ByteArrayOutputStream();
+    PcmChunkDecoder decoder = new PcmChunkDecoder();
+    boolean emitted = false;
+    String finishReason = null;
+    try (Response response = httpClient.newCall(httpRequest).execute()) {
+      if (!response.isSuccessful()) {
+        warnOnce(
+            "Google AI Studio streaming TTS failed (HTTP "
+                + response.code()
+                + "); check your API key and quota. This line was not voiced.");
+        return null;
+      }
+      ResponseBody body = response.body();
+      if (body == null) {
+        warnOnce("Google AI Studio streaming TTS returned no audio; this line was not voiced.");
+        return null;
+      }
+      BufferedSource source = body.source();
+      String data;
+      while ((data = readSseData(source)) != null) {
+        if (data.isEmpty() || "[DONE]".equals(data)) {
+          continue;
+        }
+        String eventFinishReason = extractFinishReason(data);
+        if (eventFinishReason != null) {
+          finishReason = eventFinishReason;
+        }
+        for (byte[] audio : extractAudioChunks(data)) {
+          complete.write(audio);
+          Pcm chunk = decoder.decode(audio);
+          if (chunk != null) {
+            emitted = true;
+            onChunk.accept(chunk);
+          }
+        }
+      }
+    } catch (IOException | RuntimeException e) {
+      log.warn("[TTS AI Studio] streaming request failed: {}", e.getMessage());
+      warnOnce("Google AI Studio TTS could not reach the network; this line was not voiced.");
+      return null;
+    }
+
+    Pcm pcm = model.decodeResponse(complete.toByteArray());
+    if (pcm != null
+        && emitted
+        && "STOP".equals(finishReason)
+        && !PcmCompleteness.isTruncated(pcm)) {
+      return pcm;
+    }
+    warnOnce("Google AI Studio returned incomplete streamed audio; this line was not cached.");
+    return null;
+  }
+
+  private Request buildRequest(
+      String target, String input, String voice, String languageCode, String key) {
     JsonObject textPart = new JsonObject();
     textPart.addProperty("text", input);
     JsonArray parts = new JsonArray();
@@ -270,7 +374,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     payload.add("contents", contents);
     payload.add("generationConfig", generationConfig);
     return new Request.Builder()
-        .url(endpoint)
+        .url(target)
         .addHeader("x-goog-api-key", key)
         .addHeader("User-Agent", "runelite-voiced-dialogue")
         .post(
@@ -280,35 +384,114 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   private byte[] extractAudio(String raw) {
+    List<byte[]> chunks = extractAudioChunks(raw);
+    if (chunks.isEmpty()) {
+      return null;
+    }
+    ByteArrayOutputStream audio = new ByteArrayOutputStream();
+    for (byte[] chunk : chunks) {
+      audio.write(chunk, 0, chunk.length);
+    }
+    return audio.toByteArray();
+  }
+
+  private List<byte[]> extractAudioChunks(String raw) {
+    List<byte[]> chunks = new ArrayList<>();
+    try {
+      JsonObject response = gson.fromJson(raw, JsonObject.class);
+      JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
+      if (candidates == null || candidates.size() == 0) {
+        return chunks;
+      }
+      JsonObject content = candidates.get(0).getAsJsonObject().getAsJsonObject("content");
+      JsonArray parts = content == null ? null : content.getAsJsonArray("parts");
+      if (parts == null) {
+        return chunks;
+      }
+      for (JsonElement element : parts) {
+        JsonObject part = element.getAsJsonObject();
+        JsonObject inlineData = part.getAsJsonObject("inlineData");
+        if (inlineData == null) {
+          inlineData = part.getAsJsonObject("inline_data");
+        }
+        if (inlineData != null && inlineData.has("data")) {
+          chunks.add(Base64.getDecoder().decode(inlineData.get("data").getAsString()));
+        }
+      }
+      return chunks;
+    } catch (RuntimeException e) {
+      log.debug("[TTS AI Studio] response parse error: {}", e.getMessage());
+      return chunks;
+    }
+  }
+
+  private static String streamingEndpoint(String endpoint) {
+    return endpoint.contains(":generateContent")
+        ? endpoint.replace(":generateContent", ":streamGenerateContent") + "?alt=sse"
+        : endpoint + "-stream";
+  }
+
+  /** Reads one SSE event, joining its data fields as required by the SSE framing rules. */
+  private static String readSseData(BufferedSource source) throws IOException {
+    StringBuilder data = null;
+    String line;
+    while ((line = source.readUtf8Line()) != null) {
+      if (line.isEmpty()) {
+        if (data != null) {
+          return data.toString();
+        }
+        continue;
+      }
+      if (!line.startsWith("data:")) {
+        continue;
+      }
+      if (data == null) {
+        data = new StringBuilder();
+      } else {
+        data.append('\n');
+      }
+      String value = line.substring("data:".length());
+      data.append(value.startsWith(" ") ? value.substring(1) : value);
+    }
+    return data == null ? null : data.toString();
+  }
+
+  private String extractFinishReason(String raw) {
     try {
       JsonObject response = gson.fromJson(raw, JsonObject.class);
       JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
       if (candidates == null || candidates.size() == 0) {
         return null;
       }
-      JsonObject content = candidates.get(0).getAsJsonObject().getAsJsonObject("content");
-      JsonArray parts = content == null ? null : content.getAsJsonArray("parts");
-      if (parts == null) {
-        return null;
-      }
-      List<byte[]> chunks = new ArrayList<>();
-      for (JsonElement element : parts) {
-        JsonObject inlineData = element.getAsJsonObject().getAsJsonObject("inlineData");
-        if (inlineData != null && inlineData.has("data")) {
-          chunks.add(Base64.getDecoder().decode(inlineData.get("data").getAsString()));
-        }
-      }
-      if (chunks.isEmpty()) {
-        return null;
-      }
-      ByteArrayOutputStream audio = new ByteArrayOutputStream();
-      for (byte[] chunk : chunks) {
-        audio.write(chunk, 0, chunk.length);
-      }
-      return audio.toByteArray();
+      JsonObject candidate = candidates.get(0).getAsJsonObject();
+      return candidate.has("finishReason") ? candidate.get("finishReason").getAsString() : null;
     } catch (RuntimeException e) {
-      log.debug("[TTS AI Studio] response parse error: {}", e.getMessage());
       return null;
+    }
+  }
+
+  /** Keeps a trailing odd byte until the next SSE audio part completes its 16-bit PCM sample. */
+  private static final class PcmChunkDecoder {
+    private int trailingByte = -1;
+
+    Pcm decode(byte[] bytes) {
+      if (bytes == null || bytes.length == 0) {
+        return null;
+      }
+      int prefix = trailingByte < 0 ? 0 : 1;
+      byte[] combined = new byte[prefix + bytes.length];
+      if (prefix == 1) {
+        combined[0] = (byte) trailingByte;
+      }
+      System.arraycopy(bytes, 0, combined, prefix, bytes.length);
+      int playableLength = combined.length & ~1;
+      trailingByte = playableLength < combined.length ? combined[combined.length - 1] & 0xff : -1;
+      if (playableLength == 0) {
+        return null;
+      }
+      byte[] playable = new byte[playableLength];
+      System.arraycopy(combined, 0, playable, 0, playableLength);
+      return RawPcmDecoder.decode(playable, GeminiTtsModel.SAMPLE_RATE);
     }
   }
 

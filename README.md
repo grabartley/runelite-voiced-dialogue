@@ -152,6 +152,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | **Cache Size Limit (MiB)** | `1024` | Maximum size of the on-disk audio cache; the oldest clips are deleted first. Set to `0` for no limit. |
 | **Max Characters Per Line** | `0` | Caps how many characters of a line are voiced, to bound worst-case per-line cost. `0` voices the whole line. |
 | **Debug Logging** | `Off` | Writes detailed per-line voice decisions and timing logs, for troubleshooting. |
+| **Experimental Low-Latency Audio** | `Off` | With Google AI Studio, starts uncached playback from Gemini's first streamed PCM chunk. Cave Echo still uses complete audio. |
 | **Allow Mature Persona Ad-libs** | `Off` | Allows player persona rewrites to use ordinary profanity; slurs remain masked. |
 
 </details>

@@ -1,5 +1,6 @@
 package com.grahambartley.tts;
 
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -30,6 +31,7 @@ public class StreamingAudioPlayer implements AudioOutput {
   private final LineFactory lineFactory;
   private final AtomicLong generation = new AtomicLong();
   private volatile SourceDataLine line;
+  private volatile SourceLineSession session;
   private long latestStreamId = Long.MIN_VALUE;
 
   public StreamingAudioPlayer() {
@@ -111,10 +113,153 @@ public class StreamingAudioPlayer implements AudioOutput {
   }
 
   @Override
+  public synchronized StreamSession openStream(long streamId, int sampleRate, int volumePercent) {
+    if (streamId < latestStreamId) {
+      return null;
+    }
+    if (session != null) {
+      session.abort();
+    }
+    latestStreamId = streamId;
+    long gen = generation.incrementAndGet();
+    AudioFormat format = PcmAudio.format(sampleRate);
+    SourceDataLine open = null;
+    try {
+      open = lineFactory.getLine(format);
+      open.open(format);
+      applyVolume(open, volumePercent);
+      open.start();
+      line = open;
+      SourceLineSession created = new SourceLineSession(open, gen);
+      session = created;
+      return created;
+    } catch (Exception e) {
+      log.warn("Audio playback failed: {}", e.getMessage());
+      if (open != null) {
+        try {
+          open.close();
+        } catch (Exception ignored) {
+          // Best-effort setup failure cleanup.
+        }
+      }
+      return null;
+    }
+  }
+
+  private final class SourceLineSession implements StreamSession {
+    private final byte[] end = new byte[0];
+    private final SourceDataLine open;
+    private final long gen;
+    private final LinkedBlockingQueue<byte[]> chunks = new LinkedBlockingQueue<>();
+    private volatile boolean closed;
+    private volatile boolean finishing;
+
+    private SourceLineSession(SourceDataLine open, long gen) {
+      this.open = open;
+      this.gen = gen;
+      Thread writer = new Thread(this::writeChunks, "tts-audio-stream");
+      writer.setDaemon(true);
+      writer.start();
+    }
+
+    @Override
+    public void write(float[] samples) {
+      if (closed
+          || finishing
+          || samples == null
+          || samples.length == 0
+          || generation.get() != gen) {
+        return;
+      }
+      chunks.offer(PcmAudio.toPcm16LE(samples));
+    }
+
+    @Override
+    public void finish() {
+      if (closed || finishing) {
+        return;
+      }
+      finishing = true;
+      chunks.offer(end);
+    }
+
+    @Override
+    public void abort() {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      chunks.clear();
+      chunks.offer(end);
+      closeLine(true);
+    }
+
+    private void writeChunks() {
+      boolean finished = false;
+      try {
+        while (!closed) {
+          byte[] pcm = chunks.take();
+          if (pcm == end) {
+            finished = true;
+            break;
+          }
+          int offset = 0;
+          while (offset < pcm.length && generation.get() == gen) {
+            int length = Math.min(CHUNK_BYTES, pcm.length - offset);
+            offset += open.write(pcm, offset, length);
+          }
+        }
+      } catch (InterruptedException e) {
+        log.debug("Incremental audio writer interrupted");
+      } catch (RuntimeException e) {
+        log.debug("Incremental audio writer stopped: {}", e.getMessage());
+      } finally {
+        if (finished && !closed && generation.get() == gen) {
+          try {
+            open.drain();
+          } catch (Exception ignored) {
+            // Interruption can close the line while drain is blocked.
+          }
+        }
+        if (!closed) {
+          closeLine(false);
+        }
+      }
+    }
+
+    private void closeLine(boolean flush) {
+      closed = true;
+      try {
+        if (flush) {
+          open.flush();
+        }
+        open.stop();
+        open.close();
+      } catch (Exception ignored) {
+        // Best-effort line teardown.
+      } finally {
+        synchronized (StreamingAudioPlayer.this) {
+          if (line == open) {
+            line = null;
+          }
+          if (session == this) {
+            session = null;
+          }
+        }
+      }
+    }
+  }
+
+  @Override
   public synchronized void stop() {
     // Invalidate the current generation so the streaming loop bails, then unblock any pending
     // write() by flushing and stopping the line.
     generation.incrementAndGet();
+    SourceLineSession currentSession = session;
+    if (currentSession != null) {
+      currentSession.abort();
+      return;
+    }
     SourceDataLine current = this.line;
     if (current != null) {
       try {

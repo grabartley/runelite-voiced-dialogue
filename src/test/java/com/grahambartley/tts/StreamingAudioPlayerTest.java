@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -64,6 +65,35 @@ public class StreamingAudioPlayerTest {
 
     verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
     verify(line, never()).drain();
+  }
+
+  @Test
+  public void incrementalSessionQueuesChunksThenDrainsOneLine() {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+    AudioOutput.StreamSession session = player.openStream(1, 24_000, 100);
+
+    session.write(new float[] {0f, 0f});
+    session.write(new float[] {0f, 0f, 0f});
+    session.finish();
+
+    verify(line, timeout(2_000)).write(any(byte[].class), eq(0), eq(4));
+    verify(line, timeout(2_000)).write(any(byte[].class), eq(0), eq(6));
+    verify(line, timeout(2_000)).drain();
+    verify(line, timeout(2_000)).close();
+  }
+
+  @Test
+  public void abortFlushesAndClosesAnIncrementalSession() {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+    AudioOutput.StreamSession session = player.openStream(1, 24_000, 100);
+
+    session.abort();
+
+    verify(line).flush();
+    verify(line).stop();
+    verify(line).close();
   }
 
   @Test

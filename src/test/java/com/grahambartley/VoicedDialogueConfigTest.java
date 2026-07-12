@@ -16,6 +16,7 @@ public class VoicedDialogueConfigTest {
   public void openRouterIsTheDefaultProvider() {
     VoicedDialogueConfig config = new VoicedDialogueConfig() {};
     assertEquals(VoicedDialogueConfig.TtsProvider.OPENROUTER, config.ttsProvider());
+    assertFalse(config.experimentalStreamingPlayback());
   }
 
   @Test
