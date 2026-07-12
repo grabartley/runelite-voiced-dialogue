@@ -195,7 +195,9 @@ public final class DialogueWatcher {
     return headWaitTicks >= HEAD_WAIT_MAX_CLIENT_TICKS;
   }
 
-  /** Cancels queued work for the prior node and resets the prefetch session when speakers change. */
+  /**
+   * Cancels queued work for the prior node and resets the prefetch session when speakers change.
+   */
   private void beginSessionNode(String npcName) {
     if (sessionNpc != null
         && !sessionNpc.equals(npcName)
