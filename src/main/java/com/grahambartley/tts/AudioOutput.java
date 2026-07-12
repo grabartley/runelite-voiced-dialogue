@@ -19,7 +19,9 @@ public interface AudioOutput {
     stream(samples, sampleRate, volumePercent);
   }
 
-  /** Marks the newest dialogue generation so delayed older streams can be rejected before opening. */
+  /**
+   * Marks the newest dialogue generation so delayed older streams can be rejected before opening.
+   */
   default void advance(long streamId) {}
 
   /** Interrupts the line currently playing (if any) so {@link #stream} returns promptly. */
