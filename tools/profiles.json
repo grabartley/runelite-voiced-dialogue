@@ -219,7 +219,7 @@
     {
       "id": "child",
       "keywords": ["child", "schoolboy", "schoolgirl", "urchin"],
-      "age": "child",
+      "lifeStage": "child",
       "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
     }
   ],

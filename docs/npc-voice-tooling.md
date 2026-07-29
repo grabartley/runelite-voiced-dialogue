@@ -11,7 +11,7 @@ are no network calls or large downloads when choosing a voice.
   and ethnicity from the Old School RuneScape Wiki, merges the curated
   overrides, embeds the voice profiles, and writes the bundled resource.
 - `tools/overrides.json` - hand-curated, **authoritative** `npcId -> {race,
-  gender, ethnicity?, age?}` entries. These always win over the wiki, for pinning the
+  gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
   rare NPC the wiki gets wrong or does not cover, and for marking named children.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
   (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
@@ -29,7 +29,7 @@ none of those, so their race comes from the page's categories. The generator:
    (via the MediaWiki `embeddedin` API).
 2. Fetches each page's lead wikitext and categories in batches and parses every
    infobox.
-3. Maps each cache id to `{race, gender, ethnicity}` (plus a curated `age` child
+3. Maps each cache id to `{race, gender, ethnicity}` (plus a curated `lifeStage` child
    marker from the overrides), deriving race from the
    page categories when the infobox does not carry it.
 
@@ -122,7 +122,7 @@ local-only correction, or to pin a talkable monster the wiki splits into
 ```
 
 The optional `name` field is documentation only. `ethnicity` is also optional (set a byEthnicity key, or omit to clear a wrong one). The optional
-`age` field marks a named child (`"age": "child"` is the only value) so it voices
+`lifeStage` field marks a named child (`"lifeStage": "child"` is the only value) so it voices
 from the youthful cloud voice sub-pool instead of its adult race anchor;
 generically named children (Child, Schoolboy, Street urchin, ...) are caught by
 the `child` keyword category in `profiles.json` instead and need no override. Find
@@ -131,7 +131,7 @@ plugin (it logs the id and chosen voice/profile per line).
 
 ## Character voice profiles (cloud)
 
-Alongside the `npcId -> {race, gender, ethnicity?, age?}` table, the bundled resource
+Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini) backend
 delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
 PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
@@ -165,7 +165,7 @@ the most specific layer that sets each one wins.
    (leprechaun -> Irish, vampyre -> Dracula-esque, gnome, imp, ghost, pirate,
    royalty, knight, noble, wizard, ...). Matching is case-insensitive and bounded
    on word edges, so `imp` matches "Imp" but not "important". A category may also
-   carry `"age": "child"`: besides layering its style, it marks every matching NPC
+   carry `"lifeStage": "child"`: besides layering its style, it marks every matching NPC
    as a child so the voice resolver picks from the youthful voice sub-pool (the
    `child` category keys on child/schoolboy/schoolgirl/urchin).
 5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id. Sparse:

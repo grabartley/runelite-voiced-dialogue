@@ -1,6 +1,7 @@
 package com.grahambartley.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -147,7 +148,7 @@ public class NPCDemographicAnalyzerTest {
   }
 
   @Test
-  public void markedChildrenCarryTheChildAgeFromTheBundledTable() {
+  public void markedChildrenCarryTheChildLifeStageFromTheBundledTable() {
     // Real child NPCs marked via overrides.json: Shilop (Gertrude's son) and Rory (young cyclops).
     assertTrue("Shilop is a child", analyzer.lookup(3501, null).isChild());
     assertTrue("Rory is a child", analyzer.lookup(2136, null).isChild());
@@ -155,7 +156,7 @@ public class NPCDemographicAnalyzerTest {
 
   @Test
   public void unmarkedNpcsAreAdults() {
-    assertTrue("Hans is an adult", !analyzer.lookup(3105, null).isChild());
+    assertFalse("Hans is an adult", analyzer.lookup(3105, null).isChild());
   }
 
   private void assertAttributes(int npcId, String expectedRace, String expectedGender) {

@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "description": "Static precomputed npcId -> {race, gender, ethnicity?, age?} lookup plus cloud voice profiles, baked into the plugin. Generated offline by tools/generate_npc_voices.py from the Old School RuneScape Wiki (Infobox NPC and Infobox Monster pages; Monster races derive from page categories). Do not hand-edit; edit tools/overrides.json or tools/profiles.json and regenerate.",
-    "schema": "npcs[id] = { race, gender, ethnicity?, age? }",
+    "description": "Static precomputed npcId -> {race, gender, ethnicity?, lifeStage?} lookup plus cloud voice profiles, baked into the plugin. Generated offline by tools/generate_npc_voices.py from the Old School RuneScape Wiki (Infobox NPC and Infobox Monster pages; Monster races derive from page categories). Do not hand-edit; edit tools/overrides.json or tools/profiles.json and regenerate.",
+    "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 5917,
     "count": 13728,
@@ -42,7 +42,7 @@
       "wilderness": 115,
       "wyrmscraig": 12
     },
-    "age_counts": {
+    "life_stage_counts": {
       "child": 45
     },
     "profiles_bespoke": 6424
@@ -374,7 +374,7 @@
           "schoolgirl",
           "urchin"
         ],
-        "age": "child",
+        "lifeStage": "child",
         "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
       }
     ],
@@ -31474,13 +31474,13 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "1221": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "1223": {
       "race": "Human",
@@ -34708,7 +34708,7 @@
       "race": "Gnome",
       "gender": "Male",
       "ethnicity": "tirannwn",
-      "age": "child"
+      "lifeStage": "child"
     },
     "2037": {
       "race": "Gnome",
@@ -35133,7 +35133,7 @@
       "race": "Troll",
       "gender": "Male",
       "ethnicity": "asgarnia",
-      "age": "child"
+      "lifeStage": "child"
     },
     "2137": {
       "race": "Troll",
@@ -35870,22 +35870,22 @@
     "2319": {
       "race": "Goblin",
       "gender": "Male",
-      "age": "child"
+      "lifeStage": "child"
     },
     "2320": {
       "race": "Goblin",
       "gender": "Male",
-      "age": "child"
+      "lifeStage": "child"
     },
     "2321": {
       "race": "Goblin",
       "gender": "Male",
-      "age": "child"
+      "lifeStage": "child"
     },
     "2322": {
       "race": "Goblin",
       "gender": "Male",
-      "age": "child"
+      "lifeStage": "child"
     },
     "2323": {
       "race": "Goblin",
@@ -40055,7 +40055,7 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "asgarnia",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3307": {
       "race": "Human",
@@ -40309,7 +40309,7 @@
       "race": "Human",
       "gender": "Female",
       "ethnicity": "asgarnia",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3388": {
       "race": "Human",
@@ -40723,25 +40723,25 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "misthalin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3502": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "misthalin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3503": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "misthalin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3504": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "misthalin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3505": {
       "race": "Human",
@@ -42957,7 +42957,7 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "asgarnia",
-      "age": "child"
+      "lifeStage": "child"
     },
     "3995": {
       "race": "Human",
@@ -44122,7 +44122,7 @@
       "race": "Human",
       "gender": "Female",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "4268": {
       "race": "Human",
@@ -47212,13 +47212,13 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5063": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5066": {
       "race": "Human",
@@ -48200,13 +48200,13 @@
       "race": "Elf",
       "gender": "Male",
       "ethnicity": "tirannwn",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5303": {
       "race": "Elf",
       "gender": "Female",
       "ethnicity": "tirannwn",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5304": {
       "race": "Elf",
@@ -49170,17 +49170,17 @@
     "5544": {
       "race": "Human",
       "gender": "Male",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5545": {
       "race": "Human",
       "gender": "Female",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5546": {
       "race": "Human",
       "gender": "Male",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5547": {
       "race": "Human",
@@ -50925,7 +50925,7 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kharidian",
-      "age": "child"
+      "lifeStage": "child"
     },
     "5957": {
       "race": "Human",
@@ -56311,7 +56311,7 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kourend",
-      "age": "child"
+      "lifeStage": "child"
     },
     "7476": {
       "race": "Human",
@@ -57532,7 +57532,7 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "misthalin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "7778": {
       "race": "Human",
@@ -61756,19 +61756,19 @@
       "race": "Elf",
       "gender": "Female",
       "ethnicity": "tirannwn",
-      "age": "child"
+      "lifeStage": "child"
     },
     "8930": {
       "race": "Elf",
       "gender": "Male",
       "ethnicity": "tirannwn",
-      "age": "child"
+      "lifeStage": "child"
     },
     "8931": {
       "race": "Elf",
       "gender": "Male",
       "ethnicity": "tirannwn",
-      "age": "child"
+      "lifeStage": "child"
     },
     "8932": {
       "race": "Elf",
@@ -73867,19 +73867,19 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "12031": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "12032": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin",
-      "age": "child"
+      "lifeStage": "child"
     },
     "12034": {
       "race": "Human",
@@ -79233,13 +79233,13 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "13307": {
       "race": "Human",
       "gender": "Female",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "13308": {
       "race": "Human",
@@ -79280,25 +79280,25 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "13316": {
       "race": "Human",
       "gender": "Female",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "13317": {
       "race": "Human",
       "gender": "Female",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "13318": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "13319": {
       "race": "Human",
@@ -82584,13 +82584,13 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14216": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14218": {
       "race": "Human",
@@ -82601,13 +82601,13 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14221": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14222": {
       "race": "Human",
@@ -83476,13 +83476,13 @@
       "race": "Human",
       "gender": "Female",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14581": {
       "race": "Human",
       "gender": "Female",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14582": {
       "race": "Human",
@@ -83715,7 +83715,7 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "varlamore",
-      "age": "child"
+      "lifeStage": "child"
     },
     "14683": {
       "race": "Undead",

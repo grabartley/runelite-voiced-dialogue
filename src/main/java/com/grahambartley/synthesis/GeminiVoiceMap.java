@@ -22,10 +22,10 @@ import java.util.Map;
  * The player respects the configured player-voice gender. {@link #UNKNOWN} race and unknown gender
  * fall back to the neutral human-male anchor so every spec resolves to a real voice.
  *
- * <p>Age is a third axis: a child spec (any race, any ethnicity) resolves to a dedicated youthful
- * sub-pool of its gender instead of the adult race anchor, still spread by the per-NPC seed. Every
- * child voice is drawn from the gender it already belongs to above, so the gender disjointness
- * invariant holds with children included.
+ * <p>Life stage is a third axis: a child spec (any race, any ethnicity) resolves to a dedicated
+ * youthful sub-pool of its gender instead of the adult race anchor, still spread by the per-NPC
+ * seed. Every child voice is drawn from the gender it already belongs to above, so the gender
+ * disjointness invariant holds with children included.
  */
 final class GeminiVoiceMap {
 

@@ -13,8 +13,8 @@ import net.runelite.api.NPC;
 
 /**
  * Resolves an NPC name to a backend-neutral {@link VoiceSpec}: its detected race and gender, a
- * stable per-NPC variety seed, and whether the NPC is a child (from the bundled table's age marker
- * or a child-age keyword category on the display name). Detection failures voice as the default
+ * stable per-NPC variety seed, and whether the NPC is a child (from the bundled table's life-stage
+ * marker or a child keyword category on the display name). Detection failures voice as the default
  * human male. An NPC unknown to the bundled table (and the learned cache) triggers a one-off
  * background wiki lookup so the next line voices it correctly. Emits the debug trace once.
  */

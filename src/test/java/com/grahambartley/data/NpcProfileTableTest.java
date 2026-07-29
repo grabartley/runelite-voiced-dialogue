@@ -25,7 +25,7 @@ public class NpcProfileTableTest {
           + "\"byCategory\":["
           + "{\"id\":\"vampyre\",\"keywords\":[\"vampyre\",\"vyre\"],\"name\":\"Vampyre\",\"accent\":\"Transylvanian.\",\"style\":\"Predatory.\"},"
           + "{\"id\":\"imp\",\"keywords\":[\"imp\"],\"name\":\"Imp\",\"style\":\"Squeaky.\"},"
-          + "{\"id\":\"child\",\"keywords\":[\"child\",\"urchin\"],\"age\":\"child\","
+          + "{\"id\":\"child\",\"keywords\":[\"child\",\"urchin\"],\"lifeStage\":\"child\","
           + "\"style\":\"Bright and young.\"}"
           + "],"
           + "\"byId\":{\"_comment\":\"x\",\"100\":{\"name\":\"Vanstrom\",\"style\":\"An ancient vampyre lord.\"}}"

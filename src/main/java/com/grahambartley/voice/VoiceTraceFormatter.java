@@ -21,7 +21,7 @@ public final class VoiceTraceFormatter {
       String source,
       int seed) {
     return String.format(
-        "[TTS voice] npc='%s' world=%s race=%s gender=%s age=%s source=%s -> seed=%d",
+        "[TTS voice] npc='%s' world=%s race=%s gender=%s lifeStage=%s source=%s -> seed=%d",
         npcName,
         npcId == null ? "MISS" : "HIT(id=" + npcId + ")",
         race == null ? "UNKNOWN" : race,
@@ -50,7 +50,7 @@ public final class VoiceTraceFormatter {
       String profileName,
       String accent) {
     return String.format(
-        "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s age=%s seed=%s"
+        "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s lifeStage=%s seed=%s"
             + " profile=%s accent=%s",
         backendId,
         player ? "player" : "npc",

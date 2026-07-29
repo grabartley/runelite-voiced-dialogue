@@ -103,7 +103,7 @@ public class GeminiVoiceMapTest {
 
   /**
    * Every voice any spec of {@code gender} can produce, sweeping races, a spread of NPC seeds, and
-   * both the adult and child age axes, so the gender-disjointness invariant covers children too.
+   * both the adult and child life stages, so the gender-disjointness invariant covers children too.
    */
   private Set<String> voicesFor(NPCGender gender) {
     Set<String> voices = new HashSet<>();
@@ -230,7 +230,7 @@ public class GeminiVoiceMapTest {
   }
 
   @Test
-  public void adultSpecsNeverResolveIntoTheChildFemalePoolAndKeepTheirRaceAnchor() {
+  public void adultSpecsKeepTheirAdultRaceAnchors() {
     // The child pools reuse voices the map already trusts for goblins and monkeys, so adults of
     // OTHER races must be unaffected: a human male still anchors to Charon, not Puck.
     assertEquals(

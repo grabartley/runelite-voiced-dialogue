@@ -15,6 +15,8 @@ import com.grahambartley.data.NpcLearningService;
 import com.grahambartley.synthesis.VoiceSpec;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
+import java.util.HashSet;
+import java.util.Set;
 import net.runelite.api.NPC;
 import org.junit.Test;
 
@@ -24,7 +26,7 @@ public class NpcVoiceResolverTest {
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final NPCDemographicAnalyzer analyzer = mock(NPCDemographicAnalyzer.class);
   private final NpcFinder finder = mock(NpcFinder.class);
-  private final java.util.Set<String> childNames = new java.util.HashSet<>();
+  private final Set<String> childNames = new HashSet<>();
   private final NpcVoiceResolver resolver =
       new NpcVoiceResolver(config, analyzer, finder, childNames::contains);
 
@@ -85,7 +87,7 @@ public class NpcVoiceResolverTest {
   }
 
   @Test
-  public void tableAgeMarkerFlagsTheSpecAsChild() {
+  public void tableLifeStageMarkerFlagsTheSpecAsChild() {
     NPC npc = mock(NPC.class);
     when(npc.getId()).thenReturn(3501);
     when(finder.findByName("Shilop")).thenReturn(npc);
@@ -95,7 +97,7 @@ public class NpcVoiceResolverTest {
 
     VoiceSpec spec = resolver.resolve("Shilop");
 
-    assertTrue("the table age marker makes a child spec", spec.child());
+    assertTrue("the table life-stage marker makes a child spec", spec.child());
     assertEquals(NPCRace.HUMAN, spec.race());
     assertEquals(NPCGender.MALE, spec.gender());
   }

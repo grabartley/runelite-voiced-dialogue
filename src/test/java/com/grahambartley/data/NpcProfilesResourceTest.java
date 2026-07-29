@@ -1,6 +1,7 @@
 package com.grahambartley.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.synthesis.CharacterProfile;
@@ -184,7 +185,7 @@ public class NpcProfilesResourceTest {
     assertTrue("'Schoolgirl' is a child", table.isChildName("Schoolgirl"));
     assertTrue("'Troll child' is a child", table.isChildName("Troll child"));
     assertTrue("'Street urchin' is a child", table.isChildName("Street urchin"));
-    assertTrue("'Hans' is not a child", !table.isChildName("Hans"));
-    assertTrue("'Lady Trahaearn' is not a child", !table.isChildName("Lady Trahaearn"));
+    assertFalse("'Hans' is not a child", table.isChildName("Hans"));
+    assertFalse("'Lady Trahaearn' is not a child", table.isChildName("Lady Trahaearn"));
   }
 }

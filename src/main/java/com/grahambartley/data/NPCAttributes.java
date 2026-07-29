@@ -34,12 +34,12 @@ public class NPCAttributes {
   /** The NPC's ethnicity accent key (e.g. "kharidian"), or null when not ethnically distinct. */
   private String ethnicity;
 
-  /** The NPC's age marker ("child"), or null for an adult. */
-  private String age;
+  /** The NPC's life-stage marker ("child"), or null for an adult. */
+  private String lifeStage;
 
   /** Whether this NPC is marked as a child (voiced from the youthful sub-pool). */
   public boolean isChild() {
-    return "child".equalsIgnoreCase(age);
+    return "child".equalsIgnoreCase(lifeStage);
   }
 
   /** Constructor for basic race/gender classification */

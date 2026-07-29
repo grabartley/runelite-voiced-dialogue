@@ -82,7 +82,7 @@ public final class NpcProfileTable {
     List<String> keywords;
     Layer layer;
 
-    /** Whether this category marks matching NPCs as children ({@code "age": "child"}). */
+    /** Whether this category marks matching NPCs as children ({@code "lifeStage": "child"}). */
     boolean child;
   }
 
@@ -171,7 +171,7 @@ public final class NpcProfileTable {
           keywords.add(kw.getAsString().toLowerCase(Locale.ROOT));
         }
         String id = entry.has("id") ? entry.get("id").getAsString() : "category";
-        boolean child = "child".equalsIgnoreCase(optString(entry, "age"));
+        boolean child = "child".equalsIgnoreCase(optString(entry, "lifeStage"));
         categories.add(new CategoryRule(id, keywords, parseLayer(entry), child));
       }
     }
@@ -295,7 +295,7 @@ public final class NpcProfileTable {
   }
 
   /**
-   * Whether the display name matches a child-age keyword category ({@code "age": "child"}), so
+   * Whether the display name matches a child keyword category ({@code "lifeStage": "child"}), so
    * generically named children (Child, Schoolboy, Street urchin, ...) voice from the youthful
    * sub-pool without a per-id table entry.
    */

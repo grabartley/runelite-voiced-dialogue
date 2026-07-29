@@ -163,8 +163,8 @@ public class NPCDemographicAnalyzer {
           if (entry.has("ethnicity") && !entry.get("ethnicity").isJsonNull()) {
             attributes.setEthnicity(entry.get("ethnicity").getAsString());
           }
-          if (entry.has("age") && !entry.get("age").isJsonNull()) {
-            attributes.setAge(entry.get("age").getAsString());
+          if (entry.has("lifeStage") && !entry.get("lifeStage").isJsonNull()) {
+            attributes.setLifeStage(entry.get("lifeStage").getAsString());
           }
           table.put(npcId, attributes);
         } catch (RuntimeException e) {
