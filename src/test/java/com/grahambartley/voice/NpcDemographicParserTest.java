@@ -31,6 +31,9 @@ public class NpcDemographicParserTest {
       new Object[] {"Karamja primate", NPCRace.MONKEY},
       new Object[] {"Battle mage", NPCRace.WIZARD},
       new Object[] {"Tortuga elder", NPCRace.TORTUGAN},
+      new Object[] {"Icyene queen", NPCRace.ICYENE},
+      // A half-blood hits the human keyword arm first and stays HUMAN (Safalaan).
+      new Object[] {"Half Icyene, half human", NPCRace.HUMAN},
       // Unknown or empty falls through to UNKNOWN.
       new Object[] {null, NPCRace.UNKNOWN},
       new Object[] {"", NPCRace.UNKNOWN},

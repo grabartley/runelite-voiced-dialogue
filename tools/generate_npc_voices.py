@@ -68,6 +68,7 @@ CATEGORY_RACE_RULES = [
     ("troll", "Troll"), ("ogre", "Troll"), ("cyclop", "Troll"), ("giant", "Troll"),
     ("wizard", "Wizard"), ("sorcerer", "Wizard"),
     ("tortugan", "Tortugan"), ("tortuga", "Tortugan"),
+    ("icyene", "Icyene"),
     ("human", "Human"),
 ]
 
@@ -81,7 +82,7 @@ DEFAULT_SUMMARY_URL = (
 )
 
 VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
-               "Demon", "Wizard", "Tortugan"}
+               "Demon", "Wizard", "Tortugan", "Icyene"}
 VALID_GENDERS = {"Male", "Female"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
@@ -101,6 +102,8 @@ RACE_BUCKET_RULES = [
     (r"troll|\bgiant\b|cyclops|ogre|\bent\b|\bgolem\b|\bhuman.*giant", "Troll"),
     (r"gorilla", "Gorilla"),
     (r"monkey|primate|baboon|mandril", "Monkey"),
+    # "Half Icyene" (Safalaan) is excluded: a half-blood reads as human, not angelic.
+    (r"(?<!half )(?<!half-)icyene", "Icyene"),
     (r"tortugan|tortuga", "Tortugan"),
     (r"\bhuman\b|\bman\b|\bwoman\b|\bgnome child\b", "Human"),
 ]
