@@ -64,6 +64,8 @@ final class GeminiVoiceMap {
     put(NPCRace.WIZARD, male("Sadaltager", "Charon"), female("Sulafat", "Vindemiatrix"));
     // Tortugan (warm island folk): friendly/clear and warm/gentle, relaxed mid-depth.
     put(NPCRace.TORTUGAN, male("Achird", "Iapetus"), female("Sulafat", "Vindemiatrix"));
+
+    put(NPCRace.ICYENE, male("Alnilam", "Schedar"), female("Kore", "Despina"));
   }
 
   private static String[] male(String... voices) {
