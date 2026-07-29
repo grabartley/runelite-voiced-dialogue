@@ -17,6 +17,10 @@ import lombok.experimental.Accessors;
  * race+gender can be spread across a gender-appropriate sub-pool and sound different (but stable)
  * from each other. {@link #UNSPECIFIED_SEED} ({@code -1}) means "no explicit choice" so the backend
  * anchors the spec to the first voice of its race/gender pool.
+ *
+ * <p>A spec flagged {@link #child} resolves to a youthful, gender-correct sub-pool instead of its
+ * adult race anchor; the race still colours the delivery through the character-profile text, and
+ * the player is never a child.
  */
 @Value
 @Accessors(fluent = true)
@@ -29,12 +33,6 @@ public class VoiceSpec {
   VoiceManager.NPCRace race;
   VoiceManager.NPCGender gender;
   int voiceSeed;
-
-  /**
-   * Whether the speaker is a child. A child spec resolves to a youthful, gender-correct voice
-   * sub-pool instead of the adult race anchor; the race still colours the delivery through the
-   * character-profile text. The player is never a child.
-   */
   boolean child;
 
   /** A player voice of the given gender. Race is not meaningful for the player. */

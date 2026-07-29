@@ -74,15 +74,16 @@ public final class NpcProfileTable {
     String pace;
   }
 
-  /** An ordered keyword rule: the layer applies when any keyword word-matches the display name. */
+  /**
+   * An ordered keyword rule: the layer applies when any keyword word-matches the display name. A
+   * rule carrying {@code "lifeStage": "child"} additionally marks matching NPCs as children.
+   */
   @Value
   @Accessors(fluent = true)
   private static class CategoryRule {
     String id;
     List<String> keywords;
     Layer layer;
-
-    /** Whether this category marks matching NPCs as children ({@code "lifeStage": "child"}). */
     boolean child;
   }
 
