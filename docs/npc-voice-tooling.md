@@ -61,7 +61,9 @@ name still resolves to a documented NPC is covered too.
   so apes are kept off the chattery island-monkey voice; the explicitly demonic
   Monkey Madness 2 gorillas stay `Demon` via overrides. Tortugans (the turtle-like
   folk of the Great Conch) are their own `Tortugan` race, carrying a warm Bajan
-  accent everywhere they are found.
+  accent everywhere they are found. Icyene (the winged Saradominist beings) are
+  their own `Icyene` race with an ethereal, hallowed delivery; a "Half Icyene"
+  (Safalaan) is excluded by the rule and pinned `Human` in overrides.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
@@ -71,6 +73,9 @@ name still resolves to a documented NPC is covered too.
   has no single ethnicity, so it keeps the British default. Ethnicity is an
   **origin** signal, not where the NPC is standing, so a Varrock guard exploring
   Karamja still sounds Misthalin; a foreigner is corrected in `overrides.json`.
+  A place with no `leagueRegion` of its own (e.g. the Wyrmscraig island ->
+  `wyrmscraig`) gets no auto-assignment; its ethnicity is pinned per-NPC in
+  `overrides.json`.
 
 ## Regenerate the table
 

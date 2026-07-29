@@ -4,9 +4,9 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, age? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 5917,
-    "count": 13711,
+    "count": 13728,
     "name_matched_ids": 713,
-    "overrides_applied": 1528,
+    "overrides_applied": 1551,
     "race_counts": {
       "Demon": 776,
       "Dwarf": 517,
@@ -14,7 +14,8 @@
       "Gnome": 261,
       "Goblin": 368,
       "Gorilla": 11,
-      "Human": 9975,
+      "Human": 9983,
+      "Icyene": 9,
       "Monkey": 64,
       "Tortugan": 66,
       "Troll": 451,
@@ -22,8 +23,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1923,
-      "Male": 11788
+      "Female": 1930,
+      "Male": 11798
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -35,15 +36,16 @@
       "kourend": 778,
       "menaphite": 132,
       "misthalin": 911,
-      "morytania": 963,
+      "morytania": 964,
       "tirannwn": 317,
       "varlamore": 999,
-      "wilderness": 115
+      "wilderness": 115,
+      "wyrmscraig": 12
     },
     "age_counts": {
       "child": 45
     },
-    "profiles_bespoke": 6421
+    "profiles_bespoke": 6424
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -131,6 +133,12 @@
         "accent": "A warm Caribbean accent, the lilting Bajan English of Barbados, melodic and unhurried with a gentle sing-song rhythm.",
         "style": "A turtle-like islander of the Great Conch. Peaceful, self-reliant and easy-going, with a sun-warmed, seafaring calm that turns firm and steady when the island is threatened.",
         "pace": "Relaxed and unhurried, with a natural island lilt."
+      },
+      "Icyene": {
+        "name": "Icyene",
+        "accent": "A resonant, otherworldly delivery with an ethereal, hallowed timbre.",
+        "style": "An ancient winged Saradominist being; serene, luminous and commanding.",
+        "pace": "Measured and stately, each phrase carrying weight."
       }
     },
     "byCategory": [
@@ -410,6 +418,9 @@
       },
       "easternlands": {
         "accent": "A Japanese accent, refined and precise, of the distant Eastern Lands across the sea."
+      },
+      "wyrmscraig": {
+        "accent": "A country Irish accent, the warm rural lilt of the Irish countryside."
       }
     },
     "byId": {
@@ -26497,6 +26508,21 @@
       "9598": {
         "name": "Sarius Guile",
         "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."
+      },
+      "16294": {
+        "name": "Mortimer",
+        "style": "A grizzled, no-nonsense Slayer master dealing only in superior monsters; dry, gruff, hard-bitten.",
+        "accent": "A country Irish accent, the warm rural lilt of the Irish countryside."
+      },
+      "16314": {
+        "name": "Mad Angel",
+        "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.",
+        "accent": "An angelic, reverberant delivery gone cold and menacing."
+      },
+      "16315": {
+        "name": "Mad Angel",
+        "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.",
+        "accent": "An angelic, reverberant delivery gone cold and menacing."
       }
     }
   },
@@ -35396,7 +35422,7 @@
       "ethnicity": "wilderness"
     },
     "2205": {
-      "race": "Human",
+      "race": "Icyene",
       "gender": "Female"
     },
     "2206": {
@@ -52457,8 +52483,8 @@
       "gender": "Male"
     },
     "6493": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Icyene",
+      "gender": "Female"
     },
     "6494": {
       "race": "Human",
@@ -75421,8 +75447,8 @@
       "gender": "Male"
     },
     "12445": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Icyene",
+      "gender": "Female"
     },
     "12446": {
       "race": "Human",
@@ -87345,23 +87371,36 @@
       "race": "Human",
       "gender": "Male"
     },
+    "15893": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "15894": {
+      "race": "Human",
+      "gender": "Male"
+    },
     "15911": {
       "race": "Undead",
       "gender": "Female",
       "ethnicity": "morytania"
     },
     "15941": {
-      "race": "Human",
+      "race": "Icyene",
       "gender": "Female",
       "ethnicity": "morytania"
     },
     "15942": {
-      "race": "Human",
+      "race": "Icyene",
+      "gender": "Female",
+      "ethnicity": "morytania"
+    },
+    "15943": {
+      "race": "Icyene",
       "gender": "Female",
       "ethnicity": "morytania"
     },
     "15953": {
-      "race": "Human",
+      "race": "Icyene",
       "gender": "Female",
       "ethnicity": "morytania"
     },
@@ -87429,6 +87468,74 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "morytania"
+    },
+    "16294": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16295": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16299": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16314": {
+      "race": "Icyene",
+      "gender": "Female"
+    },
+    "16315": {
+      "race": "Icyene",
+      "gender": "Female"
+    },
+    "16318": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16319": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "wyrmscraig"
+    },
+    "16323": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16324": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16325": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "wyrmscraig"
+    },
+    "16326": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16327": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16328": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
+    },
+    "16329": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "wyrmscraig"
     },
     "17009": {
       "race": "Human",

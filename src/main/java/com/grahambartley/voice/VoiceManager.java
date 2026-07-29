@@ -41,6 +41,7 @@ public class VoiceManager {
     DEMON,
     WIZARD,
     TORTUGAN,
+    ICYENE,
     UNKNOWN
   }
 

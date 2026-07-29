@@ -42,7 +42,8 @@ public class NpcProfilesResourceTest {
           "Undead",
           "Demon",
           "Wizard",
-          "Tortugan"
+          "Tortugan",
+          "Icyene"
         }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
@@ -132,6 +133,13 @@ public class NpcProfilesResourceTest {
             .profile()
             .accent()
             .contains("Norse"));
+    assertTrue(
+        "Wyrmscraig islanders sound country Irish",
+        table
+            .resolveNpc(null, "Villager", "Human", "wyrmscraig")
+            .profile()
+            .accent()
+            .contains("Irish"));
   }
 
   @Test
