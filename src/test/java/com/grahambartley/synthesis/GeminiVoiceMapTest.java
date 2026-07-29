@@ -18,7 +18,7 @@ public class GeminiVoiceMapTest {
 
   /** The youthful sub-pools a child spec must resolve within, regardless of race. */
   private static final Set<String> CHILD_MALE_POOL =
-      new HashSet<>(java.util.Arrays.asList("Puck", "Fenrir", "Sadachbia"));
+      new HashSet<>(java.util.Arrays.asList("Puck", "Fenrir"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
       new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr", "Laomedeia"));
