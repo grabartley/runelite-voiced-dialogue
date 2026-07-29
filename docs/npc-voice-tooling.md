@@ -16,6 +16,13 @@ are no network calls or large downloads when choosing a voice.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
   (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
+- `src/test/resources/npc-names.json` - a committed, **test-only** `id -> display name`
+  resource the generator emits alongside the table (it is **not** bundled in the shipped
+  jar). The golden test needs a name per id both to run keyword matching and to label each
+  case. See [Golden resolved-voice test](#golden-resolved-voice-test).
+- `src/test/resources/npc-resolved-golden.json` - the committed snapshot of the **final
+  resolved voice state** for every id, regenerated from the plugin's own resolver. See
+  [Golden resolved-voice test](#golden-resolved-voice-test).
 
 ## Data source
 
@@ -97,6 +104,11 @@ the `_meta` counts) with no wiki drift:
 python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json
 ```
 
+Either mode also refreshes the test-only `src/test/resources/npc-names.json`
+(`id -> display name`), taken from the id dump first and the wiki page title as a
+fallback. Fetching the id dump for names does not touch the table in `--base` mode
+(nothing is filled when every id already exists), so `--base` stays deterministic.
+
 Then build and test:
 
 ```bash
@@ -104,7 +116,39 @@ Then build and test:
 ```
 
 Commit the regenerated `src/main/resources/npc-voices.json` alongside any
-overrides or profile changes.
+overrides or profile changes. A mapping change also moves the golden, so
+regenerate and review it too (next section).
+
+## Golden resolved-voice test
+
+`ResolvedNpcVoiceGoldenTest` asserts the **final resolved voice state** for
+**every** id in the bundled table against a committed golden snapshot
+(`src/test/resources/npc-resolved-golden.json`). Per id it re-runs the real
+`NpcProfileTable` resolver and compares the resolved demographics (`race`,
+`gender`, `ethnicity`, `lifeStage`), the resolved `CharacterProfile`
+(`name`/`accent`/`style`/`pace`), the `source` layer trace, and the resolved
+`child` flag. A failure names the NPC and the field that drifted, e.g.
+`13890 Aldarin citizen -> accent: expected «X», got «Y»`.
+
+The golden is the human-reviewable record of what every NPC sounds like. When a
+mapping edit (`overrides.json`/`profiles.json` -> regenerate `npc-voices.json`)
+moves the resolved output, the un-regenerated golden fails here, so the golden
+**diff is the "which NPCs' final voices changed" artifact**. After an intentional
+mapping change, regenerate it and review the diff:
+
+```bash
+./gradlew test --tests '*ResolvedNpcVoiceGoldenTest' -Dgolden.regenerate=true --rerun-tasks
+```
+
+Regeneration writes the golden from the same Java resolver the test compares
+against, so the golden can never drift from the layering logic. Commit the
+regenerated golden alongside the mapping change.
+
+Scope: this covers the data-driven resolution surface only (resolve-by-id from the
+committed table). The live world-scan (`NpcFinder`) and multiloc composition-id
+transform steps need a running client and are covered by their own unit tests;
+they are lookup/transform plumbing, not mapping data, so a mapping edit never
+moves them.
 
 ## Fixing a wrong voice
 

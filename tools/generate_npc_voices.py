@@ -30,6 +30,9 @@ Pipeline
   6. Merge the hand-curated overrides on top (authoritative, always win).
   7. Embed tools/profiles.json under the ``profiles`` key and emit
      src/main/resources/npc-voices.json.
+  8. Emit the test-only src/test/resources/npc-names.json (id -> display name) for
+     every id in the table, for the golden resolved-voice test. Not bundled in the
+     shipped jar.
 
 Usage
 -----
@@ -73,6 +76,10 @@ CATEGORY_RACE_RULES = [
 ]
 
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
+# Test-only id -> display name resource. Committed but NOT bundled in the shipped jar (it would add
+# ~13.7k names of dead weight); the golden resolved-voice test reads it to run keyword matching and
+# to label each case. Kept in sync with the npcs map every time this generator writes the table.
+DEFAULT_NAMES_OUT = os.path.join("src", "test", "resources", "npc-names.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
 DEFAULT_PROFILES = os.path.join("tools", "profiles.json")
 # Full NPC id -> name dump, used only to cross-reference ids the wiki pages do not
@@ -327,6 +334,7 @@ def build_table_from_wiki(limit=None):
     print(f"Enumerated {len(titles)} NPC pages from the wiki", file=sys.stderr)
     table = {}
     name_map = {}
+    wiki_titles = {}
     pages_with_ids = 0
     for title, wikitext, categories in fetch_infoboxes(titles):
         groups = parse_id_groups(wikitext)
@@ -361,7 +369,9 @@ def build_table_from_wiki(limit=None):
                 entry = build_entry(genders[index] if aligned else default_gender)
                 for npc_id in group:
                     table.setdefault(npc_id, entry)
-    return table, len(titles), pages_with_ids, name_map
+                    # The page title is this id's display-name fallback when the id dump has no name.
+                    wiki_titles.setdefault(npc_id, title)
+    return table, len(titles), pages_with_ids, name_map, wiki_titles
 
 
 def fill_from_summary(table, name_map, summary):
@@ -376,6 +386,41 @@ def fill_from_summary(table, name_map, summary):
             table[npc_id] = entry
             filled += 1
     return filled
+
+
+def summary_name_map(summary):
+    """id -> display name from the full id dump. These are the cache display names the live client
+    reports at runtime, so they are the most faithful source for the keyword-matching name."""
+    return {npc_id: name for npc_id, name in iter_summary(summary)} if summary else {}
+
+
+def emit_names(npc_ids, summary_names, wiki_titles, existing_names, path):
+    """Write the test-only id -> display name resource for exactly the ids in the npcs map.
+
+    Per id the name is taken from the id dump first (the runtime cache display name), then the wiki
+    page title, then whatever the previously committed file held (covers the offline ``--base`` path,
+    where neither the wiki nor the dump is consulted). Any id left without a name is emitted as an
+    empty string and counted, so a gap surfaces in the run summary rather than silently vanishing.
+    """
+    names = {}
+    gaps = 0
+    for npc_id in npc_ids:
+        name = (
+            summary_names.get(npc_id)
+            or wiki_titles.get(npc_id)
+            or existing_names.get(str(npc_id))
+            or ""
+        )
+        if not name:
+            gaps += 1
+        names[str(npc_id)] = name
+    ordered = {str(k): names[str(k)] for k in sorted(npc_ids)}
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(ordered, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")
+    print(f"Wrote {len(ordered)} id->name entries to {path} ({gaps} without a name)", file=sys.stderr)
+    return gaps
 
 
 def apply_overrides(table, overrides):
@@ -449,6 +494,8 @@ def main():
     parser.add_argument("--summary", default=DEFAULT_SUMMARY_URL,
                         help="Full id->name NPC dump (URL) for name cross-reference; '' to skip.")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--names-out", default=DEFAULT_NAMES_OUT,
+                        help="Test-only id->name resource path; '' to skip emitting it.")
     parser.add_argument("--limit", type=int, default=None,
                         help="Cap the number of NPC pages (for quick test runs).")
     parser.add_argument("--base", default=None,
@@ -460,6 +507,17 @@ def main():
     profiles = validate_profiles(load_json(args.profiles))
     overrides = load_json(args.overrides)
 
+    # The id dump is fetched once and feeds two things: filling wiki-unlisted variant ids (full mode
+    # only) and, always, the id->name resource. Fetching it in --base mode too does not touch the
+    # table (nothing is filled when every id already exists), so --base stays wiki-drift-free.
+    summary = None
+    if args.summary:
+        try:
+            summary = fetch_json_url(args.summary)
+        except Exception as exc:  # noqa: BLE001 - tooling, surface and continue
+            print(f"  (skipping id dump: {exc})", file=sys.stderr)
+    summary_names = summary_name_map(summary)
+
     if args.base:
         base = load_json(args.base)
         table = {int(npc_id): entry for npc_id, entry in base["npcs"].items()}
@@ -467,19 +525,17 @@ def main():
         page_count = base_meta.get("npc_pages", 0)
         pages_with_ids = page_count
         name_matched = base_meta.get("name_matched_ids", 0)
+        wiki_titles = {}
         print(f"Seeded {len(table)} entries from {args.base} (offline; no wiki fetch)",
               file=sys.stderr)
     else:
-        table, page_count, pages_with_ids, name_map = build_table_from_wiki(limit=args.limit)
+        table, page_count, pages_with_ids, name_map, wiki_titles = build_table_from_wiki(
+            limit=args.limit)
         name_matched = 0
-        if args.summary:
-            try:
-                summary = fetch_json_url(args.summary)
-                name_matched = fill_from_summary(table, name_map, summary)
-                print(f"  name cross-ref covered {name_matched} extra ids from the id dump",
-                      file=sys.stderr)
-            except Exception as exc:  # noqa: BLE001 - tooling, surface and continue
-                print(f"  (skipping name cross-ref: {exc})", file=sys.stderr)
+        if summary:
+            name_matched = fill_from_summary(table, name_map, summary)
+            print(f"  name cross-ref covered {name_matched} extra ids from the id dump",
+                  file=sys.stderr)
     override_count = apply_overrides(table, overrides)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
@@ -525,6 +581,10 @@ def main():
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=2, ensure_ascii=False)
         fh.write("\n")
+
+    if args.names_out:
+        existing_names = load_json(args.names_out) if os.path.exists(args.names_out) else {}
+        emit_names(list(table), summary_names, wiki_titles, existing_names, args.names_out)
 
     print(f"Wrote {len(npcs)} NPC entries from {pages_with_ids} pages to {args.out}", file=sys.stderr)
     print(f"  races:   {out['_meta']['race_counts']}", file=sys.stderr)

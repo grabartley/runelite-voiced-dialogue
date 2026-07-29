@@ -69,6 +69,13 @@ tasks.named('compileJava') {
 	options.release.set(11)
 }
 
+tasks.named('test') {
+	// Forward the golden-regenerate switch to the forked test JVM so
+	// `-Dgolden.regenerate=true` reaches ResolvedNpcVoiceGoldenTest. Defaults false, so a normal
+	// run only compares the resolved voice attributes against the committed golden.
+	systemProperty 'golden.regenerate', System.getProperty('golden.regenerate', 'false')
+}
+
 tasks.register('shadowJar', Jar) {
 	dependsOn configurations.testRuntimeClasspath
 	manifest {
