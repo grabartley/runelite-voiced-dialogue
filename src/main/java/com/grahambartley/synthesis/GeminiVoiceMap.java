@@ -47,12 +47,14 @@ final class GeminiVoiceMap {
     // Children of any race resolve here instead of the adult race anchor, confirmed young BY EAR,
     // which trumps the catalog vibe adjectives: Puck is the only male voice that reads as a young
     // boy (Sadachbia's "Lively" and Fenrir's "Excitable" both read adult/feminine, so they stay
-    // out; boys deliberately share Puck until another candidate passes the ear test). The
-    // childlike timbre dominates; race and accent still colour the delivery through the
-    // character-profile directive text, so a troll child sounds young rather than large.
+    // out; boys deliberately share Puck until another candidate passes the ear test), and Leda and
+    // Zephyr are the girls that both read young AND hold the directed British accent (Laomedeia
+    // drifts off it, so it stays out). The childlike timbre dominates; race and accent still
+    // colour the delivery through the character-profile directive text, so a troll child sounds
+    // young rather than large.
     childVoices = new EnumMap<>(NPCGender.class);
     childVoices.put(NPCGender.MALE, new String[] {"Puck"});
-    childVoices.put(NPCGender.FEMALE, new String[] {"Leda", "Zephyr", "Laomedeia"});
+    childVoices.put(NPCGender.FEMALE, new String[] {"Leda", "Zephyr"});
 
     npcVoices = new EnumMap<>(NPCRace.class);
     // Voice depth is inferred from the catalog's character adjectives: gravelly (Algenib), firm

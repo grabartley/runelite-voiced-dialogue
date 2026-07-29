@@ -20,7 +20,7 @@ public class GeminiVoiceMapTest {
   private static final Set<String> CHILD_MALE_POOL = new HashSet<>(java.util.Arrays.asList("Puck"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
-      new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr", "Laomedeia"));
+      new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr"));
 
   /** Races that carry a real race/gender mapping (UNKNOWN intentionally falls back). */
   private static final NPCRace[] MAPPED_RACES = {
