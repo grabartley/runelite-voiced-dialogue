@@ -215,6 +215,12 @@
       "name": "Noble",
       "style": "A highborn aristocrat of the realm; polished, urbane, and self-assured, speaking in a refined, well-bred register, accustomed to deference.",
       "pace": "Measured and composed."
+    },
+    {
+      "id": "child",
+      "keywords": ["child", "schoolboy", "schoolgirl", "urchin"],
+      "lifeStage": "child",
+      "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
     }
   ],
   "byEthnicity": {

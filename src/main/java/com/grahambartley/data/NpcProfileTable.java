@@ -74,13 +74,17 @@ public final class NpcProfileTable {
     String pace;
   }
 
-  /** An ordered keyword rule: the layer applies when any keyword word-matches the display name. */
+  /**
+   * An ordered keyword rule: the layer applies when any keyword word-matches the display name. A
+   * rule carrying {@code "lifeStage": "child"} additionally marks matching NPCs as children.
+   */
   @Value
   @Accessors(fluent = true)
   private static class CategoryRule {
     String id;
     List<String> keywords;
     Layer layer;
+    boolean child;
   }
 
   /**
@@ -168,7 +172,8 @@ public final class NpcProfileTable {
           keywords.add(kw.getAsString().toLowerCase(Locale.ROOT));
         }
         String id = entry.has("id") ? entry.get("id").getAsString() : "category";
-        categories.add(new CategoryRule(id, keywords, parseLayer(entry)));
+        boolean child = "child".equalsIgnoreCase(optString(entry, "lifeStage"));
+        categories.add(new CategoryRule(id, keywords, parseLayer(entry), child));
       }
     }
     this.byCategory = Collections.unmodifiableList(categories);
@@ -288,6 +293,20 @@ public final class NpcProfileTable {
   /** Whether the bundled {@code profiles} section loaded successfully. */
   public boolean isLoaded() {
     return loaded;
+  }
+
+  /**
+   * Whether the display name matches a child keyword category ({@code "lifeStage": "child"}), so
+   * generically named children (Child, Schoolboy, Street urchin, ...) voice from the youthful
+   * sub-pool without a per-id table entry.
+   */
+  public boolean isChildName(String npcName) {
+    for (CategoryRule rule : matchCategories(npcName)) {
+      if (rule.child()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Every category whose keyword is in the display name, in declaration order (may be empty). */

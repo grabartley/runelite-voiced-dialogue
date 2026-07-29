@@ -17,7 +17,10 @@ needs an OpenRouter API key; until one is set it logs a one-time notice and its 
 model is fixed to Google's **Gemini 3.1 Flash TTS**, the one OpenRouter speech model with both a voice
 catalog rich enough to map every race and gender and full emotion support. Each NPC gets a
 gender-correct Gemini voice by race, and two NPCs of the same race and gender are spread across a
-sub-pool by a stable per-NPC seed so they sound distinct but stable. The detected emotion is prepended
+sub-pool by a stable per-NPC seed so they sound distinct but stable. Life stage is a third axis: an NPC
+marked as a child (a `child` life-stage marker in the bundled table, or a child keyword like "Child"
+or "Schoolboy" in the display name) resolves to a dedicated youthful sub-pool of its gender instead of
+its adult race anchor, for every race and ethnicity alike. The detected emotion is prepended
 to `input` as an inline style tag (`GeminiEmotionStyle`); Neutral adds none. A per-speaker **character
 profile** (`CharacterProfile`, resolved by `NpcProfileTable`) is also rendered as a leading `AUDIO
 PROFILE` direction block setting accent/style/pace, so the profile sets the character and the emotion

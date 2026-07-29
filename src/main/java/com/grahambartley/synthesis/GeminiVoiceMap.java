@@ -21,19 +21,40 @@ import java.util.Map;
  * sub-pool and a female spec to a female sub-pool, so no race maps two genders onto the same voice.
  * The player respects the configured player-voice gender. {@link #UNKNOWN} race and unknown gender
  * fall back to the neutral human-male anchor so every spec resolves to a real voice.
+ *
+ * <p>Life stage is a third axis: a child spec (any race, any ethnicity) resolves to a dedicated
+ * youthful sub-pool of its gender instead of the adult race anchor, still spread by the per-NPC
+ * seed. Every child voice is drawn from the gender it already belongs to above, so the gender
+ * disjointness invariant holds with children included.
  */
 final class GeminiVoiceMap {
 
   /** Neutral default when a spec has no specific mapping (a clear, even male voice). */
   static final String DEFAULT_VOICE = "Charon";
 
+  /** Default for a child spec whose pool is somehow empty (the upbeat child-male anchor). */
+  static final String DEFAULT_CHILD_VOICE = "Puck";
+
   private final Map<NPCRace, Map<NPCGender, String[]>> npcVoices;
   private final Map<NPCGender, String[]> playerVoices;
+  private final Map<NPCGender, String[]> childVoices;
 
   GeminiVoiceMap() {
     playerVoices = new EnumMap<>(NPCGender.class);
     playerVoices.put(NPCGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NPCGender.FEMALE, new String[] {"Aoede", "Autonoe"});
+
+    // Children of any race resolve here instead of the adult race anchor, confirmed young BY EAR,
+    // which trumps the catalog vibe adjectives: Puck is the only male voice that reads as a young
+    // boy (Sadachbia's "Lively" and Fenrir's "Excitable" both read adult/feminine, so they stay
+    // out; boys deliberately share Puck until another candidate passes the ear test), and Leda and
+    // Zephyr are the girls that both read young AND hold the directed British accent (Laomedeia
+    // drifts off it, so it stays out). The childlike timbre dominates; race and accent still
+    // colour the delivery through the character-profile directive text, so a troll child sounds
+    // young rather than large.
+    childVoices = new EnumMap<>(NPCGender.class);
+    childVoices.put(NPCGender.MALE, new String[] {"Puck"});
+    childVoices.put(NPCGender.FEMALE, new String[] {"Leda", "Zephyr"});
 
     npcVoices = new EnumMap<>(NPCRace.class);
     // Voice depth is inferred from the catalog's character adjectives: gravelly (Algenib), firm
@@ -97,6 +118,10 @@ final class GeminiVoiceMap {
       // There is a single player, so it anchors to its configured voice; the per-NPC seed is for
       // NPC variety only and the player carries none.
       return anchor(playerVoices.get(gender));
+    }
+    if (spec.child()) {
+      String[] pool = childVoices.get(gender);
+      return (pool == null || pool.length == 0) ? DEFAULT_CHILD_VOICE : pick(pool, spec);
     }
     Map<NPCGender, String[]> byGender = npcVoices.get(spec.race());
     if (byGender == null) {
