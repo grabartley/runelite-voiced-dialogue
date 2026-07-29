@@ -17,8 +17,7 @@ public class GeminiVoiceMapTest {
   private final GeminiVoiceMap map = new GeminiVoiceMap();
 
   /** The youthful sub-pools a child spec must resolve within, regardless of race. */
-  private static final Set<String> CHILD_MALE_POOL =
-      new HashSet<>(java.util.Arrays.asList("Puck", "Fenrir"));
+  private static final Set<String> CHILD_MALE_POOL = new HashSet<>(java.util.Arrays.asList("Puck"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
       new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr", "Laomedeia"));
@@ -221,9 +220,11 @@ public class GeminiVoiceMapTest {
 
   @Test
   public void sameRaceGenderDifferentChildrenSpreadAcrossTheChildPool() {
+    // The male pool is deliberately a single by-ear-approved voice, so the seed spread is
+    // observable on the female pool.
     Set<String> seen = new HashSet<>();
     for (int seed = 0; seed < 16; seed++) {
-      seen.add(map.voiceFor(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, seed, true)));
+      seen.add(map.voiceFor(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.FEMALE, seed, true)));
     }
     assertTrue("the per-NPC seed spreads children across the child sub-pool", seen.size() > 1);
   }

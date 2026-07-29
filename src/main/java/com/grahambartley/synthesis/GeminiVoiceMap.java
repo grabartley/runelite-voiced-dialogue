@@ -44,13 +44,14 @@ final class GeminiVoiceMap {
     playerVoices.put(NPCGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NPCGender.FEMALE, new String[] {"Aoede", "Autonoe"});
 
-    // Children of any race resolve here instead of the adult race anchor: the youngest, brightest
-    // gender-correct voices (upbeat/excitable male, youthful/bright female), confirmed young by
-    // ear (Sadachbia's "Lively" reads adult, so it stays out). The childlike timbre deliberately
-    // dominates; race and accent still colour the delivery through the character-profile directive
-    // text, so a troll child sounds young rather than large.
+    // Children of any race resolve here instead of the adult race anchor, confirmed young BY EAR,
+    // which trumps the catalog vibe adjectives: Puck is the only male voice that reads as a young
+    // boy (Sadachbia's "Lively" and Fenrir's "Excitable" both read adult/feminine, so they stay
+    // out; boys deliberately share Puck until another candidate passes the ear test). The
+    // childlike timbre dominates; race and accent still colour the delivery through the
+    // character-profile directive text, so a troll child sounds young rather than large.
     childVoices = new EnumMap<>(NPCGender.class);
-    childVoices.put(NPCGender.MALE, new String[] {"Puck", "Fenrir"});
+    childVoices.put(NPCGender.MALE, new String[] {"Puck"});
     childVoices.put(NPCGender.FEMALE, new String[] {"Leda", "Zephyr", "Laomedeia"});
 
     npcVoices = new EnumMap<>(NPCRace.class);

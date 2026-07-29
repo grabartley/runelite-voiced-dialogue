@@ -6,7 +6,7 @@
     "npc_pages": 5917,
     "count": 13728,
     "name_matched_ids": 713,
-    "overrides_applied": 1551,
+    "overrides_applied": 1553,
     "race_counts": {
       "Demon": 776,
       "Dwarf": 517,
@@ -23,8 +23,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1930,
-      "Male": 11798
+      "Female": 1931,
+      "Male": 11797
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -34393,7 +34393,7 @@
     },
     "1913": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "1914": {

@@ -1551,6 +1551,8 @@
     "14581": {"name": "Isadora", "age": "child"},
     "14680": {"name": "Toch", "age": "child"},
     "7475": {"name": "Roy jr.", "age": "child"},
-    "5956": {"name": "Ali the Leaflet Dropper", "age": "child"}
+    "5956": {"name": "Ali the Leaflet Dropper", "age": "child"},
+    "1913": {"name": "Teacher and pupil", "gender": "Female"},
+    "1922": {"name": "Teacher and pupil", "gender": "Female"}
   }
 }
