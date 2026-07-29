@@ -146,6 +146,18 @@ public class NPCDemographicAnalyzerTest {
     assertEquals("Default", attributes.getSource());
   }
 
+  @Test
+  public void markedChildrenCarryTheChildAgeFromTheBundledTable() {
+    // Real child NPCs marked via overrides.json: Shilop (Gertrude's son) and Rory (young cyclops).
+    assertTrue("Shilop is a child", analyzer.lookup(3501, null).isChild());
+    assertTrue("Rory is a child", analyzer.lookup(2136, null).isChild());
+  }
+
+  @Test
+  public void unmarkedNpcsAreAdults() {
+    assertTrue("Hans is an adult", !analyzer.lookup(3105, null).isChild());
+  }
+
   private void assertAttributes(int npcId, String expectedRace, String expectedGender) {
     NPCAttributes attributes = analyzer.lookup(npcId, null);
     assertNotNull("expected a table entry for id " + npcId, attributes);

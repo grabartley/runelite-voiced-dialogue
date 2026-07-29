@@ -163,6 +163,9 @@ public class NPCDemographicAnalyzer {
           if (entry.has("ethnicity") && !entry.get("ethnicity").isJsonNull()) {
             attributes.setEthnicity(entry.get("ethnicity").getAsString());
           }
+          if (entry.has("age") && !entry.get("age").isJsonNull()) {
+            attributes.setAge(entry.get("age").getAsString());
+          }
           table.put(npcId, attributes);
         } catch (RuntimeException e) {
           log.warn("Skipping malformed NPC voice entry {}: {}", npcIdStr, e.getMessage());

@@ -30,14 +30,21 @@ public class VoiceSpec {
   VoiceManager.NPCGender gender;
   int voiceSeed;
 
+  /**
+   * Whether the speaker is a child. A child spec resolves to a youthful, gender-correct voice
+   * sub-pool instead of the adult race anchor; the race still colours the delivery through the
+   * character-profile text. The player is never a child.
+   */
+  boolean child;
+
   /** A player voice of the given gender. Race is not meaningful for the player. */
   public static VoiceSpec player(VoiceManager.NPCGender gender) {
-    return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SEED);
+    return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SEED, false);
   }
 
   /** An NPC voice for the given race and gender, with no per-NPC variety seed. */
   public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender) {
-    return new VoiceSpec(false, race, gender, UNSPECIFIED_SEED);
+    return new VoiceSpec(false, race, gender, UNSPECIFIED_SEED, false);
   }
 
   /**
@@ -46,7 +53,16 @@ public class VoiceSpec {
    * {@link #UNSPECIFIED_SEED} so it is treated as absent.
    */
   public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed) {
-    return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed);
+    return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, false);
+  }
+
+  /**
+   * An NPC voice additionally carrying the child flag, so a young NPC resolves to the youthful
+   * voice sub-pool of its gender rather than its adult race anchor.
+   */
+  public static VoiceSpec npc(
+      VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed, boolean child) {
+    return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, child);
   }
 
   /** Whether this spec carries a per-NPC variety seed. */
@@ -56,9 +72,10 @@ public class VoiceSpec {
 
   /**
    * Stable cache-key fragment, e.g. {@code "npc:ELF:FEMALE"} or {@code "player:MALE"}. Two specs
-   * that resolve to the same voice produce the same key. The per-NPC variety seed is deliberately
-   * not folded in here: the cloud backend already reflects the concrete resolved voice in its own
-   * cache variant, so two NPCs that map to different voices never share a cached frame anyway.
+   * that resolve to the same voice produce the same key. The per-NPC variety seed and the child
+   * flag are deliberately not folded in here: the cloud backend already reflects the concrete
+   * resolved voice in its own cache variant, so two NPCs that map to different voices never share a
+   * cached frame anyway.
    */
   public String key() {
     return player ? "player:" + gender : "npc:" + race + ":" + gender;

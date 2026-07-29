@@ -24,7 +24,9 @@ public class NpcVoiceResolverTest {
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final NPCDemographicAnalyzer analyzer = mock(NPCDemographicAnalyzer.class);
   private final NpcFinder finder = mock(NpcFinder.class);
-  private final NpcVoiceResolver resolver = new NpcVoiceResolver(config, analyzer, finder);
+  private final java.util.Set<String> childNames = new java.util.HashSet<>();
+  private final NpcVoiceResolver resolver =
+      new NpcVoiceResolver(config, analyzer, finder, childNames::contains);
 
   @Test
   public void blankNameResolvesToDefaultHumanMale() {
@@ -80,6 +82,58 @@ public class NpcVoiceResolverTest {
     assertEquals("an unrecognised race voices as human", NPCRace.HUMAN, spec.race());
     assertEquals(NPCGender.FEMALE, spec.gender());
     verify(learning).considerLearning(202, "Penguin");
+  }
+
+  @Test
+  public void tableAgeMarkerFlagsTheSpecAsChild() {
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(3501);
+    when(finder.findByName("Shilop")).thenReturn(npc);
+    NPCAttributes attrs = attributes("Human", "Male", "StaticTable");
+    when(attrs.isChild()).thenReturn(true);
+    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
+
+    VoiceSpec spec = resolver.resolve("Shilop");
+
+    assertTrue("the table age marker makes a child spec", spec.child());
+    assertEquals(NPCRace.HUMAN, spec.race());
+    assertEquals(NPCGender.MALE, spec.gender());
+  }
+
+  @Test
+  public void childNamedNpcFlagsTheSpecAsChildWithoutATableMarker() {
+    childNames.add("Schoolboy");
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(1919);
+    when(finder.findByName("Schoolboy")).thenReturn(npc);
+    NPCAttributes attrs = attributes("Human", "Male", "StaticTable");
+    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
+
+    assertTrue(
+        "a child-name keyword match makes a child spec", resolver.resolve("Schoolboy").child());
+  }
+
+  @Test
+  public void childNamedNpcStaysAChildEvenWhenDetectionFails() {
+    childNames.add("Child");
+    when(finder.findByName("Child")).thenReturn(null);
+
+    VoiceSpec spec = resolver.resolve("Child");
+
+    assertTrue("the default fallback keeps the child flag from the name", spec.child());
+    assertEquals(NPCRace.HUMAN, spec.race());
+    assertEquals(NPCGender.MALE, spec.gender());
+  }
+
+  @Test
+  public void adultsResolveWithoutTheChildFlag() {
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(3105);
+    when(finder.findByName("Hans")).thenReturn(npc);
+    NPCAttributes attrs = attributes("Human", "Male", "StaticTable");
+    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
+
+    assertFalse(resolver.resolve("Hans").child());
   }
 
   private void assertDefaultHumanMale(VoiceSpec spec) {

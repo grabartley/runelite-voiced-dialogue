@@ -168,4 +168,15 @@ public class NpcProfilesResourceTest {
     assertTrue("the player has a name label", p.name() != null && !p.name().isEmpty());
     assertTrue("the player accent is British by default", p.accent().contains("British"));
   }
+
+  @Test
+  public void childNamedNpcsAreMarkedAsChildrenByTheBundledCategory() {
+    assertTrue("'Child' is a child", table.isChildName("Child"));
+    assertTrue("'Schoolboy' is a child", table.isChildName("Schoolboy"));
+    assertTrue("'Schoolgirl' is a child", table.isChildName("Schoolgirl"));
+    assertTrue("'Troll child' is a child", table.isChildName("Troll child"));
+    assertTrue("'Street urchin' is a child", table.isChildName("Street urchin"));
+    assertTrue("'Hans' is not a child", !table.isChildName("Hans"));
+    assertTrue("'Lady Trahaearn' is not a child", !table.isChildName("Lady Trahaearn"));
+  }
 }

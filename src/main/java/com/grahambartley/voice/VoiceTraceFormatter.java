@@ -13,13 +13,20 @@ public final class VoiceTraceFormatter {
   private VoiceTraceFormatter() {}
 
   static String buildNpcTrace(
-      String npcName, Integer npcId, NPCRace race, NPCGender gender, String source, int seed) {
+      String npcName,
+      Integer npcId,
+      NPCRace race,
+      NPCGender gender,
+      boolean child,
+      String source,
+      int seed) {
     return String.format(
-        "[TTS voice] npc='%s' world=%s race=%s gender=%s source=%s -> seed=%d",
+        "[TTS voice] npc='%s' world=%s race=%s gender=%s age=%s source=%s -> seed=%d",
         npcName,
         npcId == null ? "MISS" : "HIT(id=" + npcId + ")",
         race == null ? "UNKNOWN" : race,
         gender,
+        child ? "child" : "adult",
         source,
         seed);
   }
@@ -38,18 +45,20 @@ public final class VoiceTraceFormatter {
       String emotion,
       NPCRace race,
       NPCGender gender,
+      boolean child,
       int seed,
       String profileName,
       String accent) {
     return String.format(
-        "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s seed=%s profile=%s"
-            + " accent=%s",
+        "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s age=%s seed=%s"
+            + " profile=%s accent=%s",
         backendId,
         player ? "player" : "npc",
         player ? "-" : "'" + npcName + "'",
         emotion,
         race,
         gender,
+        child ? "child" : "adult",
         seed < 0 ? "-" : Integer.toString(seed),
         profileName == null ? "-" : "'" + profileName + "'",
         accent == null ? "-" : "'" + accent + "'");

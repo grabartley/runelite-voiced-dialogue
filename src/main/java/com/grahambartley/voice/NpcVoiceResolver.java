@@ -7,14 +7,16 @@ import com.grahambartley.data.NpcLearningService;
 import com.grahambartley.synthesis.VoiceSpec;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NPC;
 
 /**
- * Resolves an NPC name to a backend-neutral {@link VoiceSpec}: its detected race and gender plus a
- * stable per-NPC variety seed. Detection failures voice as the default human male. An NPC unknown
- * to the bundled table (and the learned cache) triggers a one-off background wiki lookup so the
- * next line voices it correctly. Emits the debug trace once.
+ * Resolves an NPC name to a backend-neutral {@link VoiceSpec}: its detected race and gender, a
+ * stable per-NPC variety seed, and whether the NPC is a child (from the bundled table's age marker
+ * or a child-age keyword category on the display name). Detection failures voice as the default
+ * human male. An NPC unknown to the bundled table (and the learned cache) triggers a one-off
+ * background wiki lookup so the next line voices it correctly. Emits the debug trace once.
  */
 @Slf4j
 final class NpcVoiceResolver {
@@ -22,6 +24,7 @@ final class NpcVoiceResolver {
   private final VoicedDialogueConfig config;
   private final NPCDemographicAnalyzer demographicAnalyzer;
   private final NpcFinder npcFinder;
+  private final Predicate<String> childName;
 
   /** Optional runtime wiki fallback for NPCs missing from the bundled table; null when off. */
   private NpcLearningService learningService;
@@ -29,10 +32,12 @@ final class NpcVoiceResolver {
   NpcVoiceResolver(
       VoicedDialogueConfig config,
       NPCDemographicAnalyzer demographicAnalyzer,
-      NpcFinder npcFinder) {
+      NpcFinder npcFinder,
+      Predicate<String> childName) {
     this.config = config;
     this.demographicAnalyzer = demographicAnalyzer;
     this.npcFinder = npcFinder;
+    this.childName = childName;
   }
 
   void setLearningService(NpcLearningService learningService) {
@@ -68,11 +73,14 @@ final class NpcVoiceResolver {
     // human and an unknown gender as male, matching the long-standing default.
     NPCRace voiceRace = race == NPCRace.UNKNOWN ? NPCRace.HUMAN : race;
     NPCGender voiceGender = gender == NPCGender.FEMALE ? NPCGender.FEMALE : NPCGender.MALE;
+    boolean child = attributes.isChild() || isChildName(npcName);
     int seed = voiceSeed(npc.getId(), npcName);
     if (config != null && config.debugMode()) {
-      log.info(VoiceTraceFormatter.buildNpcTrace(npcName, npc.getId(), race, gender, source, seed));
+      log.info(
+          VoiceTraceFormatter.buildNpcTrace(
+              npcName, npc.getId(), race, gender, child, source, seed));
     }
-    return VoiceSpec.npc(voiceRace, voiceGender, seed);
+    return VoiceSpec.npc(voiceRace, voiceGender, seed, child);
   }
 
   /**
@@ -80,13 +88,19 @@ final class NpcVoiceResolver {
    * backend has always fallen back to, with a stable per-NPC variety seed keyed off the id or name.
    */
   private VoiceSpec defaultVoice(String npcName, Integer npcId, String source) {
+    // A child-named NPC keeps its youthful voice even when race/gender detection failed.
+    boolean child = isChildName(npcName);
     int seed = voiceSeed(npcId, npcName);
     if (config != null && config.debugMode()) {
       log.info(
           VoiceTraceFormatter.buildNpcTrace(
-              npcName, npcId, NPCRace.UNKNOWN, NPCGender.UNKNOWN, source, seed));
+              npcName, npcId, NPCRace.UNKNOWN, NPCGender.UNKNOWN, child, source, seed));
     }
-    return VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, seed);
+    return VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, seed, child);
+  }
+
+  private boolean isChildName(String npcName) {
+    return childName != null && npcName != null && childName.test(npcName);
   }
 
   /**
