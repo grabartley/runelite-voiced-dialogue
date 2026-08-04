@@ -619,6 +619,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
       long attemptStart = System.nanoTime();
       boolean fedSink = false;
+      long firstChunkMs = -1;
       try (Response response = httpClient.newCall(httpRequest).execute()) {
         String contentType = headerOrEmpty(response, "Content-Type");
         String generationId = headerOrEmpty(response, "X-Generation-Id");
@@ -662,6 +663,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               // draining the body to completion and the finished line is still cached, never
               // re-billed on a later hearing.
               sink.accept(chunk, rate);
+              if (!fedSink) {
+                firstChunkMs = elapsedMs(attemptStart);
+              }
               fedSink = true;
               chunks.add(chunk);
               sampleCount += chunk.length;
@@ -688,14 +692,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           return null;
         }
         if (config.debugMode()) {
+          // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
+          // body. A first chunk that lands nearly at elapsedMs means the provider sent the audio
+          // in one burst and streaming playback could not start any earlier.
           log.info(
+              "{} firstChunkMs={}",
               CloudSynthTrace.success(
-                  attempt,
-                  MAX_SPEECH_ATTEMPTS,
-                  elapsedMs,
-                  inputLen,
-                  (int) totalBytes,
-                  generationId));
+                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, (int) totalBytes, generationId),
+              firstChunkMs);
         }
         Pcm pcm = new Pcm(flatten(chunks, sampleCount), rate);
         // The audio already played through the sink; only return it for caching when it is a whole,
