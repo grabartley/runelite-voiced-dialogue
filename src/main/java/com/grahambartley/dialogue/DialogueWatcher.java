@@ -24,6 +24,7 @@ public final class DialogueWatcher {
   private final DialoguePrefetchCoordinator prefetchCoordinator;
   private final DialoguePrefetcher prefetcher;
   private final DialogueAudioService audioService;
+  private final PredictiveDialoguePrefetcher predictivePrefetcher;
 
   private String lastSpoken = "";
   private boolean wasDialogueOpen;
@@ -36,6 +37,27 @@ public final class DialogueWatcher {
       DialoguePrefetchCoordinator prefetchCoordinator,
       DialoguePrefetcher prefetcher,
       DialogueAudioService audioService) {
+    this(
+        client,
+        textCleaner,
+        widgetReader,
+        dispatcher,
+        prefetchCoordinator,
+        prefetcher,
+        audioService,
+        null);
+  }
+
+  /** As above, with an optional predictor that warms likely next lines from wiki transcripts. */
+  public DialogueWatcher(
+      Client client,
+      DialogueTextCleaner textCleaner,
+      DialogueWidgetReader widgetReader,
+      SynthesisDispatcher dispatcher,
+      DialoguePrefetchCoordinator prefetchCoordinator,
+      DialoguePrefetcher prefetcher,
+      DialogueAudioService audioService,
+      PredictiveDialoguePrefetcher predictivePrefetcher) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.widgetReader = widgetReader;
@@ -43,6 +65,7 @@ public final class DialogueWatcher {
     this.prefetchCoordinator = prefetchCoordinator;
     this.prefetcher = prefetcher;
     this.audioService = audioService;
+    this.predictivePrefetcher = predictivePrefetcher;
   }
 
   public void tick() {
@@ -55,6 +78,9 @@ public final class DialogueWatcher {
         String npcName = widgetReader.currentNpcName();
         int headAnimationId = widgetReader.headAnimationId(InterfaceID.ChatLeft.HEAD);
         dispatcher.speakDialogue(cleaned, VoiceManager.SPEAKER_NPC, npcName, headAnimationId);
+        if (predictivePrefetcher != null) {
+          predictivePrefetcher.onLine(cleaned, npcName);
+        }
       }
     }
 
@@ -67,6 +93,9 @@ public final class DialogueWatcher {
         int headAnimationId = widgetReader.headAnimationId(InterfaceID.ChatRight.HEAD);
         // No NPC name needed for player lines.
         dispatcher.speakDialogue(cleaned, VoiceManager.SPEAKER_PLAYER, null, headAnimationId);
+        if (predictivePrefetcher != null) {
+          predictivePrefetcher.onLine(cleaned, null);
+        }
       }
     }
 
@@ -94,6 +123,9 @@ public final class DialogueWatcher {
             && !optionsVisible;
     if (fullyClosed) {
       prefetcher.reset();
+      if (predictivePrefetcher != null) {
+        predictivePrefetcher.reset();
+      }
     }
   }
 

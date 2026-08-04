@@ -5,12 +5,14 @@ import com.google.inject.Provides;
 import com.grahambartley.data.LearnedNpcStore;
 import com.grahambartley.data.NpcLearningService;
 import com.grahambartley.data.WikiNpcClient;
+import com.grahambartley.data.WikiTranscriptClient;
 import com.grahambartley.dialogue.ChatNoticeManager;
 import com.grahambartley.dialogue.DialoguePrefetchCoordinator;
 import com.grahambartley.dialogue.DialoguePrefetcher;
 import com.grahambartley.dialogue.DialogueTextCleaner;
 import com.grahambartley.dialogue.DialogueWatcher;
 import com.grahambartley.dialogue.DialogueWidgetReader;
+import com.grahambartley.dialogue.PredictiveDialoguePrefetcher;
 import com.grahambartley.dialogue.PublicChatPolicy;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.BackendWarmUpPolicy;
@@ -80,6 +82,12 @@ public class VoicedDialoguePlugin extends Plugin {
   /** Dedicated daemon thread for off-game-thread wiki NPC lookups (the auto-learn fallback). */
   private ExecutorService wikiExecutor;
 
+  /**
+   * Separate daemon thread for wiki transcript lookups, so a slow auto-learn lookup cannot delay a
+   * prediction for the line the player is about to reach.
+   */
+  private ExecutorService transcriptExecutor;
+
   private ChatNoticeManager noticeManager;
 
   private DialogueTextCleaner textCleaner;
@@ -87,6 +95,8 @@ public class VoicedDialoguePlugin extends Plugin {
   private SynthesisDispatcher synthesisDispatcher;
 
   private DialogueWatcher dialogueWatcher;
+
+  private PredictiveDialoguePrefetcher predictivePrefetcher;
 
   @Override
   protected void startUp() {
@@ -160,6 +170,26 @@ public class VoicedDialoguePlugin extends Plugin {
     DialoguePrefetchCoordinator prefetchCoordinator =
         new DialoguePrefetchCoordinator(
             voiceManager, profileResolver, textCleaner, prefetcher, backendProvider, config);
+    // Off by default. When enabled it reads the current NPC's public wiki transcript to warm the
+    // lines the player is most likely to hear next, on its own thread so it never blocks learning.
+    transcriptExecutor =
+        Executors.newSingleThreadExecutor(
+            r -> {
+              Thread t = new Thread(r, "tts-wiki-transcript");
+              t.setDaemon(true);
+              return t;
+            });
+    predictivePrefetcher =
+        new PredictiveDialoguePrefetcher(
+            new WikiTranscriptClient(okHttpClient, gson),
+            transcriptExecutor,
+            clientThread,
+            voiceManager,
+            profileResolver,
+            textCleaner,
+            prefetcher,
+            backendProvider,
+            config);
     dialogueWatcher =
         new DialogueWatcher(
             client,
@@ -168,13 +198,18 @@ public class VoicedDialoguePlugin extends Plugin {
             synthesisDispatcher,
             prefetchCoordinator,
             prefetcher,
-            audioService);
+            audioService,
+            predictivePrefetcher);
 
     log.info("VoicedDialogue started");
   }
 
   @Override
   protected void shutDown() {
+    if (predictivePrefetcher != null) {
+      predictivePrefetcher.close();
+      predictivePrefetcher = null;
+    }
     noticeManager = null;
     synthesisDispatcher = null;
     dialogueWatcher = null;
@@ -190,6 +225,10 @@ public class VoicedDialoguePlugin extends Plugin {
     if (wikiExecutor != null) {
       wikiExecutor.shutdownNow();
       wikiExecutor = null;
+    }
+    if (transcriptExecutor != null) {
+      transcriptExecutor.shutdownNow();
+      transcriptExecutor = null;
     }
     log.info("VoicedDialogue stopped");
   }

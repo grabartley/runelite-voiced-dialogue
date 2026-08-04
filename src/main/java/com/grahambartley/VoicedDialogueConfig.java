@@ -255,6 +255,16 @@ public interface VoicedDialogueConfig extends Config {
     return true;
   }
 
+  @ConfigItem(
+      keyName = "predictiveWikiPrefetch",
+      name = "Predictive Wiki Prefetch",
+      description = "Warm likely next lines from the NPC's wiki transcript.",
+      position = 6,
+      section = generalSection)
+  default boolean predictiveWikiPrefetch() {
+    return false;
+  }
+
   // ---------------------------------------------------------------------------
   // Voices
   // ---------------------------------------------------------------------------

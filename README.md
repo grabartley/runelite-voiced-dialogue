@@ -81,11 +81,11 @@ Set **Spoken Language** to anything other than English and every line is spoken 
 <details>
 <summary><b>Fast, cheap, and out of the way</b></summary>
 
-Everything runs off the game thread, so the client never stutters and skipping a line cuts its audio instantly. Every line you have heard is kept in a local cache and replays instantly and free, even across sessions. Turn on **Prefetch Dialogue** and the plugin pre-voices the dialogue options on your screen, so the line you pick next starts playing the moment you click it.
+Everything runs off the game thread, so the client never stutters and skipping a line cuts its audio instantly. Every line you have heard is kept in a local cache and replays instantly and free, even across sessions. Turn on **Prefetch Dialogue** and the plugin pre-voices the dialogue options on your screen, so the line you pick next starts playing the moment you click it. **Predictive Wiki Prefetch** goes one step further and reads the NPC's public wiki transcript to guess the next line or two, which can spend credit on lines you never reach.
 
 </details>
 
-> **Privacy:** only the dialogue text being spoken is sent to OpenRouter over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
+> **Privacy:** only the dialogue text being spoken is sent to OpenRouter over HTTPS, and lines you have already heard replay from your local cache without going anywhere. With **Predictive Wiki Prefetch** on, the current NPC's name is also sent to the OSRS Wiki to fetch its public transcript page.
 
 ## Configuration
 
@@ -102,6 +102,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options you can see so your pick plays instantly; can spend credit on branches you never choose. |
 | **Save Audio To Disk** | `On` | Keeps synthesized audio on disk so repeated lines replay instantly and free across sessions. |
 | **Stream Playback** | `On` | Starts speaking a line as its audio arrives instead of waiting for the whole clip, so dialogue begins sooner. Cached lines always play instantly either way. |
+| **Predictive Wiki Prefetch** | `Off` | Reads the current NPC's public OSRS Wiki transcript to pre-voice the next line or two. Needs **Prefetch Dialogue** on, sends the NPC's name to the wiki, and can spend credit on lines you never reach. |
 
 </details>
 
