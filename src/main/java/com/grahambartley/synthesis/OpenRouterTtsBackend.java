@@ -698,7 +698,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           log.info(
               "{} firstChunkMs={}",
               CloudSynthTrace.success(
-                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, (int) totalBytes, generationId),
+                  attempt,
+                  MAX_SPEECH_ATTEMPTS,
+                  elapsedMs,
+                  inputLen,
+                  (int) totalBytes,
+                  generationId),
               firstChunkMs);
         }
         Pcm pcm = new Pcm(flatten(chunks, sampleCount), rate);
