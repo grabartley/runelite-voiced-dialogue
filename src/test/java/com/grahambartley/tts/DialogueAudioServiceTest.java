@@ -1087,4 +1087,68 @@ public class DialogueAudioServiceTest {
         afterFirstSession,
         cloud.requests.size());
   }
+
+  @Test
+  public void aPrefetchedLineIsReportedAsConsumed() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.prefetch(req("Yes, I'll help.", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    svc.speak(req("Yes, I'll help.", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals(1, svc.prefetchOutcomes().warmed());
+    assertEquals("the live line used the warmed clip", 1, svc.prefetchOutcomes().consumed());
+    assertEquals(0, svc.prefetchOutcomes().emotionMismatch());
+    assertEquals(0, svc.prefetchOutcomes().cold());
+  }
+
+  @Test
+  public void anEmotionalLineCannotUseItsNeutralPrefetchAndIsReportedAsSuch() {
+    // Options are warmed as NEUTRAL, but a live reply resolves its chat-head expression and emotion
+    // is part of the cache identity, so the warmed clip is unusable and the line re-synthesizes.
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL, Emotion.ANGRY));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.prefetch(req("Yes, I'll help.", NPCRace.HUMAN, NPCGender.MALE, Emotion.NEUTRAL));
+    executor.runAll();
+    svc.speak(req("Yes, I'll help.", NPCRace.HUMAN, NPCGender.MALE, Emotion.ANGRY));
+    executor.runAll();
+
+    assertEquals(1, svc.prefetchOutcomes().warmed());
+    assertEquals(0, svc.prefetchOutcomes().consumed());
+    assertEquals("the warmed neutral clip was wasted", 1, svc.prefetchOutcomes().emotionMismatch());
+    assertEquals("and the line was synthesized a second time", 2, backend.requests.size());
+  }
+
+  @Test
+  public void anUnwarmedLineIsReportedAsCold() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.speak(req("Never warmed", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals(0, svc.prefetchOutcomes().warmed());
+    assertEquals(1, svc.prefetchOutcomes().cold());
+  }
+
+  @Test
+  public void aReplayedLineIsReportedAsAPlainCacheHit() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.speak(req("Heard before", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    svc.speak(req("Heard before", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+
+    assertEquals("a replay is not attributed to prefetch", 1, svc.prefetchOutcomes().cacheHit());
+    assertEquals(0, svc.prefetchOutcomes().consumed());
+  }
 }

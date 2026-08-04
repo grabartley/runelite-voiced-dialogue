@@ -5,6 +5,8 @@ import com.grahambartley.synthesis.Emotion;
 import com.grahambartley.synthesis.PcmSink;
 import com.grahambartley.synthesis.SynthesisBackend;
 import com.grahambartley.synthesis.SynthesisRequest;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,6 +82,15 @@ public final class DialogueAudioService {
   /** Character budget for the abbreviated text preview in debug logs. */
   private static final int LOG_TEXT_PREVIEW_LENGTH = 40;
 
+  /**
+   * How many prefetch-warmed keys to remember for outcome reporting. Bounded so a long session
+   * never grows this set without limit; the oldest entries are dropped once it is full.
+   */
+  private static final int PREFETCH_TRACKING_LIMIT = 1024;
+
+  /** How many live lines to observe between rolling prefetch-outcome summaries. */
+  private static final int PREFETCH_SUMMARY_INTERVAL = 25;
+
   private final BackendProvider backends;
   private final AudioOutput output;
   private final Executor executor;
@@ -106,6 +117,17 @@ public final class DialogueAudioService {
   // pending result instead of issuing a duplicate (billable) backend call.
   private final ConcurrentHashMap<CacheKey, CompletableFuture<Pcm>> inFlight =
       new ConcurrentHashMap<>();
+  // Keys a successful prefetch actually produced, so a live line can report whether speculative
+  // warming paid off and, when it did not, why. Bounded and access-ordered: oldest entries drop
+  // first. Guarded by its own monitor, since prefetch workers write while live workers read.
+  private final LinkedHashMap<CacheKey, Boolean> prefetchWarmed =
+      new LinkedHashMap<CacheKey, Boolean>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<CacheKey, Boolean> eldest) {
+          return size() > PREFETCH_TRACKING_LIMIT;
+        }
+      };
+  private final PrefetchOutcomes prefetchOutcomes = new PrefetchOutcomes();
 
   public DialogueAudioService(
       BackendProvider backends,
@@ -263,7 +285,9 @@ public final class DialogueAudioService {
               key.backendId(),
               key.voiceKey(),
               abbreviate(key.text()));
-          synthesizeDeduped(backend, effective, key);
+          if (synthesizeDeduped(backend, effective, key) != null) {
+            markPrefetchWarmed(key);
+          }
         });
   }
 
@@ -337,6 +361,7 @@ public final class DialogueAudioService {
       return;
     }
     Pcm pcm = lookup(key);
+    recordPrefetchOutcome(key, pcm != null);
     if (pcm != null) {
       // A cache hit always plays buffered and instantly, no matter the streaming setting.
       playBuffered(mine, pcm, applyEcho);
@@ -591,6 +616,134 @@ public final class DialogueAudioService {
         new ArrayBlockingQueue<>(PREFETCH_QUEUE_CAPACITY),
         daemonThreadFactory("dialogue-prefetch"),
         new ThreadPoolExecutor.DiscardOldestPolicy());
+  }
+
+  /** Notes that speculative warming produced audio for {@code key}. */
+  private void markPrefetchWarmed(CacheKey key) {
+    synchronized (prefetchWarmed) {
+      prefetchWarmed.put(key, Boolean.TRUE);
+    }
+    prefetchOutcomes.warmed.incrementAndGet();
+  }
+
+  /**
+   * Classifies what speculative warming did for the live line now being spoken, so the value of
+   * prefetch is measurable from a real session rather than assumed.
+   *
+   * <ul>
+   *   <li>{@code consumed}: the line played from audio a prefetch had warmed;
+   *   <li>{@code cacheHit}: it played from cache that prefetch did not warm (a replayed line);
+   *   <li>{@code emotionMismatch}: it missed, but the same words and voice were warmed under a
+   *       different emotion, so the warmed clip could not be used and is about to be
+   *       re-synthesized;
+   *   <li>{@code cold}: it missed and nothing had warmed it.
+   * </ul>
+   */
+  private void recordPrefetchOutcome(CacheKey key, boolean cacheHit) {
+    boolean warmedThisKey;
+    boolean warmedOtherEmotion = false;
+    synchronized (prefetchWarmed) {
+      warmedThisKey = prefetchWarmed.containsKey(key);
+      if (!warmedThisKey) {
+        for (CacheKey warmed : prefetchWarmed.keySet()) {
+          if (warmed.emotion() != key.emotion()
+              && warmed.backendId().equals(key.backendId())
+              && warmed.voiceKey().equals(key.voiceKey())
+              && warmed.text().equals(key.text())) {
+            warmedOtherEmotion = true;
+            break;
+          }
+        }
+      }
+    }
+
+    String outcome;
+    if (cacheHit) {
+      outcome = warmedThisKey ? "consumed" : "cache-hit";
+    } else if (warmedOtherEmotion) {
+      outcome = "emotion-mismatch";
+    } else {
+      outcome = "cold";
+    }
+    prefetchOutcomes.record(outcome);
+    log.debug(
+        "[TTS prefetch] outcome={} emotion={} \"{}\"",
+        outcome,
+        key.emotion(),
+        abbreviate(key.text()));
+
+    long lines = prefetchOutcomes.lines.incrementAndGet();
+    if (lines % PREFETCH_SUMMARY_INTERVAL == 0) {
+      log.debug("[TTS prefetch] {}", prefetchOutcomes.summary());
+    }
+  }
+
+  /** Visible for tests: the running prefetch-outcome tallies. */
+  PrefetchOutcomes prefetchOutcomes() {
+    return prefetchOutcomes;
+  }
+
+  /**
+   * Running tally of what speculative warming achieved. Counters only; nothing here changes
+   * playback.
+   */
+  static final class PrefetchOutcomes {
+    private final AtomicLong lines = new AtomicLong();
+    private final AtomicLong warmed = new AtomicLong();
+    private final AtomicLong consumed = new AtomicLong();
+    private final AtomicLong cacheHit = new AtomicLong();
+    private final AtomicLong emotionMismatch = new AtomicLong();
+    private final AtomicLong cold = new AtomicLong();
+
+    private void record(String outcome) {
+      switch (outcome) {
+        case "consumed":
+          consumed.incrementAndGet();
+          break;
+        case "cache-hit":
+          cacheHit.incrementAndGet();
+          break;
+        case "emotion-mismatch":
+          emotionMismatch.incrementAndGet();
+          break;
+        default:
+          cold.incrementAndGet();
+          break;
+      }
+    }
+
+    long warmed() {
+      return warmed.get();
+    }
+
+    long consumed() {
+      return consumed.get();
+    }
+
+    long cacheHit() {
+      return cacheHit.get();
+    }
+
+    long emotionMismatch() {
+      return emotionMismatch.get();
+    }
+
+    long cold() {
+      return cold.get();
+    }
+
+    String summary() {
+      return "summary warmed="
+          + warmed.get()
+          + " consumed="
+          + consumed.get()
+          + " cacheHit="
+          + cacheHit.get()
+          + " emotionMismatch="
+          + emotionMismatch.get()
+          + " cold="
+          + cold.get();
+    }
   }
 
   private static String abbreviate(String text) {
