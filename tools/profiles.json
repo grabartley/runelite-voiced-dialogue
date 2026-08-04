@@ -84,6 +84,12 @@
       "accent": "A warm Caribbean accent, the lilting Bajan English of Barbados, melodic and unhurried with a gentle sing-song rhythm.",
       "style": "A turtle-like islander of the Great Conch. Peaceful, self-reliant and easy-going, with a sun-warmed, seafaring calm that turns firm and steady when the island is threatened.",
       "pace": "Relaxed and unhurried, with a natural island lilt."
+    },
+    "Icyene": {
+      "name": "Icyene",
+      "accent": "A resonant, otherworldly delivery with an ethereal, hallowed timbre.",
+      "style": "An ancient winged Saradominist being; serene, luminous and commanding.",
+      "pace": "Measured and stately, each phrase carrying weight."
     }
   },
   "byCategory": [
@@ -209,6 +215,12 @@
       "name": "Noble",
       "style": "A highborn aristocrat of the realm; polished, urbane, and self-assured, speaking in a refined, well-bred register, accustomed to deference.",
       "pace": "Measured and composed."
+    },
+    {
+      "id": "child",
+      "keywords": ["child", "schoolboy", "schoolgirl", "urchin"],
+      "lifeStage": "child",
+      "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
     }
   ],
   "byEthnicity": {
@@ -251,6 +263,9 @@
     },
     "easternlands": {
       "accent": "A Japanese accent, refined and precise, of the distant Eastern Lands across the sea."
+    },
+    "wyrmscraig": {
+      "accent": "A country Irish accent, the warm rural lilt of the Irish countryside."
     }
   },
   "byId": {
@@ -6675,6 +6690,9 @@
     "3776": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "3778": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "6161": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
-    "9598": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."}
+    "9598": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
+    "16294": {"name": "Mortimer", "style": "A grizzled, no-nonsense Slayer master dealing only in superior monsters; dry, gruff, hard-bitten.", "accent": "A country Irish accent, the warm rural lilt of the Irish countryside."},
+    "16314": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."},
+    "16315": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."}
   }
 }

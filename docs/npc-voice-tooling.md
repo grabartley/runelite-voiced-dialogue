@@ -11,8 +11,8 @@ are no network calls or large downloads when choosing a voice.
   and ethnicity from the Old School RuneScape Wiki, merges the curated
   overrides, embeds the voice profiles, and writes the bundled resource.
 - `tools/overrides.json` - hand-curated, **authoritative** `npcId -> {race,
-  gender, ethnicity?}` entries. These always win over the wiki, for pinning the rare
-  NPC the wiki gets wrong or does not cover.
+  gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
+  rare NPC the wiki gets wrong or does not cover, and for marking named children.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
   (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
@@ -29,7 +29,8 @@ none of those, so their race comes from the page's categories. The generator:
    (via the MediaWiki `embeddedin` API).
 2. Fetches each page's lead wikitext and categories in batches and parses every
    infobox.
-3. Maps each cache id to `{race, gender, ethnicity}`, deriving race from the
+3. Maps each cache id to `{race, gender, ethnicity}` (plus a curated `lifeStage` child
+   marker from the overrides), deriving race from the
    page categories when the infobox does not carry it.
 
 Because race and gender come straight from the wiki, townsfolk get the correct
@@ -60,7 +61,9 @@ name still resolves to a documented NPC is covered too.
   so apes are kept off the chattery island-monkey voice; the explicitly demonic
   Monkey Madness 2 gorillas stay `Demon` via overrides. Tortugans (the turtle-like
   folk of the Great Conch) are their own `Tortugan` race, carrying a warm Bajan
-  accent everywhere they are found.
+  accent everywhere they are found. Icyene (the winged Saradominist beings) are
+  their own `Icyene` race with an ethereal, hallowed delivery; a "Half Icyene"
+  (Safalaan) is excluded by the rule and pinned `Human` in overrides.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
@@ -70,6 +73,9 @@ name still resolves to a documented NPC is covered too.
   has no single ethnicity, so it keeps the British default. Ethnicity is an
   **origin** signal, not where the NPC is standing, so a Varrock guard exploring
   Karamja still sounds Misthalin; a foreigner is corrected in `overrides.json`.
+  A place with no `leagueRegion` of its own (e.g. the Wyrmscraig island ->
+  `wyrmscraig`) gets no auto-assignment; its ethnicity is pinned per-NPC in
+  `overrides.json`.
 
 ## Regenerate the table
 
@@ -115,13 +121,17 @@ local-only correction, or to pin a talkable monster the wiki splits into
 }
 ```
 
-The optional `name` field is documentation only. `ethnicity` is also optional (set a byEthnicity key, or omit to clear a wrong one). Find
+The optional `name` field is documentation only. `ethnicity` is also optional (set a byEthnicity key, or omit to clear a wrong one). The optional
+`lifeStage` field marks a named child (`"lifeStage": "child"` is the only value) so it voices
+from the youthful cloud voice sub-pool instead of its adult race anchor;
+generically named children (Child, Schoolboy, Street urchin, ...) are caught by
+the `child` keyword category in `profiles.json` instead and need no override. Find
 an NPC's id with the RuneLite developer tools, the wiki, or **Debug Logging** in the
 plugin (it logs the id and chosen voice/profile per line).
 
 ## Character voice profiles (cloud)
 
-Alongside the `npcId -> {race, gender, ethnicity}` table, the bundled resource
+Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini) backend
 delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
 PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
@@ -154,7 +164,10 @@ the most specific layer that sets each one wins.
    the display name contributes. This expresses categories the race buckets cannot
    (leprechaun -> Irish, vampyre -> Dracula-esque, gnome, imp, ghost, pirate,
    royalty, knight, noble, wizard, ...). Matching is case-insensitive and bounded
-   on word edges, so `imp` matches "Imp" but not "important".
+   on word edges, so `imp` matches "Imp" but not "important". A category may also
+   carry `"lifeStage": "child"`: besides layering its style, it marks every matching NPC
+   as a child so the voice resolver picks from the youthful voice sub-pool (the
+   `child` category keys on child/schoolboy/schoolgirl/urchin).
 5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id. Sparse:
    carry only what is unique to the character (usually `name` + `style`); its
    style is added on top of the blend, and accent and pace inherit unless it sets

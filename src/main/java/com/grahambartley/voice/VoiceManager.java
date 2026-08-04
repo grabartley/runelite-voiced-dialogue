@@ -41,6 +41,7 @@ public class VoiceManager {
     DEMON,
     WIZARD,
     TORTUGAN,
+    ICYENE,
     UNKNOWN
   }
 
@@ -91,7 +92,8 @@ public class VoiceManager {
     this.profileTable = new NpcProfileTable();
     this.profileTable.initialize();
     this.npcFinder = new NpcFinder(client);
-    this.npcVoiceResolver = new NpcVoiceResolver(config, demographicAnalyzer, npcFinder);
+    this.npcVoiceResolver =
+        new NpcVoiceResolver(config, demographicAnalyzer, npcFinder, profileTable::isChildName);
   }
 
   /**

@@ -13,10 +13,11 @@ public class VoiceTraceFormatterTest {
   public void buildNpcTraceShowsWorldHitSourceAndSeed() {
     String trace =
         VoiceTraceFormatter.buildNpcTrace(
-            "Goblin", 101, NPCRace.GOBLIN, NPCGender.MALE, "table-hit", 24);
+            "Goblin", 101, NPCRace.GOBLIN, NPCGender.MALE, false, "table-hit", 24);
     assertTrue(trace, trace.contains("npc='Goblin'"));
     assertTrue(trace, trace.contains("world=HIT(id=101)"));
     assertTrue(trace, trace.contains("race=GOBLIN"));
+    assertTrue(trace, trace.contains("lifeStage=adult"));
     assertTrue(trace, trace.contains("source=table-hit"));
     assertTrue(trace, trace.contains("seed=24"));
   }
@@ -25,7 +26,7 @@ public class VoiceTraceFormatterTest {
   public void buildNpcTraceShowsWorldMissForUntabledNpc() {
     String trace =
         VoiceTraceFormatter.buildNpcTrace(
-            "Hans", null, NPCRace.UNKNOWN, NPCGender.UNKNOWN, "not-in-world", 26);
+            "Hans", null, NPCRace.UNKNOWN, NPCGender.UNKNOWN, false, "not-in-world", 26);
     assertTrue(trace, trace.contains("world=MISS"));
     assertTrue(trace, trace.contains("race=UNKNOWN"));
     assertTrue(trace, trace.contains("seed=26"));
@@ -41,6 +42,7 @@ public class VoiceTraceFormatterTest {
             "HAPPY",
             NPCRace.HUMAN,
             NPCGender.MALE,
+            false,
             26,
             "Hans",
             "British");
@@ -51,6 +53,7 @@ public class VoiceTraceFormatterTest {
     assertTrue(line, line.contains("emotion=HAPPY"));
     assertTrue(line, line.contains("race=HUMAN"));
     assertTrue(line, line.contains("gender=MALE"));
+    assertTrue(line, line.contains("lifeStage=adult"));
     assertTrue(line, line.contains("seed=26"));
     assertTrue(line, line.contains("profile='Hans'"));
     assertTrue(line, line.contains("accent='British'"));
@@ -66,6 +69,7 @@ public class VoiceTraceFormatterTest {
             "NEUTRAL",
             NPCRace.HUMAN,
             NPCGender.FEMALE,
+            false,
             -1,
             null,
             null);
@@ -74,6 +78,31 @@ public class VoiceTraceFormatterTest {
     assertTrue(line, line.contains("seed=-"));
     assertTrue(line, line.contains("profile=-"));
     assertTrue(line, line.contains("accent=-"));
+  }
+
+  @Test
+  public void buildNpcTraceShowsChildAge() {
+    String trace =
+        VoiceTraceFormatter.buildNpcTrace(
+            "Shilop", 3501, NPCRace.HUMAN, NPCGender.MALE, true, "table-hit", 12);
+    assertTrue(trace, trace.contains("lifeStage=child"));
+  }
+
+  @Test
+  public void buildResolvedLineShowsChildAge() {
+    String line =
+        VoiceTraceFormatter.buildResolvedLine(
+            "cloud-openrouter",
+            false,
+            "Shilop",
+            "HAPPY",
+            NPCRace.HUMAN,
+            NPCGender.MALE,
+            true,
+            12,
+            "Shilop",
+            "British");
+    assertTrue(line, line.contains("lifeStage=child"));
   }
 
   @Test

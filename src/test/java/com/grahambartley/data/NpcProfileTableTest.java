@@ -24,7 +24,9 @@ public class NpcProfileTableTest {
           + "\"byEthnicity\":{\"kharidian\":{\"accent\":\"Middle Eastern.\"}},"
           + "\"byCategory\":["
           + "{\"id\":\"vampyre\",\"keywords\":[\"vampyre\",\"vyre\"],\"name\":\"Vampyre\",\"accent\":\"Transylvanian.\",\"style\":\"Predatory.\"},"
-          + "{\"id\":\"imp\",\"keywords\":[\"imp\"],\"name\":\"Imp\",\"style\":\"Squeaky.\"}"
+          + "{\"id\":\"imp\",\"keywords\":[\"imp\"],\"name\":\"Imp\",\"style\":\"Squeaky.\"},"
+          + "{\"id\":\"child\",\"keywords\":[\"child\",\"urchin\"],\"lifeStage\":\"child\","
+          + "\"style\":\"Bright and young.\"}"
           + "],"
           + "\"byId\":{\"_comment\":\"x\",\"100\":{\"name\":\"Vanstrom\",\"style\":\"An ancient vampyre lord.\"}}"
           + "}";
@@ -157,5 +159,24 @@ public class NpcProfileTableTest {
     assertEquals("a non-blank accent overrides", "Pirate drawl.", overridden.accent());
     assertEquals("a blank style inherits", "Brave hero.", overridden.style());
     assertEquals("a blank pace inherits", "Steady.", overridden.pace());
+  }
+
+  @Test
+  public void childAgeCategoryMarksMatchingNamesAsChildren() {
+    NpcProfileTable t = table();
+    assertTrue("'Child' matches the child category", t.isChildName("Child"));
+    assertTrue("'Street urchin' matches the child category", t.isChildName("Street urchin"));
+    assertFalse("an adult name is not a child", t.isChildName("Random Bloke"));
+    assertFalse("a non-child category match is not a child", t.isChildName("Imp"));
+    assertFalse("a null name is not a child", t.isChildName(null));
+  }
+
+  @Test
+  public void childCategoryStyleLayersOverTheRaceStyle() {
+    NpcProfileTable.Resolution r = table().resolveNpc(null, "Troll child", "Troll", null);
+    assertEquals("race:Troll+keyword:child", r.source());
+    assertEquals("Big and dim. Bright and young.", r.profile().style());
+    assertEquals(
+        "the child category leaves the accent to the race", "Brixton.", r.profile().accent());
   }
 }
