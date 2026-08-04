@@ -7,7 +7,7 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-> Voiced Dialogue leverages a cloud service ([OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
+> Voiced Dialogue leverages a cloud service ([OpenRouter](https://openrouter.ai) by default, or [Google AI Studio](https://aistudio.google.com)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
 
 ## Gielinor, out loud
 
@@ -51,6 +51,8 @@ Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRoute
 
 Until a key is set, lines stay silent and a one-time notice points you to the key.
 
+**Already have a Google AI Studio account?** You can skip OpenRouter entirely: set **Voice Provider** to **Google AI Studio** and paste your Gemini API key (from [aistudio.google.com](https://aistudio.google.com/apikey)) into the **Google AI Studio API Key** field. Dialogue then goes straight to Google and bills your Google account; the voices sound the same on both providers.
+
 ## The features, up close
 
 <details>
@@ -85,18 +87,20 @@ Everything runs off the game thread, so the client never stutters and skipping a
 
 </details>
 
-> **Privacy:** only the dialogue text being spoken is sent to OpenRouter over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
+> **Privacy:** only the dialogue text being spoken is sent to your chosen provider (OpenRouter or Google AI Studio) over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
 
 ## Configuration
 
-Settings mirror the in-game panel: **General** (key, playback, caching), **Voices** (who sounds like what), **Delivery** (how each line is spoken), and **Advanced** (niche tuning).
+Settings mirror the in-game panel: **General** (provider, keys, playback, caching), **Voices** (who sounds like what), **Delivery** (how each line is spoken), and **Advanced** (niche tuning).
 
 <details>
 <summary><b>General</b></summary>
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **OpenRouter API Key** | empty | Your OpenRouter API key, required to voice dialogue; stored locally, never bundled with the plugin. |
+| **Voice Provider** | `OpenRouter` | The cloud service that voices dialogue and bills the calls: OpenRouter, or Google AI Studio with your own Gemini API key. The voices sound the same on both. |
+| **OpenRouter API Key** | empty | Your OpenRouter API key, used by the OpenRouter provider; stored locally, never bundled with the plugin. |
+| **Google AI Studio API Key** | empty | Your Gemini API key, used by the Google AI Studio provider; stored locally, never bundled with the plugin. |
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
 | **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice, exactly as typed. |
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options you can see so your pick plays instantly; can spend credit on branches you never choose. |
@@ -156,7 +160,7 @@ cd runelite-voiced-dialogue
 
 Run the `com.grahambartley.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. See [docs/architecture.md](docs/architecture.md) for how the synthesis pipeline works end to end.
 
-**Tech stack:** Java, the OpenRouter speech API for the cloud voice, and the RuneLite plugin framework.
+**Tech stack:** Java, the OpenRouter and Gemini speech APIs for the cloud voice, and the RuneLite plugin framework.
 
 ## Thanks
 
