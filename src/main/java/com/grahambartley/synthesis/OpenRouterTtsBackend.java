@@ -258,15 +258,24 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     String language = effectiveSpokenLanguage(request);
     String languageFragment =
         needsTranslation(language) && !request.skipTranslation() ? language.toLowerCase() : null;
-    return CloudCacheKeyBuilder.build(
-        model.modelId(),
-        model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
+    String variant =
+        CloudCacheKeyBuilder.build(
+            model.modelId(),
+            model.voiceFor(request.voice()),
+            speedPercent(),
+            DEFAULT_SPEED_PERCENT,
+            request.text(),
+            config.cloudMaxChars(),
+            request.profile(),
+            languageFragment);
+    // The creativity level changes the rewritten words, so it is only part of the identity when a
+    // rewrite actually runs. A line that never reaches the model keeps its simpler key.
+    return languageFragment == null ? variant : variant + "|k" + creativity();
+  }
+
+  /** The configured rewrite freedom, clamped to the supported range. */
+  private int creativity() {
+    return VoicedDialogueConfig.boundedDialogueCreativity(config.dialogueCreativity());
   }
 
   /** A target language other than English (case-insensitive, blank treated as English). */
@@ -287,6 +296,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   String effectiveSpokenLanguage(SynthesisRequest request) {
     VoicedDialogueConfig.SpeakingStyle style =
         request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
+    // At creativity 0 the line is read exactly as written, so a style must not pull it through the
+    // rewrite hop. A non-English target still translates: that is a language choice, not a liberty.
+    if (creativity() == 0) {
+      style = VoicedDialogueConfig.SpeakingStyle.NONE;
+    }
     return combineLanguage(config.cloudLanguage().label(), style);
   }
 
@@ -344,7 +358,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     boolean translating = needsTranslation(language) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
+      String translated = translator.translate(cappedText, language.trim(), key, creativity());
       if (translated == null) {
         warnOnce(
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");

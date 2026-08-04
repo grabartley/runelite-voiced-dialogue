@@ -70,6 +70,49 @@ public class OpenRouterTranslatorTest {
   }
 
   @Test
+  public void creativityLevelsReadAsDistinctInstructions() {
+    String literal = OpenRouterTranslator.systemPrompt("French", 0);
+    String nearLiteral = OpenRouterTranslator.systemPrompt("French", 1);
+    String restrained = OpenRouterTranslator.systemPrompt("French", 2);
+    String expressive = OpenRouterTranslator.systemPrompt("French", 3);
+    String creative = OpenRouterTranslator.systemPrompt("French", 4);
+
+    assertTrue(literal.contains("level 0/4"));
+    assertTrue(literal.contains("Add, omit, reorder, or embellish nothing"));
+    assertTrue(nearLiteral.contains("level 1/4"));
+    assertTrue(nearLiteral.contains("Do not add sentences, reactions, jokes, or ad-libs"));
+    assertTrue(restrained.contains("level 2/4"));
+    assertTrue(expressive.contains("level 3/4"));
+    assertTrue(creative.contains("level 4/4"));
+    assertNotEquals(literal, nearLiteral);
+    assertNotEquals(nearLiteral, restrained);
+  }
+
+  @Test
+  public void aLevelStaysStableSoThePromptCacheKeepsHitting() {
+    assertEquals(
+        OpenRouterTranslator.systemPrompt("French", 3),
+        OpenRouterTranslator.systemPrompt("French", 3));
+  }
+
+  @Test
+  public void outOfRangeLevelsClampToTheNearestSupportedOne() {
+    assertEquals(
+        OpenRouterTranslator.systemPrompt("French", 0),
+        OpenRouterTranslator.systemPrompt("French", -5));
+    assertEquals(
+        OpenRouterTranslator.systemPrompt("French", 4),
+        OpenRouterTranslator.systemPrompt("French", 99));
+  }
+
+  @Test
+  public void theDefaultPromptIsTheNearLiteralLevel() {
+    assertEquals(
+        OpenRouterTranslator.systemPrompt("French", 1),
+        OpenRouterTranslator.systemPrompt("French"));
+  }
+
+  @Test
   public void translatesAndReturnsTrimmedContent() throws Exception {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("  Bonjour  ")));

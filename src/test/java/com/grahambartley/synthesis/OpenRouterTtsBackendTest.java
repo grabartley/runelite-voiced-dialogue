@@ -51,6 +51,12 @@ public class OpenRouterTtsBackendTest {
     VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
     VoicedDialogueConfig.SpeakingStyle playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
     VoicedDialogueConfig.SpeakingStyle npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
+    int creativity = VoicedDialogueConfig.DEFAULT_DIALOGUE_CREATIVITY;
+
+    @Override
+    public int dialogueCreativity() {
+      return creativity;
+    }
 
     @Override
     public String openRouterApiKey() {
@@ -1290,5 +1296,75 @@ public class OpenRouterTtsBackendTest {
 
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
+  }
+
+  @Test
+  public void theCreativityLevelReachesTheRewritePrompt() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    config.creativity = 4;
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Bonjour")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(req()));
+
+    assertTrue(server.takeRequest().getBody().readUtf8().contains("level 4/4"));
+  }
+
+  @Test
+  public void zeroCreativityReadsAStyledEnglishLineVerbatim() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
+    config.creativity = 0;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(req()));
+
+    assertEquals("no rewrite hop at all", 1, server.getRequestCount());
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertEquals("Hello & welcome", body.get("input").getAsString());
+  }
+
+  @Test
+  public void zeroCreativityStillTranslatesANonEnglishTarget() {
+    TestConfig config = new TestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    config.creativity = 0;
+
+    assertTrue(
+        "picking a language is not a liberty the level should override",
+        backend(config).cacheVariant(req()).contains("|lfrench"));
+  }
+
+  @Test
+  public void theCreativityLevelPartitionsARewrittenLineOnly() {
+    TestConfig config = new TestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    OpenRouterTtsBackend backend = backend(config);
+
+    config.creativity = 1;
+    String nearLiteral = backend.cacheVariant(req());
+    config.creativity = 4;
+    assertNotEquals(
+        "a different level rewrites the words, so it cannot share a key",
+        nearLiteral,
+        backend.cacheVariant(req()));
+
+    // A plain English line is never rewritten, so its key stays as simple as before.
+    config.language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
+    config.creativity = 1;
+    String plainAtOne = backend.cacheVariant(req());
+    config.creativity = 4;
+    assertEquals(
+        "an untouched line keeps its simpler key", plainAtOne, backend.cacheVariant(req()));
   }
 }

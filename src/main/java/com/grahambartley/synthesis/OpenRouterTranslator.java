@@ -68,13 +68,22 @@ final class OpenRouterTranslator {
    * failed line rather than voicing untranslated text under a target-language cache key.
    */
   String translate(String text, String language, String apiKey) {
+    return translate(text, language, apiKey, VoicedDialogueConfig.DEFAULT_DIALOGUE_CREATIVITY);
+  }
+
+  /**
+   * As {@link #translate(String, String, String)}, but steers how much freedom the rewrite has. The
+   * level only changes the fixed system prompt, so the cacheable prefix stays byte-identical for a
+   * given (language, level) pair.
+   */
+  String translate(String text, String language, String apiKey, int creativity) {
     if (text == null || text.isEmpty()) {
       return text;
     }
     JsonObject payload = new JsonObject();
     payload.addProperty("model", MODEL);
     JsonArray messages = new JsonArray();
-    messages.add(message("system", systemPrompt(language)));
+    messages.add(message("system", systemPrompt(language, creativity)));
     messages.add(message("user", text));
     payload.add("messages", messages);
     OpenRouterProvider.apply(payload);
@@ -145,12 +154,52 @@ final class OpenRouterTranslator {
    * byte-identical prefix the model's prompt cache keys on.
    */
   static String systemPrompt(String language) {
+    return systemPrompt(language, VoicedDialogueConfig.DEFAULT_DIALOGUE_CREATIVITY);
+  }
+
+  /**
+   * The fixed system prompt for a target language at a given creativity level. Deterministic in
+   * both inputs (no timestamps, names, or per-line text) so the same pair always produces the
+   * byte-identical prefix the model's prompt cache keys on.
+   */
+  static String systemPrompt(String language, int creativity) {
     return "You are a translation engine for an Old School RuneScape dialogue voice plugin."
         + " Translate the user's line into "
         + language
         + ". Preserve proper nouns, character names, place names, item names, and RuneScape"
-        + " terminology exactly as written. Output only the translation, with no quotes, notes,"
+        + " terminology exactly as written. "
+        + creativityInstruction(creativity)
+        + " Output only the transformed line, with no quotes, notes,"
         + " explanations, or preamble.";
+  }
+
+  /**
+   * How much liberty the rewrite may take, as an explicit instruction rather than a temperature:
+   * the levels are qualitative steps a reviewer can read, and every one of them still forbids
+   * changing the facts, requests, answers, or named entities in the source line.
+   */
+  private static String creativityInstruction(int creativity) {
+    switch (VoicedDialogueConfig.boundedDialogueCreativity(creativity)) {
+      case 0:
+        return "Creativity level 0/4: translate faithfully. Add, omit, reorder, or embellish"
+            + " nothing.";
+      case 1:
+        return "Creativity level 1/4: stay near-literal. Preserve every clause and factual detail,"
+            + " and change wording only where the target language requires it. Do not add"
+            + " sentences, reactions, jokes, or ad-libs.";
+      case 2:
+        return "Creativity level 2/4: use restrained natural phrasing and light character diction"
+            + " while preserving every proposition and factual detail. Do not add new ideas,"
+            + " jokes, or ad-libs.";
+      case 3:
+        return "Creativity level 3/4: use noticeably in-character phrasing while preserving the"
+            + " source intent, facts, questions, answers, names, and RuneScape terms. At most one"
+            + " very short non-factual reaction is allowed.";
+      default:
+        return "Creativity level 4/4: use expressive in-character phrasing and, where it fits, add"
+            + " at most one short aside. Never change facts, requests, answers, named entities, or"
+            + " the source intent.";
+    }
   }
 
   private static JsonObject message(String role, String content) {

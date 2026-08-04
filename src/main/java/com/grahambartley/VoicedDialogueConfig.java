@@ -13,6 +13,17 @@ public interface VoicedDialogueConfig extends Config {
   /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
   String GROUP = "voicedDialogue";
 
+  /** Top of the {@link #dialogueCreativity()} scale: qualitative steps, not a temperature dial. */
+  int MAX_DIALOGUE_CREATIVITY = 4;
+
+  /** Near-literal by default: natural phrasing only, with no invented reactions or ad-libs. */
+  int DEFAULT_DIALOGUE_CREATIVITY = 1;
+
+  /** Clamps a configured creativity level into the supported range. */
+  static int boundedDialogueCreativity(int level) {
+    return Math.max(0, Math.min(MAX_DIALOGUE_CREATIVITY, level));
+  }
+
   @ConfigSection(
       name = "General",
       description = "API key, playback, cache. Text is sent to OpenRouter.",
@@ -364,10 +375,21 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "dialogueCreativity",
+      name = "Dialogue Creativity",
+      description = "0 literal, 1 near-literal, 2 restrained, 3 expressive, 4 creative.",
+      position = 4,
+      section = deliverySection)
+  @Range(min = 0, max = MAX_DIALOGUE_CREATIVITY)
+  default int dialogueCreativity() {
+    return DEFAULT_DIALOGUE_CREATIVITY;
+  }
+
+  @ConfigItem(
       keyName = "speakingPace",
       name = "Speaking Pace",
       description = "Speech speed as % of normal (100 = normal).",
-      position = 4,
+      position = 5,
       section = deliverySection)
   @Range(min = 50, max = 200)
   default int speakingPace() {
@@ -378,7 +400,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "cloudCaveEcho",
       name = "Cave Echo",
       description = "Add a cave echo to dialogue spoken underground.",
-      position = 5,
+      position = 6,
       section = deliverySection)
   default boolean cloudCaveEcho() {
     return false;

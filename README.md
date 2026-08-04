@@ -128,6 +128,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | **Spoken Language** | `English` | Speaks dialogue in another language, keeping names, places, and item terms intact. Translation adds a little latency per line. |
 | **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). |
 | **NPC Speaking Style** | `None` | The same set of styles, applied to NPC lines instead; composes with any Spoken Language. |
+| **Dialogue Creativity** | `1` | How much freedom a rewrite has: `0` literal, `1` near-literal, `2` restrained, `3` expressive, `4` creative. Only affects lines that already go through translation or a style. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
 | **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). |
 
