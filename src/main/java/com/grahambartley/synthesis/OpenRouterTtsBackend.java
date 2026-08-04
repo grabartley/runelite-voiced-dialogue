@@ -350,7 +350,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");
         return null;
       }
-      spokenText = translated;
+      spokenText = capLength(translated, config.cloudMaxChars());
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
     // The profile block sets the tone (accent/style/pace) and the emotion tag colours the moment;

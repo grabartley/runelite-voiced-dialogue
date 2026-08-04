@@ -35,6 +35,13 @@ public class CloudCacheKeyBuilderTest {
   }
 
   @Test
+  public void capFragmentAlsoAppliesToATranslatedLineThatCouldExpand() {
+    assertTrue(
+        "a short source can still translate to something longer than the cap",
+        CloudCacheKeyBuilder.build("m", "v", 100, 100, "ab", 3, null, "french").contains("|c3"));
+  }
+
+  @Test
   public void profileFragmentIsTheProfileContentKey() {
     String withProfile = CloudCacheKeyBuilder.build("m", "v", 100, 100, "a", 0, PROFILE, null);
     assertEquals("m|v|p" + PROFILE.cacheKey(), withProfile);

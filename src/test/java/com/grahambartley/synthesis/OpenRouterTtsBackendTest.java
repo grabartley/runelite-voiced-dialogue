@@ -1291,4 +1291,46 @@ public class OpenRouterTtsBackendTest {
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
   }
+
+  @Test
+  public void translatedTextIsCappedBeforeItIsVoiced() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.maxChars = 8;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    // A short source line can come back from the translation model longer than the cap.
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("un deux trois quatre")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(
+        backend(config)
+            .synthesize(
+                new SynthesisRequest(
+                    "Hello", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL)));
+
+    server.takeRequest();
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertEquals("un deux", body.get("input").getAsString());
+  }
+
+  @Test
+  public void aTranslatedLineFoldsTheCapIntoItsCacheKey() {
+    TestConfig config = new TestConfig();
+    config.maxChars = 8;
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    OpenRouterTtsBackend backend = backend(config);
+
+    String atSmallCap = backend.cacheVariant(req());
+    config.maxChars = 600;
+
+    assertNotEquals(
+        "changing the cap must not replay differently truncated audio",
+        atSmallCap,
+        backend.cacheVariant(req()));
+  }
 }

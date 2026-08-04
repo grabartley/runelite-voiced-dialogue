@@ -11,7 +11,8 @@ package com.grahambartley.synthesis;
  *   <li>model + voice: the base, so a future model switch or a different voice never replays the
  *       wrong audio;
  *   <li>{@code |s}: speed, only when non-default;
- *   <li>{@code |c}: cap, only when this line is long enough to actually be truncated;
+ *   <li>{@code |c}: cap, when this line can be truncated: either the source is already longer than
+ *       the cap, or it is translated and the translation may come back longer;
  *   <li>{@code |p}: character-profile content digest, only when a profile is present;
  *   <li>{@code |l}: target language/style, only when the line is actually translated.
  * </ul>
@@ -33,7 +34,9 @@ final class CloudCacheKeyBuilder {
     if (speedPercent != defaultSpeedPercent) {
       variant.append("|s").append(speedPercent);
     }
-    if (maxChars > 0 && text != null && text.length() > maxChars) {
+    boolean capCanApply =
+        maxChars > 0 && text != null && (text.length() > maxChars || languageFragment != null);
+    if (capCanApply) {
       variant.append("|c").append(maxChars);
     }
     if (profile != null) {

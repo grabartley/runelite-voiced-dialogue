@@ -92,4 +92,14 @@ public class CharacterProfileTest {
           "Mage", "Distinguished elderly British English.", "A wise old wizard.", "Measured."),
     };
   }
+
+  @Test
+  public void cacheKeySeparatesProfilesThatShareAJavaStringHash() {
+    // "Aa" and "BB" collide under String.hashCode(), so a 32-bit hash would have replayed the first
+    // profile's cached audio for every line the second one speaks.
+    CharacterProfile first = new CharacterProfile("Wizard", "British.", "Aa", "Measured.");
+    CharacterProfile second = new CharacterProfile("Wizard", "British.", "BB", "Measured.");
+
+    assertNotEquals(first.cacheKey(), second.cacheKey());
+  }
 }

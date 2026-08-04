@@ -84,13 +84,15 @@ public final class CharacterProfile {
   }
 
   /**
-   * Stable, content-derived cache fragment (e.g. {@code "1f3a9c"}). Two profiles with identical
-   * fields produce the same key (so NPCs sharing a profile share cached audio); changing any field
-   * changes the key (so a re-tuned profile does not replay the old delivery). Folded into the cloud
-   * cache variant.
+   * Stable, content-derived cache fragment. Two profiles with identical fields produce the same key
+   * (so NPCs sharing a profile share cached audio); changing any field changes the key (so a
+   * re-tuned profile does not replay the old delivery). Folded into the cloud cache variant.
+   *
+   * <p>Uses a truncated SHA-256 rather than {@link String#hashCode()}: a 32-bit string hash
+   * collides on short, realistic edits (for example a style of {@code "Aa"} and {@code "BB"}),
+   * which would silently replay the previous profile's audio for every line it had already cached.
    */
   public String cacheKey() {
-    String joined = name + '' + accent + '' + style + '' + pace;
-    return Integer.toHexString(joined.hashCode());
+    return CacheVariantDigest.of(name + '\u0001' + accent + '\u0001' + style + '\u0001' + pace);
   }
 }
