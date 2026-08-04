@@ -377,8 +377,8 @@ public final class DialogueAudioService {
    * if a synth for this key is already running (for example a prefetch), this awaits it and plays
    * it buffered rather than issuing a second billable call. After a skip the sink stops feeding the
    * player while the backend keeps draining the body, so the finished line is still cached and
-   * never re-billed (Option A). A line the backend deems incomplete is played but returns {@code
-   * null}, so nothing clipped is persisted.
+   * never re-billed on a later hearing. A line the backend deems incomplete is played but returns
+   * {@code null}, so nothing clipped is persisted.
    */
   // Package-private for the same reason as synthesizeDeduped: the dedup-degrades-to-buffered branch
   // needs a concurrency test to drive it directly.
@@ -407,7 +407,7 @@ public final class DialogueAudioService {
       // Forward every chunk to the player: its generation counter drops post-skip chunks and
       // releases the audio line at once (so a skipped line does not hold it open through the
       // background drain), while the backend keeps draining the body so the finished line still
-      // caches (Option A).
+      // caches.
       AudioOutput.AudioStream playing = stream;
       PcmSink sink = playing::write;
       full = backends.synthesizeStreamingWith(backend, request, sink);

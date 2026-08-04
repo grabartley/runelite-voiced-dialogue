@@ -266,7 +266,7 @@ public class DialogueAudioServiceTest {
     List<String> synthed = new ArrayList<>();
     Runnable[] skipHook = {() -> {}};
     // A backend that keeps draining the body to the complete line even though a skip lands mid-way
-    // (the real backend does the same). The service must still cache that complete line (Option A).
+    // (the real backend does the same). The service must still cache that complete line.
     // The player is what drops the post-skip chunk from the speakers; that is covered by
     // StreamingAudioPlayerTest, so here we assert the service-level caching and stream release.
     SynthesisBackend streaming =
@@ -311,7 +311,7 @@ public class DialogueAudioServiceTest {
     assertEquals(
         "the stream is released even though it was skipped mid-line", 1, output.endStreamCalls);
 
-    // The whole line was still cached despite the skip (Option A): a repeat is a cache hit.
+    // The whole line was still cached despite the skip: a repeat is a cache hit.
     svc.speak(req("Skipme", NPCRace.HUMAN, NPCGender.MALE));
     executor.runAll();
 

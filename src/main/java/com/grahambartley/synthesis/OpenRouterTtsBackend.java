@@ -657,10 +657,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             totalBytes += read;
             float[] chunk = decoder.decode(buffer, read);
             if (chunk.length > 0) {
-              // Feed playback first so it starts on the earliest bytes, then keep the chunk for the
-              // cache. After a skip the sink drops the chunk cheaply, so the loop keeps draining
-              // the
-              // body to completion and the finished line is still cached (Option A).
+              // Feed playback first so it starts on the earliest bytes, then keep the chunk for
+              // the cache. After a skip the sink drops the chunk cheaply, so the loop keeps
+              // draining the body to completion and the finished line is still cached, never
+              // re-billed on a later hearing.
               sink.accept(chunk, rate);
               fedSink = true;
               chunks.add(chunk);
