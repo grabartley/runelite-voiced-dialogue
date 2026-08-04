@@ -5,6 +5,7 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PAYMENT_REQUIRED;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -20,7 +21,9 @@ import com.grahambartley.tts.Pcm;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import okhttp3.OkHttpClient;
@@ -973,6 +976,155 @@ public class OpenRouterTtsBackendTest {
     short[] s = new short[40_800];
     java.util.Arrays.fill(s, 0, 36_000, (short) 12_000);
     return s;
+  }
+
+  private static float[] concat(List<float[]> chunks) {
+    int total = 0;
+    for (float[] chunk : chunks) {
+      total += chunk.length;
+    }
+    float[] out = new float[total];
+    int pos = 0;
+    for (float[] chunk : chunks) {
+      System.arraycopy(chunk, 0, out, pos, chunk.length);
+      pos += chunk.length;
+    }
+    return out;
+  }
+
+  @Test
+  public void streamingFeedsChunksAndReturnsTheCompleteLineForCaching() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    short[] samples = completeAudio();
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(samples))));
+
+    List<float[]> fed = new ArrayList<>();
+    Pcm result = backend(config).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
+
+    float[] whole = RawPcmDecoder.decode(RawPcmDecoderTest.raw(samples), 24_000).getSamples();
+    assertNotNull("a complete streamed line is returned for caching", result);
+    assertEquals("the model sample rate is carried", 24_000, result.getSampleRate());
+    assertArrayEquals(
+        "the returned line matches the whole-buffer decode", whole, result.getSamples(), 1e-6f);
+    assertTrue("audio was handed to the sink as it streamed", fed.size() >= 1);
+    assertArrayEquals("the streamed chunks reconstruct the whole line", whole, concat(fed), 1e-6f);
+  }
+
+  @Test
+  public void streamingRetriesAnEmptyBodyThenReturnsNull() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK)); // empty body
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK)); // empty again
+
+    List<float[]> fed = new ArrayList<>();
+    Pcm result = backend(config).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
+
+    assertNull("an all-empty streamed line is not voiced", result);
+    assertEquals(
+        "an empty body is retried once, like the buffered path", 2, server.getRequestCount());
+    assertTrue("nothing ever played", fed.isEmpty());
+  }
+
+  @Test
+  public void streamingPlaysATruncatedLineOnceButDoesNotCacheOrRetryIt() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    // Full-amplitude with no trailing silence: heard as it streams, but not cacheable.
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(truncatedAudio()))));
+
+    List<float[]> fed = new ArrayList<>();
+    Pcm result = backend(config).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
+
+    assertNull("a truncated streamed line is not returned for caching", result);
+    assertFalse("but it still played through the sink as it arrived", fed.isEmpty());
+    assertEquals(
+        "a streamed line is not retried once it has begun playing", 1, server.getRequestCount());
+  }
+
+  @Test
+  public void streamingFailsANon2xxFastWithoutPlaying() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
+
+    int[] notices = {0};
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setNotice(msg -> notices[0]++);
+    List<float[]> fed = new ArrayList<>();
+    Pcm result = backend.synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
+
+    assertNull("a non-2xx streamed line is not voiced", result);
+    assertTrue("nothing played", fed.isEmpty());
+    assertEquals("non-2xx fails fast with no retry", 1, server.getRequestCount());
+    assertEquals("and surfaces one notice", 1, notices[0]);
+  }
+
+  @Test
+  public void theDefaultStreamingImplementationFallsBackToBufferedAsOneChunk() {
+    Pcm whole = new Pcm(new float[] {0.1f, -0.2f, 0.3f}, 24_000);
+    SynthesisBackend buffered =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return "buffered-only";
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            return whole;
+          }
+        };
+
+    List<float[]> fed = new ArrayList<>();
+    int[] rate = {0};
+    Pcm result =
+        buffered.synthesizeStreaming(
+            req(),
+            (chunk, r) -> {
+              fed.add(chunk);
+              rate[0] = r;
+            });
+
+    assertEquals("the buffered result is returned unchanged", whole, result);
+    assertEquals("the whole line is delivered as a single chunk", 1, fed.size());
+    assertArrayEquals(whole.getSamples(), fed.get(0), 0f);
+    assertEquals("at the line's own sample rate", 24_000, rate[0]);
+  }
+
+  @Test
+  public void streamingTreatsAnOddLengthBodyAsIncompleteAndDoesNotCacheIt() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    // A complete-looking body plus one dangling byte: not a whole number of 16-bit samples, so the
+    // decoder ends with a pending byte and the line must not be cached (played once, re-fetched).
+    byte[] even = RawPcmDecoderTest.raw(completeAudio());
+    byte[] odd = java.util.Arrays.copyOf(even, even.length + 1);
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(new Buffer().write(odd)));
+
+    List<float[]> fed = new ArrayList<>();
+    Pcm result = backend(config).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
+
+    assertFalse("the whole samples still played as they streamed", fed.isEmpty());
+    assertNull("a misaligned (odd-length) stream is not returned for caching", result);
+    assertEquals("no retry once it has begun playing", 1, server.getRequestCount());
   }
 
   @Test

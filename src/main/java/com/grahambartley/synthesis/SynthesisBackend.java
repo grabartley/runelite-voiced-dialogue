@@ -25,6 +25,23 @@ public interface SynthesisBackend {
   Pcm synthesize(SynthesisRequest request);
 
   /**
+   * Synthesizes the request while delivering decoded audio to {@code sink} in chunks as it is
+   * produced, and returns the complete {@link Pcm} for caching (or {@code null} when the line
+   * failed or is too incomplete to cache — it may still have played through the sink).
+   *
+   * <p>Default: the buffered behavior. Synthesize the whole line, then hand it to the sink as a
+   * single chunk, so a backend that cannot stream still works through the streaming call site. A
+   * backend that can stream overrides this to start feeding the sink as bytes arrive.
+   */
+  default Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
+    Pcm pcm = synthesize(request);
+    if (pcm != null) {
+      sink.accept(pcm.getSamples(), pcm.getSampleRate());
+    }
+    return pcm;
+  }
+
+  /**
    * An extra cache-key fragment that distinguishes audio this backend would render differently for
    * the same {@code (voice, emotion, text)} because of backend-specific state outside the request.
    *

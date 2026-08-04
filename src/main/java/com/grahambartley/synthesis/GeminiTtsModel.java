@@ -50,4 +50,9 @@ final class GeminiTtsModel implements TtsModelStrategy {
   public Pcm decodeResponse(byte[] bytes) {
     return RawPcmDecoder.decode(bytes, SAMPLE_RATE);
   }
+
+  @Override
+  public int sampleRate() {
+    return SAMPLE_RATE;
+  }
 }

@@ -5,12 +5,15 @@ import com.google.gson.JsonObject;
 import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -112,6 +115,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
   private static final int BODY_SNIPPET_MAX_BYTES = 300;
+
+  /** Read granularity for the streaming path: bytes are decoded and played per network read. */
+  private static final int STREAM_READ_BUFFER = 16_384;
+
+  /** Shared empty body for failure traces where no response bytes were (or could be) read. */
+  private static final byte[] EMPTY_BODY = new byte[0];
 
   /** RFC 6585 Too Many Requests, absent from {@link HttpURLConnection}'s status constants. */
   static final int HTTP_TOO_MANY_REQUESTS = 429;
@@ -294,6 +303,29 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   @Override
   public Pcm synthesize(SynthesisRequest request) {
+    PreparedRequest prepared = prepare(request);
+    if (prepared == null) {
+      return null;
+    }
+    return executeBuffered(prepared);
+  }
+
+  @Override
+  public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
+    PreparedRequest prepared = prepare(request);
+    if (prepared == null) {
+      return null;
+    }
+    return executeStreaming(prepared, sink);
+  }
+
+  /**
+   * Builds the speech request shared by the buffered and streaming paths: availability check,
+   * optional translation hop, emotion styling, character-profile block, speed/language params, and
+   * headers. Returns {@code null} (after surfacing the one-time notice) when the line cannot be
+   * voiced at all: no API key, or a failed translation.
+   */
+  private PreparedRequest prepare(SynthesisRequest request) {
     if (!isAvailable()) {
       log.debug(NO_KEY_NOTICE);
       notice.accept(NO_KEY_NOTICE);
@@ -361,10 +393,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", model.responseFormat());
     int speed = speedPercent();
+    double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
     if (speed != DEFAULT_SPEED_PERCENT) {
       // The model may ignore speed; sending it only when non-default keeps the default request body
       // identical to before and avoids paying for a param the model might not honour.
-      double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
       payload.addProperty("speed", speedRatio);
       if (config.debugMode()) {
         log.info("[TTS cloud] speed {}", speedRatio);
@@ -391,6 +423,17 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
                     JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
             .build();
 
+    return new PreparedRequest(httpRequest, speedRatio, input.length());
+  }
+
+  /**
+   * The buffered path: reads the whole body once, decodes it, retries a transient empty or
+   * truncated response, and returns the complete {@link Pcm} (or {@code null} on failure).
+   */
+  private Pcm executeBuffered(PreparedRequest prepared) {
+    Request httpRequest = prepared.httpRequest;
+    double speedRatio = prepared.speedRatio;
+    int inputLen = prepared.inputLen;
     // A 200 with a zero-byte body is a transient server-side glitch (the generation id is present
     // but no audio came back), so one immediate retry recovers the line; the byte[]-backed request
     // body is reusable across calls. A read/call timeout (or other transient IOException) is also
@@ -400,7 +443,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // Every attempt is timed and numbered individually so retry effectiveness is measurable from
     // the
     // logs (#162, #196).
-    int inputLen = input.length();
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
       long attemptStart = System.nanoTime();
       try (Response response = httpClient.newCall(httpRequest).execute()) {
@@ -471,7 +513,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // below), but the model occasionally returns a line whose audio stops mid-utterance. A
         // complete line releases into trailing silence; one that does not is rejected so a clipped
         // clip is never cached or voiced. One retry recovers the common transient case.
-        if (PcmCompleteness.isTruncated(pcm)) {
+        if (PcmCompleteness.isTruncated(pcm, speedRatio)) {
           if (attempt < MAX_SPEECH_ATTEMPTS) {
             log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
@@ -489,9 +531,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               bytes);
           return null;
         }
-        log.debug(
-            CloudSynthTrace.success(
-                attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, bytes.length, generationId));
+        // Emitted at info under the plugin's Debug Logging toggle (like the other [TTS cloud]
+        // traces) so a successful line's latency is measurable, not just its failures; the record
+        // carries elapsedMs and attempt=N/2, so a line recovered on retry is visible as such.
+        if (config.debugMode()) {
+          log.info(
+              CloudSynthTrace.success(
+                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, bytes.length, generationId));
+        }
         return pcm;
       } catch (ConnectException e) {
         // The host is unreachable (connection refused / no route), almost certainly an offline
@@ -554,6 +601,210 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       }
     }
     return null;
+  }
+
+  /**
+   * The streaming path: reads the body incrementally, decodes each chunk with {@link
+   * StreamingPcmDecoder}, hands it to {@code sink} for immediate playback, and accumulates the
+   * whole line for caching. An empty body (nothing handed over yet) is retried like the buffered
+   * path; once any chunk has reached the sink the line is committed, so a mid-stream failure plays
+   * what arrived and is not retried. A line whose accumulated audio is truncated still played but
+   * returns {@code null} so it is not cached, and re-fetches next time.
+   */
+  private Pcm executeStreaming(PreparedRequest prepared, PcmSink sink) {
+    Request httpRequest = prepared.httpRequest;
+    double speedRatio = prepared.speedRatio;
+    int inputLen = prepared.inputLen;
+    int rate = model.sampleRate();
+    for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
+      long attemptStart = System.nanoTime();
+      boolean fedSink = false;
+      long firstChunkMs = -1;
+      try (Response response = httpClient.newCall(httpRequest).execute()) {
+        String contentType = headerOrEmpty(response, "Content-Type");
+        String generationId = headerOrEmpty(response, "X-Generation-Id");
+        if (!response.isSuccessful()) {
+          if (response.code() == HTTP_TOO_MANY_REQUESTS) {
+            backoff.recordRateLimited();
+          }
+          warnOnce(failureNotice(response.code()));
+          logFailure(
+              "non-2xx",
+              attempt,
+              elapsedMs(attemptStart),
+              inputLen,
+              response.code(),
+              response.message(),
+              contentType,
+              generationId,
+              errorBody(response));
+          return null;
+        }
+        // A clean call clears any rate-limit back-off so prefetch can resume.
+        backoff.recordSuccess();
+        StreamingPcmDecoder decoder = new StreamingPcmDecoder();
+        List<float[]> chunks = new ArrayList<>();
+        int sampleCount = 0;
+        long totalBytes = 0;
+        ResponseBody body = response.body();
+        if (body != null) {
+          InputStream in = body.byteStream();
+          byte[] buffer = new byte[STREAM_READ_BUFFER];
+          int read;
+          while ((read = in.read(buffer)) != -1) {
+            if (read == 0) {
+              continue;
+            }
+            totalBytes += read;
+            float[] chunk = decoder.decode(buffer, read);
+            if (chunk.length > 0) {
+              // Feed playback first so it starts on the earliest bytes, then keep the chunk for
+              // the cache. After a skip the sink drops the chunk cheaply, so the loop keeps
+              // draining the body to completion and the finished line is still cached, never
+              // re-billed on a later hearing.
+              sink.accept(chunk, rate);
+              if (!fedSink) {
+                firstChunkMs = elapsedMs(attemptStart);
+              }
+              fedSink = true;
+              chunks.add(chunk);
+              sampleCount += chunk.length;
+            }
+          }
+        }
+        long elapsedMs = elapsedMs(attemptStart);
+        if (totalBytes == 0) {
+          logFailure(
+              "empty-body",
+              attempt,
+              elapsedMs,
+              inputLen,
+              response.code(),
+              response.message(),
+              contentType,
+              generationId,
+              EMPTY_BODY);
+          if (attempt < MAX_SPEECH_ATTEMPTS) {
+            log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
+            continue;
+          }
+          warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
+          return null;
+        }
+        if (config.debugMode()) {
+          // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
+          // body. A first chunk that lands nearly at elapsedMs means the provider sent the audio
+          // in one burst and streaming playback could not start any earlier.
+          log.info(
+              "{} firstChunkMs={}",
+              CloudSynthTrace.success(
+                  attempt,
+                  MAX_SPEECH_ATTEMPTS,
+                  elapsedMs,
+                  inputLen,
+                  (int) totalBytes,
+                  generationId),
+              firstChunkMs);
+        }
+        Pcm pcm = new Pcm(flatten(chunks, sampleCount), rate);
+        // The audio already played through the sink; only return it for caching when it is a whole,
+        // complete line. A truncated stream is heard once but never persisted clipped, and there is
+        // no retry here since replaying the line would double it.
+        if (decoder.hasPendingByte() || PcmCompleteness.isTruncated(pcm, speedRatio)) {
+          log.debug("[TTS cloud] streamed line played but not cached (incomplete tail)");
+          return null;
+        }
+        return pcm;
+      } catch (ConnectException e) {
+        warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
+        log.warn(
+            CloudSynthTrace.failure(
+                "connect",
+                attempt,
+                MAX_SPEECH_ATTEMPTS,
+                elapsedMs(attemptStart),
+                inputLen,
+                0,
+                "",
+                "",
+                0,
+                e.getMessage()));
+        return null;
+      } catch (IOException e) {
+        long elapsedMs = elapsedMs(attemptStart);
+        // Retry only while no audio has played; once a chunk reached the sink, replaying the line
+        // would double it, so a mid-stream cut plays what arrived and fails without a retry.
+        if (!fedSink && attempt < MAX_SPEECH_ATTEMPTS) {
+          log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
+          backoffBeforeNetworkRetry(attempt);
+          continue;
+        }
+        warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
+        log.warn(
+            CloudSynthTrace.failure(
+                "network",
+                attempt,
+                MAX_SPEECH_ATTEMPTS,
+                elapsedMs,
+                inputLen,
+                0,
+                "",
+                "",
+                0,
+                e.getMessage()));
+        return null;
+      } catch (RuntimeException e) {
+        warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
+        log.warn(
+            CloudSynthTrace.failure(
+                "unexpected",
+                attempt,
+                MAX_SPEECH_ATTEMPTS,
+                elapsedMs(attemptStart),
+                inputLen,
+                0,
+                "",
+                "",
+                0,
+                e.getMessage()));
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /** Reads a small non-audio error body for diagnostics, tolerating a read failure. */
+  private static byte[] errorBody(Response response) {
+    try {
+      ResponseBody body = response.body();
+      return body == null ? EMPTY_BODY : body.bytes();
+    } catch (IOException e) {
+      return EMPTY_BODY;
+    }
+  }
+
+  /** Concatenates the decoded stream chunks into one sample buffer for caching. */
+  private static float[] flatten(List<float[]> chunks, int totalSamples) {
+    float[] out = new float[totalSamples];
+    int pos = 0;
+    for (float[] chunk : chunks) {
+      System.arraycopy(chunk, 0, out, pos, chunk.length);
+      pos += chunk.length;
+    }
+    return out;
+  }
+
+  /** The built speech request plus the two values both response loops need. */
+  private static final class PreparedRequest {
+    final Request httpRequest;
+    final double speedRatio;
+    final int inputLen;
+
+    PreparedRequest(Request httpRequest, double speedRatio, int inputLen) {
+      this.httpRequest = httpRequest;
+      this.speedRatio = speedRatio;
+      this.inputLen = inputLen;
+    }
   }
 
   /**

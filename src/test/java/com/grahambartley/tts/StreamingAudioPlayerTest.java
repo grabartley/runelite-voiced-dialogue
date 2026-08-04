@@ -7,11 +7,14 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
@@ -64,6 +67,89 @@ public class StreamingAudioPlayerTest {
 
     verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
     verify(line, never()).drain();
+  }
+
+  @Test
+  public void streamedChunksOpenTheLineOnceThenDrainAndClose() throws Exception {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[] {0f, 0f, 0f}, 24_000); // enqueues; the player thread opens + plays it
+    stream.write(new float[] {0f, 0f}, 24_000); // second chunk
+    stream.end();
+
+    // Playback runs on a dedicated thread, so wait for it to open, play both chunks, drain and
+    // close.
+    ArgumentCaptor<AudioFormat> format = ArgumentCaptor.forClass(AudioFormat.class);
+    verify(line, timeout(2_000)).open(format.capture());
+    assertEquals(24_000f, format.getValue().getSampleRate(), 0f);
+    verify(line, timeout(2_000)).start();
+    verify(line, timeout(2_000).times(2)).write(any(byte[].class), anyInt(), anyInt());
+    verify(line, timeout(2_000)).drain();
+    verify(line, timeout(2_000)).close();
+  }
+
+  @Test
+  public void anEmptyLeadingChunkDoesNotOpenTheLine() {
+    StreamingAudioPlayer.LineFactory factory = mock(StreamingAudioPlayer.LineFactory.class);
+    StreamingAudioPlayer player = new StreamingAudioPlayer(factory);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[0], 24_000);
+    stream.write(null, 24_000);
+
+    verifyNoInteractions(factory);
+  }
+
+  /**
+   * A mock line whose write() signals it was reached, so a test can interrupt deterministically.
+   */
+  private static SourceDataLine lineSignalingWrites(CountDownLatch wrote) {
+    SourceDataLine line = mock(SourceDataLine.class);
+    when(line.write(any(byte[].class), anyInt(), anyInt()))
+        .thenAnswer(
+            inv -> {
+              wrote.countDown();
+              return inv.getArgument(2);
+            });
+    return line;
+  }
+
+  @Test
+  public void stopMidStreamDropsRemainingChunksSkipsDrainAndReleases() throws Exception {
+    CountDownLatch wrote = new CountDownLatch(1);
+    SourceDataLine line = lineSignalingWrites(wrote);
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[] {0f, 0f}, 24_000); // the player thread opens the line and plays this
+    assertTrue("the first chunk reached the line", wrote.await(2, TimeUnit.SECONDS));
+    player.stop(); // supersede mid-stream
+    stream.write(new float[] {0f, 0f}, 24_000); // dropped: the stream is superseded
+    stream.end();
+
+    verify(line, timeout(2_000)).close(); // the line is still released
+    verify(line, never()).drain(); // but never drained (it was interrupted)
+    verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt()); // only the pre-skip chunk
+  }
+
+  @Test
+  public void aNewerLineSupersedesAnInProgressStream() throws Exception {
+    CountDownLatch wrote = new CountDownLatch(1);
+    SourceDataLine line = lineSignalingWrites(wrote);
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream first = player.beginStream(100);
+    first.write(new float[] {0f, 0f}, 24_000);
+    assertTrue(wrote.await(2, TimeUnit.SECONDS));
+    player.beginStream(100); // a newer stream bumps the shared generation
+    first.write(new float[] {0f, 0f}, 24_000); // dropped by the old stream
+    first.end();
+
+    verify(line, timeout(2_000)).close();
+    verify(line, never()).drain();
+    verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
   }
 
   @Test
