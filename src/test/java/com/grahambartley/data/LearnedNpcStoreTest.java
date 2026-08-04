@@ -47,4 +47,21 @@ public class LearnedNpcStoreTest {
     Path file = Files.createTempDirectory("learned").resolve("does-not-exist.json");
     assertEquals(0, new LearnedNpcStore(file, gson).size());
   }
+
+  @Test
+  public void repeatedWritesReplaceTheStoreCleanlyAndLeaveNoTempFile() throws Exception {
+    Path dir = Files.createTempDirectory("learned");
+    Path file = dir.resolve("learned-npcs.json");
+    LearnedNpcStore store = new LearnedNpcStore(file, gson);
+
+    store.learn(1, "Human", "Male", null);
+    store.learn(2, "Dwarf", "Female", null);
+    store.learn(3, "Gnome", "Male", null);
+
+    assertEquals(3, new LearnedNpcStore(file, gson).size());
+    assertEquals(
+        "the temp file is consumed by the move, never left behind",
+        0,
+        Files.list(dir).filter(p -> p.getFileName().toString().endsWith(".tmp")).count());
+  }
 }

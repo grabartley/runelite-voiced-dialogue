@@ -113,4 +113,20 @@ public class ChatNoticeManagerTest {
     verify(client, never())
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), contains(""), isNull());
   }
+
+  @Test
+  public void clearingTheKeyLaterInTheSessionStillWarnsOnce() {
+    // The player starts with a working key, then clears it mid-session: they should be told why
+    // dialogue went silent, and told only once.
+    manager.maybeWarnMissingCloudKey(true);
+    manager.maybeWarnMissingCloudKey(false);
+    manager.maybeWarnMissingCloudKey(false);
+
+    verify(client, times(1))
+        .addChatMessage(
+            eq(ChatMessageType.GAMEMESSAGE),
+            eq(""),
+            contains(OpenRouterTtsBackend.NO_KEY_NOTICE),
+            isNull());
+  }
 }
