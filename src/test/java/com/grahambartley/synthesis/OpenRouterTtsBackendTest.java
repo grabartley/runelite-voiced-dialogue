@@ -1291,4 +1291,80 @@ public class OpenRouterTtsBackendTest {
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
   }
+
+  @Test
+  public void aShortReplySendsTheQuestionAsNonSpokenContext() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Oui")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+    SynthesisRequest reply =
+        new SynthesisRequest(
+                "Yes.",
+                VoiceSpec.player(NPCGender.MALE),
+                Emotion.NEUTRAL,
+                null,
+                /* skipTranslation= */ false,
+                /* player= */ true)
+            .withContext("Will you help me fight the dragon?");
+
+    assertNotNull(backend(config).synthesize(reply));
+
+    String rewrite = server.takeRequest().getBody().readUtf8();
+    assertTrue(rewrite.contains("Will you help me fight the dragon?"));
+    assertTrue(rewrite.contains("do not repeat it"));
+    JsonObject speech =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertEquals("only the reply is voiced", "Oui", speech.get("input").getAsString());
+  }
+
+  @Test
+  public void theSameReplyToADifferentQuestionGetsItsOwnCacheKey() {
+    TestConfig config = new TestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    OpenRouterTtsBackend backend = backend(config);
+    SynthesisRequest reply =
+        new SynthesisRequest(
+            "Yes.",
+            VoiceSpec.player(NPCGender.MALE),
+            Emotion.NEUTRAL,
+            null,
+            /* skipTranslation= */ false,
+            /* player= */ true);
+
+    String helpingWithADragon = backend.cacheVariant(reply.withContext("Will you help me?"));
+    String admittingATheft = backend.cacheVariant(reply.withContext("Did you steal my coins?"));
+
+    assertNotEquals(
+        "one word answering two questions must not share audio",
+        helpingWithADragon,
+        admittingATheft);
+    assertEquals(
+        "and a line with no context keeps its simpler key",
+        backend.cacheVariant(reply),
+        backend.cacheVariant(reply.withContext(null)));
+  }
+
+  @Test
+  public void contextIsIgnoredWhenNoRewriteRuns() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+    SynthesisRequest reply =
+        new SynthesisRequest(
+            "Yes.",
+            VoiceSpec.player(NPCGender.MALE),
+            Emotion.NEUTRAL,
+            null,
+            /* skipTranslation= */ false,
+            /* player= */ true);
+
+    assertEquals(
+        "plain English never reaches the model, so context cannot change the audio",
+        backend.cacheVariant(reply),
+        backend.cacheVariant(reply.withContext("Will you help me?")));
+  }
 }

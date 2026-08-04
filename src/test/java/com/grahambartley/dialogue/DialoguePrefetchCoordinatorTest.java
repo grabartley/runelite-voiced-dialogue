@@ -86,6 +86,23 @@ public class DialoguePrefetchCoordinatorTest {
     assertEquals("No thanks.", offered.get(1).text());
   }
 
+  @Test
+  public void warmedOptionsCarryTheSameContextTheLiveReplyWillUse() {
+    when(config.prefetch()).thenReturn(true);
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null))
+        .thenReturn(mock(VoiceSpec.class));
+    Widget[] children = {option("Yes.")};
+    Widget options = mock(Widget.class);
+    when(options.getDynamicChildren()).thenReturn(children);
+
+    coordinator.prefetchOptions(options, "Will you help me fight the dragon?");
+
+    ArgumentCaptor<List<SynthesisRequest>> captor = ArgumentCaptor.forClass(List.class);
+    verify(prefetcher).offer(captor.capture());
+    assertEquals("Will you help me fight the dragon?", captor.getValue().get(0).context());
+  }
+
   private static Widget option(String text) {
     Widget w = mock(Widget.class);
     when(w.getText()).thenReturn(text);

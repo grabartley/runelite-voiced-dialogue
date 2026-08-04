@@ -258,15 +258,21 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     String language = effectiveSpokenLanguage(request);
     String languageFragment =
         needsTranslation(language) && !request.skipTranslation() ? language.toLowerCase() : null;
-    return CloudCacheKeyBuilder.build(
-        model.modelId(),
-        model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
+    String variant =
+        CloudCacheKeyBuilder.build(
+            model.modelId(),
+            model.voiceFor(request.voice()),
+            speedPercent(),
+            DEFAULT_SPEED_PERCENT,
+            request.text(),
+            config.cloudMaxChars(),
+            request.profile(),
+            languageFragment);
+    // The carried question changes the rewritten reply, so the same short line answering two
+    // different questions must not share cached audio. Only rewritten lines can use it at all.
+    return languageFragment == null || request.context() == null
+        ? variant
+        : variant + "|x" + CacheVariantDigest.of(request.context());
   }
 
   /** A target language other than English (case-insensitive, blank treated as English). */
@@ -344,7 +350,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     boolean translating = needsTranslation(language) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
+      String translated = translator.translate(cappedText, language.trim(), key, request.context());
       if (translated == null) {
         warnOnce(
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");

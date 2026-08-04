@@ -3,6 +3,7 @@ package com.grahambartley.dialogue;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -99,5 +100,48 @@ public class DialogueWatcherTest {
 
     verify(audioService, times(1)).interrupt();
     verify(prefetcher).reset();
+  }
+
+  @Test
+  public void aPlayerReplyCarriesThePrecedingNpcLine() {
+    Widget npc = mock(Widget.class);
+    Widget player = mock(Widget.class);
+    when(npc.isHidden()).thenReturn(false);
+    when(player.isHidden()).thenReturn(false);
+    when(npc.getText()).thenReturn("Will you help me?");
+    when(player.getText()).thenReturn("Yes.");
+    when(client.getWidget(ComponentID.DIALOG_NPC_TEXT)).thenReturn(npc, (Widget) null);
+    when(client.getWidget(ComponentID.DIALOG_PLAYER_TEXT)).thenReturn(null, player);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(dispatcher)
+        .speakDialogue(
+            eq("Yes."),
+            eq(VoiceManager.SPEAKER_PLAYER),
+            isNull(),
+            anyInt(),
+            eq("Will you help me?"));
+  }
+
+  @Test
+  public void closingTheDialogueForgetsThePreviousLine() {
+    Widget npc = mock(Widget.class);
+    Widget player = mock(Widget.class);
+    when(npc.isHidden()).thenReturn(false);
+    when(player.isHidden()).thenReturn(false);
+    when(npc.getText()).thenReturn("Will you help me?");
+    when(player.getText()).thenReturn("Yes.");
+    // NPC line, then everything closes, then an unrelated player line in a new conversation.
+    when(client.getWidget(ComponentID.DIALOG_NPC_TEXT)).thenReturn(npc, null, (Widget) null);
+    when(client.getWidget(ComponentID.DIALOG_PLAYER_TEXT)).thenReturn(null, null, player);
+
+    watcher.tick();
+    watcher.tick();
+    watcher.tick();
+
+    verify(dispatcher)
+        .speakDialogue(eq("Yes."), eq(VoiceManager.SPEAKER_PLAYER), isNull(), anyInt(), isNull());
   }
 }

@@ -46,6 +46,14 @@ public final class DialoguePrefetchCoordinator {
   }
 
   void prefetchOptions(Widget options) {
+    prefetchOptions(options, null);
+  }
+
+  /**
+   * As {@link #prefetchOptions(Widget)}, but carries the preceding NPC line so a warmed option is
+   * rewritten with the same context the live line will use, and therefore lands on the same key.
+   */
+  void prefetchOptions(Widget options, String dialogueContext) {
     if (!config.prefetch() || !backendProvider.active().isAvailable()) {
       return;
     }
@@ -70,12 +78,13 @@ public final class DialoguePrefetchCoordinator {
       }
       candidates.add(
           new SynthesisRequest(
-              cleaned,
-              voice,
-              Emotion.NEUTRAL,
-              profile,
-              /* skipTranslation= */ false,
-              /* player= */ true));
+                  cleaned,
+                  voice,
+                  Emotion.NEUTRAL,
+                  profile,
+                  /* skipTranslation= */ false,
+                  /* player= */ true)
+              .withContext(dialogueContext));
     }
     prefetcher.offer(candidates);
   }

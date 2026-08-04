@@ -68,6 +68,15 @@ final class OpenRouterTranslator {
    * failed line rather than voicing untranslated text under a target-language cache key.
    */
   String translate(String text, String language, String apiKey) {
+    return translate(text, language, apiKey, null);
+  }
+
+  /**
+   * As {@link #translate(String, String, String)}, but tells the model what the line is answering.
+   * The context is sent for comprehension only, with an explicit instruction not to repeat it, so a
+   * short reply like "Yes." can be rewritten as an answer rather than a standalone greeting.
+   */
+  String translate(String text, String language, String apiKey, String context) {
     if (text == null || text.isEmpty()) {
       return text;
     }
@@ -75,7 +84,7 @@ final class OpenRouterTranslator {
     payload.addProperty("model", MODEL);
     JsonArray messages = new JsonArray();
     messages.add(message("system", systemPrompt(language)));
-    messages.add(message("user", text));
+    messages.add(message("user", contextualInput(text, context)));
     payload.add("messages", messages);
     OpenRouterProvider.apply(payload);
 
@@ -151,6 +160,20 @@ final class OpenRouterTranslator {
         + ". Preserve proper nouns, character names, place names, item names, and RuneScape"
         + " terminology exactly as written. Output only the translation, with no quotes, notes,"
         + " explanations, or preamble.";
+  }
+
+  /**
+   * The user message: the line to transform on its own, or the line preceded by the NPC question it
+   * answers, labelled as context and explicitly excluded from the output.
+   */
+  static String contextualInput(String text, String context) {
+    if (context == null || context.trim().isEmpty()) {
+      return text;
+    }
+    return "Previous dialogue for context only; do not repeat it:\n"
+        + context.trim()
+        + "\n\nTransform and output only this reply:\n"
+        + text;
   }
 
   private static JsonObject message(String role, String content) {

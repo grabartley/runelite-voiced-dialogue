@@ -49,6 +49,15 @@ public final class SynthesisDispatcher {
    * Emotion} and ridden into the request.
    */
   public void speakDialogue(String text, String speaker, String npcName, int headAnimationId) {
+    speakDialogue(text, speaker, npcName, headAnimationId, null);
+  }
+
+  /**
+   * As {@link #speakDialogue(String, String, String, int)}, but carries the preceding NPC line so a
+   * short player reply can be rewritten as an answer to it. The context is never spoken.
+   */
+  public void speakDialogue(
+      String text, String speaker, String npcName, int headAnimationId, String dialogueContext) {
     Emotion emotion = emotionResolver.resolve(headAnimationId, config.cloudEmotion());
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
@@ -57,12 +66,13 @@ public final class SynthesisDispatcher {
     boolean player = VoiceManager.SPEAKER_PLAYER.equals(speaker);
     dispatch(
         new SynthesisRequest(
-            text,
-            voice,
-            emotion,
-            profileResolver.resolve(speaker, npcName),
-            /* skipTranslation= */ false,
-            player),
+                text,
+                voice,
+                emotion,
+                profileResolver.resolve(speaker, npcName),
+                /* skipTranslation= */ false,
+                player)
+            .withContext(dialogueContext),
         npcName);
   }
 

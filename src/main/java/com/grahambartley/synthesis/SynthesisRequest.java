@@ -31,6 +31,11 @@ import lombok.experimental.Accessors;
  * player dialogue, public chat, and prefetched options (all lines the player speaks) and {@code
  * false} for NPC lines. The legacy constructors default it {@code false}, so an unmarked request
  * voices as an NPC line as before.
+ *
+ * <p>{@code context} is the preceding NPC line, carried only for a short player reply so a rewrite
+ * can tell what the reply is answering. It is never spoken and never part of the text sent to TTS.
+ * It is {@code null} for every other request, so those keep their existing request body and cache
+ * key.
  */
 @Getter
 @Accessors(fluent = true)
@@ -39,21 +44,31 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 public final class SynthesisRequest {
 
+  /**
+   * Only a short reply is ambiguous enough to need the question it answers. A longer line already
+   * carries its own meaning, so it is not worth the extra prompt tokens.
+   */
+  private static final int MAX_CONTEXTUAL_REPLY_CHARS = 80;
+
+  /** Upper bound on the carried context, so a long NPC speech cannot dominate the prompt. */
+  private static final int MAX_CONTEXT_CHARS = 240;
+
   private final String text;
   private final VoiceSpec voice;
   private final Emotion emotion;
   private final CharacterProfile profile;
   private final boolean skipTranslation;
   private final boolean player;
+  private final String context;
 
   /** A request with no character profile (backward-compatible 3-arg form). */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
-    this(text, voice, emotion, null, false, false);
+    this(text, voice, emotion, null, false, false, null);
   }
 
   /** A translating request with a character profile (backward-compatible 4-arg form). */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion, CharacterProfile profile) {
-    this(text, voice, emotion, profile, false, false);
+    this(text, voice, emotion, profile, false, false, null);
   }
 
   /** A request with explicit translation behaviour but no speaker-class flag (5-arg form). */
@@ -63,17 +78,51 @@ public final class SynthesisRequest {
       Emotion emotion,
       CharacterProfile profile,
       boolean skipTranslation) {
-    this(text, voice, emotion, profile, skipTranslation, false);
+    this(text, voice, emotion, profile, skipTranslation, false, null);
+  }
+
+  /** A request with explicit translation and speaker-class behaviour (6-arg form). */
+  public SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player) {
+    this(text, voice, emotion, profile, skipTranslation, player, null);
   }
 
   /**
-   * Returns a copy of this request with a different emotion, leaving text, voice, profile, and the
-   * translation and speaker-class behaviour intact.
+   * Returns a copy of this request with a different emotion, leaving text, voice, profile, context,
+   * and the translation and speaker-class behaviour intact.
    */
   public SynthesisRequest withEmotion(Emotion newEmotion) {
     if (newEmotion == emotion) {
       return this;
     }
-    return new SynthesisRequest(text, voice, newEmotion, profile, skipTranslation, player);
+    return new SynthesisRequest(text, voice, newEmotion, profile, skipTranslation, player, context);
+  }
+
+  /**
+   * Returns a copy carrying the preceding NPC line as non-spoken rewrite context, or this request
+   * unchanged when the context cannot help: anything that is not a short player reply, and public
+   * chat, which is always voiced exactly as typed. Longer context is trimmed to a bounded window.
+   */
+  public SynthesisRequest withContext(String dialogueContext) {
+    String bounded = dialogueContext == null ? null : dialogueContext.trim();
+    if (!player
+        || skipTranslation
+        || text == null
+        || text.length() > MAX_CONTEXTUAL_REPLY_CHARS
+        || bounded == null
+        || bounded.isEmpty()) {
+      bounded = null;
+    } else if (bounded.length() > MAX_CONTEXT_CHARS) {
+      bounded = bounded.substring(0, MAX_CONTEXT_CHARS).trim();
+    }
+    if (bounded == null ? context == null : bounded.equals(context)) {
+      return this;
+    }
+    return new SynthesisRequest(text, voice, emotion, profile, skipTranslation, player, bounded);
   }
 }

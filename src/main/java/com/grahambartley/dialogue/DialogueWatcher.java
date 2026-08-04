@@ -28,6 +28,9 @@ public final class DialogueWatcher {
   private String lastSpoken = "";
   private boolean wasDialogueOpen;
 
+  /** The last NPC line seen this conversation, carried as context for a short player reply. */
+  private String previousNpcLine;
+
   public DialogueWatcher(
       Client client,
       DialogueTextCleaner textCleaner,
@@ -55,6 +58,8 @@ public final class DialogueWatcher {
         String npcName = widgetReader.currentNpcName();
         int headAnimationId = widgetReader.headAnimationId(InterfaceID.ChatLeft.HEAD);
         dispatcher.speakDialogue(cleaned, VoiceManager.SPEAKER_NPC, npcName, headAnimationId);
+        // Remembered so the player's reply to this line can be rewritten as an answer to it.
+        previousNpcLine = cleaned;
       }
     }
 
@@ -66,14 +71,15 @@ public final class DialogueWatcher {
         String cleaned = textCleaner.clean(text);
         int headAnimationId = widgetReader.headAnimationId(InterfaceID.ChatRight.HEAD);
         // No NPC name needed for player lines.
-        dispatcher.speakDialogue(cleaned, VoiceManager.SPEAKER_PLAYER, null, headAnimationId);
+        dispatcher.speakDialogue(
+            cleaned, VoiceManager.SPEAKER_PLAYER, null, headAnimationId, previousNpcLine);
       }
     }
 
     Widget options = client.getWidget(ComponentID.DIALOG_OPTION_OPTIONS);
     boolean optionsVisible = options != null && !options.isHidden();
     if (optionsVisible) {
-      prefetchCoordinator.prefetchOptions(options);
+      prefetchCoordinator.prefetchOptions(options, previousNpcLine);
     }
 
     boolean dialogueOpen =
@@ -94,6 +100,7 @@ public final class DialogueWatcher {
             && !optionsVisible;
     if (fullyClosed) {
       prefetcher.reset();
+      previousNpcLine = null;
     }
   }
 
