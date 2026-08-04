@@ -148,6 +148,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private final TtsModelStrategy model = new GeminiTtsModel();
   private final OpenRouterTranslator translator;
 
+  /** Masks the model's own output, which the game-side cleaner never sees. */
+  private final ProfanityFilter profanityFilter = new ProfanityFilter();
+
   /**
    * Per-profile digest of the stable cacheable prefix, used only in debug mode to assert the prefix
    * a given profile renders is byte-identical across the process lifetime (so Gemini's prompt cache
@@ -256,17 +259,30 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // text. Plain English with no quirk folds in no language fragment, so pre-translation cache
     // entries stay valid.
     String language = effectiveSpokenLanguage(request);
+    boolean maturePersona = PersonaRewriteTarget.enabled(config, request);
     String languageFragment =
-        needsTranslation(language) && !request.skipTranslation() ? language.toLowerCase() : null;
-    return CloudCacheKeyBuilder.build(
-        model.modelId(),
-        model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
+        rewriting(request, language, maturePersona) ? language.toLowerCase() : null;
+    String variant =
+        CloudCacheKeyBuilder.build(
+            model.modelId(),
+            model.voiceFor(request.voice()),
+            speedPercent(),
+            DEFAULT_SPEED_PERCENT,
+            request.text(),
+            config.cloudMaxChars(),
+            request.profile(),
+            languageFragment);
+    // The persona itself lives in the profile digest already, so this only has to separate a mature
+    // rewrite from the same line rewritten without one.
+    return maturePersona ? variant + "|m" : variant;
+  }
+
+  /**
+   * Whether this line goes through the rewrite model: a non-English target, or an opted-in mature
+   * persona, which rewrites even under plain English. Public chat never does.
+   */
+  private boolean rewriting(SynthesisRequest request, String language, boolean maturePersona) {
+    return (needsTranslation(language) || maturePersona) && !request.skipTranslation();
   }
 
   /** A target language other than English (case-insensitive, blank treated as English). */
@@ -341,16 +357,22 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // (public chat) is voiced exactly as typed, so it bypasses the hop even under a non-English
     // target or a global quirk.
     String language = effectiveSpokenLanguage(request);
-    boolean translating = needsTranslation(language) && !request.skipTranslation();
+    boolean maturePersona = PersonaRewriteTarget.enabled(config, request);
+    boolean translating = rewriting(request, language, maturePersona);
     String spokenText = cappedText;
     if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
+      String translated =
+          translator.translate(
+              cappedText, PersonaRewriteTarget.apply(config, request, language).trim(), key);
       if (translated == null) {
         warnOnce(
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");
         return null;
       }
-      spokenText = translated;
+      // The model wrote these words, not the game, so they are filtered here as well. An opted-in
+      // mature persona relaxes ordinary profanity but never the slur subset.
+      spokenText =
+          maturePersona ? profanityFilter.maskSlurs(translated) : profanityFilter.mask(translated);
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
     // The profile block sets the tone (accent/style/pace) and the emotion tag colours the moment;

@@ -1,6 +1,7 @@
 package com.grahambartley.synthesis;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import junitparams.JUnitParamsRunner;
@@ -123,5 +124,39 @@ public class ProfanityFilterTest {
             + perCallNanos
             + "ns)",
         perCallNanos < 1_000_000);
+  }
+
+  @Test
+  public void maskSlursLeavesOrdinarySwearingAudible() {
+    String masked = filter.maskSlurs("Move it, you bloody fool, this is shit.");
+
+    assertEquals("Move it, you bloody fool, this is shit.", masked);
+  }
+
+  @Test
+  public void maskSlursStillMasksTheSlurSubset() {
+    String masked = filter.maskSlurs("You spic.");
+
+    assertFalse("the slur is gone", masked.contains("spic"));
+    assertTrue(masked.contains("****"));
+  }
+
+  @Test
+  public void maskSlursKeepsTheEvasionFoldingOfTheFullFilter() {
+    assertFalse(filter.maskSlurs("you sp1c").contains("sp1c"));
+  }
+
+  @Test
+  public void maskSlursIsIdempotent() {
+    String once = filter.maskSlurs("You spic.");
+
+    assertEquals(once, filter.maskSlurs(once));
+  }
+
+  @Test
+  public void theFullFilterStillMasksOrdinaryProfanity() {
+    assertTrue(
+        "the relaxed mode must not change the default",
+        filter.mask("this is shit").contains("****"));
   }
 }

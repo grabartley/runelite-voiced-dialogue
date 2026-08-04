@@ -411,10 +411,20 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "allowMaturePersonaAdlibs",
+      name = "Allow Mature Persona Ad-libs",
+      description = "Let your persona ad-lib and swear. Slurs stay masked.",
+      position = 3,
+      section = advancedSection)
+  default boolean allowMaturePersonaAdlibs() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "debugMode",
       name = "Debug Logging",
       description = "Log NPC race/gender resolution to the client logs.",
-      position = 2,
+      position = 4,
       section = advancedSection)
   default boolean debugMode() {
     return false;

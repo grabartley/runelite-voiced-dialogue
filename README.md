@@ -140,6 +140,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 |---------|---------|--------------|
 | **Cache Size Limit (MiB)** | `1024` | Maximum size of the on-disk audio cache; the oldest clips are deleted first. Set to `0` for no limit. |
 | **Max Characters Per Line** | `0` | Caps how many characters of a line are voiced, to bound worst-case per-line cost. `0` voices the whole line. |
+| **Allow Mature Persona Ad-libs** | `Off` | Lets your own persona ad-lib and swear in character. Only affects your lines, never NPCs or public chat, and slurs stay masked either way. |
 | **Debug Logging** | `Off` | Writes detailed per-line voice decisions and timing logs, for troubleshooting. |
 
 </details>

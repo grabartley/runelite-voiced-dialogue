@@ -51,6 +51,12 @@ public class OpenRouterTtsBackendTest {
     VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
     VoicedDialogueConfig.SpeakingStyle playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
     VoicedDialogueConfig.SpeakingStyle npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
+    boolean maturePersona;
+
+    @Override
+    public boolean allowMaturePersonaAdlibs() {
+      return maturePersona;
+    }
 
     @Override
     public String openRouterApiKey() {
@@ -1290,5 +1296,116 @@ public class OpenRouterTtsBackendTest {
 
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
+  }
+
+  private static SynthesisRequest playerLineWithPersona() {
+    return new SynthesisRequest(
+        "Please move.",
+        VoiceSpec.player(NPCGender.MALE),
+        Emotion.NEUTRAL,
+        new CharacterProfile("Adventurer", "British.", "Rude and foul-mouthed.", "Normal."),
+        /* skipTranslation= */ false,
+        /* player= */ true);
+  }
+
+  @Test
+  public void anOptedInPersonaRewritesEvenUnderPlainEnglish() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.maturePersona = true;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Move it, you sod.")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(playerLineWithPersona()));
+
+    String rewrite = server.takeRequest().getBody().readUtf8();
+    assertTrue(
+        "the persona reaches the rewrite target", rewrite.contains("Rude and foul-mouthed."));
+    JsonObject speech =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertTrue(speech.get("input").getAsString().endsWith("Move it, you sod."));
+  }
+
+  @Test
+  public void theToggleOffKeepsPlainEnglishOutOfTheModel() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(playerLineWithPersona()));
+
+    assertEquals("no rewrite hop by default", 1, server.getRequestCount());
+  }
+
+  @Test
+  public void aMatureRewriteKeepsSwearingButStillMasksSlurs() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.maturePersona = true;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(chatResponse("Move it, you shit and spic.")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(playerLineWithPersona()));
+
+    server.takeRequest();
+    String input =
+        new JsonParser()
+            .parse(server.takeRequest().getBody().readUtf8())
+            .getAsJsonObject()
+            .get("input")
+            .getAsString();
+    assertTrue("ordinary profanity is allowed through", input.contains("shit"));
+    assertFalse("the slur is masked regardless of the setting", input.contains("spic"));
+  }
+
+  @Test
+  public void generatedProfanityIsMaskedWhenTheToggleIsOff() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Arr, this be shit.")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(req()));
+
+    server.takeRequest();
+    String input =
+        new JsonParser()
+            .parse(server.takeRequest().getBody().readUtf8())
+            .getAsJsonObject()
+            .get("input")
+            .getAsString();
+    assertFalse("a style rewrite cannot smuggle profanity past the filter", input.contains("shit"));
+    assertTrue(input.contains("****"));
+  }
+
+  @Test
+  public void aMatureRewritePartitionsTheCacheKey() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+    SynthesisRequest line = playerLineWithPersona();
+
+    String plain = backend.cacheVariant(line);
+    config.maturePersona = true;
+
+    assertNotEquals(
+        "a mature rewrite must not replay the unrewritten clip", plain, backend.cacheVariant(line));
   }
 }
