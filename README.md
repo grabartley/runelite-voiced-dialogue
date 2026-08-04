@@ -74,7 +74,7 @@ Profiles stack in layers, so an unknown NPC still gets a sensible voice while ic
 <details>
 <summary><b>Languages and speaking styles</b></summary>
 
-Set **Spoken Language** to anything other than English and every line is spoken in that language, with names and RuneScape terms kept intact. Layer a **Speaking Style** on top (Gen Z slang, pirate speak, Shakespearean, cyberpunk, and more), set separately for your own lines and for NPCs, and mix them however you like: every combination of language and style works together.
+Set **Spoken Language** to anything other than English and every line is spoken in that language, with names and RuneScape terms kept intact. Translated speech also asks the model for native pronunciation, so a character's usual English accent does not bleed into Finnish, Japanese, or Spanish. Prefer English but not British English? **English (US)** and **English (AU)** speak the original line with that regional pronunciation instead. Layer a **Speaking Style** on top (Gen Z slang, pirate speak, Shakespearean, cyberpunk, and more), set separately for your own lines and for NPCs, and mix them however you like: every combination of language and style works together. **AUS Slang**, **Heavy Boston**, and **Heavy French** also steer an audible accent and deliberately keep the line in English, while **Random** picks one style per line and sticks to it.
 
 </details>
 
@@ -125,8 +125,8 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Emotional Delivery** | `On` | Matches the voice to the emotion on the speaker's chat-head. Off voices every line as Neutral. |
-| **Spoken Language** | `English` | Speaks dialogue in another language, keeping names, places, and item terms intact. Translation adds a little latency per line. |
-| **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). |
+| **Spoken Language** | `English (UK)` | Speaks dialogue in another language, keeping names, places, and item terms intact, or picks a regional English pronunciation. Translation adds a little latency per line. |
+| **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on), plus accent styles and per-line Random. |
 | **NPC Speaking Style** | `None` | The same set of styles, applied to NPC lines instead; composes with any Spoken Language. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
 | **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). |

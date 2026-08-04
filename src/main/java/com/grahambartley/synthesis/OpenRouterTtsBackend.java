@@ -258,15 +258,21 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     String language = effectiveSpokenLanguage(request);
     String languageFragment =
         needsTranslation(language) && !request.skipTranslation() ? language.toLowerCase() : null;
-    return CloudCacheKeyBuilder.build(
-        model.modelId(),
-        model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
+    String variant =
+        CloudCacheKeyBuilder.build(
+            model.modelId(),
+            model.voiceFor(request.voice()),
+            speedPercent(),
+            DEFAULT_SPEED_PERCENT,
+            request.text(),
+            config.cloudMaxChars(),
+            request.profile(),
+            languageFragment);
+    // A pronunciation direction changes the delivery without changing the words, so it has to be
+    // part of the identity: otherwise switching English (UK) to English (US), or picking an accent
+    // style, would replay the previously cached accent.
+    String pronunciation = pronunciationDirection(request);
+    return pronunciation.isEmpty() ? variant : variant + "|a" + pronunciationToken(request);
   }
 
   /** A target language other than English (case-insensitive, blank treated as English). */
@@ -285,16 +291,70 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * skips the hop while the other class can still be styled.
    */
   String effectiveSpokenLanguage(SynthesisRequest request) {
-    VoicedDialogueConfig.SpeakingStyle style =
+    return combineLanguage(config.cloudLanguage().label(), styleFor(request));
+  }
+
+  /**
+   * The Speaking Style for this line's speaker class, with Random resolved to one concrete style
+   * per line so the cache key and the rendered request always agree.
+   */
+  private VoicedDialogueConfig.SpeakingStyle styleFor(SynthesisRequest request) {
+    VoicedDialogueConfig.SpeakingStyle configured =
         request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
-    return combineLanguage(config.cloudLanguage().label(), style);
+    return SpeakingStyleResolver.resolve(configured, request);
+  }
+
+  /**
+   * The accent instruction for this line: an accent-oriented Speaking Style wins, otherwise the
+   * Spoken Language's own pronunciation direction. The default English (UK) carries none, so its
+   * requests (and any character profile's own accent) are unchanged.
+   */
+  private String pronunciationDirection(SynthesisRequest request) {
+    if (request.skipTranslation()) {
+      return "";
+    }
+    String styleDirection = styleFor(request).voiceDirection();
+    return styleDirection.isEmpty()
+        ? config.cloudLanguage().pronunciationDirection()
+        : styleDirection;
+  }
+
+  /** Short, stable cache token for the applied pronunciation direction. */
+  private String pronunciationToken(SynthesisRequest request) {
+    VoicedDialogueConfig.SpeakingStyle style = styleFor(request);
+    return style.voiceDirection().isEmpty()
+        ? config.cloudLanguage().code().toLowerCase()
+        : style.name().toLowerCase();
+  }
+
+  /**
+   * The BCP-47 code to send, or {@code null} for none: the base language for a translated line (as
+   * before), the regional code for the non-default English variants, and nothing for an accent
+   * style that keeps the line in English, since a code would counter-steer the requested accent.
+   */
+  private String languageCodeFor(SynthesisRequest request, boolean translating) {
+    if (request.skipTranslation() || styleFor(request).forcesEnglish()) {
+      return null;
+    }
+    VoicedDialogueConfig.SpokenLanguage language = config.cloudLanguage();
+    if (translating) {
+      return language.code();
+    }
+    return language.isEnglish() && language != VoicedDialogueConfig.SpokenLanguage.ENGLISH
+        ? language.code()
+        : null;
   }
 
   /**
    * Appends a non-empty quirk phrase to the (blank-safe) base language, e.g. "French pirate speak".
+   * An accent-oriented style that forces English keeps the base English so the accent is audible
+   * rather than translated away.
    */
   static String combineLanguage(String language, VoicedDialogueConfig.SpeakingStyle quirk) {
-    String base = language == null || language.trim().isEmpty() ? "English" : language.trim();
+    String base =
+        quirk != null && quirk.forcesEnglish()
+            ? "English"
+            : language == null || language.trim().isEmpty() ? "English" : language.trim();
     if (quirk == null || quirk.isNone()) {
       return base;
     }
@@ -356,10 +416,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // The profile block sets the tone (accent/style/pace) and the emotion tag colours the moment;
     // they compose, so the block leads and the emotion-tagged transcript follows the divider. A
     // null
-    // profile leaves the input exactly as the pre-profile backend produced it.
+    // profile leaves the input exactly as the pre-profile backend produced it. A pronunciation
+    // direction (regional English, a translated language, or an accent style) replaces the
+    // profile's
+    // own accent line so the two never contradict each other in the same prompt.
     CharacterProfile profile = request.profile();
-    String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
-    if (profile != null) {
+    String pronunciation = pronunciationDirection(request);
+    String input = TtsPromptDirections.render(profile, styledInput, pronunciation);
+    if (profile != null && pronunciation.isEmpty()) {
       assertStablePrefix(profile);
     }
 
@@ -403,9 +467,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       }
     }
     // A translated line gets a BCP-47 language_code from the base language (not the quirk), so the
-    // voice pronounces the text natively rather than mis-reading it with an English phoneme set.
-    if (translating) {
-      payload.addProperty("language_code", config.cloudLanguage().code());
+    // voice pronounces the text natively rather than mis-reading it with an English phoneme set. A
+    // regional English variant sends its own code for the same reason, while an accent style that
+    // deliberately keeps the line in English sends none, so the code cannot fight the accent.
+    String languageCode = languageCodeFor(request, translating);
+    if (languageCode != null) {
+      payload.addProperty("language_code", languageCode);
     }
     // Route every call to the fastest provider (throughput sort, the :nitro equivalent). Identical
     // block on the translation hop, so routing is consistent.

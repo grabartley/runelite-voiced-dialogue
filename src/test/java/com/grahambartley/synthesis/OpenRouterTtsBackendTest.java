@@ -748,10 +748,12 @@ public class OpenRouterTtsBackendTest {
     RecordedRequest second = server.takeRequest();
     assertTrue("then the speech call", second.getPath().endsWith("/audio/speech"));
     JsonObject body = new JsonParser().parse(second.getBody().readUtf8()).getAsJsonObject();
-    assertEquals(
+    assertTrue(
         "the spoken transcript is the translation, not the source",
-        "Bonjour",
-        body.get("input").getAsString());
+        body.get("input").getAsString().endsWith("Bonjour"));
+    assertTrue(
+        "a translated line asks for native pronunciation",
+        body.get("input").getAsString().contains("native French pronunciation"));
     assertEquals(
         "the BCP-47 language_code matches the target",
         "fr-FR",
@@ -1290,5 +1292,183 @@ public class OpenRouterTtsBackendTest {
 
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
+  }
+
+  @Test
+  public void regionalEnglishSendsItsPronunciationDirectionAndCode() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.AMERICAN_ENGLISH;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(req()));
+
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertEquals("an English variant needs no translation hop", 1, server.getRequestCount());
+    assertEquals("en-US", body.get("language_code").getAsString());
+    assertTrue(body.get("input").getAsString().contains("natural American English pronunciation"));
+  }
+
+  @Test
+  public void defaultBritishEnglishRequestIsUnchanged() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(req()));
+
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertFalse("the existing default still sends no language_code", body.has("language_code"));
+    assertEquals("Hello & welcome", body.get("input").getAsString());
+  }
+
+  @Test
+  public void translatedLineOverridesTheProfileAccentWithNativePronunciation() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FINNISH;
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Hyvaa")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+    SynthesisRequest line =
+        new SynthesisRequest(
+            "Good day",
+            VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE),
+            Emotion.NEUTRAL,
+            new CharacterProfile("Banker", "British RP.", "Professional.", "Normal."));
+
+    assertNotNull(backend(config).synthesize(line));
+
+    server.takeRequest();
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    String input = body.get("input").getAsString();
+    assertTrue(input.contains("- Accent: Use native Finnish pronunciation."));
+    assertFalse(
+        "the British profile accent must not fight the translation", input.contains("British RP."));
+    assertTrue("the profile persona survives", input.contains("- Style: Professional."));
+    assertEquals("fi-FI", body.get("language_code").getAsString());
+  }
+
+  @Test
+  public void profileAccentIsKeptUnderPlainBritishEnglish() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+    SynthesisRequest line =
+        new SynthesisRequest(
+            "Good day",
+            VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE),
+            Emotion.NEUTRAL,
+            new CharacterProfile("Troll", "South London.", "Slow and simple.", "Heavy."));
+
+    assertNotNull(backend(config).synthesize(line));
+
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertTrue(body.get("input").getAsString().contains("- Accent: South London."));
+  }
+
+  @Test
+  public void accentStyleKeepsEnglishAndSendsNoLanguageCode() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.BOSTON;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Wicked good")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+
+    assertNotNull(backend(config).synthesize(req()));
+
+    String rewrite = server.takeRequest().getBody().readUtf8();
+    assertTrue("the accent style rewrites in English", rewrite.contains("English"));
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertTrue(body.get("input").getAsString().contains("heavy Boston accent"));
+    assertFalse("a French code would fight the Boston accent", body.has("language_code"));
+  }
+
+  @Test
+  public void pronunciationChangesPartitionTheCacheKey() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+
+    String british = backend.cacheVariant(req());
+    config.language = VoicedDialogueConfig.SpokenLanguage.AMERICAN_ENGLISH;
+    String american = backend.cacheVariant(req());
+    config.language = VoicedDialogueConfig.SpokenLanguage.AUSTRALIAN_ENGLISH;
+    String australian = backend.cacheVariant(req());
+
+    assertNotEquals("US English must not replay the UK clip", british, american);
+    assertNotEquals(american, australian);
+  }
+
+  @Test
+  public void accentStylePartitionsTheCacheKey() {
+    TestConfig config = new TestConfig();
+    OpenRouterTtsBackend backend = backend(config);
+
+    String plain = backend.cacheVariant(req());
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.AUS_SLANG;
+    String australian = backend.cacheVariant(req());
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.BOSTON;
+
+    assertNotEquals(plain, australian);
+    assertNotEquals(australian, backend.cacheVariant(req()));
+  }
+
+  @Test
+  public void randomStyleResolvesToOneStableStylePerLine() {
+    TestConfig config = new TestConfig();
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.RANDOM;
+    OpenRouterTtsBackend backend = backend(config);
+
+    assertEquals(
+        "a random line keeps one cache identity",
+        backend.cacheVariant(req()),
+        backend.cacheVariant(req()));
+  }
+
+  @Test
+  public void publicChatIgnoresPronunciationDirections() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.AMERICAN_ENGLISH;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1}))));
+    SynthesisRequest publicChat =
+        new SynthesisRequest(
+            "Hello & welcome",
+            VoiceSpec.player(NPCGender.MALE),
+            Emotion.NEUTRAL,
+            null,
+            /* skipTranslation= */ true,
+            /* player= */ true);
+
+    assertNotNull(backend(config).synthesize(publicChat));
+
+    JsonObject body =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    assertFalse(body.has("language_code"));
+    assertEquals("Hello & welcome", body.get("input").getAsString());
   }
 }

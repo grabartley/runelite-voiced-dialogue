@@ -18,9 +18,55 @@ public class VoicedDialogueConfigTest {
     assertTrue("English is the no-translation default", SpokenLanguage.ENGLISH.isEnglish());
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertEquals(
-          "English is the only language treated as no-translation",
-          language == SpokenLanguage.ENGLISH,
+          "all and only the English variants are treated as no-translation",
+          language.code().startsWith("en-"),
           language.isEnglish());
+    }
+  }
+
+  @Test
+  public void onlyTheNonDefaultEnglishVariantsCarryAPronunciationDirection() {
+    assertEquals(
+        "the default keeps its existing request shape",
+        "",
+        SpokenLanguage.ENGLISH.pronunciationDirection());
+    assertTrue(
+        SpokenLanguage.AMERICAN_ENGLISH.pronunciationDirection().contains("American English"));
+    assertTrue(
+        SpokenLanguage.AUSTRALIAN_ENGLISH.pronunciationDirection().contains("Australian English"));
+  }
+
+  @Test
+  public void everyTranslatedLanguageAsksForNativePronunciation() {
+    for (SpokenLanguage language : SpokenLanguage.values()) {
+      if (language.isEnglish()) {
+        continue;
+      }
+      String direction = language.pronunciationDirection();
+      assertTrue(direction, direction.contains("native " + language.label() + " pronunciation"));
+      assertTrue(direction, direction.contains("Do not use an English accent"));
+    }
+  }
+
+  @Test
+  public void accentStylesCarryAVoiceDirectionAndKeepTheLineInEnglish() {
+    for (VoicedDialogueConfig.SpeakingStyle style :
+        new VoicedDialogueConfig.SpeakingStyle[] {
+          VoicedDialogueConfig.SpeakingStyle.AUS_SLANG,
+          VoicedDialogueConfig.SpeakingStyle.BOSTON,
+          VoicedDialogueConfig.SpeakingStyle.FRENCH_ACCENT
+        }) {
+      assertFalse(style.toString(), style.voiceDirection().isEmpty());
+      assertTrue(style.toString(), style.forcesEnglish());
+    }
+  }
+
+  @Test
+  public void registerOnlyStylesStayLanguageAgnostic() {
+    for (VoicedDialogueConfig.SpeakingStyle style : VoicedDialogueConfig.SpeakingStyle.values()) {
+      if (style.voiceDirection().isEmpty()) {
+        assertFalse(style.toString(), style.forcesEnglish());
+      }
     }
   }
 
@@ -47,7 +93,9 @@ public class VoicedDialogueConfigTest {
 
   @Test
   public void toStringShowsTheDisplayNameWithoutTheCode() {
-    assertEquals("English", SpokenLanguage.ENGLISH.toString());
+    assertEquals("English (UK)", SpokenLanguage.ENGLISH.toString());
+    assertEquals("English (US)", SpokenLanguage.AMERICAN_ENGLISH.toString());
+    assertEquals("English (AU)", SpokenLanguage.AUSTRALIAN_ENGLISH.toString());
     assertEquals("Spanish", SpokenLanguage.SPANISH.toString());
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertFalse(

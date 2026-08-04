@@ -55,7 +55,23 @@ public interface VoicedDialogueConfig extends Config {
     STREET("Street Slang", "casual street slang"),
     US_SLANG("US Slang", "with casual American slang"),
     UK_SLANG("UK Slang", "with London Roadman Slang"),
+    AUS_SLANG(
+        "AUS Slang",
+        "with broad Australian slang and mannerisms",
+        "Use a broad Australian accent while speaking English.",
+        true),
     IRISH_SLANG("Irish Slang", "with Dublin Slang"),
+    BOSTON(
+        "Heavy Boston",
+        "with heavy Boston slang and mannerisms",
+        "Use a heavy Boston accent while speaking English.",
+        true),
+    FRENCH_ACCENT(
+        "Heavy French",
+        "with French-influenced English expressions and mannerisms; keep the dialogue in English"
+            + " and do not translate it into French",
+        "Use a heavy French accent while speaking English.",
+        true),
     SURFER("Surfer", "with laid-back surfer slang"),
     VALLEY_GIRL("Valley Girl", "with Valley Girl slang"),
     FORMAL("Formal & Posh", "very formal and posh"),
@@ -66,14 +82,23 @@ public interface VoicedDialogueConfig extends Config {
     PIRATE("Pirate Speak", "pirate speak"),
     COWBOY("Cowboy", "with Wild West cowboy slang"),
     CYBERPUNK("Cyberpunk", "with gritty cyberpunk netrunner slang"),
-    RHYMING("Rhyming", "as rhyming verse");
+    RHYMING("Rhyming", "as rhyming verse"),
+    RANDOM("Random", "");
 
     private final String label;
     private final String phrase;
+    private final String voiceDirection;
+    private final boolean forcesEnglish;
 
     SpeakingStyle(String label, String phrase) {
+      this(label, phrase, "", false);
+    }
+
+    SpeakingStyle(String label, String phrase, String voiceDirection, boolean forcesEnglish) {
       this.label = label;
       this.phrase = phrase;
+      this.voiceDirection = voiceDirection;
+      this.forcesEnglish = forcesEnglish;
     }
 
     /** Whether this is the no-op default. */
@@ -84,6 +109,22 @@ public interface VoicedDialogueConfig extends Config {
     /** The style descriptor appended to the spoken language for the translation model. */
     public String phrase() {
       return phrase;
+    }
+
+    /**
+     * Optional instruction sent straight to the TTS model for styles that need an audible accent
+     * rather than only a rewritten register. Blank for every register-only style.
+     */
+    public String voiceDirection() {
+      return voiceDirection;
+    }
+
+    /**
+     * Whether this regional style deliberately keeps the dialogue in English, overriding a
+     * non-English Spoken Language so the accent is audible instead of being translated away.
+     */
+    public boolean forcesEnglish() {
+      return forcesEnglish;
     }
 
     @Override
@@ -99,11 +140,17 @@ public interface VoicedDialogueConfig extends Config {
    * its BCP-47 code (sent so a translated line is pronounced natively rather than mis-read with an
    * English phoneme set), and a display name shown in the dropdown. The display name defaults to
    * the natural name but is shortened for regional variants (e.g. {@code Spanish (LatAm)}) so the
-   * combo box does not crowd out the setting label. {@link #ENGLISH} (the default) speaks the
-   * original line directly; every other value routes the line through the translation hop first.
+   * combo box does not crowd out the setting label. The English variants speak the original line
+   * directly with a regional pronunciation direction; every other value routes the line through the
+   * translation hop first and carries a native-pronunciation direction so a character's usual
+   * English accent does not leak into the translated speech.
    */
   enum SpokenLanguage {
-    ENGLISH("English", "en-GB"),
+    ENGLISH("English", "en-GB", "English (UK)"),
+    AMERICAN_ENGLISH(
+        "English", "en-US", "English (US)", "Use natural American English pronunciation."),
+    AUSTRALIAN_ENGLISH(
+        "English", "en-AU", "English (AU)", "Use natural Australian English pronunciation."),
     SPANISH("Spanish", "es-ES"),
     LATIN_AMERICAN_SPANISH("Latin American Spanish", "es-419", "Spanish (LatAm)"),
     MEXICAN_SPANISH("Mexican Spanish", "es-MX", "Spanish (MX)"),
@@ -157,20 +204,26 @@ public interface VoicedDialogueConfig extends Config {
     private final String label;
     private final String code;
     private final String displayName;
+    private final String voiceDirection;
 
     SpokenLanguage(String label, String code) {
-      this(label, code, label);
+      this(label, code, label, "");
     }
 
     SpokenLanguage(String label, String code, String displayName) {
+      this(label, code, displayName, "");
+    }
+
+    SpokenLanguage(String label, String code, String displayName, String voiceDirection) {
       this.label = label;
       this.code = code;
       this.displayName = displayName;
+      this.voiceDirection = voiceDirection;
     }
 
-    /** Whether this is English, the no-translation default. */
+    /** Whether this is an English variant, all of which bypass the translation hop. */
     public boolean isEnglish() {
-      return this == ENGLISH;
+      return this == ENGLISH || this == AMERICAN_ENGLISH || this == AUSTRALIAN_ENGLISH;
     }
 
     /** The natural language name fed to the translation model as the target language. */
@@ -181,6 +234,21 @@ public interface VoicedDialogueConfig extends Config {
     /** The BCP-47 code sent as {@code language_code} so the line is pronounced natively. */
     public String code() {
       return code;
+    }
+
+    /**
+     * The pronunciation instruction sent to the TTS model: a regional accent for the non-default
+     * English variants, and a native-pronunciation instruction for every translated language so a
+     * character's usual English accent does not carry over into the translated speech. Blank for
+     * the default English (UK), which keeps its existing request shape.
+     */
+    public String pronunciationDirection() {
+      if (!voiceDirection.isEmpty()) {
+        return voiceDirection;
+      }
+      return isEnglish()
+          ? ""
+          : "Use native " + label + " pronunciation. Do not use an English accent.";
     }
 
     @Override
