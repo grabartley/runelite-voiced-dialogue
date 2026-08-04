@@ -1291,4 +1291,40 @@ public class OpenRouterTtsBackendTest {
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
   }
+
+  @Test
+  public void aTranslationRateLimitPausesPrefetchToo() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    OpenRouterTtsBackend backend = backend(config);
+    assertFalse("a fresh backend is not throttled", backend.isThrottled());
+    // The translation hop is rate limited, so the speech call never happens.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_TOO_MANY_REQUESTS).setBody("slow down"));
+
+    assertNull("a rate-limited translation fails the line", backend.synthesize(req()));
+
+    assertEquals("only the translation hop was attempted", 1, server.getRequestCount());
+    assertTrue("the account limit pauses speculative prefetch as well", backend.isThrottled());
+  }
+
+  @Test
+  public void aSuccessfulTranslationDoesNotClearASpeechRateLimit() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    OpenRouterTtsBackend backend = backend(config);
+    // Speech is rate limited first: translation succeeds, then the speech call reports the 429.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Bonjour")));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_TOO_MANY_REQUESTS));
+    assertNull(backend.synthesize(req()));
+    assertTrue(backend.isThrottled());
+
+    // A later successful translation must not reopen the gate the speech model closed.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Bonjour")));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_TOO_MANY_REQUESTS));
+    backend.synthesize(req());
+
+    assertTrue("a translate 200 must not clear a speech 429", backend.isThrottled());
+  }
 }

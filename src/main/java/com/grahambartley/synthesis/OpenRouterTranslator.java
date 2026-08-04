@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.grahambartley.VoicedDialogueConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.function.IntConsumer;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -49,6 +50,12 @@ final class OpenRouterTranslator {
   private final Gson gson;
   private final String endpoint;
 
+  /**
+   * Observes the HTTP status of each translation call so the owning backend can fold a translation
+   * rate limit into the same back-off the speech call uses. Defaults to a no-op.
+   */
+  private IntConsumer responseCodeListener = code -> {};
+
   OpenRouterTranslator(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
   }
@@ -60,6 +67,11 @@ final class OpenRouterTranslator {
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
+  }
+
+  /** Registers the observer used to report translation HTTP status back to the owning backend. */
+  void setResponseCodeListener(IntConsumer listener) {
+    this.responseCodeListener = listener == null ? code -> {} : listener;
   }
 
   /**
@@ -96,6 +108,7 @@ final class OpenRouterTranslator {
       ResponseBody body = response.body();
       String raw = body == null ? "" : body.string();
       long elapsedMs = elapsedMs(start);
+      responseCodeListener.accept(response.code());
       if (!response.isSuccessful()) {
         log.warn(
             "[TTS cloud] translate fail reason=non-2xx http={} elapsedMs={} inLen={} detail={}",
