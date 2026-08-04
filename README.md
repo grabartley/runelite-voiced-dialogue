@@ -101,6 +101,7 @@ Settings mirror the in-game panel: **General** (key, playback, caching), **Voice
 | **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice, exactly as typed. |
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options you can see so your pick plays instantly; can spend credit on branches you never choose. |
 | **Save Audio To Disk** | `On` | Keeps synthesized audio on disk so repeated lines replay instantly and free across sessions. |
+| **Stream Playback** | `On` | Starts speaking a line as its audio arrives instead of waiting for the whole clip, so dialogue begins sooner. Cached lines always play instantly either way. |
 
 </details>
 
