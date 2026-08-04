@@ -104,4 +104,21 @@ public class VoiceSpecTest {
     assertEquals(VoiceSpec.UNSPECIFIED_SEED, spec.voiceSeed());
     assertEquals("npc:HUMAN:MALE", spec.key());
   }
+
+  @Test
+  public void specsDefaultToAdult() {
+    assertFalse(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE).child());
+    assertFalse(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE, 7).child());
+    assertFalse("the player is never a child", VoiceSpec.player(NPCGender.FEMALE).child());
+  }
+
+  @Test
+  public void childFlagIsCarriedButNotFoldedIntoKey() {
+    VoiceSpec child = VoiceSpec.npc(NPCRace.TROLL, NPCGender.MALE, 7, true);
+    assertTrue(child.child());
+    // Like the seed, the child flag drives the concrete voice, which the cloud backend already
+    // folds into its own cache variant.
+    assertEquals("npc:TROLL:MALE", child.key());
+    assertNotEquals(child, VoiceSpec.npc(NPCRace.TROLL, NPCGender.MALE, 7));
+  }
 }

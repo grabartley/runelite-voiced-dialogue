@@ -118,6 +118,7 @@ public final class SynthesisDispatcher {
               effective.name(),
               request.voice().race(),
               request.voice().gender(),
+              request.voice().child(),
               request.voice().voiceSeed(),
               profile == null ? null : profile.name(),
               profile == null ? null : profile.accent()));

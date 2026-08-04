@@ -1,6 +1,7 @@
 package com.grahambartley.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.synthesis.CharacterProfile;
@@ -42,7 +43,8 @@ public class NpcProfilesResourceTest {
           "Undead",
           "Demon",
           "Wizard",
-          "Tortugan"
+          "Tortugan",
+          "Icyene"
         }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
@@ -132,6 +134,13 @@ public class NpcProfilesResourceTest {
             .profile()
             .accent()
             .contains("Norse"));
+    assertTrue(
+        "Wyrmscraig islanders sound country Irish",
+        table
+            .resolveNpc(null, "Villager", "Human", "wyrmscraig")
+            .profile()
+            .accent()
+            .contains("Irish"));
   }
 
   @Test
@@ -167,5 +176,39 @@ public class NpcProfilesResourceTest {
     CharacterProfile p = table.resolvePlayer(null, null, null);
     assertTrue("the player has a name label", p.name() != null && !p.name().isEmpty());
     assertTrue("the player accent is British by default", p.accent().contains("British"));
+  }
+
+  @Test
+  public void childrenKeepTheirRaceOrEthnicityAccentAcrossRaces() {
+    // The child category layers style only, so the accent keeps coming from the race or ethnicity
+    // layer: a gnome child is an Irish-accented child, a troll child a South London one, and a
+    // Menaphite street kid an Egyptian one, all on the same youthful voice pool.
+    NpcProfileTable.Resolution gnome = table.resolveNpc(6077, "Gnome child", "Gnome", null);
+    assertTrue("the child category matched", gnome.source().contains("keyword:child"));
+    assertTrue(
+        "a gnome child keeps the Irish gnome accent", gnome.profile().accent().contains("Irish"));
+    assertTrue(
+        "the child delivery layers into the style",
+        gnome.profile().style().contains("A young child's voice"));
+
+    NpcProfileTable.Resolution troll = table.resolveNpc(696, "Troll child", "Troll", null);
+    assertTrue(
+        "a troll child keeps the troll accent", troll.profile().accent().contains("Brixton"));
+
+    NpcProfileTable.Resolution menaphite = table.resolveNpc(null, "Child", "Human", "menaphite");
+    assertTrue(
+        "a Menaphite child keeps the Egyptian accent",
+        menaphite.profile().accent().contains("Egyptian"));
+  }
+
+  @Test
+  public void childNamedNpcsAreMarkedAsChildrenByTheBundledCategory() {
+    assertTrue("'Child' is a child", table.isChildName("Child"));
+    assertTrue("'Schoolboy' is a child", table.isChildName("Schoolboy"));
+    assertTrue("'Schoolgirl' is a child", table.isChildName("Schoolgirl"));
+    assertTrue("'Troll child' is a child", table.isChildName("Troll child"));
+    assertTrue("'Street urchin' is a child", table.isChildName("Street urchin"));
+    assertFalse("'Hans' is not a child", table.isChildName("Hans"));
+    assertFalse("'Lady Trahaearn' is not a child", table.isChildName("Lady Trahaearn"));
   }
 }

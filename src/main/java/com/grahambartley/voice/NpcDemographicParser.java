@@ -56,6 +56,8 @@ final class NpcDemographicParser {
         return NPCRace.WIZARD;
       } else if (raceLower.contains("tortugan") || raceLower.contains("tortuga")) {
         return NPCRace.TORTUGAN;
+      } else if (raceLower.contains("icyene")) {
+        return NPCRace.ICYENE;
       }
 
       log.debug("Unknown race '{}', using default voice", race);

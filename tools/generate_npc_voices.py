@@ -68,6 +68,7 @@ CATEGORY_RACE_RULES = [
     ("troll", "Troll"), ("ogre", "Troll"), ("cyclop", "Troll"), ("giant", "Troll"),
     ("wizard", "Wizard"), ("sorcerer", "Wizard"),
     ("tortugan", "Tortugan"), ("tortuga", "Tortugan"),
+    ("icyene", "Icyene"),
     ("human", "Human"),
 ]
 
@@ -81,8 +82,9 @@ DEFAULT_SUMMARY_URL = (
 )
 
 VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
-               "Demon", "Wizard", "Tortugan"}
+               "Demon", "Wizard", "Tortugan", "Icyene"}
 VALID_GENDERS = {"Male", "Female"}
+VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
 # Wiki race text -> the voice buckets (VoiceProfile). Buckets are
@@ -101,6 +103,8 @@ RACE_BUCKET_RULES = [
     (r"troll|\bgiant\b|cyclops|ogre|\bent\b|\bgolem\b|\bhuman.*giant", "Troll"),
     (r"gorilla", "Gorilla"),
     (r"monkey|primate|baboon|mandril", "Monkey"),
+    # "Half Icyene" (Safalaan) is excluded: a half-blood reads as human, not angelic.
+    (r"(?<!half )(?<!half-)icyene", "Icyene"),
     (r"tortugan|tortuga", "Tortugan"),
     (r"\bhuman\b|\bman\b|\bwoman\b|\bgnome child\b", "Human"),
 ]
@@ -379,15 +383,16 @@ def apply_overrides(table, overrides):
 
     Per field, an override that names it wins; one that omits it inherits the wiki base; one
     that sets it to ``null`` clears it. So omitting ``ethnicity`` keeps the wiki-inferred accent
-    (the common case), while ``"ethnicity": null`` drops a wrong one (a foreigner). ``race`` and
-    ``gender`` are optional too, but the post-merge entry must still carry both, else the wiki
-    never supplied one and we raise rather than emit a malformed entry.
+    (the common case), while ``"ethnicity": null`` drops a wrong one (a foreigner). The optional
+    ``lifeStage`` marks a child ("child" is the only value). ``race`` and ``gender`` are optional too,
+    but the post-merge entry must still carry both, else the wiki never supplied one and we raise
+    rather than emit a malformed entry.
     """
     override_npcs = overrides.get("npcs", {})
     for key, entry in override_npcs.items():
         npc_id = int(key)
         merged = dict(table.get(npc_id, {}))  # copy: wiki entries are shared across sibling ids
-        for field in ("race", "gender", "ethnicity"):
+        for field in ("race", "gender", "ethnicity", "lifeStage"):
             if field not in entry:
                 continue  # absent: inherit the wiki-inferred value
             value = entry[field]
@@ -398,6 +403,8 @@ def apply_overrides(table, overrides):
                 raise ValueError(f"Override {key} has invalid race '{value}'")
             if field == "gender" and value not in VALID_GENDERS:
                 raise ValueError(f"Override {key} has invalid gender '{value}'")
+            if field == "lifeStage" and value not in VALID_LIFE_STAGES:
+                raise ValueError(f"Override {key} has invalid lifeStage '{value}'")
             merged[field] = value
         missing = [f for f in ("race", "gender") if f not in merged]
         if missing:
@@ -417,6 +424,9 @@ def validate_profiles(profiles):
     for entry in (profiles.get("byCategory") or []):
         if not isinstance(entry, dict) or not entry.get("keywords"):
             raise ValueError(f"byCategory entry missing keywords: {entry!r}")
+        life_stage = entry.get("lifeStage")
+        if life_stage is not None and life_stage not in VALID_LIFE_STAGES:
+            raise ValueError(f"byCategory entry has invalid lifeStage '{life_stage}': {entry!r}")
     for key in (profiles.get("byId") or {}):
         if key.startswith("_"):
             continue
@@ -474,22 +484,24 @@ def main():
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
 
-    race_counts, gender_counts, ethnicity_counts = {}, {}, {}
+    race_counts, gender_counts, ethnicity_counts, life_stage_counts = {}, {}, {}, {}
     for v in table.values():
         race_counts[v["race"]] = race_counts.get(v["race"], 0) + 1
         gender_counts[v["gender"]] = gender_counts.get(v["gender"], 0) + 1
         if "ethnicity" in v:
             ethnicity_counts[v["ethnicity"]] = ethnicity_counts.get(v["ethnicity"], 0) + 1
+        if "lifeStage" in v:
+            life_stage_counts[v["lifeStage"]] = life_stage_counts.get(v["lifeStage"], 0) + 1
 
     out = {
         "_meta": {
-            "description": "Static precomputed npcId -> {race, gender, ethnicity?} lookup plus "
-                           "cloud voice profiles, baked into the plugin. Generated offline by "
+            "description": "Static precomputed npcId -> {race, gender, ethnicity?, lifeStage?} lookup "
+                           "plus cloud voice profiles, baked into the plugin. Generated offline by "
                            "tools/generate_npc_voices.py from the Old School RuneScape Wiki "
                            "(Infobox NPC and Infobox Monster pages; Monster races derive from "
                            "page categories). Do not hand-edit; edit tools/overrides.json or "
                            "tools/profiles.json and regenerate.",
-            "schema": "npcs[id] = { race, gender, ethnicity? }",
+            "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
             "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) "
                       "and Infobox Monster (race from page categories), "
                       "cross-referenced by name against a full id dump for variant ids, "
@@ -501,6 +513,7 @@ def main():
             "race_counts": dict(sorted(race_counts.items())),
             "gender_counts": dict(sorted(gender_counts.items())),
             "ethnicity_counts": dict(sorted(ethnicity_counts.items())),
+            "life_stage_counts": dict(sorted(life_stage_counts.items())),
             "profiles_bespoke": len(
                 [k for k in (profiles.get("byId") or {}) if not k.startswith("_")]),
         },
@@ -517,6 +530,7 @@ def main():
     print(f"  races:   {out['_meta']['race_counts']}", file=sys.stderr)
     print(f"  genders: {out['_meta']['gender_counts']}", file=sys.stderr)
     print(f"  ethnicities: {out['_meta']['ethnicity_counts']}", file=sys.stderr)
+    print(f"  life stages: {out['_meta']['life_stage_counts']}", file=sys.stderr)
 
 
 if __name__ == "__main__":
