@@ -108,4 +108,16 @@ public class DialoguePrefetcherTest {
     assertEquals("reset clears dedup so a new conversation re-warms", 4, warmed.size());
     assertTrue("reset cancels still-queued prefetches", cancels >= 1);
   }
+
+  @Test
+  public void advancingANodeCancelsWithoutResettingSession() {
+    DialoguePrefetcher prefetcher = prefetcher();
+
+    prefetcher.offer(options("Yes."));
+    prefetcher.advanceNode();
+    prefetcher.offer(options("Yes."));
+
+    assertEquals("the same option remains deduplicated", 1, warmed.size());
+    assertEquals("queued work is cancelled for the old node", 1, cancels);
+  }
 }

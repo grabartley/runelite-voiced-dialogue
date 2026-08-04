@@ -508,6 +508,25 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
+  public void conditionalInterruptCannotStopANewerLine() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("First", NPCRace.HUMAN, NPCGender.MALE));
+    long first = svc.currentEpoch();
+    svc.speak(req("Newer public chat", NPCRace.HUMAN, NPCGender.MALE));
+    int stopsAfterNewer = output.stopCalls;
+
+    svc.interruptIfCurrent(first);
+    assertEquals("a stale close cannot stop newer audio", stopsAfterNewer, output.stopCalls);
+
+    svc.interruptIfCurrent(svc.currentEpoch());
+    assertEquals("the current line is still interruptible", stopsAfterNewer + 1, output.stopCalls);
+  }
+
+  @Test
   public void failedSynthIsNotCachedOrPlayed() {
     SynthesisBackend failing =
         new SynthesisBackend() {

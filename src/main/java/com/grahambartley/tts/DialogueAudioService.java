@@ -295,6 +295,22 @@ public final class DialogueAudioService {
     output.stop();
   }
 
+  /**
+   * Interrupts only when no newer line has superseded {@code expected}, so a delayed dialogue-close
+   * interrupt cannot cut a public-chat clip or a newer dialogue line that started meanwhile.
+   */
+  public void interruptIfCurrent(long expected) {
+    if (!epoch.compareAndSet(expected, expected + 1)) {
+      return;
+    }
+    output.stop();
+  }
+
+  /** The epoch of the line most recently queued, so a caller can later interrupt just that line. */
+  public long currentEpoch() {
+    return epoch.get();
+  }
+
   public void close() {
     epoch.incrementAndGet();
     prefetchEpoch.incrementAndGet();
