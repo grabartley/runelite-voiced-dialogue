@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
+import com.grahambartley.synthesis.SynthesisBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.runelite.api.ChatMessageType;
@@ -94,9 +95,9 @@ public class ChatNoticeManagerTest {
   }
 
   @Test
-  public void missingKeyWarningPostsOnceWhenNoKey() {
-    manager.maybeWarnMissingCloudKey(false);
-    manager.maybeWarnMissingCloudKey(false);
+  public void missingKeyWarningPostsOnceWithTheBackendsOwnNotice() {
+    manager.maybeWarnMissingCloudKey(backend(false, OpenRouterTtsBackend.NO_KEY_NOTICE));
+    manager.maybeWarnMissingCloudKey(backend(false, OpenRouterTtsBackend.NO_KEY_NOTICE));
 
     verify(client, times(1))
         .addChatMessage(
@@ -107,10 +108,29 @@ public class ChatNoticeManagerTest {
   }
 
   @Test
+  public void missingKeyWarningNamesTheActiveProvider() {
+    manager.maybeWarnMissingCloudKey(backend(false, "Add your Google AI Studio API key"));
+
+    verify(client, times(1))
+        .addChatMessage(
+            eq(ChatMessageType.GAMEMESSAGE),
+            eq(""),
+            contains("Add your Google AI Studio API key"),
+            isNull());
+  }
+
+  @Test
   public void missingKeyWarningStaysQuietWhenKeyAvailable() {
-    manager.maybeWarnMissingCloudKey(true);
+    manager.maybeWarnMissingCloudKey(backend(true, OpenRouterTtsBackend.NO_KEY_NOTICE));
 
     verify(client, never())
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), contains(""), isNull());
+  }
+
+  private static SynthesisBackend backend(boolean available, String missingKeyNotice) {
+    SynthesisBackend backend = mock(SynthesisBackend.class);
+    when(backend.isAvailable()).thenReturn(available);
+    when(backend.missingKeyNotice()).thenReturn(missingKeyNotice);
+    return backend;
   }
 }

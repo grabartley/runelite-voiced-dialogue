@@ -18,6 +18,16 @@ public interface SynthesisBackend {
   /** Whether this backend can actually run right now (e.g. an API key is set). */
   boolean isAvailable();
 
+  /**
+   * The user-facing notice shown when this backend is unavailable for lack of an API key, naming
+   * the provider and where to get a key so the fix is actionable. Shared between the backend's own
+   * one-time warning and the plugin's session start-up check so the two paths never drift.
+   */
+  default String missingKeyNotice() {
+    return "Add your API key in the Voiced Dialogue settings to hear dialogue; without a key,"
+        + " lines are not voiced.";
+  }
+
   /** The emotions this backend can voice. Requests outside this set are downgraded to neutral. */
   EnumSet<Emotion> supportedEmotions();
 

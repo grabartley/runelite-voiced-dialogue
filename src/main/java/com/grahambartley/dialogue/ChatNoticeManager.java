@@ -1,7 +1,7 @@
 package com.grahambartley.dialogue;
 
 import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.synthesis.OpenRouterTtsBackend;
+import com.grahambartley.synthesis.SynthesisBackend;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -88,17 +88,17 @@ public final class ChatNoticeManager {
   }
 
   /**
-   * Posts the missing-cloud-key notice once per session when no key is set, so a player who never
-   * set a key is told their voice is effectively off. Must be called on the game thread. {@code
-   * keyAvailable} is the backend's availability.
+   * Posts the active backend's missing-key notice once per session when no key is set, so a player
+   * who never set a key for the selected provider is told their voice is effectively off. Must be
+   * called on the game thread.
    */
-  public void maybeWarnMissingCloudKey(boolean keyAvailable) {
+  public void maybeWarnMissingCloudKey(SynthesisBackend backend) {
     if (cloudKeyNoticeChecked) {
       return;
     }
     cloudKeyNoticeChecked = true;
-    if (shouldWarnMissingCloudKey(keyAvailable)) {
-      addGameMessage(OpenRouterTtsBackend.NO_KEY_NOTICE);
+    if (shouldWarnMissingCloudKey(backend.isAvailable())) {
+      addGameMessage(backend.missingKeyNotice());
     }
   }
 

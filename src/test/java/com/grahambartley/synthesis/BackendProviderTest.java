@@ -3,6 +3,7 @@ package com.grahambartley.synthesis;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
 import com.grahambartley.voice.VoiceManager.NPCGender;
 import com.grahambartley.voice.VoiceManager.NPCRace;
@@ -19,6 +20,7 @@ public class BackendProviderTest {
     Emotion lastEmotion;
     int synthCalls;
     int warmCalls;
+    int closeCalls;
 
     StubBackend(String id, boolean available, EnumSet<Emotion> emotions) {
       this.id = id;
@@ -51,6 +53,11 @@ public class BackendProviderTest {
     @Override
     public void warmUp() {
       warmCalls++;
+    }
+
+    @Override
+    public void close() {
+      closeCalls++;
     }
   }
 
@@ -104,5 +111,61 @@ public class BackendProviderTest {
     provider.synthesize(req(Emotion.SCARED));
 
     assertEquals("Cloud supports the full set, so no downgrade", Emotion.SCARED, cloud.lastEmotion);
+  }
+
+  @Test
+  public void activeFollowsTheConfiguredProviderLive() {
+    StubBackend openRouter =
+        new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
+    StubBackend aiStudio =
+        new StubBackend("cloud-google-ai-studio", true, EnumSet.allOf(Emotion.class));
+    VoicedDialogueConfig.TtsProvider[] selected = {VoicedDialogueConfig.TtsProvider.OPENROUTER};
+    BackendProvider provider = new BackendProvider(openRouter, aiStudio, () -> selected[0]);
+
+    assertSame(openRouter, provider.active());
+    selected[0] = VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO;
+    assertSame("provider switch takes effect with no restart", aiStudio, provider.active());
+  }
+
+  @Test
+  public void warmUpActiveWarmsOnlyTheSelectedBackend() {
+    StubBackend openRouter =
+        new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
+    StubBackend aiStudio =
+        new StubBackend("cloud-google-ai-studio", true, EnumSet.allOf(Emotion.class));
+    BackendProvider provider =
+        new BackendProvider(
+            openRouter, aiStudio, () -> VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO);
+
+    provider.warmUpActive();
+
+    assertEquals(0, openRouter.warmCalls);
+    assertEquals(1, aiStudio.warmCalls);
+  }
+
+  @Test
+  public void closeReleasesBothProviderBackends() {
+    StubBackend openRouter =
+        new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
+    StubBackend aiStudio =
+        new StubBackend("cloud-google-ai-studio", true, EnumSet.allOf(Emotion.class));
+    BackendProvider provider =
+        new BackendProvider(
+            openRouter, aiStudio, () -> VoicedDialogueConfig.TtsProvider.OPENROUTER);
+
+    provider.close();
+
+    assertEquals(1, openRouter.closeCalls);
+    assertEquals(1, aiStudio.closeCalls);
+  }
+
+  @Test
+  public void closeReleasesASingleFixedBackendOnce() {
+    StubBackend cloud = new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
+    BackendProvider provider = new BackendProvider(cloud);
+
+    provider.close();
+
+    assertEquals(1, cloud.closeCalls);
   }
 }

@@ -15,7 +15,7 @@ public interface VoicedDialogueConfig extends Config {
 
   @ConfigSection(
       name = "General",
-      description = "API key, playback, cache. Text is sent to OpenRouter.",
+      description = "Provider, API keys, playback, cache.",
       position = 0)
   String generalSection = "general";
 
@@ -37,6 +37,28 @@ public interface VoicedDialogueConfig extends Config {
       position = 3,
       closedByDefault = true)
   String advancedSection = "advanced";
+
+  /**
+   * The cloud service dialogue is synthesized through. Both providers voice through the same Gemini
+   * TTS model, so voices, emotion, and character profiles sound the same; they differ only in who
+   * bills the call and which API key is used. {@link #OPENROUTER} (the default) uses the OpenRouter
+   * key; {@link #GOOGLE_AI_STUDIO} sends requests directly to Google with a Gemini API key.
+   */
+  enum TtsProvider {
+    OPENROUTER("OpenRouter"),
+    GOOGLE_AI_STUDIO("Google AI Studio");
+
+    private final String label;
+
+    TtsProvider(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return label;
+    }
+  }
 
   /**
    * An optional delivery quirk layered onto a spoken line, selected per speaker class (Player vs
@@ -194,10 +216,20 @@ public interface VoicedDialogueConfig extends Config {
   // ---------------------------------------------------------------------------
 
   @ConfigItem(
+      keyName = "ttsProvider",
+      name = "Voice Provider",
+      description = "Cloud service that voices dialogue and bills the calls.",
+      position = 0,
+      section = generalSection)
+  default TtsProvider ttsProvider() {
+    return TtsProvider.OPENROUTER;
+  }
+
+  @ConfigItem(
       keyName = "openRouterApiKey",
       name = "OpenRouter API Key",
-      description = "Required to voice dialogue. Free key at openrouter.ai.",
-      position = 0,
+      description = "Used by the OpenRouter provider. Key at openrouter.ai.",
+      position = 1,
       secret = true,
       section = generalSection)
   default String openRouterApiKey() {
@@ -205,10 +237,21 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "googleAiStudioApiKey",
+      name = "Google AI Studio API Key",
+      description = "Used by the Google AI Studio provider. Key at aistudio.google.com.",
+      position = 2,
+      secret = true,
+      section = generalSection)
+  default String googleAiStudioApiKey() {
+    return "";
+  }
+
+  @ConfigItem(
       keyName = "volume",
       name = "Dialogue Volume",
       description = "Loudness of spoken dialogue, 0 (muted) to 100.",
-      position = 1,
+      position = 3,
       section = generalSection)
   @Range(min = 0, max = 100)
   default int volume() {
@@ -219,7 +262,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "voicePublicChat",
       name = "Voice My Public Chat",
       description = "Speak your own public chat in your player voice.",
-      position = 2,
+      position = 4,
       section = generalSection)
   default boolean voicePublicChat() {
     return false;
@@ -229,7 +272,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "prefetch",
       name = "Prefetch Dialogue",
       description = "Preload visible dialogue options; may raise spend.",
-      position = 3,
+      position = 5,
       section = generalSection)
   default boolean prefetch() {
     return true;
@@ -239,7 +282,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "persistentCache",
       name = "Save Audio To Disk",
       description = "Save audio to disk so repeat lines replay for free.",
-      position = 4,
+      position = 6,
       section = generalSection)
   default boolean persistentCache() {
     return true;
@@ -249,7 +292,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "streamPlayback",
       name = "Stream Playback",
       description = "Start playing a line as it downloads instead of waiting for the whole clip.",
-      position = 5,
+      position = 7,
       section = generalSection)
   default boolean streamPlayback() {
     return true;

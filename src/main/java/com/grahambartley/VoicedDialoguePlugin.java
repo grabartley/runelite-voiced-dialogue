@@ -14,6 +14,7 @@ import com.grahambartley.dialogue.DialogueWidgetReader;
 import com.grahambartley.dialogue.PublicChatPolicy;
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.BackendWarmUpPolicy;
+import com.grahambartley.synthesis.GeminiAiStudioTtsBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import com.grahambartley.synthesis.ProfanityFilter;
 import com.grahambartley.synthesis.SynthesisDispatcher;
@@ -114,12 +115,17 @@ public class VoicedDialoguePlugin extends Plugin {
 
     noticeManager = new ChatNoticeManager(client, configManager, clientThread, config);
 
-    // Cloud-only: dialogue is voiced through OpenRouter. The backend reports available only once an
-    // API key is set, and a line it cannot voice is left silent (with a one-time notice) rather
-    // than routed anywhere else. No model or native binaries ship in the plugin jar.
-    OpenRouterTtsBackend cloudBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
-    cloudBackend.setNotice(noticeManager::notifyFromBackendThread);
-    backendProvider = new BackendProvider(cloudBackend);
+    // Cloud-only: dialogue is voiced through the configured provider (OpenRouter or Google AI
+    // Studio), resolved live so switching needs no restart. A backend reports available only once
+    // its API key is set, and a line it cannot voice is left silent (with a one-time notice)
+    // rather than routed to the other provider. No model or native binaries ship in the plugin
+    // jar.
+    OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
+    openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
+    GeminiAiStudioTtsBackend aiStudioBackend =
+        new GeminiAiStudioTtsBackend(okHttpClient, config, gson);
+    aiStudioBackend.setNotice(noticeManager::notifyFromBackendThread);
+    backendProvider = new BackendProvider(openRouterBackend, aiStudioBackend, config::ttsProvider);
     // Persistent on-disk cache under the plugin's RuneLite dir; on by default so repeated lines
     // survive restarts and the cloud backend is not re-billed. Opt-out via config.
     DiskAudioCache diskCache =
@@ -200,7 +206,7 @@ public class VoicedDialoguePlugin extends Plugin {
       return;
     }
     noticeManager.maybeShowOnboarding();
-    noticeManager.maybeWarnMissingCloudKey(backendProvider.active().isAvailable());
+    noticeManager.maybeWarnMissingCloudKey(backendProvider.active());
     dialogueWatcher.tick();
   }
 
