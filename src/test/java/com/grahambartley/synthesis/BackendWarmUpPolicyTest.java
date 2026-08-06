@@ -18,6 +18,9 @@ public class BackendWarmUpPolicyTest {
     return new Object[] {
       // Plugin group with a backend-affecting key warms.
       new Object[] {"voicedDialogue", "openRouterApiKey", true},
+      new Object[] {"voicedDialogue", "googleAiStudioApiKey", true},
+      // Switching provider makes a different (possibly cold) backend active.
+      new Object[] {"voicedDialogue", "ttsProvider", true},
       // Right group, key that does not affect backend availability.
       new Object[] {"voicedDialogue", "volume", false},
       // A backend key but a different plugin's config group.

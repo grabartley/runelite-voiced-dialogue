@@ -1,14 +1,18 @@
 package com.grahambartley.synthesis;
 
+import com.grahambartley.VoicedDialogueConfig;
 import com.grahambartley.tts.Pcm;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Single point of truth for the active {@link SynthesisBackend} and how emotion is downgraded.
  *
- * <p>The plugin is Cloud-only: there is one backend (OpenRouter), which this simply provides. A
- * line the backend cannot voice (for example when no API key is set) is left unvoiced rather than
- * routed elsewhere.
+ * <p>The plugin is Cloud-only, with one backend per {@link VoicedDialogueConfig.TtsProvider}:
+ * OpenRouter and Google AI Studio. {@link #active()} resolves the configured provider's backend
+ * live on every call, so switching providers takes effect on the next line with no restart. A line
+ * the active backend cannot voice (for example when no API key is set) is left unvoiced rather than
+ * routed to the other provider.
  *
  * <p>The emotion-downgrade rule lives here and nowhere else: {@link #synthesize} rewrites a
  * request's emotion to {@link Emotion#NEUTRAL} whenever the backend does not list it in {@link
@@ -18,15 +22,29 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class BackendProvider {
 
-  private final SynthesisBackend backend;
+  private final SynthesisBackend openRouter;
+  private final SynthesisBackend googleAiStudio;
+  private final Supplier<VoicedDialogueConfig.TtsProvider> selectedProvider;
 
+  /** A provider fixed to one backend, for call sites and tests with no provider choice. */
   public BackendProvider(SynthesisBackend backend) {
-    this.backend = backend;
+    this(backend, backend, () -> VoicedDialogueConfig.TtsProvider.OPENROUTER);
   }
 
-  /** The active synthesis backend. */
+  public BackendProvider(
+      SynthesisBackend openRouter,
+      SynthesisBackend googleAiStudio,
+      Supplier<VoicedDialogueConfig.TtsProvider> selectedProvider) {
+    this.openRouter = openRouter;
+    this.googleAiStudio = googleAiStudio;
+    this.selectedProvider = selectedProvider;
+  }
+
+  /** The configured provider's backend, resolved live so a provider switch needs no restart. */
   public SynthesisBackend active() {
-    return backend;
+    return selectedProvider.get() == VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO
+        ? googleAiStudio
+        : openRouter;
   }
 
   /**
@@ -49,6 +67,7 @@ public final class BackendProvider {
    * backend reflected in the cache key is the one that actually runs.
    */
   public Pcm synthesize(SynthesisRequest request) {
+    SynthesisBackend backend = active();
     return backend.synthesize(downgradeFor(backend, request));
   }
 
@@ -77,11 +96,18 @@ public final class BackendProvider {
    * idempotent.
    */
   public void warmUpActive() {
-    backend.warmUp();
+    active().warmUp();
   }
 
-  /** Releases the backend. */
+  /** Releases both provider backends (each once, even when fixed to a single backend). */
   public void close() {
+    closeQuietly(openRouter);
+    if (googleAiStudio != openRouter) {
+      closeQuietly(googleAiStudio);
+    }
+  }
+
+  private static void closeQuietly(SynthesisBackend backend) {
     try {
       backend.close();
     } catch (RuntimeException e) {
