@@ -127,6 +127,22 @@ public class ChatNoticeManagerTest {
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), contains(""), isNull());
   }
 
+  @Test
+  public void clearingTheKeyLaterInTheSessionStillWarnsOnce() {
+    // The player starts with a working key, then clears it mid-session: they should be told why
+    // dialogue went silent, and told only once.
+    manager.maybeWarnMissingCloudKey(backend(true, OpenRouterTtsBackend.NO_KEY_NOTICE));
+    manager.maybeWarnMissingCloudKey(backend(false, OpenRouterTtsBackend.NO_KEY_NOTICE));
+    manager.maybeWarnMissingCloudKey(backend(false, OpenRouterTtsBackend.NO_KEY_NOTICE));
+
+    verify(client, times(1))
+        .addChatMessage(
+            eq(ChatMessageType.GAMEMESSAGE),
+            eq(""),
+            contains(OpenRouterTtsBackend.NO_KEY_NOTICE),
+            isNull());
+  }
+
   private static SynthesisBackend backend(boolean available, String missingKeyNotice) {
     SynthesisBackend backend = mock(SynthesisBackend.class);
     when(backend.isAvailable()).thenReturn(available);

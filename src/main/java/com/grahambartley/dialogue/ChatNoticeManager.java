@@ -91,15 +91,17 @@ public final class ChatNoticeManager {
    * Posts the active backend's missing-key notice once per session when no key is set, so a player
    * who never set a key for the selected provider is told their voice is effectively off. Must be
    * called on the game thread.
+   *
+   * <p>The one-shot guard is only consumed when the notice actually fires. Consuming it on the
+   * first game tick regardless would mean a player who starts with a valid key and later clears it
+   * is never told why dialogue went silent.
    */
   public void maybeWarnMissingCloudKey(SynthesisBackend backend) {
-    if (cloudKeyNoticeChecked) {
+    if (cloudKeyNoticeChecked || !shouldWarnMissingCloudKey(backend.isAvailable())) {
       return;
     }
     cloudKeyNoticeChecked = true;
-    if (shouldWarnMissingCloudKey(backend.isAvailable())) {
-      addGameMessage(backend.missingKeyNotice());
-    }
+    addGameMessage(backend.missingKeyNotice());
   }
 
   /** Pure decision for {@link #maybeWarnMissingCloudKey}: warn only when the key is unavailable. */
