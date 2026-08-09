@@ -6,8 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Tracks the cloud backend's rate-limit (429) back-off. A 429 opens a window that grows
- * geometrically per consecutive hit and is capped so prefetch never retry-storms; any clean call
+ * geometrically per consecutive hit and is capped so prefetch never retry-storms; a clean call
  * clears it so prefetch resumes immediately.
+ *
+ * <p>Both updates are synchronized because the live synthesis pool and the prefetch pool report
+ * into the same instance: an unsynchronized clear could otherwise read a stale window and erase a
+ * 429 that another worker had just recorded, leaving prefetch free to pile onto the limit.
  */
 @Slf4j
 final class RateLimitBackoff {
@@ -28,18 +32,16 @@ final class RateLimitBackoff {
   }
 
   /** Opens (or widens) the back-off window after a 429, geometrically per repeat hit. */
-  void recordRateLimited() {
+  synchronized void recordRateLimited() {
     long window = backoffWindowMillis(consecutive429.incrementAndGet());
     backoffUntil.set(System.currentTimeMillis() + window);
     log.debug("[TTS cloud] rate limited (429); backing off prefetch for {}ms", window);
   }
 
-  /** Clears the back-off after any clean call so prefetch resumes immediately. */
-  void recordSuccess() {
-    if (backoffUntil.get() != 0) {
-      consecutive429.set(0);
-      backoffUntil.set(0);
-    }
+  /** Clears the back-off after a clean call so prefetch resumes immediately. */
+  synchronized void recordSuccess() {
+    consecutive429.set(0);
+    backoffUntil.set(0);
   }
 
   /**

@@ -19,6 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.ConnectionPool;
@@ -165,8 +166,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /** One-time user notice hook for cloud failures; defaults to a no-op. */
   private Consumer<String> notice = msg -> {};
 
-  /** Guards the one-time notice so a sustained outage does not spam the chat box. */
-  private boolean warned;
+  /**
+   * Guards the one-time notice so a sustained outage does not spam the chat box. Atomic because the
+   * two live synthesis workers and the two prefetch workers can fail concurrently, and a plain
+   * boolean lets more than one of them win the check and post a duplicate notice.
+   */
+  private final AtomicBoolean warned = new AtomicBoolean();
 
   public OpenRouterTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
@@ -226,6 +231,16 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             ? endpoint.replace("/audio/speech", "/chat/completions")
             : OpenRouterTranslator.PRODUCTION_ENDPOINT;
     this.translator = new OpenRouterTranslator(this.httpClient, config, gson, translatorEndpoint);
+    // A rate limit on the translation hop is the same account limit the speech call would hit, so
+    // it
+    // pauses prefetch too. Only a 429 widens the window: a successful translate must not clear a
+    // speech 429, since the two hops bill different models.
+    this.translator.setResponseCodeListener(
+        code -> {
+          if (code == HTTP_TOO_MANY_REQUESTS) {
+            backoff.recordRateLimited();
+          }
+        });
   }
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
@@ -969,8 +984,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   private void warnOnce(String message) {
     log.debug(message);
-    if (!warned) {
-      warned = true;
+    if (warned.compareAndSet(false, true)) {
       notice.accept(message);
     }
   }
