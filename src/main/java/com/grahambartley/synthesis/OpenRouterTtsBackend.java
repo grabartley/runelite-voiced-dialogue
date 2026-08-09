@@ -244,6 +244,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   }
 
   @Override
+  public String missingKeyNotice() {
+    return NO_KEY_NOTICE;
+  }
+
+  @Override
   public EnumSet<Emotion> supportedEmotions() {
     return model.supportedEmotions();
   }
