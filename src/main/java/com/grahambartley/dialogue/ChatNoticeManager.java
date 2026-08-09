@@ -1,7 +1,7 @@
 package com.grahambartley.dialogue;
 
 import com.grahambartley.VoicedDialogueConfig;
-import com.grahambartley.synthesis.OpenRouterTtsBackend;
+import com.grahambartley.synthesis.SynthesisBackend;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -88,18 +88,20 @@ public final class ChatNoticeManager {
   }
 
   /**
-   * Posts the missing-cloud-key notice once per session when no key is set, so a player who never
-   * set a key is told their voice is effectively off. Must be called on the game thread. {@code
-   * keyAvailable} is the backend's availability.
+   * Posts the active backend's missing-key notice once per session when no key is set, so a player
+   * who never set a key for the selected provider is told their voice is effectively off. Must be
+   * called on the game thread.
+   *
+   * <p>The one-shot guard is only consumed when the notice actually fires. Consuming it on the
+   * first game tick regardless would mean a player who starts with a valid key and later clears it
+   * is never told why dialogue went silent.
    */
-  public void maybeWarnMissingCloudKey(boolean keyAvailable) {
-    if (cloudKeyNoticeChecked) {
+  public void maybeWarnMissingCloudKey(SynthesisBackend backend) {
+    if (cloudKeyNoticeChecked || !shouldWarnMissingCloudKey(backend.isAvailable())) {
       return;
     }
     cloudKeyNoticeChecked = true;
-    if (shouldWarnMissingCloudKey(keyAvailable)) {
-      addGameMessage(OpenRouterTtsBackend.NO_KEY_NOTICE);
-    }
+    addGameMessage(backend.missingKeyNotice());
   }
 
   /** Pure decision for {@link #maybeWarnMissingCloudKey}: warn only when the key is unavailable. */

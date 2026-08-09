@@ -1,9 +1,13 @@
 # Synthesis architecture
 
-Every dialogue line is voiced through a single pipeline: an OpenRouter speech call implemented by
-the `SynthesisBackend` that `BackendProvider` supplies. `BackendProvider` also applies the
+Every dialogue line is voiced through a single pipeline: a cloud speech call implemented by the
+`SynthesisBackend` that `BackendProvider` supplies. Two backends exist, one per **Voice Provider**
+setting: OpenRouter (`OpenRouterTtsBackend`, the default) and Google AI Studio
+(`GeminiAiStudioTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
+every call, so switching takes effect on the next line with no restart, and also applies the
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
-A line the pipeline cannot voice (for example when no API key is set) is left silent.
+A line the pipeline cannot voice (for example when the active provider's API key is not set) is
+left silent, never routed to the other provider.
 
 Emotion is detected from each speaker's chat-head animation and rides in every request as one of
 Happy, Sad, Angry, Scared, or Neutral. It is rendered as an inline Gemini style tag on the spoken
@@ -29,6 +33,32 @@ at 24 kHz decoded to the pipeline's native rate.
 
 Dialogue text leaves your machine and is sent to OpenRouter. A missing key, an API error, or a network
 problem fails that line gracefully (it is left unvoiced) and surfaces a one-time notice.
+
+## The Google AI Studio speech call
+
+With **Voice Provider** set to Google AI Studio, `GeminiAiStudioTtsBackend` sends the same content
+directly to the Gemini API instead: a `generateContent` request to
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent`,
+authenticated with a Google AI Studio API key in the `x-goog-api-key` header. It needs its own key
+(**Google AI Studio API Key**); until one is set it logs a provider-specific one-time notice and its
+lines stay silent.
+
+The spoken content is deliberately identical to the OpenRouter path: the same Gemini TTS model, the
+same `GeminiVoiceMap` voice resolution (requested as the `prebuiltVoiceConfig` voice), the same
+inline emotion tags, and the same leading character-profile block, so a line sounds the same
+whichever provider voices it. Only the transport differs: audio comes back as base64 16-bit LE PCM
+inside JSON rather than a raw body, and the Gemini API has no `speed` parameter, so a non-default
+**Speaking Pace** is rendered as a leading `SPEAKING PACE` prompt direction instead. The
+`streamGenerateContent` variant (`?alt=sse`) backs the streaming path below, delivering audio as
+server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
+mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
+network timeout, a rate-limit back-off on 429 (on the Gemini API that means quota, and the notice
+says so), and a `cacheVariant` built from the same fields under the distinct
+`cloud-google-ai-studio` backend id, so the two providers' cache entries never collide.
+
+The translation hop has a direct counterpart too: `GeminiAiStudioTranslator` sends the same shared
+system prompt to `gemini-3.1-flash-lite` through the Gemini API, so a non-English language or a
+speaking style works without an OpenRouter key.
 
 ### Cost and latency controls
 
@@ -108,9 +138,14 @@ is plain English, so the line bypasses the model entirely and the source text go
 speech: no chat-completions request, no added latency or cost. Setting a non-English language, a
 style for that class, or both is what turns the hop on.
 
-Streaming the audio response to start playback sooner was evaluated and deferred: OSRS lines are short,
-the full-buffer decode is already fast, and streaming would complicate the raw-PCM decode and the
-epoch-based stale-drop for little perceived gain.
+With **Stream Playback** on (the default), a cache-missed live line plays as it downloads: the
+backend's `synthesizeStreaming` decodes the response incrementally and feeds each chunk to the
+player through a `PcmSink`, so audio starts on the first decoded chunk instead of after the whole
+body. On OpenRouter that reads the raw PCM body per network read; on Google AI Studio it decodes
+each SSE audio event. The whole line is still accumulated and cached on a clean finish, an
+interrupted or incomplete stream plays what arrived but is never cached, and debug mode logs
+`firstChunkMs` (time to first audible chunk) alongside the full elapsed time so the real streaming
+gain per provider is measurable. Prefetch and cave-echo lines always buffer.
 
 The primary cost lever remains the persistent disk cache, on by default, which keeps any already-heard
 line from being billed again across sessions. Its footprint is bounded by the **Cache Size Limit**

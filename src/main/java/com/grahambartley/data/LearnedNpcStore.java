@@ -22,9 +22,9 @@ import lombok.extern.slf4j.Slf4j;
  * once-learned NPC voices correctly for the rest of that session and every future one.
  *
  * <p>It lives outside the jar (the bundled resource is read-only) under the plugin's RuneLite
- * directory and is written atomically (temp file then move) so a crash mid-write cannot corrupt it.
- * Reads and writes are thread-safe: lookups happen on the dialogue pipeline thread while a wiki
- * lookup may be writing on a background thread.
+ * directory and is written through a temp file, moved atomically where the filesystem supports it,
+ * so a crash mid-write cannot corrupt it. Reads and writes are thread-safe: lookups happen on the
+ * dialogue pipeline thread while a wiki lookup may be writing on a background thread.
  */
 @Slf4j
 public final class LearnedNpcStore {
@@ -121,7 +121,13 @@ public final class LearnedNpcStore {
       root.add("npcs", npcs);
       Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
       Files.write(tmp, gson.toJson(root).getBytes(StandardCharsets.UTF_8));
-      Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+      try {
+        Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      } catch (IOException atomicUnsupported) {
+        // Some filesystems reject ATOMIC_MOVE; fall back to a plain replace, which is still far
+        // better than writing the destination in place. Mirrors DiskAudioCache.
+        Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+      }
     } catch (IOException e) {
       log.debug("Could not write learned NPC store {}: {}", file, e.getMessage());
     }
