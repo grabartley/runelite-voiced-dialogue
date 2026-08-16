@@ -25,7 +25,7 @@ Run unit tests and manual tests for the Voiced Dialogue RuneLite plugin.
 java -ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED -jar build/libs/voicedDialogue-*-all.jar --developer-mode --debug
 ```
 
-The plugin voices dialogue through a cloud provider (Google AI Studio by default, or OpenRouter), so manual audio testing needs that provider's API key set in the plugin config. There is no engine download or bundled model: the client stays silent until a key is supplied. A Google AI Studio key needs billing enabled; its free tier allows only a handful of speech requests per day.
+The plugin voices dialogue through a cloud provider (Google AI Studio, recommended, or OpenRouter), so manual audio testing needs that provider's API key set in the plugin config. There is no engine download or bundled model: the client stays silent until a key is supplied. A Google AI Studio key needs billing enabled; its free tier allows only a handful of speech requests per day.
 
 ## Test Types
 

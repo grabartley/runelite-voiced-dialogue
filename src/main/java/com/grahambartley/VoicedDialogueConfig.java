@@ -44,11 +44,13 @@ public interface VoicedDialogueConfig extends Config {
   /**
    * The cloud service dialogue is synthesized through. Both providers voice through the same Gemini
    * TTS model, so voices, emotion, and character profiles sound the same; they differ in who bills
-   * the call, which API key is used, and how quickly audio starts. {@link #OPENROUTER} (the
-   * default) uses the OpenRouter key and returns nothing until the whole clip exists, so a long
-   * line waits out its full generation before it can be heard; {@link #GOOGLE_AI_STUDIO} sends
-   * requests directly to Google with a Gemini API key and streams audio back as it is generated, so
-   * a line starts speaking in about a second whatever its length.
+   * the call, which API key is used, and how quickly audio starts. {@link #GOOGLE_AI_STUDIO} is the
+   * recommended one: it sends requests directly to Google with a Gemini API key and streams audio
+   * back as it is generated, so a line starts speaking in about a second whatever its length.
+   * {@link #OPENROUTER} uses the OpenRouter key and has no streaming support, returning nothing
+   * until the whole clip exists, so a long line waits out its full generation before it can be
+   * heard. It stays the value this setting falls back to, so a player who has never chosen keeps
+   * the provider they already hold a key for.
    */
   enum TtsProvider {
     OPENROUTER("OpenRouter"),

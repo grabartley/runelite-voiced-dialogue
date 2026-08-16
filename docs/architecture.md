@@ -2,8 +2,8 @@
 
 Every dialogue line is voiced through a single pipeline: a cloud speech call implemented by the
 `SynthesisBackend` that `BackendProvider` supplies. Two backends exist, one per **Voice Provider**
-setting: OpenRouter (`OpenRouterTtsBackend`, the default) and Google AI Studio
-(`GeminiAiStudioTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
+setting: Google AI Studio (`GeminiAiStudioTtsBackend`, the recommended provider) and OpenRouter
+(`OpenRouterTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
 every call, so switching takes effect on the next line with no restart, and also applies the
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
 A line the pipeline cannot voice (for example when the active provider's API key is not set) is

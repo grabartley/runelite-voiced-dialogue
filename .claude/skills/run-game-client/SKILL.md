@@ -36,7 +36,7 @@ Keep `credentials.properties` private, and delete it (or use "End sessions" on t
 
 ## Hearing Audio (provider API key)
 
-The plugin voices dialogue through a cloud provider (Google AI Studio by default, or OpenRouter) and does nothing until that provider's API key is set. There is no engine download, no bundled model, no Docker container, and no `localhost` port: the client stays silent until you supply a key.
+The plugin voices dialogue through a cloud provider (Google AI Studio, recommended, or OpenRouter) and does nothing until that provider's API key is set. There is no engine download, no bundled model, no Docker container, and no `localhost` port: the client stays silent until you supply a key.
 
 To hear anything, open the Voiced Dialogue plugin config in the running client and paste the key for the selected **Voice Provider** into its API key field. Once the key is set, talk to an NPC and the line is synthesized in the cloud and played back locally.
 

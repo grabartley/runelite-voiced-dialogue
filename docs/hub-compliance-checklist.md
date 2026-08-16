@@ -6,7 +6,7 @@ requirements the Hub review is strictest about: outbound network access, third-p
 usage, user-provided secrets, bundled binaries, and user consent. The compliance story is
 **Cloud-only, no subprocess, no bundled binaries**: the plugin voices dialogue solely through
 outbound HTTPS to the configured provider (`generativelanguage.googleapis.com` for Google AI
-Studio, the default, or `openrouter.ai`), spawns no external process, and ships no engine,
+Studio, or `openrouter.ai`), spawns no external process, and ships no engine,
 native library, or model.
 
 This is the verification record. The step-by-step submission flow lives in
