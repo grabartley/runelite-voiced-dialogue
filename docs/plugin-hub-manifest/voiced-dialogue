@@ -1,4 +1,4 @@
 repository=https://github.com/grabartley/runelite-voiced-dialogue.git
 commit=REPLACE_WITH_40_CHAR_RELEASE_COMMIT_SHA
 authors=grabartley
-warning=This plugin sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not controlled or verified by the RuneLite developers) over HTTPS, using your API key, to synthesize speech.
+warning=This plugin sends the NPC and player dialogue text it voices to your chosen provider, Google AI Studio or OpenRouter (third-party services not controlled or verified by the RuneLite developers), over HTTPS, using your API key, to synthesize speech.

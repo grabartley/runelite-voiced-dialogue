@@ -1,6 +1,7 @@
 package com.grahambartley.synthesis;
 
 import static com.grahambartley.synthesis.OpenRouterTtsBackend.HTTP_TOO_MANY_REQUESTS;
+import static com.grahambartley.synthesis.OpenRouterTtsBackend.WARM_UP_CONNECTIONS;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PAYMENT_REQUIRED;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import okhttp3.OkHttpClient;
@@ -121,9 +123,8 @@ public class OpenRouterTtsBackendTest {
    * Millisecond timeout + backoff so the network-timeout retry path runs without multi-second
    * waits.
    */
-  private static final OpenRouterTtsBackend.RetryTuning FAST_RETRY =
-      new OpenRouterTtsBackend.RetryTuning(
-          Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofSeconds(1), 10, 0);
+  private static final RetryTuning FAST_RETRY =
+      new RetryTuning(Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofSeconds(1), 10, 0);
 
   private OpenRouterTtsBackend backend(TestConfig config) {
     // Point the backend at the mock server while keeping the real header/body/decode/error logic.
@@ -131,8 +132,7 @@ public class OpenRouterTtsBackendTest {
         client, config, gson, server.url("/api/v1/audio/speech").toString());
   }
 
-  private OpenRouterTtsBackend backendWith(
-      TestConfig config, OpenRouterTtsBackend.RetryTuning tuning) {
+  private OpenRouterTtsBackend backendWith(TestConfig config, RetryTuning tuning) {
     return new OpenRouterTtsBackend(
         client, config, gson, server.url("/api/v1/audio/speech").toString(), tuning);
   }
@@ -1290,5 +1290,130 @@ public class OpenRouterTtsBackendTest {
 
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
     assertEquals("the failure surfaces one notice", 1, notices[0]);
+  }
+
+  @Test
+  public void callBudgetGrowsWithTheLineLength() {
+    OpenRouterTtsBackend backend = backend(new TestConfig());
+
+    Duration shortLine = backend.callBudgetFor(20);
+    Duration longLine = backend.callBudgetFor(600);
+
+    assertTrue(
+        "a long line gets more time than a short one, because OpenRouter withholds audio until the"
+            + " whole clip is generated",
+        longLine.compareTo(shortLine) > 0);
+    assertTrue(
+        "a short line still fails fast rather than inheriting a long line's budget",
+        shortLine.compareTo(Duration.ofSeconds(30)) < 0);
+    assertTrue(
+        "a 600 character line clears the ~23s it needs in practice",
+        longLine.compareTo(Duration.ofSeconds(30)) > 0);
+  }
+
+  @Test
+  public void callBudgetIsClampedToTheClientCeiling() {
+    OpenRouterTtsBackend backend = backendWith(new TestConfig(), FAST_RETRY);
+
+    assertEquals(
+        "an uncapped line cannot exceed the configured ceiling",
+        FAST_RETRY.callTimeout,
+        backend.callBudgetFor(100_000));
+  }
+
+  @Test
+  public void callBudgetTreatsANegativeLengthAsEmpty() {
+    OpenRouterTtsBackend backend = backend(new TestConfig());
+
+    assertEquals(backend.callBudgetFor(0), backend.callBudgetFor(-1));
+  }
+
+  /** Warm-up requests the server received, in arrival order, captured by {@link #warmedBackend}. */
+  private final List<RecordedRequest> warmUpRequests = new ArrayList<>();
+
+  /**
+   * Warms a backend and blocks until every warm-up request has been received and its connection is
+   * free for the next line to reuse. Warm-up is asynchronous on both counts: a connection joins the
+   * pool before the server finishes recording its request, and stays checked out until its response
+   * body is drained, so waiting on either signal alone leaves a race.
+   */
+  private OpenRouterTtsBackend warmedBackend(TestConfig config) throws Exception {
+    for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
+      server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("{}"));
+    }
+    OpenRouterTtsBackend backend = backend(config);
+    backend.warmUp();
+    warmUpRequests.clear();
+    for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
+      RecordedRequest received = server.takeRequest(10, TimeUnit.SECONDS);
+      assertNotNull("a warm-up request never reached the server", received);
+      warmUpRequests.add(received);
+    }
+    long deadline = System.currentTimeMillis() + 10_000;
+    while (backend.idlePooledConnectionCount() < WARM_UP_CONNECTIONS
+        && System.currentTimeMillis() < deadline) {
+      Thread.sleep(10);
+    }
+    return backend;
+  }
+
+  @Test
+  public void warmUpOpensOneConnectionPerWarmUpSlotAgainstTheKeyEndpoint() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+
+    OpenRouterTtsBackend backend = warmedBackend(config);
+
+    assertEquals(
+        "warm-up opens a connection per slot",
+        WARM_UP_CONNECTIONS,
+        backend.pooledConnectionCount());
+    for (RecordedRequest warmUp : warmUpRequests) {
+      assertEquals(
+          "warm-up hits the key endpoint, never the billable one", "/api/v1/key", warmUp.getPath());
+      assertEquals("GET", warmUp.getMethod());
+      assertEquals("Bearer sk-or-abc", warmUp.getHeader("Authorization"));
+      assertEquals("each warm-up call opens its own connection", 0, warmUp.getSequenceNumber());
+    }
+  }
+
+  @Test
+  public void warmedConnectionIsReusedByTheNextSpokenLine() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    OpenRouterTtsBackend backend = warmedBackend(config);
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {0, 16384, -16384, 0}))));
+
+    assertNotNull("the warmed backend still synthesizes normally", backend.synthesize(req()));
+
+    RecordedRequest speech = server.takeRequest();
+    assertEquals("/api/v1/audio/speech", speech.getPath());
+    assertTrue(
+        "the spoken line reuses a warmed connection instead of handshaking",
+        speech.getSequenceNumber() > 0);
+  }
+
+  @Test
+  public void warmUpWithoutAnApiKeyIssuesNoRequest() {
+    OpenRouterTtsBackend backend = backend(new TestConfig());
+
+    backend.warmUp();
+
+    assertEquals("an unavailable backend is never warmed", 0, server.getRequestCount());
+  }
+
+  @Test
+  public void warmUpIsANoOpWhileTheConnectionPoolIsAlreadyWarm() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    OpenRouterTtsBackend backend = warmedBackend(config);
+
+    backend.warmUp();
+
+    assertEquals(
+        "re-warming a warm pool spends nothing", WARM_UP_CONNECTIONS, server.getRequestCount());
   }
 }

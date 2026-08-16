@@ -5,8 +5,9 @@ Pre-submission audit of **Voiced Dialogue** (internal name `voiced-dialogue`) ag
 requirements the Hub review is strictest about: outbound network access, third-party API
 usage, user-provided secrets, bundled binaries, and user consent. The compliance story is
 **Cloud-only, no subprocess, no bundled binaries**: the plugin voices dialogue solely through
-outbound HTTPS to `openrouter.ai`, spawns no external process, and ships no engine, native
-library, or model.
+outbound HTTPS to the configured provider (`generativelanguage.googleapis.com` for Google AI
+Studio, or `openrouter.ai`), spawns no external process, and ships no engine,
+native library, or model.
 
 This is the verification record. The step-by-step submission flow lives in
 [`hub-submission.md`](hub-submission.md).
@@ -49,15 +50,17 @@ The cloud retry backoff waits on a delayed `CompletableFuture` joined to complet
 a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which needs no
 `InterruptedException` handling and never re-raises the interrupt flag).
 
-### API key is a secret, never logged, sent only to OpenRouter
+### API keys are secrets, never logged, sent only to their own provider
 
 **Verified.**
 
-- Stored via the RuneLite config item `openRouterApiKey` declared `secret = true`
-  (`VoicedDialogueConfig.java`), so RuneLite masks it in the UI and config store.
-- Read only to build the OpenRouter request `Authorization: Bearer <key>` header in
-  `OpenRouterTtsBackend` and `OpenRouterTranslator`. Sent to no host other than
-  `openrouter.ai`.
+- Stored via the RuneLite config items `openRouterApiKey` and `googleAiStudioApiKey`, both
+  declared `secret = true` (`VoicedDialogueConfig.java`), so RuneLite masks them in the UI and
+  config store.
+- Each key is read only to authenticate its own provider: the `Authorization: Bearer <key>`
+  header in `OpenRouterTtsBackend` and `OpenRouterTranslator`, and the `x-goog-api-key` header
+  in `GeminiAiStudioTtsBackend` and `GeminiAiStudioTranslator`. Neither key is ever sent to the
+  other provider's host.
 - Never logged: error logs record HTTP status, content-type, generation id, and a body
   snippet, never the key or the `Authorization` header. No `log.*` statement references the
   key.
@@ -68,20 +71,20 @@ a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which
 **Verified.** That dialogue text leaves the machine is disclosed in multiple places:
 
 - First-run onboarding chat notice (`ChatNoticeManager`): "...Your dialogue text is then sent
-  to OpenRouter to be voiced. Until a key is set, lines stay silent."
-- General section header (`VoicedDialogueConfig`): "...Text is sent to OpenRouter."
+  to that provider to be voiced. Until a key is set, lines stay silent."
+- The **Voice Provider** setting names the service that receives the text and bills the calls.
 - The Hub listing itself carries the off-machine-data `warning=` in the descriptor (see
   [`hub-submission.md`](hub-submission.md) and
   [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)).
 
 ### Graceful behaviour when outbound network is blocked or the key is invalid
 
-**Verified by code audit** (manual QA still required, see below). The OpenRouter backend
+**Verified by code audit** (manual QA still required, see below). Each backend
 gates on `isAvailable()` (false when no key) and wraps every request in try/catch: non-2xx
 responses, empty/undecodable/truncated audio, `IOException`, and unexpected
 `RuntimeException` all return `null` after a one-time chat notice. A `null` synthesis result
 leaves the single line unvoiced; nothing is thrown to the game thread. With no key set, the
-line stays silent with a one-time "add your OpenRouter API key" notice.
+line stays silent with a one-time "add your API key" notice naming the selected provider.
 
 ### No secrets or large binaries in the built jar
 

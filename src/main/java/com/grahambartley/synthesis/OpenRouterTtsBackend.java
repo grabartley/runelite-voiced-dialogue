@@ -21,6 +21,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.ConnectionPool;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -59,7 +61,16 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /** Stable backend id, folded into the synthesis cache key. */
   public static final String ID = "cloud-openrouter";
 
-  private static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/audio/speech";
+  private static final String API_BASE = "https://openrouter.ai/api/v1";
+  private static final String SPEECH_PATH = "/audio/speech";
+  private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
+
+  /**
+   * Cheapest authenticated endpoint OpenRouter exposes: a warm-up costs a key lookup, not audio.
+   */
+  private static final String KEY_PATH = "/key";
+
+  private static final String PRODUCTION_ENDPOINT = API_BASE + SPEECH_PATH;
   private static final String USER_AGENT = "runelite-voiced-dialogue";
 
   /** OpenRouter app-attribution headers, shown as the app name/URL in its usage dashboard. */
@@ -70,35 +81,59 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   /**
-   * Per-call ceiling so a hung cloud request cannot pin a synthesis-pool worker indefinitely. A
-   * line that does not return within this window is abandoned (left unvoiced). Sized comfortably
-   * above {@link #READ_TIMEOUT} so the per-read budget is actually reachable (it caps connect plus
-   * the full streamed read, not a single read), giving a slow-but-valid gemini-tts generation room
-   * to land instead of being killed early (#196).
+   * Floor of a line's call budget, covering connect, the model's own start-up cost, and a short
+   * line's generation.
    */
-  private static final Duration CALL_TIMEOUT = Duration.ofSeconds(30);
-
-  /** TCP/TLS handshake budget. Short: a slow connect should fail the line fast rather than hang. */
-  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
+  private static final Duration CALL_BUDGET_BASE = Duration.ofSeconds(15);
 
   /**
-   * Per-read budget, generous enough for the model's prefill while staying under the call timeout.
+   * Extra budget per character of input. OpenRouter delivers nothing until generation finishes, so
+   * a line's wait grows with its length: measured at roughly 37ms per character, doubled here so a
+   * slow-but-valid generation still lands. A line stays bounded by the provider's ceiling in {@link
+   * RetryTuning}, so an uncapped {@code cloudMaxChars} cannot hold a worker forever.
    */
-  private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
-
-  /** Base spacing before a backed-off retry of a transient network failure; doubled per attempt. */
-  private static final long NETWORK_RETRY_BASE_MILLIS = 400;
-
-  /**
-   * Upper bound of the random jitter added to the backoff so concurrent lines do not retry in
-   * lockstep.
-   */
-  private static final long NETWORK_RETRY_JITTER_MILLIS = 250;
+  private static final long CALL_BUDGET_MILLIS_PER_CHAR = 75;
 
   /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
 
-  private static final Duration KEEP_ALIVE = Duration.ofMinutes(5);
+  /**
+   * How long an idle connection is kept. Long enough to span the travel between quest steps, so a
+   * conversation that follows a quiet stretch still starts warm; OpenRouter holds its side of an
+   * idle connection well past this, so the client is the binding constraint.
+   */
+  private static final Duration KEEP_ALIVE = Duration.ofMinutes(15);
+
+  /**
+   * Connections opened by a warm-up. Two, because HTTP/1.1 cannot multiplex: a live line dispatched
+   * while a prefetch is in flight needs a second pooled connection or it pays its own handshake.
+   */
+  static final int WARM_UP_CONNECTIONS = 2;
+
+  /**
+   * Drains and closes a warm-up response so its connection returns to the pool rather than being
+   * discarded, which is the entire point of the call. Failures are not the player's problem: the
+   * next line simply pays its own handshake.
+   */
+  private static final Callback WARM_UP_CALLBACK =
+      new Callback() {
+        @Override
+        public void onFailure(Call call, IOException e) {
+          log.debug("[TTS cloud] OpenRouter warm-up failed: {}", e.getMessage());
+        }
+
+        @Override
+        public void onResponse(Call call, Response response) {
+          try (ResponseBody body = response.body()) {
+            if (body != null) {
+              body.bytes();
+            }
+            log.debug("[TTS cloud] OpenRouter warm-up HTTP {}", response.code());
+          } catch (IOException e) {
+            log.debug("[TTS cloud] OpenRouter warm-up body read failed: {}", e.getMessage());
+          }
+        }
+      };
 
   /**
    * One speech call plus a single retry, for a transient empty 200 body, a truncated line, or a
@@ -145,6 +180,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
+  private final String warmUpEndpoint;
   private final TtsModelStrategy model = new GeminiTtsModel();
   private final OpenRouterTranslator translator;
 
@@ -156,6 +192,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private final Map<String, Integer> prefixHashes = new ConcurrentHashMap<>();
 
   private final RateLimitBackoff backoff = new RateLimitBackoff();
+
+  /** Ceiling every per-line call budget is clamped to; overridable in tests. */
+  private final Duration callTimeout;
 
   /** Backoff budget for the network-timeout retry; overridable in tests to run in milliseconds. */
   private final long networkRetryBaseMillis;
@@ -178,7 +217,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   OpenRouterTtsBackend(
       OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
-    this(httpClient, config, gson, endpoint, RetryTuning.defaults());
+    this(httpClient, config, gson, endpoint, RetryTuning.openRouter());
   }
 
   /**
@@ -213,19 +252,27 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             .callTimeout(tuning.callTimeout)
             .retryOnConnectionFailure(true)
             .build();
+    this.callTimeout = tuning.callTimeout;
     this.networkRetryBaseMillis = tuning.retryBackoffBaseMillis;
     this.networkRetryJitterMillis = tuning.retryJitterMillis;
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
+    this.warmUpEndpoint = siblingEndpoint(endpoint, KEY_PATH);
     // The translation hop shares the same keepalive client. Its chat-completions endpoint is the
     // sibling of the speech endpoint, so a test pointing speech at a mock server points translation
     // at the same server without extra wiring.
-    String translatorEndpoint =
-        endpoint.contains("/audio/speech")
-            ? endpoint.replace("/audio/speech", "/chat/completions")
-            : OpenRouterTranslator.PRODUCTION_ENDPOINT;
-    this.translator = new OpenRouterTranslator(this.httpClient, config, gson, translatorEndpoint);
+    this.translator =
+        new OpenRouterTranslator(
+            this.httpClient, config, gson, siblingEndpoint(endpoint, CHAT_COMPLETIONS_PATH));
+  }
+
+  /**
+   * The endpoint sharing this one's host and API root, so a test pointing speech at a mock server
+   * reaches the mock's siblings too, while production resolves against the live API base.
+   */
+  private static String siblingEndpoint(String endpoint, String path) {
+    return endpoint.contains(SPEECH_PATH) ? endpoint.replace(SPEECH_PATH, path) : API_BASE + path;
   }
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
@@ -251,6 +298,64 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   @Override
   public EnumSet<Emotion> supportedEmotions() {
     return model.supportedEmotions();
+  }
+
+  /**
+   * Opens {@link #WARM_UP_CONNECTIONS} pooled connections against the key endpoint, so a spoken
+   * line does not pay the TCP/TLS handshake itself. A no-op while the pool already holds a
+   * connection, which makes it safe to call whenever a conversation starts: it only spends when the
+   * pool is genuinely cold, either at session start or after the keep-alive evicted it. The calls
+   * are issued concurrently because sequential ones would reuse the first connection and leave the
+   * second cold, and asynchronously so no caller waits on the handshake.
+   */
+  @Override
+  public void warmUp() {
+    if (!isAvailable() || pooledConnectionCount() > 0) {
+      return;
+    }
+    Request request =
+        new Request.Builder()
+            .url(warmUpEndpoint)
+            .addHeader("Authorization", "Bearer " + config.openRouterApiKey().trim())
+            .addHeader("User-Agent", USER_AGENT)
+            .get()
+            .build();
+    for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
+      httpClient.newCall(request).enqueue(WARM_UP_CALLBACK);
+    }
+  }
+
+  /** Connections this backend currently holds, so a test can await an asynchronous warm-up. */
+  int pooledConnectionCount() {
+    return httpClient.connectionPool().connectionCount();
+  }
+
+  /**
+   * Connections free for the next line to reuse. A warm-up connection is counted by {@link
+   * #pooledConnectionCount()} from the moment it is established, but only becomes reusable once its
+   * response body has been drained and released, so a test that needs a genuinely warm pool waits
+   * on this instead.
+   */
+  int idlePooledConnectionCount() {
+    return httpClient.connectionPool().idleConnectionCount();
+  }
+
+  /**
+   * How long this line is allowed to take, growing with its length because OpenRouter withholds the
+   * audio until the whole clip exists. Clamped to the client's ceiling so a short line still fails
+   * fast rather than inheriting the budget a very long one would need.
+   */
+  Duration callBudgetFor(int inputLength) {
+    Duration scaled =
+        CALL_BUDGET_BASE.plusMillis(Math.max(0, inputLength) * CALL_BUDGET_MILLIS_PER_CHAR);
+    return scaled.compareTo(callTimeout) > 0 ? callTimeout : scaled;
+  }
+
+  /** Issues the call under this line's own budget rather than the client-wide ceiling. */
+  private Call newBudgetedCall(Request httpRequest, int inputLength) {
+    Call call = httpClient.newCall(httpRequest);
+    call.timeout().timeout(callBudgetFor(inputLength).toMillis(), TimeUnit.MILLISECONDS);
+    return call;
   }
 
   @Override
@@ -450,7 +555,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // logs (#162, #196).
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
       long attemptStart = System.nanoTime();
-      try (Response response = httpClient.newCall(httpRequest).execute()) {
+      try (Response response = newBudgetedCall(httpRequest, inputLen).execute()) {
         ResponseBody body = response.body();
         // Read the bytes once; on any failure they are the diagnostic payload (an OpenRouter/Gemini
         // error is usually returned as a JSON/text body, sometimes even with HTTP 200), so
@@ -625,7 +730,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       long attemptStart = System.nanoTime();
       boolean fedSink = false;
       long firstChunkMs = -1;
-      try (Response response = httpClient.newCall(httpRequest).execute()) {
+      try (Response response = newBudgetedCall(httpRequest, inputLen).execute()) {
         String contentType = headerOrEmpty(response, "Content-Type");
         String generationId = headerOrEmpty(response, "X-Generation-Id");
         if (!response.isSuccessful()) {
@@ -984,33 +1089,4 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * construct one with millisecond budgets so the network-timeout retry path can be exercised
    * without multi-second waits.
    */
-  static final class RetryTuning {
-    final Duration connectTimeout;
-    final Duration readTimeout;
-    final Duration callTimeout;
-    final long retryBackoffBaseMillis;
-    final long retryJitterMillis;
-
-    RetryTuning(
-        Duration connectTimeout,
-        Duration readTimeout,
-        Duration callTimeout,
-        long retryBackoffBaseMillis,
-        long retryJitterMillis) {
-      this.connectTimeout = connectTimeout;
-      this.readTimeout = readTimeout;
-      this.callTimeout = callTimeout;
-      this.retryBackoffBaseMillis = retryBackoffBaseMillis;
-      this.retryJitterMillis = retryJitterMillis;
-    }
-
-    static RetryTuning defaults() {
-      return new RetryTuning(
-          CONNECT_TIMEOUT,
-          READ_TIMEOUT,
-          CALL_TIMEOUT,
-          NETWORK_RETRY_BASE_MILLIS,
-          NETWORK_RETRY_JITTER_MILLIS);
-    }
-  }
 }

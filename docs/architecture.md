@@ -2,8 +2,8 @@
 
 Every dialogue line is voiced through a single pipeline: a cloud speech call implemented by the
 `SynthesisBackend` that `BackendProvider` supplies. Two backends exist, one per **Voice Provider**
-setting: OpenRouter (`OpenRouterTtsBackend`, the default) and Google AI Studio
-(`GeminiAiStudioTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
+setting: Google AI Studio (`GeminiAiStudioTtsBackend`, the recommended provider) and OpenRouter
+(`OpenRouterTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
 every call, so switching takes effect on the next line with no restart, and also applies the
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
 A line the pipeline cannot voice (for example when the active provider's API key is not set) is
@@ -76,23 +76,35 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   cases.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
-- **Timeout and stale-drop.** Cloud calls carry a 30-second `callTimeout` (sized above the 15-second
-  `readTimeout` so the read budget is actually reachable) so a hung request cannot pin a
-  synthesis-pool worker, and the pipeline's epoch check drops any response that arrives after the
-  dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
+- **Timeout and stale-drop.** Each provider runs under its own ceiling (`RetryTuning`), sized to how
+  it delivers audio: 60 seconds for Google AI Studio, whose longest measured line completes in about
+  14 seconds, and 120 seconds for OpenRouter, which spends a long line's whole generation before
+  returning anything and narrows that ceiling per line (see below). A hung request therefore cannot
+  pin a synthesis-pool worker, and the pipeline's epoch check drops any response that arrives after
+  the dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
   sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
   result still caches) does not block the next line: the free worker picks it up.
 - **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter
   `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
   model may ignore it.
 - **Keepalive connection.** The pipeline reuses one long-lived client derived from the injected one
-  (an 8-connection 5-minute keepalive pool, a 2s connect and 15s read budget), so back-to-back lines
+  (an 8-connection 15-minute keepalive pool and a 2s connect budget), so back-to-back lines
   reuse a warm connection instead of re-handshaking. It is pinned to HTTP/1.1: the speech endpoint
   streams raw PCM, and HTTP/2 would multiplex the prefetch pool and the live line onto one
   connection where a concurrent streamed body can return truncated as an empty 200, so each
   concurrent call instead gets its own pooled connection. The same client backs the translation hop.
+- **Connection warm-up.** Both cloud backends implement `warmUp()`, run off the game thread at
+  session start and whenever an API key or provider changes. OpenRouter warms by GETting its
+  unbilled `/api/v1/key` endpoint twice concurrently, leaving two pooled connections, so neither the
+  first spoken line nor a live line racing a prefetch pays a TCP/TLS handshake. It is a no-op while
+  the pool already holds a connection, so re-warming spends nothing.
 - **Empty-200 retry.** A 200 with a zero-byte body is a transient server glitch (the generation id
   is present but no audio came back), so the line is retried once before falling back.
+- **Per-line call budget.** Because OpenRouter withholds audio until a line is fully generated, a
+  line's wait scales with its length, and a fixed read timeout either killed long lines or gave
+  short ones far too long. Each call now gets `CALL_BUDGET_BASE` plus a per-character allowance,
+  clamped to the client's ceiling, and the per-read budget matches that ceiling since the whole
+  wait arrives as a single read.
 - **Timeout retry.** A read/call timeout (a slow generation or a transient network blip) is retried
   once after a short exponential backoff with jitter, rather than dropping the line on the first
   failure. A connect-phase failure (host unreachable) and any non-2xx fail the line without a retry.
@@ -141,8 +153,11 @@ style for that class, or both is what turns the hop on.
 With **Stream Playback** on (the default), a cache-missed live line plays as it downloads: the
 backend's `synthesizeStreaming` decodes the response incrementally and feeds each chunk to the
 player through a `PcmSink`, so audio starts on the first decoded chunk instead of after the whole
-body. On OpenRouter that reads the raw PCM body per network read; on Google AI Studio it decodes
-each SSE audio event. The whole line is still accumulated and cached on a clean finish, an
+body. On Google AI Studio that decodes each SSE audio event as it arrives, and audio starts after
+roughly 0.8s whatever the line's length. OpenRouter reads the raw PCM body per network read, but
+sends nothing until the whole clip is generated, so its first chunk only lands once the line is
+finished and the wait grows with the line's length: measured at ~1.7s for a 20-character line and
+~15s for a 400-character one. Streaming therefore only shortens time-to-sound on AI Studio. The whole line is still accumulated and cached on a clean finish, an
 interrupted or incomplete stream plays what arrived but is never cached, and debug mode logs
 `firstChunkMs` (time to first audible chunk) alongside the full elapsed time so the real streaming
 gain per provider is measurable. Prefetch and cave-echo lines always buffer.

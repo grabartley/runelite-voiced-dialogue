@@ -1,6 +1,12 @@
 package com.grahambartley;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.grahambartley.synthesis.BackendProvider;
 import com.grahambartley.synthesis.Emotion;
@@ -11,6 +17,7 @@ import com.grahambartley.tts.Pcm;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import org.junit.Test;
 
@@ -18,7 +25,11 @@ import org.junit.Test;
  * Verifies the plugin's runtime warm-up orchestration (#75): a {@link ConfigChanged} for the plugin
  * group and a backend-affecting key (entering an OpenRouter key) re-runs the backend's off-thread
  * warm-up exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing.
- * The pure decision behind the trigger lives in {@link BackendWarmUpPolicy}.
+ * The pure decision behind the trigger lives in {@code BackendWarmUpPolicy}.
+ *
+ * <p>Also covers the startup pin that records an established OpenRouter player's reliance on that
+ * provider, so a shipped provider they hold no key for is never voiced through; the decision itself
+ * lives in {@code ProviderDefaultPolicy}.
  */
 public class VoicedDialoguePluginTest {
 
@@ -61,7 +72,67 @@ public class VoicedDialoguePluginTest {
     plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
   }
 
+  @Test
+  public void playerWithAnOpenRouterKeyIsPinnedToOpenRouter() throws Exception {
+    ConfigManager configManager = mock(ConfigManager.class);
+    when(configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY))
+        .thenReturn(null);
+    VoicedDialoguePlugin plugin = pluginWith(configManager, "sk-or-abc");
+
+    plugin.pinProviderForExistingOpenRouterPlayers();
+
+    verify(configManager)
+        .setConfiguration(
+            VoicedDialogueConfig.GROUP,
+            VoicedDialogueConfig.PROVIDER_KEY,
+            VoicedDialogueConfig.TtsProvider.OPENROUTER);
+  }
+
+  @Test
+  public void playerWithNoOpenRouterKeyIsLeftOnTheShippedProvider() throws Exception {
+    ConfigManager configManager = mock(ConfigManager.class);
+    when(configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY))
+        .thenReturn(null);
+    VoicedDialoguePlugin plugin = pluginWith(configManager, "");
+
+    plugin.pinProviderForExistingOpenRouterPlayers();
+
+    verify(configManager, never()).setConfiguration(anyString(), anyString(), any());
+  }
+
+  @Test
+  public void anExplicitProviderChoiceIsNeverRewritten() throws Exception {
+    ConfigManager configManager = mock(ConfigManager.class);
+    when(configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY))
+        .thenReturn(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO.name());
+    VoicedDialoguePlugin plugin = pluginWith(configManager, "sk-or-abc");
+
+    plugin.pinProviderForExistingOpenRouterPlayers();
+
+    verify(configManager, never()).setConfiguration(anyString(), anyString(), any());
+  }
+
   // --- helpers -------------------------------------------------------------
+
+  /** Plugin wired with just the config manager and OpenRouter key the pin decision reads. */
+  private static VoicedDialoguePlugin pluginWith(ConfigManager configManager, String openRouterKey)
+      throws Exception {
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "configManager", configManager);
+    setField(
+        plugin,
+        "config",
+        new VoicedDialogueConfig() {
+          @Override
+          public String openRouterApiKey() {
+            return openRouterKey;
+          }
+        });
+    return plugin;
+  }
 
   private static ConfigChanged configChanged(String group, String key) {
     ConfigChanged event = new ConfigChanged();

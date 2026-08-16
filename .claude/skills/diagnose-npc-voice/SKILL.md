@@ -12,7 +12,7 @@ Find the root cause from the runtime logs, then fix at the source via the
 
 Launch with the `run-game-client` skill (it runs with `--debug` and logs to
 `/tmp/tts-client.log`), turn **Debug Mode** on in the plugin config, set an
-OpenRouter API key so dialogue is voiced, and reproduce the line. Then read the
+API key for the selected provider so dialogue is voiced, and reproduce the line. Then read the
 trace lines the plugin emits per line:
 
 ```
@@ -33,7 +33,7 @@ trace lines the plugin emits per line:
 | Wrong gender | wiki has no gender, a mixed-gender **switch infobox** (per-version), or a wiki error | `overrides.json` `gender`; the generator pairs gender per version, a wiki gap still needs an override |
 | Two different ids for one NPC across the two trace lines | transformed multiloc NPC: **active id** (`NPC#getId`) vs base composition id; the table is keyed by the active id | n/a (expected); use the active id when pinning |
 | Foreign accent (Italian/Egyptian/West African/Japanese) doesn't land | **Gemini model limitation**, it does British/European accents well, others inconsistently | not promptable; map to a renderable accent or accept |
-| Line is silent | cloud returned a non-PCM body (rate-limit/quota/error) | check `[TTS cloud] ... response: HTTP ... contentType=... body snippet`; it's the OpenRouter robustness path |
+| Line is silent | cloud returned a non-PCM body (rate-limit/quota/error) | check `[TTS cloud] ... response: HTTP ... contentType=... body snippet`; it's the cloud robustness path. On Google AI Studio an HTTP 429 usually means the free tier's daily speech quota, so billing is the fix |
 
 ## Key facts to remember
 

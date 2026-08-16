@@ -17,6 +17,7 @@ import com.grahambartley.synthesis.BackendWarmUpPolicy;
 import com.grahambartley.synthesis.GeminiAiStudioTtsBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import com.grahambartley.synthesis.ProfanityFilter;
+import com.grahambartley.synthesis.ProviderDefaultPolicy;
 import com.grahambartley.synthesis.SynthesisDispatcher;
 import com.grahambartley.tts.CaveEchoPolicy;
 import com.grahambartley.tts.DialogueAudioService;
@@ -91,6 +92,7 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Override
   protected void startUp() {
+    pinProviderForExistingOpenRouterPlayers();
     VoiceManager voiceManager = new VoiceManager(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
@@ -233,6 +235,25 @@ public class VoicedDialoguePlugin extends Plugin {
       return;
     }
     synthesisDispatcher.speakPublicChat(cleaned);
+  }
+
+  /**
+   * Makes a player's reliance on OpenRouter explicit in config, so a shipped provider they hold no
+   * key for is never voiced through. Runs once per profile: after this the choice is recorded, so
+   * {@link ProviderDefaultPolicy} declines to touch it again.
+   */
+  void pinProviderForExistingOpenRouterPlayers() {
+    String stored =
+        configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY);
+    if (!ProviderDefaultPolicy.shouldPinToOpenRouter(stored, config.openRouterApiKey())) {
+      return;
+    }
+    configManager.setConfiguration(
+        VoicedDialogueConfig.GROUP,
+        VoicedDialogueConfig.PROVIDER_KEY,
+        VoicedDialogueConfig.TtsProvider.OPENROUTER);
+    log.info("Pinned this profile to OpenRouter, the provider it holds a key for");
   }
 
   /**

@@ -34,11 +34,13 @@ To write or refresh the credentials (requires RuneLite launcher 2.6.3+):
 
 Keep `credentials.properties` private, and delete it (or use "End sessions" on the account site) to return the client to normal.
 
-## Hearing Audio (OpenRouter API key)
+## Hearing Audio (provider API key)
 
-The plugin voices dialogue through OpenRouter (cloud) and does nothing until an OpenRouter API key is set. There is no engine download, no bundled model, no Docker container, and no `localhost` port: the client stays silent until you supply a key.
+The plugin voices dialogue through a cloud provider (Google AI Studio, recommended, or OpenRouter) and does nothing until that provider's API key is set. There is no engine download, no bundled model, no Docker container, and no `localhost` port: the client stays silent until you supply a key.
 
-To hear anything, open the Voiced Dialogue plugin config in the running client and paste your OpenRouter API key into the API key field. Once the key is set, talk to an NPC and the line is synthesized in the cloud and played back locally.
+To hear anything, open the Voiced Dialogue plugin config in the running client and paste the key for the selected **Voice Provider** into its API key field. Once the key is set, talk to an NPC and the line is synthesized in the cloud and played back locally.
+
+Google AI Studio needs billing enabled on the key's project; its free tier allows only a handful of speech requests per day, which is not enough to test with.
 
 ## Testing Flow
 
