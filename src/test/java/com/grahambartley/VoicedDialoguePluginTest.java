@@ -27,9 +27,9 @@ import org.junit.Test;
  * warm-up exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing.
  * The pure decision behind the trigger lives in {@code BackendWarmUpPolicy}.
  *
- * <p>Also covers the startup pin that keeps an established OpenRouter player on OpenRouter now that
- * Google AI Studio is the shipped provider; the decision itself lives in {@code
- * ProviderDefaultPolicy}.
+ * <p>Also covers the startup pin that records an established OpenRouter player's reliance on that
+ * provider, so a shipped provider they hold no key for is never voiced through; the decision itself
+ * lives in {@code ProviderDefaultPolicy}.
  */
 public class VoicedDialoguePluginTest {
 
@@ -73,8 +73,7 @@ public class VoicedDialoguePluginTest {
   }
 
   @Test
-  public void existingOpenRouterPlayerIsPinnedSoTheShippedProviderNeverMovesThem()
-      throws Exception {
+  public void playerWithAnOpenRouterKeyIsPinnedToOpenRouter() throws Exception {
     ConfigManager configManager = mock(ConfigManager.class);
     when(configManager.getConfiguration(
             VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY))
@@ -91,7 +90,7 @@ public class VoicedDialoguePluginTest {
   }
 
   @Test
-  public void freshInstallIsLeftOnTheShippedProvider() throws Exception {
+  public void playerWithNoOpenRouterKeyIsLeftOnTheShippedProvider() throws Exception {
     ConfigManager configManager = mock(ConfigManager.class);
     when(configManager.getConfiguration(
             VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY))

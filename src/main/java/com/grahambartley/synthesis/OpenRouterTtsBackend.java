@@ -331,6 +331,16 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   }
 
   /**
+   * Connections free for the next line to reuse. A warm-up connection is counted by {@link
+   * #pooledConnectionCount()} from the moment it is established, but only becomes reusable once its
+   * response body has been drained and released, so a test that needs a genuinely warm pool waits
+   * on this instead.
+   */
+  int idlePooledConnectionCount() {
+    return httpClient.connectionPool().idleConnectionCount();
+  }
+
+  /**
    * How long this line is allowed to take, growing with its length because OpenRouter withholds the
    * audio until the whole clip exists. Clamped to the client's ceiling so a short line still fails
    * fast rather than inheriting the budget a very long one would need.

@@ -238,10 +238,9 @@ public class VoicedDialoguePlugin extends Plugin {
   }
 
   /**
-   * Writes OpenRouter into config for a player who was already voicing dialogue through it, so
-   * recommending Google AI Studio as the shipped default never moves an existing setup onto a
-   * provider it holds no key for. Runs once: after this the choice is explicit, so {@link
-   * ProviderDefaultPolicy} declines to touch it again.
+   * Makes a player's reliance on OpenRouter explicit in config, so a shipped provider they hold no
+   * key for is never voiced through. Runs once per profile: after this the choice is recorded, so
+   * {@link ProviderDefaultPolicy} declines to touch it again.
    */
   void pinProviderForExistingOpenRouterPlayers() {
     String stored =
@@ -254,7 +253,7 @@ public class VoicedDialoguePlugin extends Plugin {
         VoicedDialogueConfig.GROUP,
         VoicedDialogueConfig.PROVIDER_KEY,
         VoicedDialogueConfig.TtsProvider.OPENROUTER);
-    log.info("Kept this profile on OpenRouter; the shipped provider is now Google AI Studio");
+    log.info("Pinned this profile to OpenRouter, the provider it holds a key for");
   }
 
   /**

@@ -1332,10 +1332,10 @@ public class OpenRouterTtsBackendTest {
   private final List<RecordedRequest> warmUpRequests = new ArrayList<>();
 
   /**
-   * Warms a backend and blocks until every warm-up request has actually been received and its
-   * connection pooled. Warm-up is asynchronous, and a connection joins the pool before the server
-   * finishes recording its request, so waiting on the pool alone would let a test observe a request
-   * count that is still climbing.
+   * Warms a backend and blocks until every warm-up request has been received and its connection is
+   * free for the next line to reuse. Warm-up is asynchronous on both counts: a connection joins the
+   * pool before the server finishes recording its request, and stays checked out until its response
+   * body is drained, so waiting on either signal alone leaves a race.
    */
   private OpenRouterTtsBackend warmedBackend(TestConfig config) throws Exception {
     for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
@@ -1350,7 +1350,7 @@ public class OpenRouterTtsBackendTest {
       warmUpRequests.add(received);
     }
     long deadline = System.currentTimeMillis() + 10_000;
-    while (backend.pooledConnectionCount() < WARM_UP_CONNECTIONS
+    while (backend.idlePooledConnectionCount() < WARM_UP_CONNECTIONS
         && System.currentTimeMillis() < deadline) {
       Thread.sleep(10);
     }

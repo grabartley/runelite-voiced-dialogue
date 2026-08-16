@@ -1,18 +1,17 @@
 package com.grahambartley.synthesis;
 
 /**
- * Pure decision for honouring a player's existing provider when the shipped default changes.
+ * Pure decision for keeping a player on the provider they hold a key for.
  *
- * <p>The default provider is now {@link
- * com.grahambartley.VoicedDialogueConfig.TtsProvider#GOOGLE_AI_STUDIO}, because it streams audio
- * while OpenRouter withholds it until a line is fully generated. A player who was already voicing
- * dialogue through OpenRouter must not be moved onto a provider they have no key for, though, and
- * RuneLite stores nothing for a setting left untouched, so an established player and a brand new
- * one look identical in config alone.
+ * <p>The shipped provider is {@link
+ * com.grahambartley.VoicedDialogueConfig.TtsProvider#GOOGLE_AI_STUDIO}, which needs a Gemini API
+ * key. A player carrying only an OpenRouter key would be voiced through a provider they cannot
+ * authenticate against, and RuneLite stores nothing for a setting left untouched, so that player
+ * and one who has never configured anything look identical in config alone.
  *
- * <p>Their OpenRouter key is what tells them apart: it is only ever present because the player put
- * it there. So a player with a key and no explicit provider choice is pinned to OpenRouter once,
- * making the previous default explicit; everyone else gets the new one.
+ * <p>The OpenRouter key is what tells them apart: it is only ever present because the player put it
+ * there. So a player holding one with no explicit provider choice is pinned to OpenRouter, and
+ * everyone else keeps the shipped provider.
  */
 public final class ProviderDefaultPolicy {
 
