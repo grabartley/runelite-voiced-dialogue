@@ -122,9 +122,8 @@ public class OpenRouterTtsBackendTest {
    * Millisecond timeout + backoff so the network-timeout retry path runs without multi-second
    * waits.
    */
-  private static final OpenRouterTtsBackend.RetryTuning FAST_RETRY =
-      new OpenRouterTtsBackend.RetryTuning(
-          Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofSeconds(1), 10, 0);
+  private static final RetryTuning FAST_RETRY =
+      new RetryTuning(Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofSeconds(1), 10, 0);
 
   private OpenRouterTtsBackend backend(TestConfig config) {
     // Point the backend at the mock server while keeping the real header/body/decode/error logic.
@@ -132,8 +131,7 @@ public class OpenRouterTtsBackendTest {
         client, config, gson, server.url("/api/v1/audio/speech").toString());
   }
 
-  private OpenRouterTtsBackend backendWith(
-      TestConfig config, OpenRouterTtsBackend.RetryTuning tuning) {
+  private OpenRouterTtsBackend backendWith(TestConfig config, RetryTuning tuning) {
     return new OpenRouterTtsBackend(
         client, config, gson, server.url("/api/v1/audio/speech").toString(), tuning);
   }

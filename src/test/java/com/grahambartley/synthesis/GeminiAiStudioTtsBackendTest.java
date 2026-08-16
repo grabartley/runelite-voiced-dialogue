@@ -87,7 +87,7 @@ public class GeminiAiStudioTtsBackendTest {
         server
             .url("/v1beta/models/" + GeminiAiStudioTranslator.MODEL + ":generateContent")
             .toString(),
-        new OpenRouterTtsBackend.RetryTuning(
+        new RetryTuning(
             java.time.Duration.ofMillis(500),
             java.time.Duration.ofMillis(500),
             java.time.Duration.ofSeconds(1),

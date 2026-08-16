@@ -81,24 +81,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   /**
-   * Hard ceiling on any one call, so a hung request cannot pin a synthesis-pool worker
-   * indefinitely. The budget an individual line actually gets is {@link #callBudgetFor}, which is
-   * smaller for all but the longest lines.
-   */
-  private static final Duration CALL_TIMEOUT = Duration.ofSeconds(120);
-
-  /** TCP/TLS handshake budget. Short: a slow connect should fail the line fast rather than hang. */
-  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
-
-  /**
-   * Per-read budget. Matched to {@link #CALL_TIMEOUT} rather than set below it: OpenRouter returns
-   * no audio at all until the whole clip is generated, so the entire wait for a line is a single
-   * read, and a shorter per-read budget would kill long lines that were about to succeed. The
-   * per-line call budget is what actually bounds a request.
-   */
-  private static final Duration READ_TIMEOUT = CALL_TIMEOUT;
-
-  /**
    * Floor of a line's call budget, covering connect, the model's own start-up cost, and a short
    * line's generation.
    */
@@ -107,19 +89,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /**
    * Extra budget per character of input. OpenRouter delivers nothing until generation finishes, so
    * a line's wait grows with its length: measured at roughly 37ms per character, doubled here so a
-   * slow-but-valid generation still lands. A line stays bounded by {@link #CALL_TIMEOUT}, so an
-   * uncapped {@code cloudMaxChars} cannot hold a worker forever.
+   * slow-but-valid generation still lands. A line stays bounded by the provider's ceiling in {@link
+   * RetryTuning}, so an uncapped {@code cloudMaxChars} cannot hold a worker forever.
    */
   private static final long CALL_BUDGET_MILLIS_PER_CHAR = 75;
-
-  /** Base spacing before a backed-off retry of a transient network failure; doubled per attempt. */
-  private static final long NETWORK_RETRY_BASE_MILLIS = 400;
-
-  /**
-   * Upper bound of the random jitter added to the backoff so concurrent lines do not retry in
-   * lockstep.
-   */
-  private static final long NETWORK_RETRY_JITTER_MILLIS = 250;
 
   /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
@@ -244,7 +217,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   OpenRouterTtsBackend(
       OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
-    this(httpClient, config, gson, endpoint, RetryTuning.defaults());
+    this(httpClient, config, gson, endpoint, RetryTuning.openRouter());
   }
 
   /**
@@ -1106,33 +1079,4 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * construct one with millisecond budgets so the network-timeout retry path can be exercised
    * without multi-second waits.
    */
-  static final class RetryTuning {
-    final Duration connectTimeout;
-    final Duration readTimeout;
-    final Duration callTimeout;
-    final long retryBackoffBaseMillis;
-    final long retryJitterMillis;
-
-    RetryTuning(
-        Duration connectTimeout,
-        Duration readTimeout,
-        Duration callTimeout,
-        long retryBackoffBaseMillis,
-        long retryJitterMillis) {
-      this.connectTimeout = connectTimeout;
-      this.readTimeout = readTimeout;
-      this.callTimeout = callTimeout;
-      this.retryBackoffBaseMillis = retryBackoffBaseMillis;
-      this.retryJitterMillis = retryJitterMillis;
-    }
-
-    static RetryTuning defaults() {
-      return new RetryTuning(
-          CONNECT_TIMEOUT,
-          READ_TIMEOUT,
-          CALL_TIMEOUT,
-          NETWORK_RETRY_BASE_MILLIS,
-          NETWORK_RETRY_JITTER_MILLIS);
-    }
-  }
 }

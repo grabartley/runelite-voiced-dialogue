@@ -76,10 +76,12 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   cases.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
-- **Timeout and stale-drop.** Cloud calls are bounded by a per-line budget (see below) under a
-  120-second ceiling, so a hung request cannot pin a synthesis-pool worker, and the pipeline's epoch
-  check drops any response that arrives after the dialogue has advanced, so stale audio never plays
-  late. The live synthesis pool runs two workers
+- **Timeout and stale-drop.** Each provider runs under its own ceiling (`RetryTuning`), sized to how
+  it delivers audio: 60 seconds for Google AI Studio, whose longest measured line completes in about
+  14 seconds, and 120 seconds for OpenRouter, which spends a long line's whole generation before
+  returning anything and narrows that ceiling per line (see below). A hung request therefore cannot
+  pin a synthesis-pool worker, and the pipeline's epoch check drops any response that arrives after
+  the dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
   sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
   result still caches) does not block the next line: the free worker picks it up.
 - **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter

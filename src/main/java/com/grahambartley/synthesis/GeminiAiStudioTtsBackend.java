@@ -126,7 +126,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         gson,
         PRODUCTION_ENDPOINT,
         GeminiAiStudioTranslator.PRODUCTION_ENDPOINT,
-        OpenRouterTtsBackend.RetryTuning.defaults());
+        RetryTuning.googleAiStudio());
   }
 
   /**
@@ -140,7 +140,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       Gson gson,
       String endpoint,
       String translatorEndpoint,
-      OpenRouterTtsBackend.RetryTuning tuning) {
+      RetryTuning tuning) {
     // Derive a long-lived keepalive client from the injected one (Hub rule: never new an
     // OkHttpClient): own warm connection pool so back-to-back lines skip the TCP/TLS handshake,
     // own connect/read/call timeouts without mutating the shared client's globals.
