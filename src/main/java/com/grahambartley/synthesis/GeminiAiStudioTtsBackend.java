@@ -71,8 +71,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
    * exhausted rather than a transient blip, so the fix is the account rather than the key.
    */
   static final String QUOTA_NOTICE =
-      "Your Google AI Studio quota or rate limit was hit, so dialogue cannot be voiced right now."
-          + " Check your plan at aistudio.google.com.";
+      "Your Google AI Studio quota was hit, so dialogue cannot be voiced right now. The free tier"
+          + " allows only a handful of speech requests per day, so enable billing at"
+          + " aistudio.google.com, or switch Voice Provider to OpenRouter.";
 
   private static final String USER_AGENT = "runelite-voiced-dialogue";
 

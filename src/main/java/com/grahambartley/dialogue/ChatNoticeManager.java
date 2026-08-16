@@ -29,8 +29,10 @@ public final class ChatNoticeManager {
 
   private static final String ONBOARDING_MESSAGE =
       "Voiced Dialogue is on. It needs a free OpenRouter API key to voice dialogue: get one at"
-          + " openrouter.ai and paste it into the plugin's Cloud Voice settings. Your dialogue text"
-          + " is then sent to OpenRouter to be voiced. Until a key is set, lines stay silent.";
+          + " openrouter.ai and paste it into the plugin's settings. Your dialogue text is then sent"
+          + " to that provider to be voiced. Until a key is set, lines stay silent. For much faster"
+          + " dialogue, switch Voice Provider to Google AI Studio and use a key from"
+          + " aistudio.google.com with billing enabled.";
 
   private final Client client;
   private final ConfigManager configManager;

@@ -13,6 +13,9 @@ public interface VoicedDialogueConfig extends Config {
   /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
   String GROUP = "voicedDialogue";
 
+  /** Key of {@link #ttsProvider()}, shared by the code that reads and writes it directly. */
+  String PROVIDER_KEY = "ttsProvider";
+
   @ConfigSection(
       name = "General",
       description = "Provider, API keys, playback, cache.",
@@ -40,9 +43,12 @@ public interface VoicedDialogueConfig extends Config {
 
   /**
    * The cloud service dialogue is synthesized through. Both providers voice through the same Gemini
-   * TTS model, so voices, emotion, and character profiles sound the same; they differ only in who
-   * bills the call and which API key is used. {@link #OPENROUTER} (the default) uses the OpenRouter
-   * key; {@link #GOOGLE_AI_STUDIO} sends requests directly to Google with a Gemini API key.
+   * TTS model, so voices, emotion, and character profiles sound the same; they differ in who bills
+   * the call, which API key is used, and how quickly audio starts. {@link #OPENROUTER} (the
+   * default) uses the OpenRouter key and returns nothing until the whole clip exists, so a long
+   * line waits out its full generation before it can be heard; {@link #GOOGLE_AI_STUDIO} sends
+   * requests directly to Google with a Gemini API key and streams audio back as it is generated, so
+   * a line starts speaking in about a second whatever its length.
    */
   enum TtsProvider {
     OPENROUTER("OpenRouter"),
