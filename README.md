@@ -7,7 +7,7 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-> Voiced Dialogue leverages a cloud service ([OpenRouter](https://openrouter.ai) by default, or [Google AI Studio](https://aistudio.google.com)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
+> Voiced Dialogue leverages a cloud service ([OpenRouter](https://openrouter.ai) by default, or [Google AI Studio](https://aistudio.google.com)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. Both voice through the same Gemini model, so they sound identical, but Google AI Studio starts speaking dramatically sooner. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
 
 ## Gielinor, out loud
 
@@ -41,7 +41,28 @@ NPC in pirate speak or another language.
 
 Install from the **RuneLite Plugin Hub**: open RuneLite, click the wrench (Configuration) icon, open the **Plugin Hub**, search for **Voiced Dialogue**, and install.
 
-Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRouter](https://openrouter.ai) API key. There is no subscription: you load a few euro of credit once and only pay for the audio you actually generate. Setup takes about two minutes:
+Voiced Dialogue voices dialogue through the cloud, so it needs an API key from one of two providers. There is no subscription with either: you only pay for the audio you actually generate.
+
+### Which provider?
+
+Both providers voice through the same Gemini TTS model, so **the voices, accents, emotion, and personalities are identical**. What differs is how quickly a line starts speaking, measured here on the same dialogue through both:
+
+| Line length | OpenRouter | Google AI Studio |
+|---|---|---|
+| Short (20 chars) | 1.7s | **0.7s** |
+| Medium (100 chars) | 6.3s | **0.8s** |
+| Long (400 chars) | 19.5s | **0.8s** |
+| Very long (500+ chars) | 37.2s | **0.8s** |
+
+Google AI Studio streams audio as it is generated, so a line starts speaking in **about a second no matter how long it is**. OpenRouter sends nothing until the whole clip has been generated, so its wait grows with the length of the line, and a long quest speech can leave you waiting a long time before it starts.
+
+**Use OpenRouter if you want the simplest setup:** top up a few euro of credit and you are done.
+
+**Use Google AI Studio if you want dialogue to start almost instantly.** The speed difference is dramatic, especially in quests where NPCs give long speeches. It asks a little more of you at setup: you have to enable billing on the Google project behind your key, because the free tier only allows a handful of speech requests per day.
+
+You can switch at any time with the **Voice Provider** setting, and lines you have already heard stay cached either way.
+
+### Setting up OpenRouter (default)
 
 1. **Create an account.** Go to [openrouter.ai](https://openrouter.ai), click **Sign Up**, and pick **Sign in with Google** (GitHub or email work too).
 2. **Add credits.** Open your [Credits page](https://openrouter.ai/settings/credits) and top up. **€5 is plenty to start.** A line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice, so €5 covers over 2,000 lines.
@@ -49,9 +70,15 @@ Voiced Dialogue voices dialogue through the cloud, so it needs a free [OpenRoute
 4. **Paste the key into the plugin.** In RuneLite, open the Voiced Dialogue settings and paste it into the **OpenRouter API Key** field under **General**.
 5. **Talk to someone.** Walk up to any NPC and start a conversation. If they answer out loud, you are done.
 
-Until a key is set, lines stay silent and a one-time notice points you to the key.
+### Setting up Google AI Studio (much lower latency)
 
-**Already have a Google AI Studio account?** You can skip OpenRouter entirely: set **Voice Provider** to **Google AI Studio** and paste your Gemini API key (from [aistudio.google.com](https://aistudio.google.com/apikey)) into the **Google AI Studio API Key** field. Dialogue then goes straight to Google and bills your Google account; the voices sound the same on both providers.
+1. **Create an API key.** Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), sign in with your Google account, create an API key, and copy it.
+2. **Enable billing on the key's project.** From the same page, open the project behind your key and turn billing on. **Do not skip this:** the free tier allows only a handful of speech requests per day, so without billing the plugin will voice a few lines and then go quiet. Costs are per character and are listed on Google's [Gemini API pricing page](https://ai.google.dev/pricing).
+3. **Switch the provider.** In the Voiced Dialogue settings, set **Voice Provider** to **Google AI Studio**.
+4. **Paste the key into the plugin.** Paste it into the **Google AI Studio API Key** field under **General**.
+5. **Talk to someone.** Lines should now start speaking about a second after the text box appears, however long they are.
+
+Until a key is set for your chosen provider, lines stay silent and a one-time notice points you to the key.
 
 ## The features, up close
 
@@ -85,6 +112,8 @@ Set **Spoken Language** to anything other than English and every line is spoken 
 
 Everything runs off the game thread, so the client never stutters and skipping a line cuts its audio instantly. Every line you have heard is kept in a local cache and replays instantly and free, even across sessions. Turn on **Prefetch Dialogue** and the plugin pre-voices the dialogue options on your screen, so the line you pick next starts playing the moment you click it.
 
+On Google AI Studio a line starts speaking after about a second and keeps generating while you listen, so length costs you almost nothing up front. OpenRouter withholds a line until it is fully generated, so its wait grows with the length of the line.
+
 </details>
 
 > **Privacy:** only the dialogue text being spoken is sent to your chosen provider (OpenRouter or Google AI Studio) over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
@@ -98,14 +127,14 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Voice Provider** | `OpenRouter` | The cloud service that voices dialogue and bills the calls: OpenRouter, or Google AI Studio with your own Gemini API key. The voices sound the same on both. |
+| **Voice Provider** | `OpenRouter` | The cloud service that voices dialogue and bills the calls. The voices sound the same on both, but Google AI Studio starts speaking far sooner: see [Which provider?](#which-provider). |
 | **OpenRouter API Key** | empty | Your OpenRouter API key, used by the OpenRouter provider; stored locally, never bundled with the plugin. |
 | **Google AI Studio API Key** | empty | Your Gemini API key, used by the Google AI Studio provider; stored locally, never bundled with the plugin. |
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
 | **Voice My Public Chat** | `Off` | Speaks your own public chat aloud in your player voice, exactly as typed. |
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options you can see so your pick plays instantly; can spend credit on branches you never choose. |
 | **Save Audio To Disk** | `On` | Keeps synthesized audio on disk so repeated lines replay instantly and free across sessions. |
-| **Stream Playback** | `On` | Starts speaking a line as its audio arrives instead of waiting for the whole clip, so dialogue begins sooner. Cached lines always play instantly either way. |
+| **Stream Playback** | `On` | Starts speaking a line as its audio arrives instead of waiting for the whole clip, so dialogue begins sooner. Only Google AI Studio delivers audio early enough for this to help; OpenRouter sends nothing until a line is fully generated. Cached lines always play instantly either way. |
 
 </details>
 
@@ -164,7 +193,7 @@ Run the `com.grahambartley.VoicedDialoguePluginRunner` class with VM options `-e
 
 ## Thanks
 
-Voiced Dialogue stands on the shoulders of others: [OpenRouter](https://openrouter.ai) for routing the cloud voice, and the RuneLite devs for making plugin development genuinely fun.
+Voiced Dialogue stands on the shoulders of others: [OpenRouter](https://openrouter.ai) and [Google AI Studio](https://aistudio.google.com) for serving the cloud voice, and the RuneLite devs for making plugin development genuinely fun.
 
 ## Contribute
 
