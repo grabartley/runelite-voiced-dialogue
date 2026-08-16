@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import okhttp3.OkHttpClient;
@@ -1327,14 +1328,28 @@ public class OpenRouterTtsBackendTest {
     assertEquals(backend.callBudgetFor(0), backend.callBudgetFor(-1));
   }
 
-  /** Enqueues one key-endpoint response per warm-up connection and awaits the pooled result. */
+  /** Warm-up requests the server received, in arrival order, captured by {@link #warmedBackend}. */
+  private final List<RecordedRequest> warmUpRequests = new ArrayList<>();
+
+  /**
+   * Warms a backend and blocks until every warm-up request has actually been received and its
+   * connection pooled. Warm-up is asynchronous, and a connection joins the pool before the server
+   * finishes recording its request, so waiting on the pool alone would let a test observe a request
+   * count that is still climbing.
+   */
   private OpenRouterTtsBackend warmedBackend(TestConfig config) throws Exception {
     for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
       server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("{}"));
     }
     OpenRouterTtsBackend backend = backend(config);
     backend.warmUp();
-    long deadline = System.currentTimeMillis() + 5_000;
+    warmUpRequests.clear();
+    for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
+      RecordedRequest received = server.takeRequest(10, TimeUnit.SECONDS);
+      assertNotNull("a warm-up request never reached the server", received);
+      warmUpRequests.add(received);
+    }
+    long deadline = System.currentTimeMillis() + 10_000;
     while (backend.pooledConnectionCount() < WARM_UP_CONNECTIONS
         && System.currentTimeMillis() < deadline) {
       Thread.sleep(10);
@@ -1353,8 +1368,7 @@ public class OpenRouterTtsBackendTest {
         "warm-up opens a connection per slot",
         WARM_UP_CONNECTIONS,
         backend.pooledConnectionCount());
-    for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
-      RecordedRequest warmUp = server.takeRequest();
+    for (RecordedRequest warmUp : warmUpRequests) {
       assertEquals(
           "warm-up hits the key endpoint, never the billable one", "/api/v1/key", warmUp.getPath());
       assertEquals("GET", warmUp.getMethod());
@@ -1368,9 +1382,6 @@ public class OpenRouterTtsBackendTest {
     TestConfig config = new TestConfig();
     config.key = "sk-or-abc";
     OpenRouterTtsBackend backend = warmedBackend(config);
-    for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
-      server.takeRequest();
-    }
     server.enqueue(
         new MockResponse()
             .setResponseCode(HTTP_OK)
