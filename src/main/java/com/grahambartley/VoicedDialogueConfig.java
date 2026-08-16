@@ -49,8 +49,7 @@ public interface VoicedDialogueConfig extends Config {
    * back as it is generated, so a line starts speaking in about a second whatever its length.
    * {@link #OPENROUTER} uses the OpenRouter key and has no streaming support, returning nothing
    * until the whole clip exists, so a long line waits out its full generation before it can be
-   * heard. It stays the value this setting falls back to, so a player who has never chosen keeps
-   * the provider they already hold a key for.
+   * heard.
    */
   enum TtsProvider {
     OPENROUTER("OpenRouter"),
@@ -230,7 +229,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 0,
       section = generalSection)
   default TtsProvider ttsProvider() {
-    return TtsProvider.OPENROUTER;
+    return TtsProvider.GOOGLE_AI_STUDIO;
   }
 
   @ConfigItem(

@@ -17,6 +17,7 @@ import com.grahambartley.synthesis.BackendWarmUpPolicy;
 import com.grahambartley.synthesis.GeminiAiStudioTtsBackend;
 import com.grahambartley.synthesis.OpenRouterTtsBackend;
 import com.grahambartley.synthesis.ProfanityFilter;
+import com.grahambartley.synthesis.ProviderDefaultPolicy;
 import com.grahambartley.synthesis.SynthesisDispatcher;
 import com.grahambartley.tts.CaveEchoPolicy;
 import com.grahambartley.tts.DialogueAudioService;
@@ -91,6 +92,7 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Override
   protected void startUp() {
+    pinProviderForExistingOpenRouterPlayers();
     VoiceManager voiceManager = new VoiceManager(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
@@ -233,6 +235,26 @@ public class VoicedDialoguePlugin extends Plugin {
       return;
     }
     synthesisDispatcher.speakPublicChat(cleaned);
+  }
+
+  /**
+   * Writes OpenRouter into config for a player who was already voicing dialogue through it, so
+   * recommending Google AI Studio as the shipped default never moves an existing setup onto a
+   * provider it holds no key for. Runs once: after this the choice is explicit, so {@link
+   * ProviderDefaultPolicy} declines to touch it again.
+   */
+  void pinProviderForExistingOpenRouterPlayers() {
+    String stored =
+        configManager.getConfiguration(
+            VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY);
+    if (!ProviderDefaultPolicy.shouldPinToOpenRouter(stored, config.openRouterApiKey())) {
+      return;
+    }
+    configManager.setConfiguration(
+        VoicedDialogueConfig.GROUP,
+        VoicedDialogueConfig.PROVIDER_KEY,
+        VoicedDialogueConfig.TtsProvider.OPENROUTER);
+    log.info("Kept this profile on OpenRouter; the shipped provider is now Google AI Studio");
   }
 
   /**

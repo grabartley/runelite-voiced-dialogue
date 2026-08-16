@@ -69,9 +69,8 @@ You can switch at any time with the **Voice Provider** setting, and lines you ha
 
 1. **Create an API key.** Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), sign in with your Google account, create an API key, and copy it.
 2. **Enable billing on the key's project.** From the same page, open the project behind your key and turn billing on. **Do not skip this:** the free tier allows only a handful of speech requests per day, so without billing the plugin voices a few lines and then goes quiet. Costs are per character and are listed on Google's [Gemini API pricing page](https://ai.google.dev/pricing).
-3. **Select the provider.** In RuneLite, open the Voiced Dialogue settings and set **Voice Provider** to **Google AI Studio**.
-4. **Paste the key into the plugin.** Paste it into the **Google AI Studio API Key** field under **General**.
-5. **Talk to someone.** Walk up to any NPC and start a conversation. Lines should start speaking about a second after the text box appears, however long they are.
+3. **Paste the key into the plugin.** In RuneLite, open the Voiced Dialogue settings and paste it into the **Google AI Studio API Key** field under **General**. **Voice Provider** is already set to Google AI Studio unless you have used OpenRouter before, in which case set it now.
+4. **Talk to someone.** Walk up to any NPC and start a conversation. Lines should start speaking about a second after the text box appears, however long they are.
 
 ### Setting up OpenRouter
 
@@ -82,7 +81,7 @@ You can switch at any time with the **Voice Provider** setting, and lines you ha
 5. **Paste the key into the plugin.** Paste it into the **OpenRouter API Key** field under **General**.
 6. **Talk to someone.** Walk up to any NPC and start a conversation. If they answer out loud, you are done.
 
-Until a key is set for your chosen provider, lines stay silent and a one-time notice points you to the key.
+Until a key is set for your chosen provider, lines stay silent and a one-time notice points you to the key. If you were already voicing dialogue through OpenRouter, the plugin keeps you there, so nothing changes for you until you switch it yourself.
 
 ## The features, up close
 
@@ -131,7 +130,7 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Voice Provider** | `OpenRouter` | The cloud service that voices dialogue and bills the calls. The voices sound the same on both; Google AI Studio is recommended because dialogue starts speaking far sooner. See [Choosing your provider](#choosing-your-provider). |
+| **Voice Provider** | `Google AI Studio` | The cloud service that voices dialogue and bills the calls. The voices sound the same on both; Google AI Studio is recommended because dialogue starts speaking far sooner. See [Choosing your provider](#choosing-your-provider). |
 | **OpenRouter API Key** | empty | Your OpenRouter API key, used by the OpenRouter provider; stored locally, never bundled with the plugin. |
 | **Google AI Studio API Key** | empty | Your Gemini API key, used by the Google AI Studio provider; stored locally, never bundled with the plugin. |
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
