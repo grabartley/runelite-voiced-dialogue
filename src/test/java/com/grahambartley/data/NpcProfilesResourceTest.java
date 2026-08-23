@@ -44,7 +44,8 @@ public class NpcProfilesResourceTest {
           "Demon",
           "Wizard",
           "Tortugan",
-          "Icyene"
+          "Icyene",
+          "Arceuus"
         }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
@@ -102,6 +103,34 @@ public class NpcProfilesResourceTest {
             .profile()
             .accent()
             .contains("Barbados"));
+    assertTrue(
+        "Citizens of Arceuus sound refined and faintly echoing",
+        table
+            .resolveNpc(null, "Tyss", "Arceuus", null)
+            .profile()
+            .accent()
+            .contains("beyond the room"));
+  }
+
+  @Test
+  public void arceuusCitizensKeepTheirOwnAccentRatherThanTheKourendOne() {
+    // They are ascended, not local townsfolk, so the region accent must not tint them even though
+    // the generated table still records where they are found.
+    CharacterProfile p = table.resolveNpc(null, "Regath", "Arceuus", "kourend").profile();
+    assertTrue("the Arceuus accent holds over the region", p.accent().contains("beyond the room"));
+    assertFalse("the rustic Kourend accent does not apply", p.accent().contains("rustic"));
+  }
+
+  @Test
+  public void aBespokeArceuusStyleLayersOverTheRaceAccent() {
+    // Logosia, chief librarian of the Arceuus Library, carries a bespoke byId style.
+    NpcProfileTable.Resolution r = table.resolveNpc(7044, "Logosia", "Arceuus", "kourend");
+    assertTrue("the bespoke layer contributes", r.source().contains("id:7044"));
+    assertTrue("the race layer contributes", r.source().contains("race:Arceuus"));
+    assertTrue("her librarian persona survives", r.profile().style().contains("chief librarian"));
+    assertTrue(
+        "she still speaks with the Arceuus accent",
+        r.profile().accent().contains("beyond the room"));
   }
 
   @Test

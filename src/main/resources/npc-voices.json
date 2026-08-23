@@ -4,17 +4,18 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 5917,
-    "count": 13728,
+    "count": 13734,
     "name_matched_ids": 713,
-    "overrides_applied": 1553,
+    "overrides_applied": 1611,
     "race_counts": {
+      "Arceuus": 58,
       "Demon": 776,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 368,
       "Gorilla": 11,
-      "Human": 9983,
+      "Human": 9931,
       "Icyene": 9,
       "Monkey": 64,
       "Tortugan": 66,
@@ -23,8 +24,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1931,
-      "Male": 11797
+      "Female": 1932,
+      "Male": 11802
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -139,6 +140,12 @@
         "accent": "A resonant, otherworldly delivery with an ethereal, hallowed timbre.",
         "style": "An ancient winged Saradominist being; serene, luminous and commanding.",
         "pace": "Measured and stately, each phrase carrying weight."
+      },
+      "Arceuus": {
+        "name": "Citizen of Arceuus",
+        "accent": "British English, Received Pronunciation, refined and cool, the voice softly resonant as though a faint echo of it arrives from somewhere just beyond the room.",
+        "style": "An ascended immortal of Arceuus, a soul lifted out of its mortal body into an incorporeal form sustained by the Dark Altar. Serene, weightless and detached, steeped in the dark arts and centuries past any need for hunger, sleep or death, every word settled and touched with deep arcane learning.",
+        "pace": "Slow and floating, unhurried, with long, airy pauses."
       }
     },
     "byCategory": [
@@ -54530,6 +54537,10 @@
       "race": "Human",
       "gender": "Male"
     },
+    "7016": {
+      "race": "Arceuus",
+      "gender": "Male"
+    },
     "7018": {
       "race": "Demon",
       "gender": "Male"
@@ -54620,17 +54631,17 @@
       "gender": "Male"
     },
     "7040": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7041": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7042": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -54640,22 +54651,22 @@
       "ethnicity": "kourend"
     },
     "7044": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7045": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7046": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7047": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -54670,57 +54681,57 @@
       "ethnicity": "kourend"
     },
     "7050": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7051": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7052": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7053": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7054": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7055": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7056": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7057": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7058": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7059": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7060": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -54730,7 +54741,7 @@
       "ethnicity": "kourend"
     },
     "7062": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -54758,7 +54769,7 @@
       "gender": "Male"
     },
     "7068": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -55261,12 +55272,12 @@
       "ethnicity": "kourend"
     },
     "7203": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7204": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -55581,7 +55592,7 @@
       "ethnicity": "asgarnia"
     },
     "7283": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -55910,17 +55921,17 @@
       "ethnicity": "kourend"
     },
     "7371": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7372": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7374": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -56806,17 +56817,17 @@
       "ethnicity": "kourend"
     },
     "7607": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "7608": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7610": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -56826,17 +56837,17 @@
       "ethnicity": "kourend"
     },
     "7612": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7613": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7614": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -57885,7 +57896,7 @@
       "ethnicity": "kourend"
     },
     "7902": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -58256,7 +58267,7 @@
       "gender": "Male"
     },
     "8006": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -58316,7 +58327,7 @@
       "ethnicity": "kourend"
     },
     "8023": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -59035,6 +59046,10 @@
       "race": "Undead",
       "gender": "Male",
       "ethnicity": "kourend"
+    },
+    "8190": {
+      "race": "Arceuus",
+      "gender": "Female"
     },
     "8193": {
       "race": "Human",
@@ -60079,12 +60094,12 @@
       "ethnicity": "kourend"
     },
     "8501": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "8502": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
@@ -60094,12 +60109,12 @@
       "ethnicity": "misthalin"
     },
     "8504": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "8505": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -60645,6 +60660,14 @@
       "race": "Human",
       "gender": "Female",
       "ethnicity": "kourend"
+    },
+    "8624": {
+      "race": "Arceuus",
+      "gender": "Male"
+    },
+    "8625": {
+      "race": "Arceuus",
+      "gender": "Male"
     },
     "8629": {
       "race": "Human",
@@ -69543,7 +69566,7 @@
       "gender": "Male"
     },
     "10889": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -69840,7 +69863,7 @@
       "ethnicity": "kourend"
     },
     "10951": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -69850,22 +69873,22 @@
       "ethnicity": "kourend"
     },
     "10953": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "10954": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "10955": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "10956": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -69888,12 +69911,12 @@
       "ethnicity": "kourend"
     },
     "10961": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "10962": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -69973,12 +69996,12 @@
       "ethnicity": "kourend"
     },
     "10978": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "10979": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -70562,14 +70585,22 @@
       "gender": "Male"
     },
     "11112": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
     },
     "11113": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Female",
       "ethnicity": "kourend"
+    },
+    "11132": {
+      "race": "Arceuus",
+      "gender": "Male"
+    },
+    "11138": {
+      "race": "Arceuus",
+      "gender": "Male"
     },
     "11152": {
       "race": "Human",
@@ -81025,7 +81056,7 @@
       "gender": "Male"
     },
     "13793": {
-      "race": "Human",
+      "race": "Arceuus",
       "gender": "Male",
       "ethnicity": "kourend"
     },

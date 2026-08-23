@@ -109,5 +109,32 @@ class ApplyOverridesTest(unittest.TestCase):
         self.assertEqual(count, 2)
 
 
+class RaceBucketTest(unittest.TestCase):
+    def test_citizen_of_arceuus_buckets_to_its_own_race(self):
+        self.assertEqual(gen.bucket_for_race("Citizen of Arceuus"), "Arceuus")
+        self.assertEqual(gen.bucket_for_race("Citizens of Arceuus"), "Arceuus")
+        self.assertEqual(gen.bucket_for_race("[[Citizen of Arceuus]]"), "Arceuus")
+
+    def test_arceuus_is_matched_before_the_human_fallback(self):
+        # "Humans, Dwarves, Citizens of Arceuus" reads as a mixed-population location, but a
+        # named Citizen must never fall through to the plain human bucket.
+        self.assertEqual(gen.bucket_for_race("Humans, Citizens of Arceuus"), "Arceuus")
+
+    def test_a_mortal_in_arceuus_stays_human(self):
+        # Not everyone in Arceuus accepted immortality; the mortals keep the human bucket.
+        self.assertEqual(gen.bucket_for_race("Human"), "Human")
+
+    def test_reanimated_arceuus_monsters_are_not_citizens(self):
+        self.assertEqual(gen.bucket_for_race("Undead"), "Undead")
+
+    def test_arceuus_category_buckets_when_the_infobox_has_no_race(self):
+        self.assertEqual(
+            gen.bucket_from_categories(["Category:Citizens of Arceuus"]), "Arceuus"
+        )
+
+    def test_arceuus_is_a_valid_override_race(self):
+        self.assertIn("Arceuus", gen.VALID_RACES)
+
+
 if __name__ == "__main__":
     unittest.main()

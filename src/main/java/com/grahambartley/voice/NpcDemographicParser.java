@@ -27,7 +27,9 @@ final class NpcDemographicParser {
       // Handle mappings for races not directly in our enum
       String raceLower = race.toLowerCase();
 
-      if (raceLower.contains("human")
+      if (raceLower.contains("arceuus")) {
+        return NPCRace.ARCEUUS;
+      } else if (raceLower.contains("human")
           || raceLower.contains("man")
           || raceLower.contains("person")) {
         return NPCRace.HUMAN;

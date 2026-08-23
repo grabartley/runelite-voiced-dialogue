@@ -90,6 +90,12 @@
       "accent": "A resonant, otherworldly delivery with an ethereal, hallowed timbre.",
       "style": "An ancient winged Saradominist being; serene, luminous and commanding.",
       "pace": "Measured and stately, each phrase carrying weight."
+    },
+    "Arceuus": {
+      "name": "Citizen of Arceuus",
+      "accent": "British English, Received Pronunciation, refined and cool, the voice softly resonant as though a faint echo of it arrives from somewhere just beyond the room.",
+      "style": "An ascended immortal of Arceuus, a soul lifted out of its mortal body into an incorporeal form sustained by the Dark Altar. Serene, weightless and detached, steeped in the dark arts and centuries past any need for hunger, sleep or death, every word settled and touched with deep arcane learning.",
+      "pace": "Slow and floating, unhurried, with long, airy pauses."
     }
   },
   "byCategory": [

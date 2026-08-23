@@ -35,7 +35,8 @@ public class GeminiVoiceMapTest {
     NPCRace.DEMON,
     NPCRace.WIZARD,
     NPCRace.TORTUGAN,
-    NPCRace.ICYENE
+    NPCRace.ICYENE,
+    NPCRace.ARCEUUS
   };
 
   /**
@@ -236,5 +237,36 @@ public class GeminiVoiceMapTest {
     assertEquals(
         GeminiVoiceMap.DEFAULT_VOICE, map.voiceFor(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE)));
     assertEquals("Despina", map.voiceFor(VoiceSpec.npc(NPCRace.HUMAN, NPCGender.FEMALE)));
+  }
+
+  @Test
+  public void arceuusSharesTheElfPoolsAndIntroducesNoNewVoice() {
+    Set<String> elfMale = new HashSet<>();
+    Set<String> elfFemale = new HashSet<>();
+    Set<String> arceuusMale = new HashSet<>();
+    Set<String> arceuusFemale = new HashSet<>();
+    for (int seed = 0; seed < 64; seed++) {
+      elfMale.add(map.voiceFor(VoiceSpec.npc(NPCRace.ELF, NPCGender.MALE, seed)));
+      elfFemale.add(map.voiceFor(VoiceSpec.npc(NPCRace.ELF, NPCGender.FEMALE, seed)));
+      arceuusMale.add(map.voiceFor(VoiceSpec.npc(NPCRace.ARCEUUS, NPCGender.MALE, seed)));
+      arceuusFemale.add(map.voiceFor(VoiceSpec.npc(NPCRace.ARCEUUS, NPCGender.FEMALE, seed)));
+    }
+    assertEquals("Arceuus males draw the elf male pool", elfMale, arceuusMale);
+    assertEquals("Arceuus females draw the elf female pool", elfFemale, arceuusFemale);
+  }
+
+  @Test
+  public void arceuusSpreadsAcrossItsPoolAndStaysGenderCorrect() {
+    Set<String> male = new HashSet<>();
+    Set<String> female = new HashSet<>();
+    for (int seed = 0; seed < 16; seed++) {
+      male.add(map.voiceFor(VoiceSpec.npc(NPCRace.ARCEUUS, NPCGender.MALE, seed)));
+      female.add(map.voiceFor(VoiceSpec.npc(NPCRace.ARCEUUS, NPCGender.FEMALE, seed)));
+    }
+    assertTrue("two Arceuus males of the same gender can differ", male.size() > 1);
+    assertTrue("two Arceuus females of the same gender can differ", female.size() > 1);
+    Set<String> overlap = new HashSet<>(male);
+    overlap.retainAll(female);
+    assertTrue("no Arceuus voice serves both genders: " + overlap, overlap.isEmpty());
   }
 }
