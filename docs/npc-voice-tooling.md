@@ -63,7 +63,11 @@ name still resolves to a documented NPC is covered too.
   folk of the Great Conch) are their own `Tortugan` race, carrying a warm Bajan
   accent everywhere they are found. Icyene (the winged Saradominist beings) are
   their own `Icyene` race with an ethereal, hallowed delivery; a "Half Icyene"
-  (Safalaan) is excluded by the rule and pinned `Human` in overrides.
+  (Safalaan) is excluded by the rule and pinned `Human` in overrides. The Citizens
+  of Arceuus (ascended humans whose souls were rehoused in incorporeal bodies at
+  the Dark Altar) are their own `Arceuus` race, matched ahead of the human
+  fallback and carrying a cool, faintly echoing delivery wherever they are found;
+  the mortals who declined immortality stay `Human`.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default

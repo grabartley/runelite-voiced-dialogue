@@ -12,10 +12,10 @@ import java.util.Map;
  * "Informative", Algenib is "Gravelly", and so on); the API carries no gender metadata, so the
  * male/female split here is confirmed by ear from a generated sample pack rather than read from the
  * API. Each race/gender pair anchors to a small, gender-correct sub-pool of voices chosen for race
- * character (gravelly timbres for dwarves and trolls, refined for elves and wizards, light for
- * goblins, breathy for the undead). Two NPCs of the same race and gender are spread across that
- * sub-pool by the per-NPC seed already stamped on the spec (issue #78), so they sound distinct but
- * stable across sessions.
+ * character (gravelly timbres for dwarves and trolls, refined for elves, wizards and the ascended
+ * Citizens of Arceuus, light for goblins, breathy for the undead). Two NPCs of the same race and
+ * gender are spread across that sub-pool by the per-NPC seed already stamped on the spec (issue
+ * #78), so they sound distinct but stable across sessions.
  *
  * <p>Gender-correctness is structural: a male spec can only ever resolve to a voice from a male
  * sub-pool and a female spec to a female sub-pool, so no race maps two genders onto the same voice.
@@ -87,6 +87,9 @@ final class GeminiVoiceMap {
     put(NPCRace.TORTUGAN, male("Achird", "Iapetus"), female("Sulafat", "Vindemiatrix"));
 
     put(NPCRace.ICYENE, male("Alnilam", "Schedar"), female("Kore", "Despina"));
+    // Citizen of Arceuus (ascended, incorporeal): the elf pool's refined, clear timbres,
+    // which carry the weightless delivery better than the earthier human voices.
+    put(NPCRace.ARCEUUS, male("Iapetus", "Rasalgethi"), female("Vindemiatrix", "Erinome"));
   }
 
   private static String[] male(String... voices) {
