@@ -117,16 +117,16 @@ From `runelite-plugin.properties`:
 - **displayName:** Voiced Dialogue
 - **author:** Graham Bartley
 - **support:** https://github.com/grabartley/runelite-voiced-dialogue
-- **description:** Voices NPC and player dialogue using cloud text-to-speech (OpenRouter).
+- **description:** Voices NPC and player dialogue using cloud text-to-speech (Google AI Studio or OpenRouter).
 - **tags:** tts, voice, dialogue, audio, immersion, accessibility, npc, speech, talk, text-to-speech
 - **version:** 0.1.0
 - **build:** standard
 
 Descriptor `warning=` (off-machine-data disclosure, from
 [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)): "This plugin
-sends the NPC and player dialogue text it voices to OpenRouter (a third-party service not
-controlled or verified by the RuneLite developers) over HTTPS, using your API key, to
-synthesize speech."
+sends the NPC and player dialogue text it voices to your chosen provider, Google AI Studio or
+OpenRouter (third-party services not controlled or verified by the RuneLite developers), over
+HTTPS, using your API key, to synthesize speech."
 
 ## Manual QA still required before submission
 
