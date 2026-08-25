@@ -190,7 +190,7 @@ cd runelite-voiced-dialogue
 ./gradlew build
 ```
 
-Run the `com.grahambartley.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. See [docs/architecture.md](docs/architecture.md) for how the synthesis pipeline works end to end.
+Run the `com.grahambartley.runelite.voiced.dialogue.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. See [docs/architecture.md](docs/architecture.md) for how the synthesis pipeline works end to end.
 
 **Tech stack:** Java, the Gemini and OpenRouter speech APIs for the cloud voice, and the RuneLite plugin framework.
 
