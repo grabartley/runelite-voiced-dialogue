@@ -15,9 +15,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -141,24 +139,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   private static final int MAX_SPEECH_ATTEMPTS = 2;
 
-  /** Speaking pace as a percentage of normal: the default (skipped on the wire) and clamp range. */
-  private static final int DEFAULT_SPEED_PERCENT = 100;
-
-  private static final int MIN_SPEED_PERCENT = 50;
-
-  private static final int MAX_SPEED_PERCENT = 200;
-
-  /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
-  private static final int BODY_SNIPPET_MAX_BYTES = 300;
-
   /** Read granularity for the streaming path: bytes are decoded and played per network read. */
   private static final int STREAM_READ_BUFFER = 16_384;
-
-  /** Shared empty body for failure traces where no response bytes were (or could be) read. */
-  private static final byte[] EMPTY_BODY = new byte[0];
-
-  /** RFC 6585 Too Many Requests, absent from {@link HttpURLConnection}'s status constants. */
-  static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   /**
    * User-facing notice shown when no API key is set. Shared with the plugin's startup check so the
@@ -196,16 +178,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /** Ceiling every per-line call budget is clamped to; overridable in tests. */
   private final Duration callTimeout;
 
-  /** Backoff budget for the network-timeout retry; overridable in tests to run in milliseconds. */
-  private final long networkRetryBaseMillis;
-
-  private final long networkRetryJitterMillis;
-
-  /** One-time user notice hook for cloud failures; defaults to a no-op. */
-  private Consumer<String> notice = msg -> {};
-
-  /** Guards the one-time notice so a sustained outage does not spam the chat box. */
-  private boolean warned;
+  /** The shared notice/logging/backoff plumbing, parameterized by this provider's budgets. */
+  private final CloudBackendSupport support;
 
   public OpenRouterTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
@@ -253,8 +227,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             .retryOnConnectionFailure(true)
             .build();
     this.callTimeout = tuning.callTimeout;
-    this.networkRetryBaseMillis = tuning.retryBackoffBaseMillis;
-    this.networkRetryJitterMillis = tuning.retryJitterMillis;
+    this.support = new CloudBackendSupport(config, MAX_SPEECH_ATTEMPTS, tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -277,7 +250,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
   public void setNotice(Consumer<String> notice) {
-    this.notice = notice == null ? msg -> {} : notice;
+    support.setNotice(notice);
   }
 
   @Override
@@ -287,7 +260,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   @Override
   public boolean isAvailable() {
-    return isNonBlank(config.openRouterApiKey());
+    return CloudBackendSupport.isNonBlank(config.openRouterApiKey());
   }
 
   @Override
@@ -367,23 +340,18 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // entries stay valid.
     String language = effectiveSpokenLanguage(request);
     String languageFragment =
-        needsTranslation(language) && !request.skipTranslation() ? language.toLowerCase() : null;
+        CloudTtsText.needsTranslation(language) && !request.skipTranslation()
+            ? language.toLowerCase()
+            : null;
     return CloudCacheKeyBuilder.build(
         model.modelId(),
         model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
+        support.speedPercent(),
+        CloudBackendSupport.DEFAULT_SPEED_PERCENT,
         request.text(),
         config.cloudMaxChars(),
         request.profile(),
         languageFragment);
-  }
-
-  /** A target language other than English (case-insensitive, blank treated as English). */
-  static boolean needsTranslation(String language) {
-    return language != null
-        && !language.trim().isEmpty()
-        && !language.trim().equalsIgnoreCase("English");
   }
 
   /**
@@ -397,18 +365,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   String effectiveSpokenLanguage(SynthesisRequest request) {
     VoicedDialogueConfig.SpeakingStyle style =
         request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
-    return combineLanguage(config.cloudLanguage().label(), style);
-  }
-
-  /**
-   * Appends a non-empty quirk phrase to the (blank-safe) base language, e.g. "French pirate speak".
-   */
-  static String combineLanguage(String language, VoicedDialogueConfig.SpeakingStyle quirk) {
-    String base = language == null || language.trim().isEmpty() ? "English" : language.trim();
-    if (quirk == null || quirk.isNone()) {
-      return base;
-    }
-    return base + " " + quirk.phrase();
+    return CloudTtsText.combineLanguage(config.cloudLanguage().label(), style);
   }
 
   @Override
@@ -437,13 +394,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   private PreparedRequest prepare(SynthesisRequest request) {
     if (!isAvailable()) {
-      log.debug(NO_KEY_NOTICE);
-      notice.accept(NO_KEY_NOTICE);
+      support.noticeMissingKey(NO_KEY_NOTICE);
       return null;
     }
     String key = config.openRouterApiKey().trim();
     String voice = model.voiceFor(request.voice());
-    String cappedText = capLength(request.text(), config.cloudMaxChars());
+    String cappedText = CloudTtsText.capLength(request.text(), config.cloudMaxChars());
     // Optional first hop: a non-English target language (or a global quirk) routes the (already
     // capped) line through the translation model before it is voiced, so the spoken transcript is
     // the transformed text. A failed translation fails the line rather than voicing the wrong
@@ -451,12 +407,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // (public chat) is voiced exactly as typed, so it bypasses the hop even under a non-English
     // target or a global quirk.
     String language = effectiveSpokenLanguage(request);
-    boolean translating = needsTranslation(language) && !request.skipTranslation();
+    boolean translating = CloudTtsText.needsTranslation(language) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
       String translated = translator.translate(cappedText, language.trim(), key);
       if (translated == null) {
-        warnOnce(
+        support.warnOnce(
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");
         return null;
       }
@@ -502,9 +458,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     payload.addProperty("input", input);
     payload.addProperty("voice", voice);
     payload.addProperty("response_format", model.responseFormat());
-    int speed = speedPercent();
-    double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
-    if (speed != DEFAULT_SPEED_PERCENT) {
+    int speed = support.speedPercent();
+    double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
+    if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
       // The model may ignore speed; sending it only when non-default keeps the default request body
       // identical to before and avoids paying for a param the model might not honour.
       payload.addProperty("speed", speedRatio);
@@ -562,16 +518,16 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // capturing
         // them is the only way to see why a line was rejected rather than guessing.
         byte[] bytes = body == null ? new byte[0] : body.bytes();
-        String contentType = headerOrEmpty(response, "Content-Type");
-        String generationId = headerOrEmpty(response, "X-Generation-Id");
-        long elapsedMs = elapsedMs(attemptStart);
+        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
+        String generationId = CloudBackendSupport.headerOrEmpty(response, "X-Generation-Id");
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
 
         if (!response.isSuccessful()) {
-          if (response.code() == HTTP_TOO_MANY_REQUESTS) {
+          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
-          warnOnce(failureNotice(response.code()));
-          logFailure(
+          support.warnOnce(failureNotice(response.code()));
+          support.logFailure(
               "non-2xx",
               attempt,
               elapsedMs,
@@ -586,7 +542,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // A clean call clears any rate-limit back-off so prefetch can resume.
         backoff.recordSuccess();
         if (bytes.length == 0) {
-          logFailure(
+          support.logFailure(
               "empty-body",
               attempt,
               elapsedMs,
@@ -600,14 +556,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
           }
-          warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
+          support.warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
           return null;
         }
         Pcm pcm = model.decodeResponse(bytes);
         if (pcm == null) {
-          warnOnce(
+          support.warnOnce(
               "OpenRouter TTS returned audio that could not be decoded; this line was not voiced.");
-          logFailure(
+          support.logFailure(
               "undecodable",
               attempt,
               elapsedMs,
@@ -628,8 +584,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
           }
-          warnOnce("OpenRouter TTS returned a truncated line; this line was not voiced.");
-          logFailure(
+          support.warnOnce("OpenRouter TTS returned a truncated line; this line was not voiced.");
+          support.logFailure(
               "truncated",
               attempt,
               elapsedMs,
@@ -653,19 +609,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       } catch (ConnectException e) {
         // The host is unreachable (connection refused / no route), almost certainly an offline
         // client. Retrying only delays the failure, so this line fails fast (#196).
-        warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
-        log.warn(
-            CloudSynthTrace.failure(
-                "connect",
-                attempt,
-                MAX_SPEECH_ATTEMPTS,
-                elapsedMs(attemptStart),
-                inputLen,
-                0,
-                "",
-                "",
-                0,
-                e.getMessage()));
+        support.warnOnce(
+            "OpenRouter TTS request could not reach the network; this line was not voiced.");
+        support.logNetworkFailure(
+            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
         return null;
       } catch (IOException e) {
         // A read/call timeout (InterruptedIOException / SocketTimeoutException) or a transient
@@ -673,40 +620,20 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         // a slow generation deserves a backed-off retry rather than being dropped on the first
         // failure (#196). The backoff waits on a synthesis-pool worker, never the game thread, and
         // a second worker keeps serving the next line while this one waits.
-        long elapsedMs = elapsedMs(attemptStart);
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
         if (attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          backoffBeforeNetworkRetry(attempt);
+          support.backoffBeforeNetworkRetry(attempt);
           continue;
         }
-        warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
-        log.warn(
-            CloudSynthTrace.failure(
-                "network",
-                attempt,
-                MAX_SPEECH_ATTEMPTS,
-                elapsedMs,
-                inputLen,
-                0,
-                "",
-                "",
-                0,
-                e.getMessage()));
+        support.warnOnce(
+            "OpenRouter TTS request could not reach the network; this line was not voiced.");
+        support.logNetworkFailure("network", attempt, elapsedMs, inputLen, e);
         return null;
       } catch (RuntimeException e) {
-        warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
-        log.warn(
-            CloudSynthTrace.failure(
-                "unexpected",
-                attempt,
-                MAX_SPEECH_ATTEMPTS,
-                elapsedMs(attemptStart),
-                inputLen,
-                0,
-                "",
-                "",
-                0,
-                e.getMessage()));
+        support.warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
+        support.logNetworkFailure(
+            "unexpected", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
         return null;
       }
     }
@@ -731,23 +658,23 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       boolean fedSink = false;
       long firstChunkMs = -1;
       try (Response response = newBudgetedCall(httpRequest, inputLen).execute()) {
-        String contentType = headerOrEmpty(response, "Content-Type");
-        String generationId = headerOrEmpty(response, "X-Generation-Id");
+        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
+        String generationId = CloudBackendSupport.headerOrEmpty(response, "X-Generation-Id");
         if (!response.isSuccessful()) {
-          if (response.code() == HTTP_TOO_MANY_REQUESTS) {
+          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
-          warnOnce(failureNotice(response.code()));
-          logFailure(
+          support.warnOnce(failureNotice(response.code()));
+          support.logFailure(
               "non-2xx",
               attempt,
-              elapsedMs(attemptStart),
+              CloudBackendSupport.elapsedMs(attemptStart),
               inputLen,
               response.code(),
               response.message(),
               contentType,
               generationId,
-              errorBody(response));
+              CloudBackendSupport.errorBody(response));
           return null;
         }
         // A clean call clears any rate-limit back-off so prefetch can resume.
@@ -774,7 +701,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               // re-billed on a later hearing.
               sink.accept(chunk, rate);
               if (!fedSink) {
-                firstChunkMs = elapsedMs(attemptStart);
+                firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
               }
               fedSink = true;
               chunks.add(chunk);
@@ -782,9 +709,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             }
           }
         }
-        long elapsedMs = elapsedMs(attemptStart);
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
         if (totalBytes == 0) {
-          logFailure(
+          support.logFailure(
               "empty-body",
               attempt,
               elapsedMs,
@@ -793,12 +720,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               response.message(),
               contentType,
               generationId,
-              EMPTY_BODY);
+              CloudBackendSupport.EMPTY_BODY);
           if (attempt < MAX_SPEECH_ATTEMPTS) {
             log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
           }
-          warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
+          support.warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
           return null;
         }
         if (config.debugMode()) {
@@ -816,7 +743,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
                   generationId),
               firstChunkMs);
         }
-        Pcm pcm = new Pcm(flatten(chunks, sampleCount), rate);
+        Pcm pcm = new Pcm(CloudBackendSupport.flatten(chunks, sampleCount), rate);
         // The audio already played through the sink; only return it for caching when it is a whole,
         // complete line. A truncated stream is heard once but never persisted clipped, and there is
         // no retry here since replaying the line would double it.
@@ -826,82 +753,32 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         }
         return pcm;
       } catch (ConnectException e) {
-        warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
-        log.warn(
-            CloudSynthTrace.failure(
-                "connect",
-                attempt,
-                MAX_SPEECH_ATTEMPTS,
-                elapsedMs(attemptStart),
-                inputLen,
-                0,
-                "",
-                "",
-                0,
-                e.getMessage()));
+        support.warnOnce(
+            "OpenRouter TTS request could not reach the network; this line was not voiced.");
+        support.logNetworkFailure(
+            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
         return null;
       } catch (IOException e) {
-        long elapsedMs = elapsedMs(attemptStart);
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
         // Retry only while no audio has played; once a chunk reached the sink, replaying the line
         // would double it, so a mid-stream cut plays what arrived and fails without a retry.
         if (!fedSink && attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          backoffBeforeNetworkRetry(attempt);
+          support.backoffBeforeNetworkRetry(attempt);
           continue;
         }
-        warnOnce("OpenRouter TTS request could not reach the network; this line was not voiced.");
-        log.warn(
-            CloudSynthTrace.failure(
-                "network",
-                attempt,
-                MAX_SPEECH_ATTEMPTS,
-                elapsedMs,
-                inputLen,
-                0,
-                "",
-                "",
-                0,
-                e.getMessage()));
+        support.warnOnce(
+            "OpenRouter TTS request could not reach the network; this line was not voiced.");
+        support.logNetworkFailure("network", attempt, elapsedMs, inputLen, e);
         return null;
       } catch (RuntimeException e) {
-        warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
-        log.warn(
-            CloudSynthTrace.failure(
-                "unexpected",
-                attempt,
-                MAX_SPEECH_ATTEMPTS,
-                elapsedMs(attemptStart),
-                inputLen,
-                0,
-                "",
-                "",
-                0,
-                e.getMessage()));
+        support.warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
+        support.logNetworkFailure(
+            "unexpected", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
         return null;
       }
     }
     return null;
-  }
-
-  /** Reads a small non-audio error body for diagnostics, tolerating a read failure. */
-  private static byte[] errorBody(Response response) {
-    try {
-      ResponseBody body = response.body();
-      return body == null ? EMPTY_BODY : body.bytes();
-    } catch (IOException e) {
-      return EMPTY_BODY;
-    }
-  }
-
-  /** Concatenates the decoded stream chunks into one sample buffer for caching. */
-  private static float[] flatten(List<float[]> chunks, int totalSamples) {
-    float[] out = new float[totalSamples];
-    int pos = 0;
-    for (float[] chunk : chunks) {
-      System.arraycopy(chunk, 0, out, pos, chunk.length);
-      pos += chunk.length;
-    }
-    return out;
   }
 
   /** The built speech request plus the two values both response loops need. */
@@ -931,37 +808,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         + "); check your API key. This line was not voiced.";
   }
 
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
-  private static long elapsedMs(long startNanos) {
-    return (System.nanoTime() - startNanos) / 1_000_000L;
-  }
-
-  /**
-   * Spaces a retry after a transient network failure: an exponential base ({@code base * 2^(attempt
-   * - 1)}) plus a small random jitter, so a brief blip or a slow generation gets a real second
-   * chance without a tight retry storm and concurrent lines do not retry in lockstep. Waits on a
-   * synthesis-pool worker, never the game thread, so a second worker keeps serving the next line
-   * while this one waits.
-   *
-   * <p>The wait is a delayed {@link CompletableFuture} joined to completion rather than a sleeping
-   * pool thread: the plugin uses no blocking sleep and no thread interrupt (a Hub constraint), and
-   * {@link CompletableFuture#join()} parks the worker without either.
-   */
-  private void backoffBeforeNetworkRetry(int attempt) {
-    long base = networkRetryBaseMillis << (attempt - 1);
-    long jitter =
-        networkRetryJitterMillis <= 0
-            ? 0
-            : ThreadLocalRandom.current().nextLong(networkRetryJitterMillis + 1);
-    long delayMillis = base + jitter;
-    if (delayMillis <= 0) {
-      return;
-    }
-    CompletableFuture.runAsync(
-            () -> {}, CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS))
-        .join();
-  }
-
   @Override
   public boolean isThrottled() {
     return backoff.isThrottled();
@@ -986,107 +832,4 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           profile.cacheKey());
     }
   }
-
-  /** The configured pace as a percentage of normal, clamped to the supported range. */
-  private int speedPercent() {
-    int percent = config.speakingPace();
-    if (percent < MIN_SPEED_PERCENT) {
-      return MIN_SPEED_PERCENT;
-    }
-    if (percent > MAX_SPEED_PERCENT) {
-      return MAX_SPEED_PERCENT;
-    }
-    return percent;
-  }
-
-  /**
-   * Truncates {@code text} to at most {@code maxChars} characters, cutting at the latest sentence
-   * boundary in the kept window, or failing that the latest word boundary, so a capped line still
-   * ends cleanly rather than mid-word. A non-positive cap or an already-short line is returned
-   * unchanged. The sentence boundary is only honoured past the halfway mark so an early period does
-   * not collapse a long line down to a fragment.
-   */
-  static String capLength(String text, int maxChars) {
-    if (text == null || maxChars <= 0 || text.length() <= maxChars) {
-      return text;
-    }
-    String window = text.substring(0, maxChars);
-    for (int i = window.length() - 1; i >= maxChars / 2; i--) {
-      char c = window.charAt(i);
-      if (c == '.' || c == '!' || c == '?') {
-        return window.substring(0, i + 1).trim();
-      }
-    }
-    int lastSpace = window.lastIndexOf(' ');
-    if (lastSpace > 0) {
-      return window.substring(0, lastSpace).trim();
-    }
-    return window.trim();
-  }
-
-  /**
-   * Logs why a cloud line was rejected in the standardized {@link CloudSynthTrace} shape: reason,
-   * attempt, elapsed ms, input length, HTTP status, content type, generation id, and byte count (at
-   * warn so it surfaces without debug), plus a short UTF-8 snippet of the body (at info, only in
-   * debug mode) since a Gemini/OpenRouter error is typically a JSON/text body, sometimes returned
-   * even with HTTP 200. This is what tells rate-limiting/quota/content errors apart from genuinely
-   * bad audio, and lets a slow failure be quantified rather than guessed at.
-   */
-  private void logFailure(
-      String kind,
-      int attempt,
-      long elapsedMs,
-      int inputLen,
-      int code,
-      String message,
-      String contentType,
-      String generationId,
-      byte[] bytes) {
-    log.warn(
-        CloudSynthTrace.failure(
-            kind,
-            attempt,
-            MAX_SPEECH_ATTEMPTS,
-            elapsedMs,
-            inputLen,
-            code,
-            contentType,
-            generationId,
-            bytes.length,
-            message));
-    if (config.debugMode() && bytes.length > 0) {
-      log.info("[TTS cloud] {} body snippet: {}", kind, bodySnippet(bytes));
-    }
-  }
-
-  private static String headerOrEmpty(Response response, String name) {
-    String value = response.header(name);
-    return value == null ? "" : value;
-  }
-
-  /** First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. */
-  private static String bodySnippet(byte[] bytes) {
-    int n = Math.min(bytes.length, BODY_SNIPPET_MAX_BYTES);
-    String text =
-        new String(bytes, 0, n, StandardCharsets.UTF_8).replaceAll("\\p{Cntrl}+", " ").trim();
-    return bytes.length > n ? text + "..." : text;
-  }
-
-  private void warnOnce(String message) {
-    log.debug(message);
-    if (!warned) {
-      warned = true;
-      notice.accept(message);
-    }
-  }
-
-  private static boolean isNonBlank(String value) {
-    return value != null && !value.trim().isEmpty();
-  }
-
-  /**
-   * Timeout and retry-backoff budget. {@link #defaults()} carries the production values; tests
-   * construct one with millisecond budgets so the network-timeout retry path can be exercised
-   * without multi-second waits.
-   */
 }

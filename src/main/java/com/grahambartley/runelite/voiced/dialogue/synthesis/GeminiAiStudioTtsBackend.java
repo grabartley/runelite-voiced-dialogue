@@ -15,8 +15,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -79,13 +77,6 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
-  /** Speaking pace as a percentage of normal: the default (no prompt direction) and clamp range. */
-  private static final int DEFAULT_SPEED_PERCENT = 100;
-
-  private static final int MIN_SPEED_PERCENT = 50;
-
-  private static final int MAX_SPEED_PERCENT = 200;
-
   /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
 
@@ -93,11 +84,6 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   /** One speech call plus a single retry, for a transient empty, truncated, or timed-out line. */
   private static final int MAX_SPEECH_ATTEMPTS = 2;
-
-  /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
-  private static final int BODY_SNIPPET_MAX_BYTES = 300;
-
-  static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
@@ -108,16 +94,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   private final GeminiAiStudioTranslator translator;
   private final RateLimitBackoff backoff = new RateLimitBackoff();
 
-  /** Backoff budget for the network-timeout retry; overridable in tests to run in milliseconds. */
-  private final long networkRetryBaseMillis;
-
-  private final long networkRetryJitterMillis;
-
-  /** One-time user notice hook for cloud failures; defaults to a no-op. */
-  private Consumer<String> notice = msg -> {};
-
-  /** Guards the one-time notice so a sustained outage does not spam the chat box. */
-  private boolean warned;
+  /** The shared notice/logging/backoff plumbing, parameterized by this provider's budgets. */
+  private final CloudBackendSupport support;
 
   public GeminiAiStudioTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(
@@ -154,8 +132,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             .callTimeout(tuning.callTimeout)
             .retryOnConnectionFailure(true)
             .build();
-    this.networkRetryBaseMillis = tuning.retryBackoffBaseMillis;
-    this.networkRetryJitterMillis = tuning.retryJitterMillis;
+    this.support = new CloudBackendSupport(config, MAX_SPEECH_ATTEMPTS, tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -166,7 +143,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
   public void setNotice(Consumer<String> notice) {
-    this.notice = notice == null ? msg -> {} : notice;
+    support.setNotice(notice);
   }
 
   @Override
@@ -176,7 +153,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   @Override
   public boolean isAvailable() {
-    return isNonBlank(config.googleAiStudioApiKey());
+    return CloudBackendSupport.isNonBlank(config.googleAiStudioApiKey());
   }
 
   @Override
@@ -221,14 +198,14 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   public String cacheVariant(SynthesisRequest request) {
     String language = effectiveSpokenLanguage(request);
     String languageFragment =
-        OpenRouterTtsBackend.needsTranslation(language) && !request.skipTranslation()
+        CloudTtsText.needsTranslation(language) && !request.skipTranslation()
             ? language.toLowerCase()
             : null;
     return CloudCacheKeyBuilder.build(
         MODEL,
         model.voiceFor(request.voice()),
-        speedPercent(),
-        DEFAULT_SPEED_PERCENT,
+        support.speedPercent(),
+        CloudBackendSupport.DEFAULT_SPEED_PERCENT,
         request.text(),
         config.cloudMaxChars(),
         request.profile(),
@@ -261,23 +238,21 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
    */
   private PreparedCall prepare(SynthesisRequest request) {
     if (!isAvailable()) {
-      log.debug(NO_KEY_NOTICE);
-      notice.accept(NO_KEY_NOTICE);
+      support.noticeMissingKey(NO_KEY_NOTICE);
       return null;
     }
     String key = config.googleAiStudioApiKey().trim();
-    String cappedText = OpenRouterTtsBackend.capLength(request.text(), config.cloudMaxChars());
+    String cappedText = CloudTtsText.capLength(request.text(), config.cloudMaxChars());
     // Optional first hop, identical in behavior to the OpenRouter path: a non-English target
     // language (or a global quirk) routes the capped line through the translation model, a failed
     // translation fails the line, and a skip-translation request (public chat) bypasses the hop.
     String language = effectiveSpokenLanguage(request);
-    boolean translating =
-        OpenRouterTtsBackend.needsTranslation(language) && !request.skipTranslation();
+    boolean translating = CloudTtsText.needsTranslation(language) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
       String translated = translator.translate(cappedText, language.trim(), key);
       if (translated == null) {
-        warnOnce(
+        support.warnOnce(
             "Google AI Studio translation to "
                 + language.trim()
                 + " failed; this line was not voiced.");
@@ -288,9 +263,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     String styledInput = model.styleInput(spokenText, request.emotion());
     CharacterProfile profile = request.profile();
     String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
-    int speed = speedPercent();
-    double speedRatio = speed / (double) DEFAULT_SPEED_PERCENT;
-    if (speed != DEFAULT_SPEED_PERCENT) {
+    int speed = support.speedPercent();
+    double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
+    if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
       // The Gemini API has no speed parameter, so a non-default pace becomes a prompt direction.
       // Prepended (not appended) so the profile block and emotion tag still lead the transcript.
       input = "SPEAKING PACE: " + speed + "% of normal.\n\n" + input;
@@ -318,7 +293,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             cappedText.length(),
             config.cloudMaxChars());
       }
-      if (speed != DEFAULT_SPEED_PERCENT) {
+      if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
         log.info("[TTS cloud] speed {}", speedRatio);
       }
     }
@@ -341,15 +316,15 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       try (Response response = httpClient.newCall(httpRequest).execute()) {
         ResponseBody body = response.body();
         byte[] bytes = body == null ? new byte[0] : body.bytes();
-        String contentType = headerOrEmpty(response, "Content-Type");
-        long elapsedMs = elapsedMs(attemptStart);
+        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
 
         if (!response.isSuccessful()) {
-          if (response.code() == HTTP_TOO_MANY_REQUESTS) {
+          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
-          warnOnce(failureNotice(response.code()));
-          logFailure(
+          support.warnOnce(failureNotice(response.code()));
+          support.logFailure(
               "non-2xx",
               attempt,
               elapsedMs,
@@ -363,7 +338,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         backoff.recordSuccess();
         byte[] audio = extractAudio(new String(bytes, StandardCharsets.UTF_8));
         if (audio == null || audio.length == 0) {
-          logFailure(
+          support.logFailure(
               "empty-body",
               attempt,
               elapsedMs,
@@ -376,15 +351,15 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
           }
-          warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
+          support.warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
           return null;
         }
         Pcm pcm = model.decodeResponse(audio);
         if (pcm == null) {
-          warnOnce(
+          support.warnOnce(
               "Google AI Studio TTS returned audio that could not be decoded; this line was not"
                   + " voiced.");
-          logFailure(
+          support.logFailure(
               "undecodable",
               attempt,
               elapsedMs,
@@ -400,8 +375,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
           }
-          warnOnce("Google AI Studio TTS returned a truncated line; this line was not voiced.");
-          logFailure(
+          support.warnOnce(
+              "Google AI Studio TTS returned a truncated line; this line was not voiced.");
+          support.logFailure(
               "truncated",
               attempt,
               elapsedMs,
@@ -419,22 +395,29 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         }
         return pcm;
       } catch (ConnectException e) {
-        warnOnce(NETWORK_NOTICE);
-        logNetworkFailure("connect", attempt, elapsedMs(attemptStart), prepared.inputLen, e);
+        support.warnOnce(NETWORK_NOTICE);
+        support.logNetworkFailure(
+            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), prepared.inputLen, e);
         return null;
       } catch (IOException e) {
-        long elapsedMs = elapsedMs(attemptStart);
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
         if (attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          backoffBeforeNetworkRetry(attempt);
+          support.backoffBeforeNetworkRetry(attempt);
           continue;
         }
-        warnOnce(NETWORK_NOTICE);
-        logNetworkFailure("network", attempt, elapsedMs, prepared.inputLen, e);
+        support.warnOnce(NETWORK_NOTICE);
+        support.logNetworkFailure("network", attempt, elapsedMs, prepared.inputLen, e);
         return null;
       } catch (RuntimeException e) {
-        warnOnce("Google AI Studio TTS request failed unexpectedly; this line was not voiced.");
-        logNetworkFailure("unexpected", attempt, elapsedMs(attemptStart), prepared.inputLen, e);
+        support.warnOnce(
+            "Google AI Studio TTS request failed unexpectedly; this line was not voiced.");
+        support.logNetworkFailure(
+            "unexpected",
+            attempt,
+            CloudBackendSupport.elapsedMs(attemptStart),
+            prepared.inputLen,
+            e);
         return null;
       }
     }
@@ -459,21 +442,21 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       long firstChunkMs = -1;
       String finishReason = null;
       try (Response response = httpClient.newCall(httpRequest).execute()) {
-        String contentType = headerOrEmpty(response, "Content-Type");
+        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
         if (!response.isSuccessful()) {
-          if (response.code() == HTTP_TOO_MANY_REQUESTS) {
+          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
-          warnOnce(failureNotice(response.code()));
-          logFailure(
+          support.warnOnce(failureNotice(response.code()));
+          support.logFailure(
               "non-2xx",
               attempt,
-              elapsedMs(attemptStart),
+              CloudBackendSupport.elapsedMs(attemptStart),
               prepared.inputLen,
               response.code(),
               response.message(),
               contentType,
-              errorBody(response));
+              CloudBackendSupport.errorBody(response));
           return null;
         }
         backoff.recordSuccess();
@@ -503,7 +486,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
                 // re-billed on a later hearing.
                 sink.accept(chunk, rate);
                 if (!fedSink) {
-                  firstChunkMs = elapsedMs(attemptStart);
+                  firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
                 }
                 fedSink = true;
                 chunks.add(chunk);
@@ -512,9 +495,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             }
           }
         }
-        long elapsedMs = elapsedMs(attemptStart);
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
         if (totalBytes == 0) {
-          logFailure(
+          support.logFailure(
               "empty-body",
               attempt,
               elapsedMs,
@@ -527,7 +510,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
             continue;
           }
-          warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
+          support.warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
           return null;
         }
         if (config.debugMode()) {
@@ -540,7 +523,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, (int) totalBytes, ""),
               firstChunkMs);
         }
-        Pcm pcm = new Pcm(flatten(chunks, sampleCount), rate);
+        Pcm pcm = new Pcm(CloudBackendSupport.flatten(chunks, sampleCount), rate);
         // The audio already played through the sink; only return it for caching when it is a
         // whole, complete line: the stream finished with STOP, no half sample is pending, and the
         // tail releases into silence. There is no retry here since replaying would double it.
@@ -552,24 +535,31 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         }
         return pcm;
       } catch (ConnectException e) {
-        warnOnce(NETWORK_NOTICE);
-        logNetworkFailure("connect", attempt, elapsedMs(attemptStart), prepared.inputLen, e);
+        support.warnOnce(NETWORK_NOTICE);
+        support.logNetworkFailure(
+            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), prepared.inputLen, e);
         return null;
       } catch (IOException e) {
-        long elapsedMs = elapsedMs(attemptStart);
+        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
         // Retry only while no audio has played; once a chunk reached the sink, replaying the line
         // would double it, so a mid-stream cut plays what arrived and fails without a retry.
         if (!fedSink && attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          backoffBeforeNetworkRetry(attempt);
+          support.backoffBeforeNetworkRetry(attempt);
           continue;
         }
-        warnOnce(NETWORK_NOTICE);
-        logNetworkFailure("network", attempt, elapsedMs, prepared.inputLen, e);
+        support.warnOnce(NETWORK_NOTICE);
+        support.logNetworkFailure("network", attempt, elapsedMs, prepared.inputLen, e);
         return null;
       } catch (RuntimeException e) {
-        warnOnce("Google AI Studio TTS request failed unexpectedly; this line was not voiced.");
-        logNetworkFailure("unexpected", attempt, elapsedMs(attemptStart), prepared.inputLen, e);
+        support.warnOnce(
+            "Google AI Studio TTS request failed unexpectedly; this line was not voiced.");
+        support.logNetworkFailure(
+            "unexpected",
+            attempt,
+            CloudBackendSupport.elapsedMs(attemptStart),
+            prepared.inputLen,
+            e);
         return null;
       }
     }
@@ -730,7 +720,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   String effectiveSpokenLanguage(SynthesisRequest request) {
     VoicedDialogueConfig.SpeakingStyle style =
         request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
-    return OpenRouterTtsBackend.combineLanguage(config.cloudLanguage().label(), style);
+    return CloudTtsText.combineLanguage(config.cloudLanguage().label(), style);
   }
 
   /**
@@ -739,7 +729,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
    * check-your-key message with the code for context.
    */
   static String failureNotice(int httpCode) {
-    if (httpCode == HTTP_TOO_MANY_REQUESTS) {
+    if (httpCode == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
       return QUOTA_NOTICE;
     }
     return "Google AI Studio TTS request failed (HTTP "
@@ -749,27 +739,6 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   private static final String NETWORK_NOTICE =
       "Google AI Studio TTS request could not reach the network; this line was not voiced.";
-
-  /** Reads a small non-audio error body for diagnostics, tolerating a read failure. */
-  private static byte[] errorBody(Response response) {
-    try {
-      ResponseBody body = response.body();
-      return body == null ? new byte[0] : body.bytes();
-    } catch (IOException e) {
-      return new byte[0];
-    }
-  }
-
-  /** Concatenates the decoded stream chunks into one sample buffer for caching. */
-  private static float[] flatten(List<float[]> chunks, int totalSamples) {
-    float[] out = new float[totalSamples];
-    int pos = 0;
-    for (float[] chunk : chunks) {
-      System.arraycopy(chunk, 0, out, pos, chunk.length);
-      pos += chunk.length;
-    }
-    return out;
-  }
 
   /** The prepared speech call: the key and JSON body plus the values both response loops need. */
   private static final class PreparedCall {
@@ -784,105 +753,5 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       this.speedRatio = speedRatio;
       this.inputLen = inputLen;
     }
-  }
-
-  /** The configured pace as a percentage of normal, clamped to the supported range. */
-  private int speedPercent() {
-    int percent = config.speakingPace();
-    if (percent < MIN_SPEED_PERCENT) {
-      return MIN_SPEED_PERCENT;
-    }
-    if (percent > MAX_SPEED_PERCENT) {
-      return MAX_SPEED_PERCENT;
-    }
-    return percent;
-  }
-
-  /**
-   * Spaces a retry after a transient network failure, same shape as the OpenRouter path: an
-   * exponential base plus random jitter, waited out on a synthesis-pool worker via a delayed future
-   * (no blocking sleep and no thread interrupt, a Hub constraint).
-   */
-  private void backoffBeforeNetworkRetry(int attempt) {
-    long base = networkRetryBaseMillis << (attempt - 1);
-    long jitter =
-        networkRetryJitterMillis <= 0
-            ? 0
-            : ThreadLocalRandom.current().nextLong(networkRetryJitterMillis + 1);
-    long delayMillis = base + jitter;
-    if (delayMillis <= 0) {
-      return;
-    }
-    CompletableFuture.runAsync(
-            () -> {}, CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS))
-        .join();
-  }
-
-  /**
-   * Logs why a cloud line was rejected in the standardized {@link CloudSynthTrace} shape (at warn
-   * so it surfaces without debug), plus a short UTF-8 snippet of the body (at info, only in debug
-   * mode) since a Gemini error is typically a JSON/text body.
-   */
-  private void logFailure(
-      String kind,
-      int attempt,
-      long elapsedMs,
-      int inputLen,
-      int code,
-      String message,
-      String contentType,
-      byte[] bytes) {
-    log.warn(
-        CloudSynthTrace.failure(
-            kind,
-            attempt,
-            MAX_SPEECH_ATTEMPTS,
-            elapsedMs,
-            inputLen,
-            code,
-            contentType,
-            "",
-            bytes.length,
-            message));
-    if (config.debugMode() && bytes.length > 0) {
-      log.info("[TTS cloud] {} body snippet: {}", kind, bodySnippet(bytes));
-    }
-  }
-
-  private void logNetworkFailure(
-      String kind, int attempt, long elapsedMs, int inputLen, Exception e) {
-    log.warn(
-        CloudSynthTrace.failure(
-            kind, attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, 0, "", "", 0, e.getMessage()));
-  }
-
-  private static String headerOrEmpty(Response response, String name) {
-    String value = response.header(name);
-    return value == null ? "" : value;
-  }
-
-  /** First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. */
-  private static String bodySnippet(byte[] bytes) {
-    int n = Math.min(bytes.length, BODY_SNIPPET_MAX_BYTES);
-    String text =
-        new String(bytes, 0, n, StandardCharsets.UTF_8).replaceAll("\\p{Cntrl}+", " ").trim();
-    return bytes.length > n ? text + "..." : text;
-  }
-
-  private void warnOnce(String message) {
-    log.debug(message);
-    if (!warned) {
-      warned = true;
-      notice.accept(message);
-    }
-  }
-
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
-  private static long elapsedMs(long startNanos) {
-    return (System.nanoTime() - startNanos) / 1_000_000L;
-  }
-
-  private static boolean isNonBlank(String value) {
-    return value != null && !value.trim().isEmpty();
   }
 }

@@ -20,11 +20,11 @@ import okhttp3.ResponseBody;
  *
  * <p>This is the optional first hop of the cloud pipeline: {@link OpenRouterTtsBackend} calls it
  * only when {@link VoicedDialogueConfig#cloudLanguage()} is not English, so the common case pays no
- * extra request. The system prompt is a fixed per-language constant (all per-line variance lives in
+ * extra request. The system prompt is the shared {@link
+ * CloudTtsText#translatorSystemPrompt(String)}: fixed per language (all per-line variance lives in
  * the user message) so the cacheable prefix is byte-identical across calls and the model's implicit
- * prompt cache hits; the instruction preserves proper nouns, place names, item names, and OSRS
- * terminology so lore reads correctly. Every failure path returns {@code null} so the backend fails
- * the line gracefully rather than voicing the wrong language or caching a mistranslation.
+ * prompt cache hits. Every failure path returns {@code null} so the backend fails the line
+ * gracefully rather than voicing the wrong language or caching a mistranslation.
  */
 @Slf4j
 final class OpenRouterTranslator {
@@ -74,7 +74,7 @@ final class OpenRouterTranslator {
     JsonObject payload = new JsonObject();
     payload.addProperty("model", MODEL);
     JsonArray messages = new JsonArray();
-    messages.add(message("system", systemPrompt(language)));
+    messages.add(message("system", CloudTtsText.translatorSystemPrompt(language)));
     messages.add(message("user", text));
     payload.add("messages", messages);
     OpenRouterProvider.apply(payload);
@@ -95,7 +95,7 @@ final class OpenRouterTranslator {
     try (Response response = httpClient.newCall(httpRequest).execute()) {
       ResponseBody body = response.body();
       String raw = body == null ? "" : body.string();
-      long elapsedMs = elapsedMs(start);
+      long elapsedMs = CloudBackendSupport.elapsedMs(start);
       if (!response.isSuccessful()) {
         log.warn(
             "[TTS cloud] translate fail reason=non-2xx http={} elapsedMs={} inLen={} detail={}",
@@ -127,30 +127,11 @@ final class OpenRouterTranslator {
     } catch (IOException | RuntimeException e) {
       log.warn(
           "[TTS cloud] translate fail reason=error elapsedMs={} inLen={} detail={}",
-          elapsedMs(start),
+          CloudBackendSupport.elapsedMs(start),
           text.length(),
           e.getMessage());
       return null;
     }
-  }
-
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
-  private static long elapsedMs(long startNanos) {
-    return (System.nanoTime() - startNanos) / 1_000_000L;
-  }
-
-  /**
-   * The fixed system prompt for a target language. The wording is deterministic in {@code language}
-   * (no timestamps, names, or per-line text) so the same language always produces the
-   * byte-identical prefix the model's prompt cache keys on.
-   */
-  static String systemPrompt(String language) {
-    return "You are a translation engine for an Old School RuneScape dialogue voice plugin."
-        + " Translate the user's line into "
-        + language
-        + ". Preserve proper nouns, character names, place names, item names, and RuneScape"
-        + " terminology exactly as written. Output only the translation, with no quotes, notes,"
-        + " explanations, or preamble.";
   }
 
   private static JsonObject message(String role, String content) {

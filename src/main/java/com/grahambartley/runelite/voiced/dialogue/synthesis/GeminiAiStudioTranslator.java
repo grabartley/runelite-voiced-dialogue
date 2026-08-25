@@ -19,7 +19,7 @@ import okhttp3.ResponseBody;
  * Translates a dialogue line into the configured spoken language before it is voiced, via the
  * Gemini API's {@code generateContent} endpoint. The direct-to-Google counterpart of {@link
  * OpenRouterTranslator}: same role in the pipeline, same {@link
- * OpenRouterTranslator#systemPrompt(String)} (kept shared so the two providers rewrite lines
+ * CloudTtsText#translatorSystemPrompt(String)} (kept shared so the two providers rewrite lines
  * identically and their prompt caches key the same way), differing only in the request/response
  * shape and the {@code x-goog-api-key} authentication.
  *
@@ -63,7 +63,7 @@ final class GeminiAiStudioTranslator {
       return text;
     }
     JsonObject systemInstruction = new JsonObject();
-    systemInstruction.add("parts", parts(OpenRouterTranslator.systemPrompt(language)));
+    systemInstruction.add("parts", parts(CloudTtsText.translatorSystemPrompt(language)));
     JsonObject content = new JsonObject();
     content.add("parts", parts(text));
     JsonArray contents = new JsonArray();
@@ -86,7 +86,7 @@ final class GeminiAiStudioTranslator {
     try (Response response = httpClient.newCall(httpRequest).execute()) {
       ResponseBody body = response.body();
       String raw = body == null ? "" : body.string();
-      long elapsedMs = elapsedMs(start);
+      long elapsedMs = CloudBackendSupport.elapsedMs(start);
       if (!response.isSuccessful()) {
         log.warn(
             "[TTS cloud] translate fail reason=non-2xx http={} elapsedMs={} inLen={} detail={}",
@@ -118,7 +118,7 @@ final class GeminiAiStudioTranslator {
     } catch (IOException | RuntimeException e) {
       log.warn(
           "[TTS cloud] translate fail reason=error elapsedMs={} inLen={} detail={}",
-          elapsedMs(start),
+          CloudBackendSupport.elapsedMs(start),
           text.length(),
           e.getMessage());
       return null;
@@ -162,10 +162,5 @@ final class GeminiAiStudioTranslator {
       log.debug("[TTS cloud] translation response parse error: {}", e.getMessage());
       return null;
     }
-  }
-
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
-  private static long elapsedMs(long startNanos) {
-    return (System.nanoTime() - startNanos) / 1_000_000L;
   }
 }
