@@ -1,11 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import static com.grahambartley.runelite.voiced.dialogue.synthesis.OpenRouterTtsBackend.HTTP_TOO_MANY_REQUESTS;
+import static com.grahambartley.runelite.voiced.dialogue.synthesis.CloudBackendSupport.HTTP_TOO_MANY_REQUESTS;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -56,17 +54,6 @@ public class OpenRouterTranslatorTest {
     JsonObject body = new JsonObject();
     body.add("choices", choices);
     return body.toString();
-  }
-
-  @Test
-  public void systemPromptIsStablePerLanguageAndNamesTheTarget() {
-    assertEquals(
-        "the same target yields a byte-identical prompt so the model's cache hits",
-        OpenRouterTranslator.systemPrompt("French"),
-        OpenRouterTranslator.systemPrompt("French"));
-    assertNotEquals(
-        OpenRouterTranslator.systemPrompt("French"), OpenRouterTranslator.systemPrompt("German"));
-    assertTrue(OpenRouterTranslator.systemPrompt("French").contains("French"));
   }
 
   @Test

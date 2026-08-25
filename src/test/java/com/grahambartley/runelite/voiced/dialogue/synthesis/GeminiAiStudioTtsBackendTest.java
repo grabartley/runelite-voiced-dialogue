@@ -332,7 +332,7 @@ public class GeminiAiStudioTtsBackendTest {
     backend.setNotice(notices::add);
     server.enqueue(
         new MockResponse()
-            .setResponseCode(GeminiAiStudioTtsBackend.HTTP_TOO_MANY_REQUESTS)
+            .setResponseCode(CloudBackendSupport.HTTP_TOO_MANY_REQUESTS)
             .setBody("quota"));
 
     assertNull(backend.synthesize(req()));
