@@ -38,7 +38,7 @@ public class CloudBackendSupportTest {
             return pace;
           }
         };
-    return new CloudBackendSupport(config, 2, INSTANT);
+    return new CloudBackendSupport(config, VoicedDialogueConfig.TtsProvider.OPENROUTER, 2, INSTANT);
   }
 
   @Test

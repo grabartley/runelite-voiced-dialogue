@@ -119,6 +119,15 @@ On Google AI Studio a line starts speaking after about a second and keeps genera
 
 </details>
 
+<details>
+<summary><b>Session spend on demand</b></summary>
+
+Type `::voicedspend` in chat and the plugin answers with what this session has cost so far: lines voiced, lines pre-voiced by prefetch, characters sent, and an estimated spend, one chat line per provider you used. Lines replayed from your cache are free and are counted nowhere, so a session spent on dialogue you have heard before reads as zero.
+
+The estimate works from roughly `$0.000025` per character sent, which is the arithmetic behind the `$0.0025` average line quoted above. It is an estimate: your provider's own dashboard is the authority on what was actually billed. Totals are session-only and reset whenever the plugin restarts.
+
+</details>
+
 > **Privacy:** only the dialogue text being spoken is sent to your chosen provider (OpenRouter or Google AI Studio) over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
 
 ## Configuration

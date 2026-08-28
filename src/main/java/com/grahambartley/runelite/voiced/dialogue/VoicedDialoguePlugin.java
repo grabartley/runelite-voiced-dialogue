@@ -18,6 +18,8 @@ import com.grahambartley.runelite.voiced.dialogue.synthesis.GeminiAiStudioTtsBac
 import com.grahambartley.runelite.voiced.dialogue.synthesis.OpenRouterTtsBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.ProviderDefaultPolicy;
+import com.grahambartley.runelite.voiced.dialogue.synthesis.SpendReport;
+import com.grahambartley.runelite.voiced.dialogue.synthesis.SpendTracker;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisDispatcher;
 import com.grahambartley.runelite.voiced.dialogue.tts.CaveEchoPolicy;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
@@ -35,6 +37,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -90,6 +93,12 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private DialogueWatcher dialogueWatcher;
 
+  /**
+   * Session-only counters behind {@code ::voicedspend}. Built fresh on every start-up, so the
+   * totals reset with the plugin and nothing is ever persisted.
+   */
+  private SpendTracker spendTracker;
+
   @Override
   protected void startUp() {
     pinProviderForExistingOpenRouterPlayers();
@@ -122,11 +131,14 @@ public class VoicedDialoguePlugin extends Plugin {
     // its API key is set, and a line it cannot voice is left silent (with a one-time notice)
     // rather than routed to the other provider. No model or native binaries ship in the plugin
     // jar.
+    spendTracker = new SpendTracker();
     OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
+    openRouterBackend.setSpendTracker(spendTracker);
     GeminiAiStudioTtsBackend aiStudioBackend =
         new GeminiAiStudioTtsBackend(okHttpClient, config, gson);
     aiStudioBackend.setNotice(noticeManager::notifyFromBackendThread);
+    aiStudioBackend.setSpendTracker(spendTracker);
     backendProvider = new BackendProvider(openRouterBackend, aiStudioBackend, config::ttsProvider);
     // Persistent on-disk cache under the plugin's RuneLite dir; on by default so repeated lines
     // survive restarts and the cloud backend is not re-billed. Opt-out via config.
@@ -184,6 +196,7 @@ public class VoicedDialoguePlugin extends Plugin {
   @Override
   protected void shutDown() {
     noticeManager = null;
+    spendTracker = null;
     synthesisDispatcher = null;
     dialogueWatcher = null;
     textCleaner = null;
@@ -235,6 +248,22 @@ public class VoicedDialoguePlugin extends Plugin {
       return;
     }
     synthesisDispatcher.speakPublicChat(cleaned);
+  }
+
+  /**
+   * Answers {@code ::voicedspend} with this session's billable cloud usage: lines voiced, lines
+   * prefetched, characters actually sent, and an estimated cost, one chat line per provider used.
+   * Cache hits cost nothing and are counted nowhere, so a session spent replaying known lines reads
+   * as zero. Runs on the client thread, where the event is dispatched, and touches no network.
+   */
+  @Subscribe
+  public void onCommandExecuted(CommandExecuted event) {
+    if (!SpendReport.matches(event.getCommand()) || spendTracker == null || noticeManager == null) {
+      return;
+    }
+    for (String line : SpendReport.lines(spendTracker.snapshot())) {
+      noticeManager.postNotice(line);
+    }
   }
 
   /**

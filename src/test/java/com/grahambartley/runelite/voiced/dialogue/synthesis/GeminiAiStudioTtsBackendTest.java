@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -19,6 +20,7 @@ import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import okhttp3.OkHttpClient;
@@ -575,5 +577,124 @@ public class GeminiAiStudioTtsBackendTest {
         RawPcmDecoder.decode(RawPcmDecoderTest.raw(samples), 24_000).getSamples(),
         streamed.getSamples(),
         0f);
+  }
+
+  @Test
+  public void aVoicedLineCountsOnceAgainstTheCharactersActuallySent() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    JsonObject sent =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    String input =
+        sent.getAsJsonArray("contents")
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonArray("parts")
+            .get(0)
+            .getAsJsonObject()
+            .get("text")
+            .getAsString();
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, recorded.provider());
+    assertEquals(1, recorded.voicedLines());
+    assertEquals(0, recorded.prefetchedLines());
+    assertEquals(
+        "the counted characters are the input the endpoint bills on",
+        input.length(),
+        recorded.speechCharacters());
+  }
+
+  @Test
+  public void aPrefetchedLineCountsAsWarmingRatherThanAsAVoicedLine() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesize(req().asPrefetch());
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals(0, recorded.voicedLines());
+    assertEquals(1, recorded.prefetchedLines());
+    assertTrue("warming still costs characters", recorded.speechCharacters() > 0);
+  }
+
+  @Test
+  public void aStreamedLineCountsOnceWhenTheFirstAudioArrives() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    List<byte[]> chunks =
+        Arrays.asList(
+            RawPcmDecoderTest.raw(new short[] {1, 2}), RawPcmDecoderTest.raw(new short[] {3, 4}));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, "STOP")));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesizeStreaming(req(), (samples, rate) -> {});
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("a multi-chunk stream is still one billable line", 1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aFailedLineThatReturnsNoAudioCostsNothing() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("bad key"));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNull(backend.synthesize(req()));
+
+    assertTrue("a rejected line never reaches the readout", spend.snapshot().isEmpty());
+  }
+
+  @Test
+  public void aLineNeverSentForWantOfAKeyCostsNothing() {
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(new TestConfig());
+    backend.setSpendTracker(spend);
+
+    assertNull(backend.synthesize(req()));
+
+    assertTrue(spend.snapshot().isEmpty());
+  }
+
+  @Test
+  public void theTranslationHopIsCountedInItsOwnBucket() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(geminiTranslation("Bonjour")));
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("one translation call", 1, recorded.translationCalls());
+    assertEquals(
+        "translation bills on the source line",
+        "Hello & welcome".length(),
+        recorded.translationCharacters());
+    assertEquals("the spoken line is still counted once", 1, recorded.voicedLines());
   }
 }

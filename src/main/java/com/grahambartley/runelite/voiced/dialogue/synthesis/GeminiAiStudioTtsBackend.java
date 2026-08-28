@@ -132,7 +132,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             .callTimeout(tuning.callTimeout)
             .retryOnConnectionFailure(true)
             .build();
-    this.support = new CloudBackendSupport(config, MAX_SPEECH_ATTEMPTS, tuning);
+    this.support =
+        new CloudBackendSupport(
+            config, VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, MAX_SPEECH_ATTEMPTS, tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -144,6 +146,11 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
   public void setNotice(Consumer<String> notice) {
     support.setNotice(notice);
+  }
+
+  /** Points this backend's billable-call counting at the plugin's session spend tracker. */
+  public void setSpendTracker(SpendTracker spend) {
+    support.setSpendTracker(spend);
   }
 
   @Override
@@ -258,6 +265,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
                 + " failed; this line was not voiced.");
         return null;
       }
+      support.recordTranslationSpend(cappedText.length());
       spokenText = translated;
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
@@ -301,7 +309,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     String languageCode = translating ? config.cloudLanguage().code() : null;
     JsonObject payload = buildPayload(input, model.voiceFor(request.voice()), languageCode);
     byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
-    return new PreparedCall(key, body, speedRatio, input.length());
+    return new PreparedCall(key, body, speedRatio, input.length(), request.prefetch());
   }
 
   /**
@@ -393,6 +401,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
               CloudSynthTrace.success(
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, audio.length, ""));
         }
+        support.recordSpeechSpend(prepared.inputLen, prepared.prefetch);
         return pcm;
       } catch (ConnectException e) {
         support.warnOnce(NETWORK_NOTICE);
@@ -487,6 +496,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
                 sink.accept(chunk, rate);
                 if (!fedSink) {
                   firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
+                  support.recordSpeechSpend(prepared.inputLen, prepared.prefetch);
                 }
                 fedSink = true;
                 chunks.add(chunk);
@@ -746,12 +756,14 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     final byte[] body;
     final double speedRatio;
     final int inputLen;
+    final boolean prefetch;
 
-    PreparedCall(String key, byte[] body, double speedRatio, int inputLen) {
+    PreparedCall(String key, byte[] body, double speedRatio, int inputLen, boolean prefetch) {
       this.key = key;
       this.body = body;
       this.speedRatio = speedRatio;
       this.inputLen = inputLen;
+      this.prefetch = prefetch;
     }
   }
 }

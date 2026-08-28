@@ -113,6 +113,15 @@ public final class ChatNoticeManager {
   }
 
   /**
+   * Posts a plugin notice the player explicitly asked for (the {@code ::voicedspend} readout), with
+   * no once-per-session guard and no log line: it is a direct answer to a command, not a warning.
+   * Must be called on the client thread, which is where {@code CommandExecuted} is dispatched.
+   */
+  public void postNotice(String message) {
+    addGameMessage(message);
+  }
+
+  /**
    * Posts a single red, plugin-tagged notice into the game chat box. Red marks it as a plugin
    * notice that stands out from ordinary dialogue and game spam. Must be called on the client
    * thread.

@@ -1,6 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -31,12 +30,16 @@ import lombok.experimental.Accessors;
  * player dialogue, public chat, and prefetched options (all lines the player speaks) and {@code
  * false} for NPC lines. The legacy constructors default it {@code false}, so an unmarked request
  * voices as an NPC line as before.
+ *
+ * <p>{@code prefetch} marks the line as speculative cache warming rather than something the player
+ * is hearing now, so {@link SpendTracker} can report warming separately from lines actually voiced.
+ * It steers nothing about how the line is rendered and is deliberately outside the cache key, so a
+ * prefetched line and the real line that follows it resolve to the same cached audio.
  */
 @Getter
 @Accessors(fluent = true)
 @EqualsAndHashCode
 @ToString
-@AllArgsConstructor
 public final class SynthesisRequest {
 
   private final String text;
@@ -45,6 +48,35 @@ public final class SynthesisRequest {
   private final CharacterProfile profile;
   private final boolean skipTranslation;
   private final boolean player;
+  private final boolean prefetch;
+
+  private SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player,
+      boolean prefetch) {
+    this.text = text;
+    this.voice = voice;
+    this.emotion = emotion;
+    this.profile = profile;
+    this.skipTranslation = skipTranslation;
+    this.player = player;
+    this.prefetch = prefetch;
+  }
+
+  /** A live (non-prefetch) request with every rendering field given explicitly. */
+  public SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player) {
+    this(text, voice, emotion, profile, skipTranslation, player, false);
+  }
 
   /** A request with no character profile (backward-compatible 3-arg form). */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
@@ -74,6 +106,18 @@ public final class SynthesisRequest {
     if (newEmotion == emotion) {
       return this;
     }
-    return new SynthesisRequest(text, voice, newEmotion, profile, skipTranslation, player);
+    return new SynthesisRequest(
+        text, voice, newEmotion, profile, skipTranslation, player, prefetch);
+  }
+
+  /**
+   * Returns a copy of this request marked as speculative prefetch, leaving every rendering field
+   * intact so it still resolves to the same audio and the same cache entry as the live line.
+   */
+  public SynthesisRequest asPrefetch() {
+    if (prefetch) {
+      return this;
+    }
+    return new SynthesisRequest(text, voice, emotion, profile, skipTranslation, player, true);
   }
 }

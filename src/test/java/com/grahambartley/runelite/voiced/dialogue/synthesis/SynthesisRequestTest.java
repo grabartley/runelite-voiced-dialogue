@@ -1,6 +1,8 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
@@ -8,9 +10,10 @@ import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
 import org.junit.Test;
 
 /**
- * The backward-compatible constructors and the {@code skipTranslation} flag added for issue #138:
- * existing call sites must keep producing a translating request, and {@code withEmotion} must carry
- * the flag through so a re-emotioned copy is not silently re-translated.
+ * The backward-compatible constructors and the routing flags carried alongside the spoken line:
+ * existing call sites must keep producing a translating, non-speculative NPC request, and {@code
+ * withEmotion} must carry every flag through so a re-emotioned copy is not silently re-translated,
+ * re-classed, or re-counted as a line the player heard.
  */
 public class SynthesisRequestTest {
 
@@ -63,5 +66,37 @@ public class SynthesisRequestTest {
     SynthesisRequest npcLine = new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false, false);
     assertFalse(
         "a re-emotioned NPC line stays an NPC line", npcLine.withEmotion(Emotion.NEUTRAL).player());
+  }
+
+  @Test
+  public void everyConstructorDefaultsToALiveLineRatherThanAPrefetch() {
+    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).prefetch());
+    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null).prefetch());
+    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true).prefetch());
+    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true, true).prefetch());
+  }
+
+  @Test
+  public void asPrefetchMarksTheLineAndChangesNothingElse() {
+    SynthesisRequest live = new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, true, true);
+    SynthesisRequest warmed = live.asPrefetch();
+
+    assertTrue("the copy is marked speculative", warmed.prefetch());
+    assertEquals("the spoken text is untouched", live.text(), warmed.text());
+    assertEquals("the voice is untouched", live.voice(), warmed.voice());
+    assertEquals("the emotion is untouched", live.emotion(), warmed.emotion());
+    assertEquals(
+        "translation behaviour is untouched", live.skipTranslation(), warmed.skipTranslation());
+    assertEquals("the speaker class is untouched", live.player(), warmed.player());
+    assertSame("marking an already-speculative line is a no-op", warmed, warmed.asPrefetch());
+  }
+
+  @Test
+  public void withEmotionPreservesThePrefetchMark() {
+    SynthesisRequest warmed =
+        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false, true).asPrefetch();
+    assertTrue(
+        "an emotion downgrade must not turn speculative warming into a voiced line",
+        warmed.withEmotion(Emotion.NEUTRAL).prefetch());
   }
 }

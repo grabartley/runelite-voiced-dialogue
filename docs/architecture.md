@@ -76,6 +76,13 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   cases.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
+- **Session spend readout.** `SpendTracker` counts billable work per provider, recorded inside each
+  backend at the point audio is confirmed (decoded, or the first chunk fed to the sink), so every
+  cache tier, deduped join, and failed call stays out of the totals. Prefetch synths land in their own
+  bucket and translation hops in another, since they bill against a different model. `::voicedspend`
+  formats a snapshot through `SpendReport`, costing characters with the per-provider rates in
+  `SpendPricing`, the single place those constants live. Session-scoped and memory-only: a fresh
+  tracker is built on plugin start and nothing is written to disk.
 - **Timeout and stale-drop.** Each provider runs under its own ceiling (`RetryTuning`), sized to how
   it delivers audio: 60 seconds for Google AI Studio, whose longest measured line completes in about
   14 seconds, and 120 seconds for OpenRouter, which spends a long line's whole generation before

@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -15,9 +16,9 @@ import okhttp3.ResponseBody;
 /**
  * The failure-path infrastructure every cloud TTS backend shares: the once-per-session user notice,
  * the standardized {@link CloudSynthTrace} failure logging, the backed-off network retry wait, the
- * speaking-pace clamp, and the small response/PCM helpers. Each backend composes one instance
- * rather than inheriting, so endpoints, payload shapes, and retry counts stay provider-specific
- * while the plumbing exists exactly once.
+ * speaking-pace clamp, the session spend counters, and the small response/PCM helpers. Each backend
+ * composes one instance rather than inheriting, so endpoints, payload shapes, and retry counts stay
+ * provider-specific while the plumbing exists exactly once.
  */
 @Slf4j
 final class CloudBackendSupport {
@@ -39,9 +40,17 @@ final class CloudBackendSupport {
   static final byte[] EMPTY_BODY = new byte[0];
 
   private final VoicedDialogueConfig config;
+  private final TtsProvider provider;
   private final int maxAttempts;
   private final long networkRetryBaseMillis;
   private final long networkRetryJitterMillis;
+
+  /**
+   * Where billable calls are counted. Defaults to a private tracker nobody reads, so a backend
+   * built without one (tests, and the moment before the plugin wires its session tracker in) counts
+   * into the void rather than needing a null check on every call.
+   */
+  private SpendTracker spend = new SpendTracker();
 
   /** One-time user notice hook for cloud failures; defaults to a no-op. */
   private Consumer<String> notice = msg -> {};
@@ -49,8 +58,10 @@ final class CloudBackendSupport {
   /** Guards the one-time notice so a sustained outage does not spam the chat box. */
   private boolean warned;
 
-  CloudBackendSupport(VoicedDialogueConfig config, int maxAttempts, RetryTuning tuning) {
+  CloudBackendSupport(
+      VoicedDialogueConfig config, TtsProvider provider, int maxAttempts, RetryTuning tuning) {
     this.config = config;
+    this.provider = provider;
     this.maxAttempts = maxAttempts;
     this.networkRetryBaseMillis = tuning.retryBackoffBaseMillis;
     this.networkRetryJitterMillis = tuning.retryJitterMillis;
@@ -59,6 +70,26 @@ final class CloudBackendSupport {
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
   void setNotice(Consumer<String> notice) {
     this.notice = notice == null ? msg -> {} : notice;
+  }
+
+  /** Points billable-call counting at the plugin's session tracker. */
+  void setSpendTracker(SpendTracker spend) {
+    this.spend = spend == null ? new SpendTracker() : spend;
+  }
+
+  /**
+   * Counts one billable speech call for this provider. Called only once audio has actually come
+   * back (decoded, or the first chunk fed to the sink), so a cache hit, a deduped join, and a call
+   * that returned nothing usable all stay out of the totals, and a line recovered on retry counts
+   * once. {@code characters} is the input handed to the speech endpoint, which is what bills.
+   */
+  void recordSpeechSpend(int characters, boolean prefetch) {
+    spend.recordSpeech(provider, characters, prefetch);
+  }
+
+  /** Counts one billable translation call for this provider, after it returned usable text. */
+  void recordTranslationSpend(int characters) {
+    spend.recordTranslation(provider, characters);
   }
 
   /**

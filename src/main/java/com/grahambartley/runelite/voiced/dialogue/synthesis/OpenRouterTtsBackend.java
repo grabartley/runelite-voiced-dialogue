@@ -227,7 +227,9 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             .retryOnConnectionFailure(true)
             .build();
     this.callTimeout = tuning.callTimeout;
-    this.support = new CloudBackendSupport(config, MAX_SPEECH_ATTEMPTS, tuning);
+    this.support =
+        new CloudBackendSupport(
+            config, VoicedDialogueConfig.TtsProvider.OPENROUTER, MAX_SPEECH_ATTEMPTS, tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -251,6 +253,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
   public void setNotice(Consumer<String> notice) {
     support.setNotice(notice);
+  }
+
+  /** Points this backend's billable-call counting at the plugin's session spend tracker. */
+  public void setSpendTracker(SpendTracker spend) {
+    support.setSpendTracker(spend);
   }
 
   @Override
@@ -416,6 +423,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
             "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");
         return null;
       }
+      support.recordTranslationSpend(cappedText.length());
       spokenText = translated;
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
@@ -489,7 +497,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
                     JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
             .build();
 
-    return new PreparedRequest(httpRequest, speedRatio, input.length());
+    return new PreparedRequest(httpRequest, speedRatio, input.length(), request.prefetch());
   }
 
   /**
@@ -605,6 +613,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               CloudSynthTrace.success(
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, bytes.length, generationId));
         }
+        support.recordSpeechSpend(inputLen, prepared.prefetch);
         return pcm;
       } catch (ConnectException e) {
         // The host is unreachable (connection refused / no route), almost certainly an offline
@@ -702,6 +711,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               sink.accept(chunk, rate);
               if (!fedSink) {
                 firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
+                support.recordSpeechSpend(inputLen, prepared.prefetch);
               }
               fedSink = true;
               chunks.add(chunk);
@@ -781,16 +791,18 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     return null;
   }
 
-  /** The built speech request plus the two values both response loops need. */
+  /** The built speech request plus the values both response loops need. */
   private static final class PreparedRequest {
     final Request httpRequest;
     final double speedRatio;
     final int inputLen;
+    final boolean prefetch;
 
-    PreparedRequest(Request httpRequest, double speedRatio, int inputLen) {
+    PreparedRequest(Request httpRequest, double speedRatio, int inputLen, boolean prefetch) {
       this.httpRequest = httpRequest;
       this.speedRatio = speedRatio;
       this.inputLen = inputLen;
+      this.prefetch = prefetch;
     }
   }
 
