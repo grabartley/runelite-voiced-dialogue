@@ -735,7 +735,7 @@ public class GeminiAiStudioTtsBackendTest {
 
     SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
     assertEquals("audio tokens are measured, not modelled", 1_700, recorded.audioTokens());
-    assertEquals(42, recorded.textTokens());
+    assertEquals(42, recorded.speechPromptTokens());
   }
 
   @Test
@@ -759,7 +759,7 @@ public class GeminiAiStudioTtsBackendTest {
 
     SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
     assertEquals("the cumulative total is banked once, not summed", 1_700, recorded.audioTokens());
-    assertEquals(42, recorded.textTokens());
+    assertEquals(42, recorded.speechPromptTokens());
     assertEquals(1, recorded.voicedLines());
   }
 
@@ -779,5 +779,34 @@ public class GeminiAiStudioTtsBackendTest {
     assertEquals("the line was still voiced", 1, recorded.voicedLines());
     assertEquals(
         "no meter reading means no tokens, never a guessed one", 0, recorded.audioTokens());
+  }
+
+  @Test
+  public void theTranslationHopBanksItsOwnMeteredTokensSeparately() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(withUsage(geminiTranslation("Bonjour"), 75, 90)));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("the hop's input is measured", 90, recorded.translationInputTokens());
+    assertEquals("as is its output", 75, recorded.translationOutputTokens());
+    assertEquals(
+        "the hop's text output must never land in the audio bucket, which bills 25x higher",
+        1_700,
+        recorded.audioTokens());
+    assertEquals("the speech call's own prompt stays its own", 42, recorded.speechPromptTokens());
   }
 }

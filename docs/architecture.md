@@ -92,6 +92,13 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   `GeminiTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
   which report a running total), and `SpendPricing` converts those measured tokens at Google's
   published rate. The readout labels that conversion an estimate and OpenRouter's figure as billed.
+
+  The translation hop is a second billable call against a second model, and each provider accounts
+  for it differently. On OpenRouter it bills to the same key, so it is inside the usage delta with
+  no extra work. On AI Studio it is a separate `generateContent` call whose tokens are read through
+  `GeminiTokenUsage.forText` and banked in their own counters. The split matters: the hop's output
+  is text, and reading it through the speech parser would price it as audio at more than twenty
+  times its rate, so the two parse entry points exist precisely to keep that from happening.
   Balance reads run on a dedicated daemon thread, never the game thread, and the finished lines hop
   back to the client thread to be posted.
 - **Timeout and stale-drop.** Each provider runs under its own ceiling (`RetryTuning`), sized to how

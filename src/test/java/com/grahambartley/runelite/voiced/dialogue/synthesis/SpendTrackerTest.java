@@ -107,8 +107,26 @@ public class SpendTrackerTest {
 
     ProviderSpend spend = only(tracker);
     assertEquals(2_600, spend.audioTokens());
-    assertEquals(72, spend.textTokens());
+    assertEquals(72, spend.speechPromptTokens());
     assertEquals("warming's tokens count too, they were still metered", 1, spend.prefetchedLines());
+  }
+
+  @Test
+  public void theTranslationHopsTokensStayApartFromTheSpeechCallsTokens() {
+    SpendTracker tracker = new SpendTracker();
+
+    tracker.recordSpeech(TtsProvider.GOOGLE_AI_STUDIO, 100, false, 1_700, 42);
+    tracker.recordTranslation(TtsProvider.GOOGLE_AI_STUDIO, 80, 90, 75);
+
+    ProviderSpend spend = only(tracker);
+    assertEquals(
+        "the hop runs on a cheaper model, so its tokens cannot be pooled",
+        1_700,
+        spend.audioTokens());
+    assertEquals(42, spend.speechPromptTokens());
+    assertEquals(90, spend.translationInputTokens());
+    assertEquals(75, spend.translationOutputTokens());
+    assertEquals(1, spend.translationCalls());
   }
 
   @Test
@@ -119,7 +137,7 @@ public class SpendTrackerTest {
 
     ProviderSpend spend = only(tracker);
     assertEquals(0, spend.audioTokens());
-    assertEquals(0, spend.textTokens());
+    assertEquals(0, spend.speechPromptTokens());
     assertEquals("the line is still counted", 1, spend.voicedLines());
   }
 
@@ -131,7 +149,7 @@ public class SpendTrackerTest {
 
     ProviderSpend spend = only(tracker);
     assertEquals(0, spend.audioTokens());
-    assertEquals(0, spend.textTokens());
+    assertEquals(0, spend.speechPromptTokens());
   }
 
   @Test

@@ -44,11 +44,17 @@ public final class SpendTracker {
     long translationCalls;
     long translationCharacters;
 
-    /** Audio tokens the provider reported generating, or 0 when it reports none. */
+    /** Audio output tokens the provider reported generating, or 0 when it reports none. */
     long audioTokens;
 
-    /** Text tokens the provider reported consuming, or 0 when it reports none. */
-    long textTokens;
+    /** Input tokens the provider reported for the speech calls, or 0 when it reports none. */
+    long speechPromptTokens;
+
+    /** Input tokens the provider reported for the translation hop. */
+    long translationInputTokens;
+
+    /** Output tokens the provider reported for the translation hop. */
+    long translationOutputTokens;
   }
 
   private final Map<TtsProvider, Counters> byProvider = new ConcurrentHashMap<>();
@@ -65,7 +71,7 @@ public final class SpendTracker {
    * call, and are 0 for a provider that reports nothing.
    */
   public void recordSpeech(
-      TtsProvider provider, int characters, boolean prefetch, long audioTokens, long textTokens) {
+      TtsProvider provider, int characters, boolean prefetch, long audioTokens, long promptTokens) {
     Counters counters = counters(provider);
     if (prefetch) {
       counters.prefetchedLines.incrementAndGet();
@@ -74,14 +80,26 @@ public final class SpendTracker {
     }
     counters.speechCharacters.addAndGet(Math.max(0, characters));
     counters.audioTokens.addAndGet(Math.max(0, audioTokens));
-    counters.textTokens.addAndGet(Math.max(0, textTokens));
+    counters.speechPromptTokens.addAndGet(Math.max(0, promptTokens));
   }
 
-  /** Records one billable translation call, the optional first hop before a non-English line. */
+  /** Records one billable translation call from a provider that reports no token counts. */
   public void recordTranslation(TtsProvider provider, int characters) {
+    recordTranslation(provider, characters, 0, 0);
+  }
+
+  /**
+   * Records one billable translation call, the optional first hop before a non-English line. Its
+   * tokens are held apart from the speech call's because the hop runs against a different, far
+   * cheaper model, so folding the two together would misprice both.
+   */
+  public void recordTranslation(
+      TtsProvider provider, int characters, long inputTokens, long outputTokens) {
     Counters counters = counters(provider);
     counters.translationCalls.incrementAndGet();
     counters.translationCharacters.addAndGet(Math.max(0, characters));
+    counters.translationInputTokens.addAndGet(Math.max(0, inputTokens));
+    counters.translationOutputTokens.addAndGet(Math.max(0, outputTokens));
   }
 
   /**
@@ -116,7 +134,9 @@ public final class SpendTracker {
     final AtomicLong translationCalls = new AtomicLong();
     final AtomicLong translationCharacters = new AtomicLong();
     final AtomicLong audioTokens = new AtomicLong();
-    final AtomicLong textTokens = new AtomicLong();
+    final AtomicLong speechPromptTokens = new AtomicLong();
+    final AtomicLong translationInputTokens = new AtomicLong();
+    final AtomicLong translationOutputTokens = new AtomicLong();
 
     ProviderSpend toSpend(TtsProvider provider) {
       return new ProviderSpend(
@@ -127,7 +147,9 @@ public final class SpendTracker {
           translationCalls.get(),
           translationCharacters.get(),
           audioTokens.get(),
-          textTokens.get());
+          speechPromptTokens.get(),
+          translationInputTokens.get(),
+          translationOutputTokens.get());
     }
   }
 }

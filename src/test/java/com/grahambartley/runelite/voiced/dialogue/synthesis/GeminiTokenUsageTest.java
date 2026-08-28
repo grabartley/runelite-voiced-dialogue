@@ -13,7 +13,7 @@ public class GeminiTokenUsageTest {
   private final Gson gson = new Gson();
 
   private GeminiTokenUsage parse(String raw) {
-    return GeminiTokenUsage.parse(gson, raw);
+    return GeminiTokenUsage.forSpeech(gson, raw);
   }
 
   @Test
@@ -24,7 +24,8 @@ public class GeminiTokenUsageTest {
                 + "\"candidatesTokensDetails\":[{\"modality\":\"AUDIO\",\"tokenCount\":1700}]}}");
 
     assertEquals(1700, usage.audioTokens);
-    assertEquals(42, usage.textTokens);
+    assertEquals(42, usage.promptTokens);
+    assertEquals("a speech call has no text output", 0, usage.textTokens);
     assertFalse(usage.isEmpty());
   }
 
@@ -34,7 +35,7 @@ public class GeminiTokenUsageTest {
         parse("{\"usageMetadata\":{\"promptTokenCount\":42,\"candidatesTokenCount\":1700}}");
 
     assertEquals("a speech call's candidates are audio in their entirety", 1700, usage.audioTokens);
-    assertEquals(42, usage.textTokens);
+    assertEquals(42, usage.promptTokens);
   }
 
   @Test
@@ -60,6 +61,26 @@ public class GeminiTokenUsageTest {
   }
 
   @Test
+  public void aTextCallBillsItsOutputAsTextRatherThanAudio() {
+    GeminiTokenUsage usage =
+        GeminiTokenUsage.forText(
+            gson, "{\"usageMetadata\":{\"promptTokenCount\":90,\"candidatesTokenCount\":75}}");
+
+    assertEquals(90, usage.promptTokens);
+    assertEquals(75, usage.textTokens);
+    assertEquals(
+        "reading the hop's output as audio would misprice it by more than twenty times",
+        0,
+        usage.audioTokens);
+  }
+
+  @Test
+  public void anAbsentBlockOnATextCallReportsNothing() {
+    assertTrue(GeminiTokenUsage.forText(gson, "{}").isEmpty());
+    assertTrue(GeminiTokenUsage.forText(gson, "not json").isEmpty());
+  }
+
+  @Test
   public void negativeCountsAreFloored() {
     GeminiTokenUsage usage =
         parse("{\"usageMetadata\":{\"promptTokenCount\":-5,\"candidatesTokenCount\":-9}}");
@@ -69,13 +90,13 @@ public class GeminiTokenUsageTest {
 
   @Test
   public void maxKeepsTheLargestReadingSoACumulativeStreamIsNeverDoubleCounted() {
-    GeminiTokenUsage first = new GeminiTokenUsage(400, 42);
-    GeminiTokenUsage running = new GeminiTokenUsage(1700, 42);
+    GeminiTokenUsage first = new GeminiTokenUsage(42, 400, 0);
+    GeminiTokenUsage running = new GeminiTokenUsage(42, 1700, 0);
 
     GeminiTokenUsage combined = first.max(running);
 
     assertEquals(1700, combined.audioTokens);
-    assertEquals(42, combined.textTokens);
+    assertEquals(42, combined.promptTokens);
     assertEquals("a null reading leaves the total alone", 1700, combined.max(null).audioTokens);
   }
 }

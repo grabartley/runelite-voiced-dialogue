@@ -91,13 +91,22 @@ final class CloudBackendSupport {
    * The {@code recordSpeechSpend} variant for a provider that reports what it metered, so the
    * session is costed from the provider's own token counts rather than from the input length.
    */
-  void recordSpeechSpend(int characters, boolean prefetch, long audioTokens, long textTokens) {
-    spend.recordSpeech(provider, characters, prefetch, audioTokens, textTokens);
+  void recordSpeechSpend(int characters, boolean prefetch, long audioTokens, long promptTokens) {
+    spend.recordSpeech(provider, characters, prefetch, audioTokens, promptTokens);
   }
 
   /** Counts one billable translation call for this provider, after it returned usable text. */
   void recordTranslationSpend(int characters) {
     spend.recordTranslation(provider, characters);
+  }
+
+  /**
+   * The {@code recordTranslationSpend} variant for a provider that reports what the hop metered.
+   * The hop runs against its own model at its own rate, so its tokens are banked separately from
+   * the speech call's.
+   */
+  void recordTranslationSpend(int characters, long inputTokens, long outputTokens) {
+    spend.recordTranslation(provider, characters, inputTokens, outputTokens);
   }
 
   /**

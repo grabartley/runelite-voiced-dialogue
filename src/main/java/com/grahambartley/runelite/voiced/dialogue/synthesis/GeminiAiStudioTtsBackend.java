@@ -257,16 +257,18 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     boolean translating = CloudTtsText.needsTranslation(language) && !request.skipTranslation();
     String spokenText = cappedText;
     if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
-      if (translated == null) {
+      GeminiAiStudioTranslator.Translation translation =
+          translator.translate(cappedText, language.trim(), key);
+      if (translation == null) {
         support.warnOnce(
             "Google AI Studio translation to "
                 + language.trim()
                 + " failed; this line was not voiced.");
         return null;
       }
-      support.recordTranslationSpend(cappedText.length());
-      spokenText = translated;
+      support.recordTranslationSpend(
+          cappedText.length(), translation.usage.promptTokens, translation.usage.textTokens);
+      spokenText = translation.text;
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
     CharacterProfile profile = request.profile();
@@ -402,9 +404,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, audio.length, ""));
         }
         GeminiTokenUsage usage =
-            GeminiTokenUsage.parse(gson, new String(bytes, StandardCharsets.UTF_8));
+            GeminiTokenUsage.forSpeech(gson, new String(bytes, StandardCharsets.UTF_8));
         support.recordSpeechSpend(
-            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.textTokens);
+            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
         return pcm;
       } catch (ConnectException e) {
         support.warnOnce(NETWORK_NOTICE);
@@ -491,7 +493,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             if (eventFinishReason != null) {
               finishReason = eventFinishReason;
             }
-            usage = usage.max(GeminiTokenUsage.parse(gson, data));
+            usage = usage.max(GeminiTokenUsage.forSpeech(gson, data));
             for (byte[] audio : extractAudioChunks(data)) {
               totalBytes += audio.length;
               float[] chunk = decoder.decode(audio, audio.length);
@@ -533,7 +535,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         // token totals only complete as the stream drains, so this banks them here rather than at
         // the first chunk.
         support.recordSpeechSpend(
-            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.textTokens);
+            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
         if (config.debugMode()) {
           // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
           // stream. A first chunk that lands nearly at elapsedMs means the provider sent the audio

@@ -20,7 +20,12 @@ import java.util.Locale;
  *       figure. When the balance cannot be read the line says so rather than substituting a guess.
  *   <li><b>Google AI Studio</b> returns no cost at all, so its line reports the audio and text
  *       tokens it really metered and converts them at the published rate, labelled an estimate.
+ *       Both models a session can touch are priced: the speech model, and the cheaper translation
+ *       model when a non-English language or a speaking style routes lines through it.
  * </ul>
+ *
+ * <p>The translation hop needs no special handling on the OpenRouter side, since it bills against
+ * the same key and is therefore already inside that provider's reported spend.
  */
 public final class SpendReport {
 
@@ -75,7 +80,11 @@ public final class SpendReport {
 
   private static String aiStudioLine(ProviderSpend spend) {
     StringBuilder text = counts(spend);
-    long tokens = spend.audioTokens() + spend.textTokens();
+    long tokens =
+        spend.audioTokens()
+            + spend.speechPromptTokens()
+            + spend.translationInputTokens()
+            + spend.translationOutputTokens();
     if (tokens == 0) {
       // No usageMetadata came back, so there is no measured quantity to cost. Report what is known
       // rather than pricing a zero.
@@ -86,11 +95,17 @@ public final class SpendReport {
     }
     text.append(count(spend.audioTokens()))
         .append(" audio tokens, ")
-        .append(count(spend.textTokens()))
+        .append(count(spend.speechPromptTokens()))
         .append(" text tokens");
-    translation(text, spend);
+    translationTokens(text, spend);
+    // Both models a session can touch are priced, so a translated session is not under-reported by
+    // the hop it paid for.
+    double usd =
+        SpendPricing.estimateSpeechUsd(spend.audioTokens(), spend.speechPromptTokens())
+            + SpendPricing.estimateTranslationUsd(
+                spend.translationInputTokens(), spend.translationOutputTokens());
     return text.append(". Estimated ")
-        .append(usd(SpendPricing.estimateUsd(spend.audioTokens(), spend.textTokens())))
+        .append(usd(usd))
         .append(" (tokens measured, price from Google's published rate).")
         .toString();
   }
@@ -105,6 +120,7 @@ public final class SpendReport {
         .append(" prefetched, ");
   }
 
+  /** The translation bucket sized in characters, for a provider that reports no tokens. */
   private static void translation(StringBuilder text, ProviderSpend spend) {
     if (spend.translationCalls() > 0) {
       text.append(", plus ")
@@ -112,6 +128,17 @@ public final class SpendReport {
           .append(" translation calls (")
           .append(count(spend.translationCharacters()))
           .append(" characters)");
+    }
+  }
+
+  /** The translation bucket sized in the tokens the provider metered for the hop. */
+  private static void translationTokens(StringBuilder text, ProviderSpend spend) {
+    if (spend.translationCalls() > 0) {
+      text.append(", plus ")
+          .append(count(spend.translationCalls()))
+          .append(" translation calls (")
+          .append(count(spend.translationInputTokens() + spend.translationOutputTokens()))
+          .append(" tokens)");
     }
   }
 

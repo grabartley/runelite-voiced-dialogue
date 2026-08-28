@@ -15,12 +15,28 @@ import org.junit.Test;
 public class SpendReportTest {
 
   private static ProviderSpend openRouter(long voiced, long prefetched, long characters) {
-    return new ProviderSpend(TtsProvider.OPENROUTER, voiced, prefetched, characters, 0, 0, 0, 0);
+    return new ProviderSpend(
+        TtsProvider.OPENROUTER, voiced, prefetched, characters, 0, 0, 0, 0, 0, 0);
   }
 
-  private static ProviderSpend aiStudio(long voiced, long audioTokens, long textTokens) {
+  private static ProviderSpend aiStudio(long voiced, long audioTokens, long promptTokens) {
     return new ProviderSpend(
-        TtsProvider.GOOGLE_AI_STUDIO, voiced, 0, 400, 0, 0, audioTokens, textTokens);
+        TtsProvider.GOOGLE_AI_STUDIO, voiced, 0, 400, 0, 0, audioTokens, promptTokens, 0, 0);
+  }
+
+  private static ProviderSpend aiStudioTranslated(
+      long audioTokens, long promptTokens, long translationIn, long translationOut) {
+    return new ProviderSpend(
+        TtsProvider.GOOGLE_AI_STUDIO,
+        4,
+        0,
+        400,
+        2,
+        310,
+        audioTokens,
+        promptTokens,
+        translationIn,
+        translationOut);
   }
 
   private static String only(List<String> lines) {
@@ -118,10 +134,44 @@ public class SpendReportTest {
     assertFalse(
         "an English session mentions no translation: " + without, without.contains("translation"));
 
-    ProviderSpend translated = new ProviderSpend(TtsProvider.OPENROUTER, 2, 0, 200, 2, 310, 0, 0);
+    ProviderSpend translated =
+        new ProviderSpend(TtsProvider.OPENROUTER, 2, 0, 200, 2, 310, 0, 0, 0, 0);
     String with = only(SpendReport.lines(Collections.singletonList(translated), 0.01));
     assertTrue(with, with.contains("2 translation calls"));
     assertTrue(with, with.contains("310 characters"));
+  }
+
+  @Test
+  public void aiStudioPricesTheTranslationHopOnTopOfTheSpeechCalls() {
+    String line =
+        only(
+            SpendReport.lines(
+                Collections.singletonList(aiStudioTranslated(9_000, 600, 800, 700)), null));
+
+    assertTrue(
+        "the hop is sized in the tokens it metered: " + line,
+        line.contains("2 translation calls (1,500 tokens)"));
+
+    double speechOnly = SpendPricing.estimateSpeechUsd(9_000, 600);
+    double withHop = speechOnly + SpendPricing.estimateTranslationUsd(800, 700);
+    assertTrue(
+        "a translated session must not be costed as if the hop were free", withHop > speechOnly);
+    assertTrue(
+        "the quoted figure includes the hop: " + line,
+        line.contains(String.format(java.util.Locale.US, "$%.4f", withHop)));
+  }
+
+  @Test
+  public void anEnglishAiStudioSessionQuotesSpeechAlone() {
+    String line =
+        only(SpendReport.lines(Collections.singletonList(aiStudio(12, 18_204, 1_208)), null));
+
+    assertFalse("no hop ran, so none is mentioned: " + line, line.contains("translation"));
+    assertTrue(
+        line,
+        line.contains(
+            String.format(
+                java.util.Locale.US, "$%.4f", SpendPricing.estimateSpeechUsd(18_204, 1_208))));
   }
 
   @Test

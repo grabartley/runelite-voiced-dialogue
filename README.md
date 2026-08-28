@@ -128,6 +128,8 @@ Type `::voicedspend` in chat and the plugin answers with what this session has c
 
 **On Google AI Studio the figure is an estimate, because Google does not expose a real one.** The Gemini API returns no cost, and actual billing lives behind the Cloud Billing API, out of reach for a plugin. What it does return is the audio and text tokens it really metered for every call, so the readout shows those measured counts and converts them at [Google's published rate](https://ai.google.dev/pricing). Only the rate is assumed; the quantities are the API's own.
 
+Setting a non-English **Spoken Language** or a **Speaking Style** adds a translation call per line against a second, much cheaper model, and both providers account for it. On OpenRouter it bills to the same key, so it is already inside the reported spend. On Google AI Studio it is metered and priced at its own model's rate, and shown as its own bucket, so a translated session is never costed as though the hop were free.
+
 </details>
 
 > **Privacy:** only the dialogue text being spoken is sent to your chosen provider (OpenRouter or Google AI Studio) over HTTPS, and lines you have already heard replay from your local cache without going anywhere.
