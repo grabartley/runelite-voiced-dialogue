@@ -99,6 +99,42 @@ public class SpendTrackerTest {
   }
 
   @Test
+  public void reportedTokenCountsAccumulateAlongsideTheLineCounts() {
+    SpendTracker tracker = new SpendTracker();
+
+    tracker.recordSpeech(TtsProvider.GOOGLE_AI_STUDIO, 100, false, 1_700, 42);
+    tracker.recordSpeech(TtsProvider.GOOGLE_AI_STUDIO, 60, true, 900, 30);
+
+    ProviderSpend spend = only(tracker);
+    assertEquals(2_600, spend.audioTokens());
+    assertEquals(72, spend.textTokens());
+    assertEquals("warming's tokens count too, they were still metered", 1, spend.prefetchedLines());
+  }
+
+  @Test
+  public void aProviderThatReportsNoTokensLeavesThoseTotalsAtZero() {
+    SpendTracker tracker = new SpendTracker();
+
+    tracker.recordSpeech(TtsProvider.OPENROUTER, 100, false);
+
+    ProviderSpend spend = only(tracker);
+    assertEquals(0, spend.audioTokens());
+    assertEquals(0, spend.textTokens());
+    assertEquals("the line is still counted", 1, spend.voicedLines());
+  }
+
+  @Test
+  public void negativeTokenCountsCannotDragTotalsBelowZero() {
+    SpendTracker tracker = new SpendTracker();
+
+    tracker.recordSpeech(TtsProvider.GOOGLE_AI_STUDIO, 100, false, -900, -30);
+
+    ProviderSpend spend = only(tracker);
+    assertEquals(0, spend.audioTokens());
+    assertEquals(0, spend.textTokens());
+  }
+
+  @Test
   public void resetClearsEverySessionTotal() {
     SpendTracker tracker = new SpendTracker();
     tracker.recordSpeech(TtsProvider.OPENROUTER, 100, false);

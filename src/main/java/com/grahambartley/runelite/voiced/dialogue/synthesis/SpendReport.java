@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SpendTracker.ProviderSpend;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,13 +8,19 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The {@code ::voicedspend} chat command: what it is called, and how a {@link SpendTracker}
- * snapshot reads back to the player.
+ * The {@code ::voicedspend} chat command: what it is called, and how a session's usage reads back
+ * to the player.
  *
- * <p>One chat line per provider used this session, carrying the lines voiced, the lines prefetched,
- * the characters actually sent, the translation hop when there was one, and an estimated cost from
- * {@link SpendPricing}. Every line says the cost is an estimate, because it is: the provider's own
- * dashboard is what actually bills.
+ * <p>One chat line per provider used. Both carry the same counts (lines voiced, lines prefetched,
+ * the translation hop when there was one), but they answer the cost question differently because
+ * the providers do:
+ *
+ * <ul>
+ *   <li><b>OpenRouter</b> states what the key has actually spent, so its line quotes a billed
+ *       figure. When the balance cannot be read the line says so rather than substituting a guess.
+ *   <li><b>Google AI Studio</b> returns no cost at all, so its line reports the audio and text
+ *       tokens it really metered and converts them at the published rate, labelled an estimate.
+ * </ul>
  */
 public final class SpendReport {
 
@@ -23,9 +30,7 @@ public final class SpendReport {
   private static final String NOTHING_SPENT =
       "Nothing has been voiced this session, so nothing has been spent.";
 
-  /**
-   * Below this the four-decimal figure would round to zero, which reads as "free" rather than tiny.
-   */
+  /** Below this the four-decimal figure rounds to zero, which reads as free rather than tiny. */
   private static final double SMALLEST_SHOWN_USD = 0.0001;
 
   private SpendReport() {}
@@ -35,28 +40,72 @@ public final class SpendReport {
     return command != null && COMMAND.equalsIgnoreCase(command.trim());
   }
 
-  /** The chat lines for a snapshot: one per provider, or a single "nothing spent" line. */
-  public static List<String> lines(List<ProviderSpend> snapshot) {
+  /**
+   * The chat lines for a snapshot. {@code openRouterSpentUsd} is what OpenRouter reports the key
+   * has spent this session, or {@code null} when that balance could not be read.
+   */
+  public static List<String> lines(List<ProviderSpend> snapshot, Double openRouterSpentUsd) {
     if (snapshot == null || snapshot.isEmpty()) {
       return Collections.singletonList(NOTHING_SPENT);
     }
     List<String> lines = new ArrayList<>(snapshot.size());
     for (ProviderSpend spend : snapshot) {
-      lines.add(line(spend));
+      lines.add(
+          spend.provider() == TtsProvider.GOOGLE_AI_STUDIO
+              ? aiStudioLine(spend)
+              : openRouterLine(spend, openRouterSpentUsd));
     }
     return lines;
   }
 
-  private static String line(ProviderSpend spend) {
-    StringBuilder text = new StringBuilder();
-    text.append(spend.provider())
+  private static String openRouterLine(ProviderSpend spend, Double spentUsd) {
+    StringBuilder text = counts(spend);
+    text.append(count(spend.speechCharacters())).append(" characters sent");
+    translation(text, spend);
+    if (spentUsd == null) {
+      return text.append(
+              ". OpenRouter's billed spend could not be read; see openrouter.ai/settings/credits.")
+          .toString();
+    }
+    return text.append(". Spent ")
+        .append(usd(spentUsd))
+        .append(", billed by OpenRouter.")
+        .toString();
+  }
+
+  private static String aiStudioLine(ProviderSpend spend) {
+    StringBuilder text = counts(spend);
+    long tokens = spend.audioTokens() + spend.textTokens();
+    if (tokens == 0) {
+      // No usageMetadata came back, so there is no measured quantity to cost. Report what is known
+      // rather than pricing a zero.
+      text.append(count(spend.speechCharacters())).append(" characters sent");
+      translation(text, spend);
+      return text.append(". Google AI Studio reported no token counts, so cost is unknown.")
+          .toString();
+    }
+    text.append(count(spend.audioTokens()))
+        .append(" audio tokens, ")
+        .append(count(spend.textTokens()))
+        .append(" text tokens");
+    translation(text, spend);
+    return text.append(". Estimated ")
+        .append(usd(SpendPricing.estimateUsd(spend.audioTokens(), spend.textTokens())))
+        .append(" (tokens measured, price from Google's published rate).")
+        .toString();
+  }
+
+  private static StringBuilder counts(ProviderSpend spend) {
+    return new StringBuilder()
+        .append(spend.provider())
         .append(" this session: ")
         .append(count(spend.voicedLines()))
         .append(" lines voiced, ")
         .append(count(spend.prefetchedLines()))
-        .append(" prefetched, ")
-        .append(count(spend.speechCharacters()))
-        .append(" characters sent");
+        .append(" prefetched, ");
+  }
+
+  private static void translation(StringBuilder text, ProviderSpend spend) {
     if (spend.translationCalls() > 0) {
       text.append(", plus ")
           .append(count(spend.translationCalls()))
@@ -64,13 +113,6 @@ public final class SpendReport {
           .append(count(spend.translationCharacters()))
           .append(" characters)");
     }
-    double usd =
-        SpendPricing.estimateUsd(
-            spend.provider(), spend.speechCharacters(), spend.translationCharacters());
-    return text.append(". Estimated spend ")
-        .append(usd(usd))
-        .append(", an estimate only.")
-        .toString();
   }
 
   private static String count(long value) {

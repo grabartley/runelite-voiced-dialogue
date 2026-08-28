@@ -1,61 +1,39 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
-
 /**
- * The one place the plugin's cost-per-character estimates live, so the {@code ::voicedspend}
- * readout and the README's average-line figure never drift apart.
+ * Converts Google AI Studio's reported token counts into an estimated cost, and is the one place
+ * those rates live.
  *
- * <p>Both providers voice through the same Gemini TTS model and translate through the same Gemini
- * Flash Lite model, and OpenRouter resells at the model's list price (its own fee is charged when
- * credits are bought, not per call), so the two currently carry identical rates. They are still
- * held per provider, since only one of them has to change its pricing for that to stop being true.
+ * <p>Only AI Studio needs this. OpenRouter states what a key has actually spent through {@code
+ * /api/v1/key}, so its readout quotes a billed figure and never passes through here. The Gemini API
+ * returns no cost of any kind, and its real billing sits behind the Cloud Billing API (a separate
+ * credential and cloud project, out of reach for a plugin), so the closest honest figure is the
+ * provider's own metered token counts multiplied by its published rate.
  *
- * <p>Rates are derived from the published per-token pricing, converted to characters:
+ * <p>That leaves exactly one modelled input: the rate. The quantities are measured, taken from the
+ * {@code usageMetadata} the API returns per call, so this is not a guess at how long a line is or
+ * how many tokens a character becomes. The readout labels the resulting figure an estimate anyway,
+ * because a published rate is not a receipt.
  *
- * <ul>
- *   <li>Speech is billed on generated audio, which dominates the text input by orders of magnitude.
- *       At roughly two audio tokens per spoken character and $10 per million audio tokens, a
- *       character costs about $0.000025, which puts a typical 100-character line at $0.0025, the
- *       average quoted in the README.
- *   <li>Translation is text in, text out on a Flash Lite class model: about a quarter of a token
- *       per character each way at a blended ~$0.25 per million tokens, so roughly $0.00000013 per
- *       source character. It is a rounding error next to speech, and is reported separately so it
- *       reads as one.
- * </ul>
- *
- * <p>Pricing pages: Google AI Studio at https://ai.google.dev/pricing and OpenRouter at
- * https://openrouter.ai/models. Every figure here is an estimate; the provider's own dashboard is
- * the authority on what was actually billed.
+ * <p>Rates come from Google's Gemini API pricing page (https://ai.google.dev/pricing) for the TTS
+ * model: audio output billed per million output tokens, text input per million input tokens.
  */
 public final class SpendPricing {
 
-  static final double OPENROUTER_SPEECH_USD_PER_CHARACTER = 0.000_025;
+  /** Audio output, $10.00 per million tokens. */
+  static final double AUDIO_USD_PER_TOKEN = 10.00 / 1_000_000;
 
-  static final double GOOGLE_AI_STUDIO_SPEECH_USD_PER_CHARACTER = 0.000_025;
-
-  static final double OPENROUTER_TRANSLATION_USD_PER_CHARACTER = 0.000_000_13;
-
-  static final double GOOGLE_AI_STUDIO_TRANSLATION_USD_PER_CHARACTER = 0.000_000_13;
+  /** Text input, $0.50 per million tokens. */
+  static final double TEXT_USD_PER_TOKEN = 0.50 / 1_000_000;
 
   private SpendPricing() {}
 
-  /** Estimated USD spent on a provider's speech and translation characters this session. */
-  public static double estimateUsd(
-      TtsProvider provider, long speechCharacters, long translationCharacters) {
-    return Math.max(0, speechCharacters) * speechUsdPerCharacter(provider)
-        + Math.max(0, translationCharacters) * translationUsdPerCharacter(provider);
-  }
-
-  static double speechUsdPerCharacter(TtsProvider provider) {
-    return provider == TtsProvider.GOOGLE_AI_STUDIO
-        ? GOOGLE_AI_STUDIO_SPEECH_USD_PER_CHARACTER
-        : OPENROUTER_SPEECH_USD_PER_CHARACTER;
-  }
-
-  static double translationUsdPerCharacter(TtsProvider provider) {
-    return provider == TtsProvider.GOOGLE_AI_STUDIO
-        ? GOOGLE_AI_STUDIO_TRANSLATION_USD_PER_CHARACTER
-        : OPENROUTER_TRANSLATION_USD_PER_CHARACTER;
+  /**
+   * Estimated USD for a set of metered tokens. Audio output dominates by twenty to one, so a line's
+   * cost tracks how long it is to speak far more than how long it is to read.
+   */
+  public static double estimateUsd(long audioTokens, long textTokens) {
+    return Math.max(0, audioTokens) * AUDIO_USD_PER_TOKEN
+        + Math.max(0, textTokens) * TEXT_USD_PER_TOKEN;
   }
 }

@@ -3,60 +3,43 @@ package com.grahambartley.runelite.voiced.dialogue.synthesis;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
 import org.junit.Test;
 
-/** The per-character cost estimates and the arithmetic the readout quotes. */
+/** Converting Google AI Studio's metered token counts into the estimate the readout quotes. */
 public class SpendPricingTest {
 
   private static final double TOLERANCE = 1e-12;
 
   @Test
-  public void aTypicalLineMatchesTheAverageQuotedInTheReadme() {
-    for (TtsProvider provider : TtsProvider.values()) {
-      assertEquals(
-          "a 100-character line costs about $0.0025 to voice, the README's average",
-          0.0025,
-          SpendPricing.estimateUsd(provider, 100, 0),
-          1e-6);
-    }
-  }
-
-  @Test
-  public void speechAndTranslationCharactersAreBilledAtTheirOwnRates() {
+  public void audioAndTextTokensAreBilledAtTheirOwnPublishedRates() {
     double expected =
-        1_000 * SpendPricing.speechUsdPerCharacter(TtsProvider.OPENROUTER)
-            + 400 * SpendPricing.translationUsdPerCharacter(TtsProvider.OPENROUTER);
+        20_000 * SpendPricing.AUDIO_USD_PER_TOKEN + 1_500 * SpendPricing.TEXT_USD_PER_TOKEN;
 
-    assertEquals(expected, SpendPricing.estimateUsd(TtsProvider.OPENROUTER, 1_000, 400), TOLERANCE);
+    assertEquals(expected, SpendPricing.estimateUsd(20_000, 1_500), TOLERANCE);
   }
 
   @Test
-  public void translationIsOrdersOfMagnitudeCheaperThanSpeech() {
-    for (TtsProvider provider : TtsProvider.values()) {
-      assertTrue(
-          "the translation hop must never dominate the estimate",
-          SpendPricing.translationUsdPerCharacter(provider) * 100
-              < SpendPricing.speechUsdPerCharacter(provider));
-    }
+  public void audioOutputDominatesTheCostOfALine() {
+    assertTrue(
+        "audio output bills far above text input, so a line's cost tracks how long it speaks",
+        SpendPricing.AUDIO_USD_PER_TOKEN > SpendPricing.TEXT_USD_PER_TOKEN * 10);
   }
 
   @Test
-  public void everyProviderHasANonZeroRateForBothCallKinds() {
-    for (TtsProvider provider : TtsProvider.values()) {
-      assertTrue(provider + " speech rate", SpendPricing.speechUsdPerCharacter(provider) > 0);
-      assertTrue(
-          provider + " translation rate", SpendPricing.translationUsdPerCharacter(provider) > 0);
-    }
+  public void aTypicalLineLandsInTheRightOrderOfMagnitude() {
+    // ~170 audio tokens is a 100-character line at Gemini's audio token rate, plus a short prompt.
+    double usd = SpendPricing.estimateUsd(170, 40);
+
+    assertTrue("a single line costs fractions of a cent: " + usd, usd > 0.0005 && usd < 0.005);
   }
 
   @Test
   public void anUntouchedSessionEstimatesNothing() {
-    assertEquals(0.0, SpendPricing.estimateUsd(TtsProvider.OPENROUTER, 0, 0), TOLERANCE);
+    assertEquals(0.0, SpendPricing.estimateUsd(0, 0), TOLERANCE);
   }
 
   @Test
-  public void negativeCharacterCountsCannotProduceACredit() {
-    assertEquals(0.0, SpendPricing.estimateUsd(TtsProvider.OPENROUTER, -500, -500), TOLERANCE);
+  public void negativeTokenCountsCannotProduceACredit() {
+    assertEquals(0.0, SpendPricing.estimateUsd(-500, -500), TOLERANCE);
   }
 }

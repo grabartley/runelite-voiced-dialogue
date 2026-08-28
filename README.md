@@ -122,9 +122,11 @@ On Google AI Studio a line starts speaking after about a second and keeps genera
 <details>
 <summary><b>Session spend on demand</b></summary>
 
-Type `::voicedspend` in chat and the plugin answers with what this session has cost so far: lines voiced, lines pre-voiced by prefetch, characters sent, and an estimated spend, one chat line per provider you used. Lines replayed from your cache are free and are counted nowhere, so a session spent on dialogue you have heard before reads as zero.
+Type `::voicedspend` in chat and the plugin answers with what this session has cost so far: lines voiced, lines pre-voiced by prefetch, and the spend, one chat line per provider you used. Lines replayed from your cache are free and are counted nowhere, so a session spent on dialogue you have heard before reads as zero. Totals are session-only and reset whenever the plugin restarts.
 
-The estimate works from roughly `$0.000025` per character sent, which is the arithmetic behind the `$0.0025` average line quoted above. It is an estimate: your provider's own dashboard is the authority on what was actually billed. Totals are session-only and reset whenever the plugin restarts.
+**On OpenRouter the figure is the real one.** OpenRouter reports what your key has spent, so the readout takes a reading when the session starts and quotes the difference. That is the same number your account is billed, not a model of it. It covers everything on that key, so other apps sharing it show up too.
+
+**On Google AI Studio the figure is an estimate, because Google does not expose a real one.** The Gemini API returns no cost, and actual billing lives behind the Cloud Billing API, out of reach for a plugin. What it does return is the audio and text tokens it really metered for every call, so the readout shows those measured counts and converts them at [Google's published rate](https://ai.google.dev/pricing). Only the rate is assumed; the quantities are the API's own.
 
 </details>
 

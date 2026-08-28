@@ -15,7 +15,9 @@ import com.grahambartley.runelite.voiced.dialogue.dialogue.PublicChatPolicy;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendWarmUpPolicy;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.GeminiAiStudioTtsBackend;
+import com.grahambartley.runelite.voiced.dialogue.synthesis.OpenRouterCreditMeter;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.OpenRouterTtsBackend;
+import com.grahambartley.runelite.voiced.dialogue.synthesis.OpenRouterUsageClient;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.ProviderDefaultPolicy;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SpendReport;
@@ -29,8 +31,10 @@ import com.grahambartley.runelite.voiced.dialogue.voice.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.voice.ProfileResolver;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
@@ -99,6 +103,17 @@ public class VoicedDialoguePlugin extends Plugin {
    */
   private SpendTracker spendTracker;
 
+  /** Reads what the OpenRouter key has actually spent, so the readout quotes a billed figure. */
+  private OpenRouterUsageClient usageClient;
+
+  private OpenRouterCreditMeter creditMeter;
+
+  /**
+   * Dedicated daemon thread for the spend readout's balance reads, so a command never touches the
+   * network on the game thread and never queues behind synthesis.
+   */
+  private ExecutorService spendExecutor;
+
   @Override
   protected void startUp() {
     pinProviderForExistingOpenRouterPlayers();
@@ -132,6 +147,18 @@ public class VoicedDialoguePlugin extends Plugin {
     // rather than routed to the other provider. No model or native binaries ship in the plugin
     // jar.
     spendTracker = new SpendTracker();
+    usageClient = new OpenRouterUsageClient(okHttpClient, gson);
+    creditMeter = new OpenRouterCreditMeter();
+    spendExecutor =
+        Executors.newSingleThreadExecutor(
+            r -> {
+              Thread t = new Thread(r, "tts-spend");
+              t.setDaemon(true);
+              return t;
+            });
+    // Take the session's starting balance now, off the game thread, so the first ::voicedspend has
+    // something to subtract from. A key entered later re-baselines through onConfigChanged.
+    captureOpenRouterBaseline();
     OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
     openRouterBackend.setSpendTracker(spendTracker);
@@ -197,6 +224,12 @@ public class VoicedDialoguePlugin extends Plugin {
   protected void shutDown() {
     noticeManager = null;
     spendTracker = null;
+    usageClient = null;
+    creditMeter = null;
+    if (spendExecutor != null) {
+      spendExecutor.shutdownNow();
+      spendExecutor = null;
+    }
     synthesisDispatcher = null;
     dialogueWatcher = null;
     textCleaner = null;
@@ -261,8 +294,49 @@ public class VoicedDialoguePlugin extends Plugin {
     if (!SpendReport.matches(event.getCommand()) || spendTracker == null || noticeManager == null) {
       return;
     }
-    for (String line : SpendReport.lines(spendTracker.snapshot())) {
-      noticeManager.postNotice(line);
+    List<SpendTracker.ProviderSpend> snapshot = spendTracker.snapshot();
+    String key = config.openRouterApiKey();
+    submitSpendTask(
+        () -> {
+          // OpenRouter states what the key has spent; reading it is a network call, so it happens
+          // here and the finished lines hop back to the client thread to be posted.
+          Double spent = creditMeter.spentSince(key, usageClient.fetchUsage(key));
+          List<String> lines = SpendReport.lines(snapshot, spent);
+          clientThread.invokeLater(
+              () -> {
+                if (noticeManager == null) {
+                  return;
+                }
+                for (String line : lines) {
+                  noticeManager.postNotice(line);
+                }
+              });
+        });
+  }
+
+  /**
+   * Reads the OpenRouter key's current all-time usage off the game thread and banks it as this
+   * session's starting point. A no-op without a key; the {@link OpenRouterCreditMeter} ignores a
+   * repeat for a key it already has a baseline for, so spend already made is never erased.
+   */
+  private void captureOpenRouterBaseline() {
+    String key = config.openRouterApiKey();
+    if (creditMeter.hasBaselineFor(key)) {
+      return;
+    }
+    submitSpendTask(() -> creditMeter.recordBaseline(key, usageClient.fetchUsage(key)));
+  }
+
+  /** Runs a spend task on the dedicated thread, dropping it if the plugin is shutting down. */
+  private void submitSpendTask(Runnable task) {
+    ExecutorService executor = spendExecutor;
+    if (executor == null) {
+      return;
+    }
+    try {
+      executor.execute(task);
+    } catch (RejectedExecutionException ignored) {
+      // Shutting down; the readout is not worth resurrecting a torn-down session for.
     }
   }
 
@@ -301,6 +375,12 @@ public class VoicedDialoguePlugin extends Plugin {
       return;
     }
     audioService.prewarm(backendProvider::warmUpActive);
+    // An OpenRouter key swapped mid-session starts a different running total, so the old baseline
+    // cannot be subtracted from the new key's usage.
+    if ("openRouterApiKey".equals(event.getKey()) && creditMeter != null) {
+      creditMeter.reset();
+      captureOpenRouterBaseline();
+    }
   }
 
   @Provides

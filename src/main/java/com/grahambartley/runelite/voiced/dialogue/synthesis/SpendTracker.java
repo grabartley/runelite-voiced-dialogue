@@ -23,6 +23,11 @@ import lombok.experimental.Accessors;
  * heard from speculative warming. Translation calls are counted separately again, since they bill
  * against a different (much cheaper) model.
  *
+ * <p>Where a provider reports what it actually metered, that is recorded instead of inferred:
+ * Google AI Studio returns real audio and text token counts per call, which is what its billing is
+ * denominated in. A provider that reports nothing leaves those at zero and is costed from its own
+ * account balance instead.
+ *
  * <p>Session-scoped and memory-only: a fresh instance is built on plugin start and nothing is ever
  * written to disk. Thread-safe, since synthesis, prefetch, and the game thread all touch it.
  */
@@ -38,16 +43,29 @@ public final class SpendTracker {
     long speechCharacters;
     long translationCalls;
     long translationCharacters;
+
+    /** Audio tokens the provider reported generating, or 0 when it reports none. */
+    long audioTokens;
+
+    /** Text tokens the provider reported consuming, or 0 when it reports none. */
+    long textTokens;
   }
 
   private final Map<TtsProvider, Counters> byProvider = new ConcurrentHashMap<>();
 
-  /**
-   * Records one billable speech call: {@code characters} is the input actually handed to the speech
-   * endpoint, after cleaning, capping, translation, and the profile/emotion/pace preamble, which is
-   * what the provider bills on.
-   */
+  /** Records one billable speech call from a provider that reports no token counts. */
   public void recordSpeech(TtsProvider provider, int characters, boolean prefetch) {
+    recordSpeech(provider, characters, prefetch, 0, 0);
+  }
+
+  /**
+   * Records one billable speech call. {@code characters} is the input actually handed to the speech
+   * endpoint, after cleaning, capping, translation, and the profile/emotion/pace preamble. {@code
+   * audioTokens} and {@code textTokens} are what the provider itself reported metering for the
+   * call, and are 0 for a provider that reports nothing.
+   */
+  public void recordSpeech(
+      TtsProvider provider, int characters, boolean prefetch, long audioTokens, long textTokens) {
     Counters counters = counters(provider);
     if (prefetch) {
       counters.prefetchedLines.incrementAndGet();
@@ -55,6 +73,8 @@ public final class SpendTracker {
       counters.voicedLines.incrementAndGet();
     }
     counters.speechCharacters.addAndGet(Math.max(0, characters));
+    counters.audioTokens.addAndGet(Math.max(0, audioTokens));
+    counters.textTokens.addAndGet(Math.max(0, textTokens));
   }
 
   /** Records one billable translation call, the optional first hop before a non-English line. */
@@ -95,6 +115,8 @@ public final class SpendTracker {
     final AtomicLong speechCharacters = new AtomicLong();
     final AtomicLong translationCalls = new AtomicLong();
     final AtomicLong translationCharacters = new AtomicLong();
+    final AtomicLong audioTokens = new AtomicLong();
+    final AtomicLong textTokens = new AtomicLong();
 
     ProviderSpend toSpend(TtsProvider provider) {
       return new ProviderSpend(
@@ -103,7 +125,9 @@ public final class SpendTracker {
           prefetchedLines.get(),
           speechCharacters.get(),
           translationCalls.get(),
-          translationCharacters.get());
+          translationCharacters.get(),
+          audioTokens.get(),
+          textTokens.get());
     }
   }
 }

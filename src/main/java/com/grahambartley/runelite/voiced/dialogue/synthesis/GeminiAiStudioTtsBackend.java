@@ -401,7 +401,10 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
               CloudSynthTrace.success(
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, audio.length, ""));
         }
-        support.recordSpeechSpend(prepared.inputLen, prepared.prefetch);
+        GeminiTokenUsage usage =
+            GeminiTokenUsage.parse(gson, new String(bytes, StandardCharsets.UTF_8));
+        support.recordSpeechSpend(
+            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.textTokens);
         return pcm;
       } catch (ConnectException e) {
         support.warnOnce(NETWORK_NOTICE);
@@ -450,6 +453,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       boolean fedSink = false;
       long firstChunkMs = -1;
       String finishReason = null;
+      // The API reports usageMetadata on its events as a running total, so this holds the largest
+      // reading seen and is banked once the stream drains.
+      GeminiTokenUsage usage = GeminiTokenUsage.NONE;
       try (Response response = httpClient.newCall(httpRequest).execute()) {
         String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
         if (!response.isSuccessful()) {
@@ -485,6 +491,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             if (eventFinishReason != null) {
               finishReason = eventFinishReason;
             }
+            usage = usage.max(GeminiTokenUsage.parse(gson, data));
             for (byte[] audio : extractAudioChunks(data)) {
               totalBytes += audio.length;
               float[] chunk = decoder.decode(audio, audio.length);
@@ -496,7 +503,6 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
                 sink.accept(chunk, rate);
                 if (!fedSink) {
                   firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
-                  support.recordSpeechSpend(prepared.inputLen, prepared.prefetch);
                 }
                 fedSink = true;
                 chunks.add(chunk);
@@ -523,6 +529,11 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
           support.warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
           return null;
         }
+        // Audio arrived, so the call is billable whether or not the tail turns out cacheable. The
+        // token totals only complete as the stream drains, so this banks them here rather than at
+        // the first chunk.
+        support.recordSpeechSpend(
+            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.textTokens);
         if (config.debugMode()) {
           // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
           // stream. A first chunk that lands nearly at elapsedMs means the provider sent the audio

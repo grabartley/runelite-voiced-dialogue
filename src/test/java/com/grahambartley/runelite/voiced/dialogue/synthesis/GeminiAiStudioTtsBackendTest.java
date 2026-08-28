@@ -107,6 +107,27 @@ public class GeminiAiStudioTtsBackendTest {
     return responseDocument(RawPcmDecoderTest.raw(samples), "STOP");
   }
 
+  /** A complete response whose usageMetadata reports what the API metered for the call. */
+  private static String audioResponseWithUsage(short[] samples, long audioTokens, long textTokens) {
+    return withUsage(audioResponse(samples), audioTokens, textTokens);
+  }
+
+  /** Folds a usageMetadata block into an existing response document. */
+  private static String withUsage(String document, long audioTokens, long textTokens) {
+    JsonObject detail = new JsonObject();
+    detail.addProperty("modality", "AUDIO");
+    detail.addProperty("tokenCount", audioTokens);
+    JsonArray details = new JsonArray();
+    details.add(detail);
+    JsonObject usage = new JsonObject();
+    usage.addProperty("promptTokenCount", textTokens);
+    usage.addProperty("candidatesTokenCount", audioTokens);
+    usage.add("candidatesTokensDetails", details);
+    JsonObject body = new JsonParser().parse(document).getAsJsonObject();
+    body.add("usageMetadata", usage);
+    return body.toString();
+  }
+
   private static String responseDocument(byte[] audioBytes, String finishReason) {
     JsonObject inlineData = new JsonObject();
     inlineData.addProperty("mimeType", "audio/L16;codec=pcm;rate=24000");
@@ -696,5 +717,67 @@ public class GeminiAiStudioTtsBackendTest {
         "Hello & welcome".length(),
         recorded.translationCharacters());
     assertEquals("the spoken line is still counted once", 1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aVoicedLineBanksTheTokenCountsTheApiActuallyReported() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("audio tokens are measured, not modelled", 1_700, recorded.audioTokens());
+    assertEquals(42, recorded.textTokens());
+  }
+
+  @Test
+  public void aStreamedLineBanksTheRunningTotalFromTheFinalEvent() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    // The API reports usageMetadata as a running total, so the last event carries the whole call.
+    String first =
+        withUsage(responseDocument(RawPcmDecoderTest.raw(new short[] {1, 2}), null), 400, 42);
+    String last =
+        withUsage(responseDocument(RawPcmDecoderTest.raw(new short[] {3, 4}), "STOP"), 1_700, 42);
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody("data: " + first + "\n\ndata: " + last + "\n\n"));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesizeStreaming(req(), (samples, rate) -> {});
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("the cumulative total is banked once, not summed", 1_700, recorded.audioTokens());
+    assertEquals(42, recorded.textTokens());
+    assertEquals(1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aResponseWithoutUsageMetadataStillCountsTheLineButReportsNoTokens() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("the line was still voiced", 1, recorded.voicedLines());
+    assertEquals(
+        "no meter reading means no tokens, never a guessed one", 0, recorded.audioTokens());
   }
 }
