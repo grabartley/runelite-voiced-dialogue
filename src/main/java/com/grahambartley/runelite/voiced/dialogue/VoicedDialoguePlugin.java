@@ -45,6 +45,7 @@ import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -81,6 +82,8 @@ public class VoicedDialoguePlugin extends Plugin {
   @Inject private ConfigManager configManager;
 
   @Inject private ClientThread clientThread;
+
+  @Inject private ChatMessageManager chatMessageManager;
 
   private BackendProvider backendProvider;
 
@@ -139,7 +142,8 @@ public class VoicedDialoguePlugin extends Plugin {
             config::autoLearnNewNpcs);
     voiceManager.enableLearning(learnedStore, learningService);
 
-    noticeManager = new ChatNoticeManager(client, configManager, clientThread, config);
+    noticeManager =
+        new ChatNoticeManager(client, configManager, clientThread, chatMessageManager, config);
 
     // Cloud-only: dialogue is voiced through the configured provider (OpenRouter or Google AI
     // Studio), resolved live so switching needs no restart. A backend reports available only once
@@ -301,16 +305,15 @@ public class VoicedDialoguePlugin extends Plugin {
           // OpenRouter states what the key has spent; reading it is a network call, so it happens
           // here and the finished lines hop back to the client thread to be posted.
           Double spent = creditMeter.spentSince(key, usageClient.fetchUsage(key));
-          List<String> lines = SpendReport.lines(snapshot, spent);
-          clientThread.invokeLater(
-              () -> {
-                if (noticeManager == null) {
-                  return;
-                }
-                for (String line : lines) {
-                  noticeManager.postNotice(line);
-                }
-              });
+          ChatNoticeManager notices = noticeManager;
+          if (notices == null) {
+            return;
+          }
+          // Queued rather than written directly, so the readout needs no hop back to the client
+          // thread: the chat manager's queue is concurrent and drains on the next game tick.
+          for (String line : SpendReport.lines(snapshot, spent)) {
+            notices.postCommandResponse(line);
+          }
         });
   }
 

@@ -6,14 +6,23 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatColorType;
+import net.runelite.client.chat.ChatMessageBuilder;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 
 /**
- * Posts the plugin's user-facing chat notices: the once-ever first-run onboarding guide, the
- * once-per-session missing-cloud-key warning, and one-off backend notices surfaced from a backend
- * thread. A fresh instance is created on each start-up, so the per-session guards reset on a
- * stop/start exactly as before; onboarding additionally persists across sessions via {@link
- * #ONBOARDING_SEEN_KEY}.
+ * Posts the plugin's user-facing chat output: the once-ever first-run onboarding guide, the
+ * once-per-session missing-cloud-key warning, one-off backend notices surfaced from a backend
+ * thread, and the answer to the {@code ::voicedspend} command.
+ *
+ * <p>The two kinds are posted differently on purpose. A notice is an unprompted red warning the
+ * player did not ask for, written straight into the chat box so it cannot be delayed. A command
+ * response follows the client's convention for {@code ::} commands and goes through {@link
+ * ChatMessageManager}, which also makes it postable from a background thread. A fresh instance is
+ * created on each start-up, so the per-session guards reset on a stop/start exactly as before;
+ * onboarding additionally persists across sessions via {@link #ONBOARDING_SEEN_KEY}.
  */
 @Slf4j
 public final class ChatNoticeManager {
@@ -38,6 +47,7 @@ public final class ChatNoticeManager {
   private final Client client;
   private final ConfigManager configManager;
   private final ClientThread clientThread;
+  private final ChatMessageManager chatMessageManager;
   private final VoicedDialogueConfig config;
 
   private boolean onboardingChecked;
@@ -47,10 +57,12 @@ public final class ChatNoticeManager {
       Client client,
       ConfigManager configManager,
       ClientThread clientThread,
+      ChatMessageManager chatMessageManager,
       VoicedDialogueConfig config) {
     this.client = client;
     this.configManager = configManager;
     this.clientThread = clientThread;
+    this.chatMessageManager = chatMessageManager;
     this.config = config;
   }
 
@@ -113,12 +125,30 @@ public final class ChatNoticeManager {
   }
 
   /**
-   * Posts a plugin notice the player explicitly asked for (the {@code ::voicedspend} readout), with
-   * no once-per-session guard and no log line: it is a direct answer to a command, not a warning.
-   * Must be called on the client thread, which is where {@code CommandExecuted} is dispatched.
+   * Answers a chat command the player typed (the {@code ::voicedspend} readout), following the
+   * client's own convention for command responses: the line is handed to {@link ChatMessageManager}
+   * as a {@link QueuedMessage} rather than written straight into the chat box, and coloured through
+   * {@link ChatMessageBuilder} so it honours the player's configured chat colours instead of a
+   * hard-coded one.
+   *
+   * <p>Safe to call from any thread, unlike the direct chat write the notices use: the manager's
+   * queue is concurrent and is drained on the game tick, which is what lets the readout be posted
+   * straight from the thread that read the provider balance. Carries no once-per-session guard and
+   * writes no log line, since it is an answer the player asked for rather than a warning.
    */
-  public void postNotice(String message) {
-    addGameMessage(message);
+  public void postCommandResponse(String message) {
+    String formatted =
+        new ChatMessageBuilder()
+            .append(ChatColorType.HIGHLIGHT)
+            .append("[Voiced Dialogue] ")
+            .append(ChatColorType.NORMAL)
+            .append(message)
+            .build();
+    chatMessageManager.queue(
+        QueuedMessage.builder()
+            .type(ChatMessageType.GAMEMESSAGE)
+            .runeLiteFormattedMessage(formatted)
+            .build());
   }
 
   /**
