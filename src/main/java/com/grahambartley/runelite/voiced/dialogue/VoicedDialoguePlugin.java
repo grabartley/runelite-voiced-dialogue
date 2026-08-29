@@ -300,19 +300,31 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     List<SpendTracker.ProviderSpend> snapshot = spendTracker.snapshot();
     String key = config.openRouterApiKey();
+    log.debug(
+        "[TTS spend] ::{} received, {} provider(s) used", SpendReport.COMMAND, snapshot.size());
     submitSpendTask(
         () -> {
-          // OpenRouter states what the key has spent; reading it is a network call, so it happens
-          // here and the finished lines hop back to the client thread to be posted.
-          Double spent = creditMeter.spentSince(key, usageClient.fetchUsage(key));
-          ChatNoticeManager notices = noticeManager;
-          if (notices == null) {
-            return;
-          }
-          // Queued rather than written directly, so the readout needs no hop back to the client
-          // thread: the chat manager's queue is concurrent and drains on the next game tick.
-          for (String line : SpendReport.lines(snapshot, spent)) {
-            notices.postCommandResponse(line);
+          try {
+            // OpenRouter states what the key has spent; reading it is a network call, so it happens
+            // off the game thread.
+            Double spent = creditMeter.spentSince(key, usageClient.fetchUsage(key));
+            ChatNoticeManager notices = noticeManager;
+            if (notices == null) {
+              return;
+            }
+            // Queued rather than written directly, so the readout needs no hop back to the client
+            // thread: the chat manager's queue is concurrent and Hooks.tick drains it every game
+            // tick.
+            List<String> lines = SpendReport.lines(snapshot, spent);
+            for (String line : lines) {
+              notices.postCommandResponse(line);
+            }
+            log.debug("[TTS spend] queued {} readout line(s), billedUsd={}", lines.size(), spent);
+          } catch (RuntimeException e) {
+            // An executor task that throws dies silently, which would leave the command looking
+            // like it did nothing at all. A readout is never worth breaking the session over, so
+            // the failure is logged and swallowed rather than propagated.
+            log.warn("[TTS spend] could not build the spend readout", e);
           }
         });
   }
