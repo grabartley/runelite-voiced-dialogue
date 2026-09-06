@@ -8,8 +8,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * The local-player name filter for the public-chat feature (#138): keeps only the player's own
- * public chat. Pure and null-safe, so it verifies without a live client.
+ * The local-player name filter for the public-chat feature: keeps only the player's own public
+ * chat. Pure and null-safe, so it verifies without a live client.
  */
 @RunWith(JUnitParamsRunner.class)
 public class PublicChatPolicyTest {

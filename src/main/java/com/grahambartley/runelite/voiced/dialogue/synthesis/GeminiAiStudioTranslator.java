@@ -5,15 +5,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 /**
  * Translates a dialogue line into the configured spoken language before it is voiced, via the
@@ -27,17 +23,13 @@ import okhttp3.ResponseBody;
  * gracefully rather than voicing the wrong language or caching a mistranslation.
  */
 @Slf4j
-final class GeminiAiStudioTranslator {
+final class GeminiAiStudioTranslator implements CloudTranslatorCall.Ops {
 
-  /** The Gemini API name of the same Flash Lite model the OpenRouter translation hop uses. */
+  /** The Gemini API name of the Flash Lite translation model, shared with the OpenRouter hop. */
   static final String MODEL = "gemini-3.1-flash-lite";
 
   static final String PRODUCTION_ENDPOINT =
       "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
-
-  private static final String USER_AGENT = "runelite-voiced-dialogue";
-
-  private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
@@ -75,6 +67,18 @@ final class GeminiAiStudioTranslator {
       // Same shape as the OpenRouter translator's guard: null in, null out; empty in, empty out.
       return text == null ? null : new Translation(text, GeminiTokenUsage.NONE);
     }
+    CloudTranslatorCall.Outcome outcome =
+        CloudTranslatorCall.run(httpClient, config, this, text, language, apiKey);
+    if (outcome == null) {
+      return null;
+    }
+    // The hop is its own billable call against its own model, so its metered tokens ride back
+    // with the text rather than being lost to the session's cost.
+    return new Translation(outcome.text, GeminiTokenUsage.forText(gson, outcome.raw));
+  }
+
+  @Override
+  public Request buildRequest(String text, String language, String apiKey) {
     JsonObject systemInstruction = new JsonObject();
     systemInstruction.add("parts", parts(CloudTtsText.translatorSystemPrompt(language)));
     JsonObject content = new JsonObject();
@@ -85,59 +89,14 @@ final class GeminiAiStudioTranslator {
     payload.add("systemInstruction", systemInstruction);
     payload.add("contents", contents);
 
-    Request httpRequest =
-        new Request.Builder()
-            .url(endpoint)
-            .addHeader("x-goog-api-key", apiKey)
-            .addHeader("User-Agent", USER_AGENT)
-            .post(
-                RequestBody.create(
-                    JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
-            .build();
-
-    long start = System.nanoTime();
-    try (Response response = httpClient.newCall(httpRequest).execute()) {
-      ResponseBody body = response.body();
-      String raw = body == null ? "" : body.string();
-      long elapsedMs = CloudBackendSupport.elapsedMs(start);
-      if (!response.isSuccessful()) {
-        log.warn(
-            "[TTS cloud] translate fail reason=non-2xx http={} elapsedMs={} inLen={} detail={}",
-            response.code(),
-            elapsedMs,
-            text.length(),
-            response.message());
-        return null;
-      }
-      String translated = extractText(raw);
-      if (translated == null || translated.isEmpty()) {
-        log.warn(
-            "[TTS cloud] translate fail reason=no-content http={} elapsedMs={} inLen={}",
-            response.code(),
-            elapsedMs,
-            text.length());
-        return null;
-      }
-      if (config.debugMode()) {
-        log.info(
-            "[TTS cloud] translate ok lang={} elapsedMs={} inLen={} outLen={} -> \"{}\"",
-            language,
-            elapsedMs,
-            text.length(),
-            translated.length(),
-            translated);
-      }
-      // The hop is its own billable call against its own model, so its metered tokens ride back
-      // with the text rather than being lost to the session's cost.
-      return new Translation(translated, GeminiTokenUsage.forText(gson, raw));
-    } catch (IOException | RuntimeException e) {
-      log.warn(
-          "[TTS cloud] translate fail reason=error elapsedMs={} inLen={} detail={}",
-          CloudBackendSupport.elapsedMs(start),
-          text.length(),
-          e.getMessage());
-      return null;
-    }
+    return new Request.Builder()
+        .url(endpoint)
+        .addHeader("x-goog-api-key", apiKey)
+        .addHeader("User-Agent", CloudHttp.USER_AGENT)
+        .post(
+            RequestBody.create(
+                CloudHttp.JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
+        .build();
   }
 
   private static JsonArray parts(String text) {
@@ -149,7 +108,8 @@ final class GeminiAiStudioTranslator {
   }
 
   /** Concatenates {@code candidates[0].content.parts[].text} out of a Gemini response, trimmed. */
-  private String extractText(String raw) {
+  @Override
+  public String extractText(String raw) {
     if (raw == null || raw.isEmpty()) {
       return null;
     }

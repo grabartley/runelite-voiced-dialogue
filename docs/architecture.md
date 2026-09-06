@@ -9,27 +9,36 @@ emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutra
 A line the pipeline cannot voice (for example when the active provider's API key is not set) is
 left silent, never routed to the other provider.
 
+Both providers speak through the same model, Google's **Gemini 3.1 Flash TTS**, and receive the
+same spoken content, so a line sounds the same whichever provider voices it. The next section
+describes how that content is built once for both; each provider section after it covers only the
+transport.
+
+## Voice resolution and prompt construction (shared by both providers)
+
+Each NPC gets a gender-correct Gemini voice by race (`GeminiVoiceMap`), and two NPCs of the same
+race and gender are spread across a sub-pool by a stable per-NPC seed so they sound distinct but
+stable. Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the
+bundled table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to a
+dedicated youthful sub-pool of its gender instead of its adult race anchor, for every race and
+ethnicity alike.
+
 Emotion is detected from each speaker's chat-head animation and rides in every request as one of
-Happy, Sad, Angry, Scared, or Neutral. It is rendered as an inline Gemini style tag on the spoken
-text (`[happy]`, `[sad]`, `[angry]`, `[fearful]`), so happy, sad, angry, and scared lines are
-audibly different; Neutral carries no tag.
+Happy, Sad, Angry, Scared, or Neutral. It is prepended to the spoken text as an inline Gemini
+style tag (`[happy]`, `[sad]`, `[angry]`, `[fearful]`, rendered by `GeminiEmotionStyle`), so
+happy, sad, angry, and scared lines are audibly different; Neutral adds no tag.
+
+A per-speaker **character profile** (`CharacterProfile`, resolved by `NpcProfileTable`) is
+rendered as a leading `AUDIO PROFILE` direction block setting accent/style/pace, so the profile
+sets the character and the emotion tag colours the moment.
 
 ## The OpenRouter speech call
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It
-needs an OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent. The
-model is fixed to Google's **Gemini 3.1 Flash TTS**, the one OpenRouter speech model with both a voice
-catalog rich enough to map every race and gender and full emotion support. Each NPC gets a
-gender-correct Gemini voice by race, and two NPCs of the same race and gender are spread across a
-sub-pool by a stable per-NPC seed so they sound distinct but stable. Life stage is a third axis: an NPC
-marked as a child (a `child` life-stage marker in the bundled table, or a child keyword like "Child"
-or "Schoolboy" in the display name) resolves to a dedicated youthful sub-pool of its gender instead of
-its adult race anchor, for every race and ethnicity alike. The detected emotion is prepended
-to `input` as an inline style tag (`GeminiEmotionStyle`); Neutral adds none. A per-speaker **character
-profile** (`CharacterProfile`, resolved by `NpcProfileTable`) is also rendered as a leading `AUDIO
-PROFILE` direction block setting accent/style/pace, so the profile sets the character and the emotion
-tag colours the moment. The body requests `response_format: "pcm"`, a headerless 16-bit LE mono stream
-at 24 kHz decoded to the pipeline's native rate.
+needs an OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent.
+Gemini 3.1 Flash TTS is the one OpenRouter speech model with both a voice catalog rich enough to
+map every race and gender and full emotion support. The body requests `response_format: "pcm"`, a
+headerless 16-bit LE mono stream at 24 kHz decoded to the pipeline's native rate.
 
 Dialogue text leaves your machine and is sent to OpenRouter. A missing key, an API error, or a network
 problem fails that line gracefully (it is left unvoiced) and surfaces a one-time notice.
@@ -41,14 +50,11 @@ directly to the Gemini API instead: a `generateContent` request to
 `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent`,
 authenticated with a Google AI Studio API key in the `x-goog-api-key` header. It needs its own key
 (**Google AI Studio API Key**); until one is set it logs a provider-specific one-time notice and its
-lines stay silent.
+lines stay silent. The shared voice resolution is requested as the `prebuiltVoiceConfig` voice.
 
-The spoken content is deliberately identical to the OpenRouter path: the same Gemini TTS model, the
-same `GeminiVoiceMap` voice resolution (requested as the `prebuiltVoiceConfig` voice), the same
-inline emotion tags, and the same leading character-profile block, so a line sounds the same
-whichever provider voices it. Only the transport differs: audio comes back as base64 16-bit LE PCM
-inside JSON rather than a raw body, and the Gemini API has no `speed` parameter, so a non-default
-**Speaking Pace** is rendered as a leading `SPEAKING PACE` prompt direction instead. The
+Only the transport differs from OpenRouter: audio comes back as base64 16-bit LE PCM inside JSON
+rather than a raw body, and the Gemini API has no `speed` parameter, so a non-default **Speaking
+Pace** is rendered as a leading `SPEAKING PACE` prompt direction instead. The
 `streamGenerateContent` variant (`?alt=sse`) backs the streaming path below, delivering audio as
 server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
 mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
@@ -60,7 +66,7 @@ The translation hop has a direct counterpart too: `GeminiAiStudioTranslator` sen
 system prompt to `gemini-3.1-flash-lite` through the Gemini API, so a non-English language or a
 speaking style works without an OpenRouter key.
 
-### Cost and latency controls
+## Cost and latency controls
 
 Because synthesis is billed per character, several guards keep cost bounded and latency low:
 
@@ -149,8 +155,9 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   epoch. A small fixed pool caps it at two requests in flight, a per-conversation cap bounds spend,
   already-cached lines are skipped, and leaving the node cancels still-queued prefetches. Gated by
   **Prefetch Dialogue**.
-- **Optional translation.** With **Spoken Language** set to anything but English, `OpenRouterTranslator`
-  translates each line through `google/gemini-3.1-flash-lite` (a fixed per-language system
+- **Optional translation.** With **Spoken Language** set to anything but English, the active
+  provider's translator (`OpenRouterTranslator` or `GeminiAiStudioTranslator`)
+  translates each line through the Gemini flash-lite model (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,
   which then carries a BCP-47 `language_code` derived from the base language. The language (with any
   quirk) is folded into the cache key, so a line is translated and billed at most once per
@@ -194,7 +201,7 @@ never rescues an old entry, and the just-written clip always survives. Setting t
 out of eviction entirely, so the cache keeps every clip for users who would rather spend disk than
 ever re-bill a line.
 
-### Cave echo
+## Cave echo
 
 **Cave Echo** (off by default) adds a decaying echo to lines spoken while the player is
 underground, so dialogue in a cave, dungeon, sewer or basement sounds enclosed. Underground is a pure

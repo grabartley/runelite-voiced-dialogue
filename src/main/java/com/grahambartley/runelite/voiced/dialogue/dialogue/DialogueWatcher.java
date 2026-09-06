@@ -2,10 +2,10 @@ package com.grahambartley.runelite.voiced.dialogue.dialogue;
 
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisDispatcher;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.voice.Speaker;
+import java.util.function.Supplier;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
 
 /**
@@ -22,11 +22,11 @@ public final class DialogueWatcher {
   private final DialogueWidgetReader widgetReader;
   private final SynthesisDispatcher dispatcher;
   private final DialoguePrefetchCoordinator prefetchCoordinator;
-  private final DialoguePrefetcher prefetcher;
   private final DialogueAudioService audioService;
 
   private String lastSpoken = "";
   private boolean wasDialogueOpen;
+  private boolean wasFullyClosed;
 
   public DialogueWatcher(
       Client client,
@@ -34,67 +34,64 @@ public final class DialogueWatcher {
       DialogueWidgetReader widgetReader,
       SynthesisDispatcher dispatcher,
       DialoguePrefetchCoordinator prefetchCoordinator,
-      DialoguePrefetcher prefetcher,
       DialogueAudioService audioService) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.widgetReader = widgetReader;
     this.dispatcher = dispatcher;
     this.prefetchCoordinator = prefetchCoordinator;
-    this.prefetcher = prefetcher;
     this.audioService = audioService;
   }
 
   public void tick() {
-    Widget npcDialogue = client.getWidget(ComponentID.DIALOG_NPC_TEXT);
-    if (npcDialogue != null && !npcDialogue.isHidden()) {
-      String text = npcDialogue.getText();
-      if (text != null && !text.isEmpty() && !text.equals(lastSpoken)) {
-        lastSpoken = text;
-        String cleaned = textCleaner.clean(text);
-        String npcName = widgetReader.currentNpcName();
-        int headAnimationId = widgetReader.headAnimationId(InterfaceID.ChatLeft.HEAD);
-        dispatcher.speakDialogue(cleaned, VoiceManager.SPEAKER_NPC, npcName, headAnimationId);
-      }
+    Widget npcDialogue = client.getWidget(InterfaceID.ChatLeft.TEXT);
+    boolean npcVisible = npcDialogue != null && !npcDialogue.isHidden();
+    Widget playerDialogue = client.getWidget(InterfaceID.ChatRight.TEXT);
+    boolean playerVisible = playerDialogue != null && !playerDialogue.isHidden();
+
+    if (npcVisible) {
+      speakIfNew(npcDialogue, InterfaceID.ChatLeft.HEAD, Speaker.NPC, widgetReader::currentNpcName);
+    }
+    if (playerVisible) {
+      speakIfNew(playerDialogue, InterfaceID.ChatRight.HEAD, Speaker.PLAYER, () -> null);
     }
 
-    Widget playerDialogue = client.getWidget(ComponentID.DIALOG_PLAYER_TEXT);
-    if (playerDialogue != null && !playerDialogue.isHidden()) {
-      String text = playerDialogue.getText();
-      if (text != null && !text.isEmpty() && !text.equals(lastSpoken)) {
-        lastSpoken = text;
-        String cleaned = textCleaner.clean(text);
-        int headAnimationId = widgetReader.headAnimationId(InterfaceID.ChatRight.HEAD);
-        // No NPC name needed for player lines.
-        dispatcher.speakDialogue(cleaned, VoiceManager.SPEAKER_PLAYER, null, headAnimationId);
-      }
-    }
-
-    Widget options = client.getWidget(ComponentID.DIALOG_OPTION_OPTIONS);
+    Widget options = client.getWidget(InterfaceID.Chatmenu.OPTIONS);
     boolean optionsVisible = options != null && !options.isHidden();
     if (optionsVisible) {
       prefetchCoordinator.prefetchOptions(options);
     }
 
-    boolean dialogueOpen =
-        (npcDialogue != null && !npcDialogue.isHidden())
-            || (playerDialogue != null && !playerDialogue.isHidden());
+    boolean dialogueOpen = npcVisible || playerVisible;
     if (shouldInterruptOnClose(dialogueOpen, wasDialogueOpen)) {
       audioService.interrupt();
       lastSpoken = "";
     }
     wasDialogueOpen = dialogueOpen;
 
-    // Reset prefetch only when the dialogue is fully gone (no text and no option list), so the
-    // session cap and queued warming survive the option-select screen instead of being cancelled
-    // and re-cancelled every tick while the player is choosing.
-    boolean fullyClosed =
-        (npcDialogue == null || npcDialogue.isHidden())
-            && (playerDialogue == null || playerDialogue.isHidden())
-            && !optionsVisible;
-    if (fullyClosed) {
-      prefetcher.reset();
+    // Reset prefetch only once the dialogue is fully gone (no text and no option list), so the
+    // session cap and queued warming survive the option-select screen. Edge-triggered like the
+    // interrupt above, because "fully closed" is also the state of every idle tick spent walking
+    // around, and re-cancelling on each of those would churn for nothing.
+    boolean fullyClosed = !dialogueOpen && !optionsVisible;
+    if (fullyClosed && !wasFullyClosed) {
+      prefetchCoordinator.reset();
     }
+    wasFullyClosed = fullyClosed;
+  }
+
+  private void speakIfNew(
+      Widget dialogue, int headWidgetId, Speaker speaker, Supplier<String> npcName) {
+    String text = dialogue.getText();
+    if (text == null || text.isEmpty() || text.equals(lastSpoken)) {
+      return;
+    }
+    lastSpoken = text;
+    dispatcher.speakDialogue(
+        textCleaner.clean(text),
+        speaker,
+        npcName.get(),
+        widgetReader.headAnimationId(headWidgetId));
   }
 
   /**

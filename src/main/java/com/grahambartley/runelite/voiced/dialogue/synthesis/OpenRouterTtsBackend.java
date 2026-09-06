@@ -6,14 +6,10 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -21,10 +17,7 @@ import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.ConnectionPool;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
-import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
@@ -48,10 +41,10 @@ import okhttp3.ResponseBody;
  * GeminiEmotionStyle#SUPPORTED} and {@link BackendProvider} downgrades anything outside it to
  * {@link Emotion#NEUTRAL}, which carries no tag.
  *
- * <p>This is the plugin's only backend and reports {@link #isAvailable()} only when an API key is
- * set. Every failure path (missing key, non-2xx, network error, empty/undecodable body) returns
- * {@code null} and surfaces a one-time notice rather than throwing, so the line is left unvoiced
- * without crashing or blocking the game thread.
+ * <p>The backend reports {@link #isAvailable()} only when an API key is set. Every failure path
+ * (missing key, non-2xx, network error, empty/undecodable body) returns {@code null} and surfaces a
+ * one-time notice rather than throwing, so the line is left unvoiced without crashing or blocking
+ * the game thread.
  */
 @Slf4j
 public final class OpenRouterTtsBackend implements SynthesisBackend {
@@ -69,14 +62,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private static final String KEY_PATH = "/key";
 
   private static final String PRODUCTION_ENDPOINT = API_BASE + SPEECH_PATH;
-  private static final String USER_AGENT = "runelite-voiced-dialogue";
-
-  /** OpenRouter app-attribution headers, shown as the app name/URL in its usage dashboard. */
-  private static final String APP_TITLE = "RuneLite Voiced Dialogue";
-
-  private static final String APP_URL = "https://github.com/grabartley/runelite-voiced-dialogue";
-
-  private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   /**
    * Floor of a line's call budget, covering connect, the model's own start-up cost, and a short
@@ -92,9 +77,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   private static final long CALL_BUDGET_MILLIS_PER_CHAR = 75;
 
-  /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
-  private static final int MAX_IDLE_CONNECTIONS = 8;
-
   /**
    * How long an idle connection is kept. Long enough to span the travel between quest steps, so a
    * conversation that follows a quiet stretch still starts warm; OpenRouter holds its side of an
@@ -107,6 +89,25 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * while a prefetch is in flight needs a second pooled connection or it pays its own handshake.
    */
   static final int WARM_UP_CONNECTIONS = 2;
+
+  /** Read granularity for the streaming path: bytes are decoded and played per network read. */
+  private static final int STREAM_READ_BUFFER = 16_384;
+
+  /**
+   * User-facing notice shown when no API key is set. Shared with the plugin's startup check so the
+   * two paths never drift.
+   */
+  public static final String NO_KEY_NOTICE =
+      "Add your OpenRouter API key in the Voiced Dialogue settings to hear dialogue; without a key,"
+          + " lines are not voiced.";
+
+  /**
+   * User-facing notice for HTTP 402, OpenRouter's insufficient-credits rejection: the key is valid
+   * and the account balance is the problem, so the fix is a top-up rather than a key check.
+   */
+  static final String OUT_OF_CREDITS_NOTICE =
+      "Your OpenRouter account is out of credits, so dialogue cannot be voiced. Top up at"
+          + " openrouter.ai/settings/credits.";
 
   /**
    * Drains and closes a warm-up response so its connection returns to the pool rather than being
@@ -133,37 +134,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         }
       };
 
-  /**
-   * One speech call plus a single retry, for a transient empty 200 body, a truncated line, or a
-   * read/call timeout (the retry for the latter is spaced by a backoff, the others are immediate).
-   */
-  private static final int MAX_SPEECH_ATTEMPTS = 2;
-
-  /** Read granularity for the streaming path: bytes are decoded and played per network read. */
-  private static final int STREAM_READ_BUFFER = 16_384;
-
-  /**
-   * User-facing notice shown when no API key is set. Shared with the plugin's startup check so the
-   * two paths never drift.
-   */
-  public static final String NO_KEY_NOTICE =
-      "Add your OpenRouter API key in the Voiced Dialogue settings to hear dialogue; without a key,"
-          + " lines are not voiced.";
-
-  /**
-   * User-facing notice for HTTP 402, OpenRouter's insufficient-credits rejection: the key is valid
-   * and the account balance is the problem, so the fix is a top-up rather than a key check.
-   */
-  static final String OUT_OF_CREDITS_NOTICE =
-      "Your OpenRouter account is out of credits, so dialogue cannot be voiced. Top up at"
-          + " openrouter.ai/settings/credits.";
-
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
   private final String warmUpEndpoint;
-  private final TtsModelStrategy model = new GeminiTtsModel();
+  private final GeminiTtsModel model = new GeminiTtsModel();
   private final OpenRouterTranslator translator;
 
   /**
@@ -173,13 +149,14 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    */
   private final Map<String, Integer> prefixHashes = new ConcurrentHashMap<>();
 
-  private final RateLimitBackoff backoff = new RateLimitBackoff();
-
   /** Ceiling every per-line call budget is clamped to; overridable in tests. */
   private final Duration callTimeout;
 
   /** The shared notice/logging/backoff plumbing, parameterized by this provider's budgets. */
   private final CloudBackendSupport support;
+
+  /** The shared prepare/retry/decode control flow, parameterized by this provider's quirks. */
+  private final CloudSpeechExecutor executor;
 
   public OpenRouterTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(httpClient, config, gson, PRODUCTION_ENDPOINT);
@@ -204,32 +181,19 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       Gson gson,
       String endpoint,
       RetryTuning tuning) {
-    // Derive a long-lived keepalive client from the injected one (Hub rule: never new an
-    // OkHttpClient). newBuilder() shares the dispatcher cheaply; we give it our own warm connection
-    // pool so back-to-back lines skip the TCP/TLS handshake, and our own connect/read/call timeouts
-    // without mutating the shared client's globals. Pinned to HTTP/1.1 deliberately: the speech
-    // endpoint streams raw PCM, and HTTP/2 multiplexes concurrent calls (the prefetch pool plus the
-    // live line) onto one connection, where a concurrent streamed body can come back truncated as
-    // an
-    // empty 200. HTTP/1.1 gives each concurrent call its own pooled connection, so they never
-    // contend; sequential lines still reuse a warm connection. Built once and reused for the
-    // process
-    // lifetime (and the translation hop below).
-    this.httpClient =
-        httpClient
-            .newBuilder()
-            .protocols(Collections.singletonList(Protocol.HTTP_1_1))
-            .connectionPool(
-                new ConnectionPool(MAX_IDLE_CONNECTIONS, KEEP_ALIVE.toMinutes(), TimeUnit.MINUTES))
-            .connectTimeout(tuning.connectTimeout)
-            .readTimeout(tuning.readTimeout)
-            .callTimeout(tuning.callTimeout)
-            .retryOnConnectionFailure(true)
-            .build();
+    // Pinned to HTTP/1.1 deliberately: the speech endpoint streams raw PCM, and HTTP/2 multiplexes
+    // concurrent calls (the prefetch pool plus the live line) onto one connection, where a
+    // concurrent streamed body can come back truncated as an empty 200. HTTP/1.1 gives each
+    // concurrent call its own pooled connection, so they never contend; sequential lines still
+    // reuse a warm connection.
+    this.httpClient = CloudHttp.deriveClient(httpClient, tuning, KEEP_ALIVE, true);
     this.callTimeout = tuning.callTimeout;
     this.support =
         new CloudBackendSupport(
-            config, VoicedDialogueConfig.TtsProvider.OPENROUTER, MAX_SPEECH_ATTEMPTS, tuning);
+            config,
+            VoicedDialogueConfig.TtsProvider.OPENROUTER,
+            CloudSpeechExecutor.MAX_SPEECH_ATTEMPTS,
+            tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -240,6 +204,8 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     this.translator =
         new OpenRouterTranslator(
             this.httpClient, config, gson, siblingEndpoint(endpoint, CHAT_COMPLETIONS_PATH));
+    this.executor =
+        new CloudSpeechExecutor(config, support, model, "OpenRouter", model.modelId(), new Ops());
   }
 
   /**
@@ -267,7 +233,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
 
   @Override
   public boolean isAvailable() {
-    return CloudBackendSupport.isNonBlank(config.openRouterApiKey());
+    return CloudHttp.isNonBlank(config.openRouterApiKey());
   }
 
   @Override
@@ -278,6 +244,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   @Override
   public EnumSet<Emotion> supportedEmotions() {
     return model.supportedEmotions();
+  }
+
+  @Override
+  public boolean isThrottled() {
+    return executor.isThrottled();
   }
 
   /**
@@ -297,7 +268,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         new Request.Builder()
             .url(warmUpEndpoint)
             .addHeader("Authorization", "Bearer " + config.openRouterApiKey().trim())
-            .addHeader("User-Agent", USER_AGENT)
+            .addHeader("User-Agent", CloudHttp.USER_AGENT)
             .get()
             .build();
     for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
@@ -331,482 +302,19 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     return scaled.compareTo(callTimeout) > 0 ? callTimeout : scaled;
   }
 
-  /** Issues the call under this line's own budget rather than the client-wide ceiling. */
-  private Call newBudgetedCall(Request httpRequest, int inputLength) {
-    Call call = httpClient.newCall(httpRequest);
-    call.timeout().timeout(callBudgetFor(inputLength).toMillis(), TimeUnit.MILLISECONDS);
-    return call;
-  }
-
   @Override
   public String cacheVariant(SynthesisRequest request) {
-    // A non-English target (or a global quirk) re-keys the line: the audio is the transformed
-    // speech, not the source words. A skip-translation request (public chat) is voiced verbatim, so
-    // it keeps the plain pre-translation key and never collides with a translated line of the same
-    // text. Plain English with no quirk folds in no language fragment, so pre-translation cache
-    // entries stay valid.
-    String language = effectiveSpokenLanguage(request);
-    String languageFragment =
-        CloudTtsText.needsTranslation(language) && !request.skipTranslation()
-            ? language.toLowerCase()
-            : null;
-    return CloudCacheKeyBuilder.build(
-        model.modelId(),
-        model.voiceFor(request.voice()),
-        support.speedPercent(),
-        CloudBackendSupport.DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
-  }
-
-  /**
-   * The spoken language actually requested of the model for this line: the configured language with
-   * the speaker-class Speaking Style appended (Player style for the player's own lines, NPC style
-   * for everything else), so "English" plus a Gen Z style becomes an "English Gen Z slang" target
-   * that routes through the translation hop and is rewritten in that style. A blank language
-   * defaults to English; the no-op style leaves the language untouched, so a class set to None
-   * skips the hop while the other class can still be styled.
-   */
-  String effectiveSpokenLanguage(SynthesisRequest request) {
-    VoicedDialogueConfig.SpeakingStyle style =
-        request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
-    return CloudTtsText.combineLanguage(config.cloudLanguage().label(), style);
+    return executor.cacheVariant(request);
   }
 
   @Override
   public Pcm synthesize(SynthesisRequest request) {
-    PreparedRequest prepared = prepare(request);
-    if (prepared == null) {
-      return null;
-    }
-    return executeBuffered(prepared);
+    return executor.synthesize(request);
   }
 
   @Override
   public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
-    PreparedRequest prepared = prepare(request);
-    if (prepared == null) {
-      return null;
-    }
-    return executeStreaming(prepared, sink);
-  }
-
-  /**
-   * Builds the speech request shared by the buffered and streaming paths: availability check,
-   * optional translation hop, emotion styling, character-profile block, speed/language params, and
-   * headers. Returns {@code null} (after surfacing the one-time notice) when the line cannot be
-   * voiced at all: no API key, or a failed translation.
-   */
-  private PreparedRequest prepare(SynthesisRequest request) {
-    if (!isAvailable()) {
-      support.noticeMissingKey(NO_KEY_NOTICE);
-      return null;
-    }
-    String key = config.openRouterApiKey().trim();
-    String voice = model.voiceFor(request.voice());
-    String cappedText = CloudTtsText.capLength(request.text(), config.cloudMaxChars());
-    // Optional first hop: a non-English target language (or a global quirk) routes the (already
-    // capped) line through the translation model before it is voiced, so the spoken transcript is
-    // the transformed text. A failed translation fails the line rather than voicing the wrong
-    // language or caching a mistranslation under the language key. A skip-translation request
-    // (public chat) is voiced exactly as typed, so it bypasses the hop even under a non-English
-    // target or a global quirk.
-    String language = effectiveSpokenLanguage(request);
-    boolean translating =
-        CloudTtsText.needsTranslation(language)
-            && !request.skipTranslation()
-            && !cappedText.isEmpty();
-    String spokenText = cappedText;
-    if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
-      if (translated == null) {
-        support.warnOnce(
-            "OpenRouter translation to " + language.trim() + " failed; this line was not voiced.");
-        return null;
-      }
-      support.recordTranslationSpend(cappedText.length());
-      spokenText = translated;
-    }
-    String styledInput = model.styleInput(spokenText, request.emotion());
-    // The profile block sets the tone (accent/style/pace) and the emotion tag colours the moment;
-    // they compose, so the block leads and the emotion-tagged transcript follows the divider. A
-    // null
-    // profile leaves the input exactly as the pre-profile backend produced it.
-    CharacterProfile profile = request.profile();
-    String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
-    if (profile != null) {
-      assertStablePrefix(profile);
-    }
-
-    if (config.debugMode()) {
-      String tag = GeminiEmotionStyle.tagFor(request.emotion());
-      log.info(
-          "[TTS voice] cloud emotion {} -> {}",
-          request.emotion(),
-          tag == null ? "no tag (neutral input)" : "inline tag [" + tag + "]");
-      if (profile == null) {
-        log.info("[TTS cloud] no character profile (plain input)");
-      } else {
-        log.info(
-            "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
-            profile.name(),
-            profile.accent(),
-            profile.cacheKey());
-      }
-      if (cappedText.length() != request.text().length()) {
-        log.info(
-            "[TTS cloud] line capped {} -> {} chars (cloudMaxChars={})",
-            request.text().length(),
-            cappedText.length(),
-            config.cloudMaxChars());
-      }
-    }
-
-    JsonObject payload = new JsonObject();
-    payload.addProperty("model", model.modelId());
-    payload.addProperty("input", input);
-    payload.addProperty("voice", voice);
-    payload.addProperty("response_format", model.responseFormat());
-    int speed = support.speedPercent();
-    double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
-    if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
-      // The model may ignore speed; sending it only when non-default keeps the default request body
-      // identical to before and avoids paying for a param the model might not honour.
-      payload.addProperty("speed", speedRatio);
-      if (config.debugMode()) {
-        log.info("[TTS cloud] speed {}", speedRatio);
-      }
-    }
-    // A translated line gets a BCP-47 language_code from the base language (not the quirk), so the
-    // voice pronounces the text natively rather than mis-reading it with an English phoneme set.
-    if (translating) {
-      payload.addProperty("language_code", config.cloudLanguage().code());
-    }
-    // Route every call to the fastest provider (throughput sort, the :nitro equivalent). Identical
-    // block on the translation hop, so routing is consistent.
-    OpenRouterProvider.apply(payload);
-
-    Request httpRequest =
-        new Request.Builder()
-            .url(endpoint)
-            .addHeader("Authorization", "Bearer " + key)
-            .addHeader("User-Agent", USER_AGENT)
-            .addHeader("HTTP-Referer", APP_URL)
-            .addHeader("X-Title", APP_TITLE)
-            .post(
-                RequestBody.create(
-                    JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
-            .build();
-
-    return new PreparedRequest(httpRequest, speedRatio, input.length(), request.prefetch());
-  }
-
-  /**
-   * The buffered path: reads the whole body once, decodes it, retries a transient empty or
-   * truncated response, and returns the complete {@link Pcm} (or {@code null} on failure).
-   */
-  private Pcm executeBuffered(PreparedRequest prepared) {
-    Request httpRequest = prepared.httpRequest;
-    double speedRatio = prepared.speedRatio;
-    int inputLen = prepared.inputLen;
-    // A 200 with a zero-byte body is a transient server-side glitch (the generation id is present
-    // but no audio came back), so one immediate retry recovers the line; the byte[]-backed request
-    // body is reusable across calls. A read/call timeout (or other transient IOException) is also
-    // retried, but spaced by a backoff since the cause is slowness rather than a fast glitch
-    // (#196).
-    // A connect-phase failure (host unreachable) and any non-2xx fail the line without a retry.
-    // Every attempt is timed and numbered individually so retry effectiveness is measurable from
-    // the
-    // logs (#162, #196).
-    for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
-      long attemptStart = System.nanoTime();
-      try (Response response = newBudgetedCall(httpRequest, inputLen).execute()) {
-        ResponseBody body = response.body();
-        // Read the bytes once; on any failure they are the diagnostic payload (an OpenRouter/Gemini
-        // error is usually returned as a JSON/text body, sometimes even with HTTP 200), so
-        // capturing
-        // them is the only way to see why a line was rejected rather than guessing.
-        byte[] bytes = body == null ? new byte[0] : body.bytes();
-        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
-        String generationId = CloudBackendSupport.headerOrEmpty(response, "X-Generation-Id");
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-
-        if (!response.isSuccessful()) {
-          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited();
-          }
-          support.warnOnce(failureNotice(response.code()));
-          support.logFailure(
-              "non-2xx",
-              attempt,
-              elapsedMs,
-              inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              generationId,
-              bytes);
-          return null;
-        }
-        // A clean call clears any rate-limit back-off so prefetch can resume.
-        backoff.recordSuccess();
-        if (bytes.length == 0) {
-          support.logFailure(
-              "empty-body",
-              attempt,
-              elapsedMs,
-              inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              generationId,
-              bytes);
-          if (attempt < MAX_SPEECH_ATTEMPTS) {
-            log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-            continue;
-          }
-          support.warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
-          return null;
-        }
-        Pcm pcm = model.decodeResponse(bytes);
-        if (pcm == null) {
-          support.warnOnce(
-              "OpenRouter TTS returned audio that could not be decoded; this line was not voiced.");
-          support.logFailure(
-              "undecodable",
-              attempt,
-              elapsedMs,
-              inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              generationId,
-              bytes);
-          return null;
-        }
-        // The response is transport-complete (OkHttp throws on a truncated chunked stream, handled
-        // below), but the model occasionally returns a line whose audio stops mid-utterance. A
-        // complete line releases into trailing silence; one that does not is rejected so a clipped
-        // clip is never cached or voiced. One retry recovers the common transient case.
-        if (PcmCompleteness.isTruncated(pcm, speedRatio)) {
-          if (attempt < MAX_SPEECH_ATTEMPTS) {
-            log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-            continue;
-          }
-          support.warnOnce("OpenRouter TTS returned a truncated line; this line was not voiced.");
-          support.logFailure(
-              "truncated",
-              attempt,
-              elapsedMs,
-              inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              generationId,
-              bytes);
-          return null;
-        }
-        // Emitted at info under the plugin's Debug Logging toggle (like the other [TTS cloud]
-        // traces) so a successful line's latency is measurable, not just its failures; the record
-        // carries elapsedMs and attempt=N/2, so a line recovered on retry is visible as such.
-        if (config.debugMode()) {
-          log.info(
-              CloudSynthTrace.success(
-                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, inputLen, bytes.length, generationId));
-        }
-        support.recordSpeechSpend(inputLen, prepared.prefetch);
-        return pcm;
-      } catch (ConnectException e) {
-        // The host is unreachable (connection refused / no route), almost certainly an offline
-        // client. Retrying only delays the failure, so this line fails fast (#196).
-        support.warnOnce(
-            "OpenRouter TTS request could not reach the network; this line was not voiced.");
-        support.logNetworkFailure(
-            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
-        return null;
-      } catch (IOException e) {
-        // A read/call timeout (InterruptedIOException / SocketTimeoutException) or a transient
-        // blip:
-        // a slow generation deserves a backed-off retry rather than being dropped on the first
-        // failure (#196). The backoff waits on a synthesis-pool worker, never the game thread, and
-        // a second worker keeps serving the next line while this one waits.
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-        if (attempt < MAX_SPEECH_ATTEMPTS) {
-          log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          support.backoffBeforeNetworkRetry(attempt);
-          continue;
-        }
-        support.warnOnce(
-            "OpenRouter TTS request could not reach the network; this line was not voiced.");
-        support.logNetworkFailure("network", attempt, elapsedMs, inputLen, e);
-        return null;
-      } catch (RuntimeException e) {
-        support.warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
-        support.logNetworkFailure(
-            "unexpected", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * The streaming path: reads the body incrementally, decodes each chunk with {@link
-   * StreamingPcmDecoder}, hands it to {@code sink} for immediate playback, and accumulates the
-   * whole line for caching. An empty body (nothing handed over yet) is retried like the buffered
-   * path; once any chunk has reached the sink the line is committed, so a mid-stream failure plays
-   * what arrived and is not retried. A line whose accumulated audio is truncated still played but
-   * returns {@code null} so it is not cached, and re-fetches next time.
-   */
-  private Pcm executeStreaming(PreparedRequest prepared, PcmSink sink) {
-    Request httpRequest = prepared.httpRequest;
-    double speedRatio = prepared.speedRatio;
-    int inputLen = prepared.inputLen;
-    int rate = model.sampleRate();
-    for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
-      long attemptStart = System.nanoTime();
-      boolean fedSink = false;
-      long firstChunkMs = -1;
-      try (Response response = newBudgetedCall(httpRequest, inputLen).execute()) {
-        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
-        String generationId = CloudBackendSupport.headerOrEmpty(response, "X-Generation-Id");
-        if (!response.isSuccessful()) {
-          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited();
-          }
-          support.warnOnce(failureNotice(response.code()));
-          support.logFailure(
-              "non-2xx",
-              attempt,
-              CloudBackendSupport.elapsedMs(attemptStart),
-              inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              generationId,
-              CloudBackendSupport.errorBody(response));
-          return null;
-        }
-        // A clean call clears any rate-limit back-off so prefetch can resume.
-        backoff.recordSuccess();
-        StreamingPcmDecoder decoder = new StreamingPcmDecoder();
-        List<float[]> chunks = new ArrayList<>();
-        int sampleCount = 0;
-        long totalBytes = 0;
-        ResponseBody body = response.body();
-        if (body != null) {
-          InputStream in = body.byteStream();
-          byte[] buffer = new byte[STREAM_READ_BUFFER];
-          int read;
-          while ((read = in.read(buffer)) != -1) {
-            if (read == 0) {
-              continue;
-            }
-            totalBytes += read;
-            float[] chunk = decoder.decode(buffer, read);
-            if (chunk.length > 0) {
-              // Feed playback first so it starts on the earliest bytes, then keep the chunk for
-              // the cache. After a skip the sink drops the chunk cheaply, so the loop keeps
-              // draining the body to completion and the finished line is still cached, never
-              // re-billed on a later hearing.
-              sink.accept(chunk, rate);
-              if (!fedSink) {
-                firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
-                support.recordSpeechSpend(inputLen, prepared.prefetch);
-              }
-              fedSink = true;
-              chunks.add(chunk);
-              sampleCount += chunk.length;
-            }
-          }
-        }
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-        if (totalBytes == 0) {
-          support.logFailure(
-              "empty-body",
-              attempt,
-              elapsedMs,
-              inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              generationId,
-              CloudBackendSupport.EMPTY_BODY);
-          if (attempt < MAX_SPEECH_ATTEMPTS) {
-            log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-            continue;
-          }
-          support.warnOnce("OpenRouter TTS returned an empty response; this line was not voiced.");
-          return null;
-        }
-        if (config.debugMode()) {
-          // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
-          // body. A first chunk that lands nearly at elapsedMs means the provider sent the audio
-          // in one burst and streaming playback could not start any earlier.
-          log.info(
-              "{} firstChunkMs={}",
-              CloudSynthTrace.success(
-                  attempt,
-                  MAX_SPEECH_ATTEMPTS,
-                  elapsedMs,
-                  inputLen,
-                  (int) totalBytes,
-                  generationId),
-              firstChunkMs);
-        }
-        Pcm pcm = new Pcm(CloudBackendSupport.flatten(chunks, sampleCount), rate);
-        // The audio already played through the sink; only return it for caching when it is a whole,
-        // complete line. A truncated stream is heard once but never persisted clipped, and there is
-        // no retry here since replaying the line would double it.
-        if (decoder.hasPendingByte() || PcmCompleteness.isTruncated(pcm, speedRatio)) {
-          log.debug("[TTS cloud] streamed line played but not cached (incomplete tail)");
-          return null;
-        }
-        return pcm;
-      } catch (ConnectException e) {
-        support.warnOnce(
-            "OpenRouter TTS request could not reach the network; this line was not voiced.");
-        support.logNetworkFailure(
-            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
-        return null;
-      } catch (IOException e) {
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-        // Retry only while no audio has played; once a chunk reached the sink, replaying the line
-        // would double it, so a mid-stream cut plays what arrived and fails without a retry.
-        if (!fedSink && attempt < MAX_SPEECH_ATTEMPTS) {
-          log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          support.backoffBeforeNetworkRetry(attempt);
-          continue;
-        }
-        support.warnOnce(
-            "OpenRouter TTS request could not reach the network; this line was not voiced.");
-        support.logNetworkFailure("network", attempt, elapsedMs, inputLen, e);
-        return null;
-      } catch (RuntimeException e) {
-        support.warnOnce("OpenRouter TTS request failed unexpectedly; this line was not voiced.");
-        support.logNetworkFailure(
-            "unexpected", attempt, CloudBackendSupport.elapsedMs(attemptStart), inputLen, e);
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /** The built speech request plus the values both response loops need. */
-  private static final class PreparedRequest {
-    final Request httpRequest;
-    final double speedRatio;
-    final int inputLen;
-    final boolean prefetch;
-
-    PreparedRequest(Request httpRequest, double speedRatio, int inputLen, boolean prefetch) {
-      this.httpRequest = httpRequest;
-      this.speedRatio = speedRatio;
-      this.inputLen = inputLen;
-      this.prefetch = prefetch;
-    }
+    return executor.synthesizeStreaming(request, sink);
   }
 
   /**
@@ -821,11 +329,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     return "OpenRouter TTS request failed (HTTP "
         + httpCode
         + "); check your API key. This line was not voiced.";
-  }
-
-  @Override
-  public boolean isThrottled() {
-    return backoff.isThrottled();
   }
 
   /**
@@ -845,6 +348,125 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
               + " miss); cacheKey={}",
           profile.name(),
           profile.cacheKey());
+    }
+  }
+
+  /** The OpenRouter-specific half of the shared speech call: payload, transport, and notices. */
+  private final class Ops implements CloudSpeechExecutor.Ops {
+
+    @Override
+    public String apiKey() {
+      return config.openRouterApiKey();
+    }
+
+    @Override
+    public String missingKeyNotice() {
+      return NO_KEY_NOTICE;
+    }
+
+    @Override
+    public String translate(String text, String language, String apiKey) {
+      String translated = translator.translate(text, language, apiKey);
+      if (translated != null) {
+        support.recordTranslationSpend(text.length());
+      }
+      return translated;
+    }
+
+    @Override
+    public void profileApplied(CharacterProfile profile) {
+      assertStablePrefix(profile);
+    }
+
+    @Override
+    public CloudSpeechExecutor.PreparedSpeech buildRequests(
+        CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
+      JsonObject payload = new JsonObject();
+      payload.addProperty("model", model.modelId());
+      payload.addProperty("input", line.input);
+      payload.addProperty("voice", model.voiceFor(request.voice()));
+      payload.addProperty("response_format", model.responseFormat());
+      if (line.speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
+        // The model may ignore speed; sending it only when non-default avoids paying for a param
+        // the model might not honour on the common default-pace line.
+        payload.addProperty("speed", line.speedRatio);
+      }
+      // A translated line gets a BCP-47 language_code from the base language (not the quirk), so
+      // the voice pronounces the text natively rather than mis-reading it with an English phoneme
+      // set.
+      if (line.translating) {
+        payload.addProperty("language_code", config.cloudLanguage().code());
+      }
+      OpenRouterProvider.apply(payload);
+
+      Request httpRequest =
+          OpenRouterProvider.attributedRequest(endpoint, line.apiKey)
+              .post(
+                  RequestBody.create(
+                      CloudHttp.JSON_MEDIA_TYPE,
+                      gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
+              .build();
+      return new CloudSpeechExecutor.PreparedSpeech(
+          httpRequest, line.speedRatio, line.input.length(), request.prefetch());
+    }
+
+    /** Issues the call under this line's own budget rather than the client-wide ceiling. */
+    @Override
+    public Call newCall(Request httpRequest, int inputLength) {
+      Call call = httpClient.newCall(httpRequest);
+      call.timeout().timeout(callBudgetFor(inputLength).toMillis(), TimeUnit.MILLISECONDS);
+      return call;
+    }
+
+    @Override
+    public String generationId(Response response) {
+      return CloudHttp.headerOrEmpty(response, "X-Generation-Id");
+    }
+
+    @Override
+    public CloudSpeechExecutor.DecodedSpeech decodeBuffered(
+        byte[] bytes, CloudSpeechExecutor.PreparedSpeech prepared) {
+      if (bytes.length == 0) {
+        return CloudSpeechExecutor.DecodedSpeech.EMPTY;
+      }
+      return new CloudSpeechExecutor.DecodedSpeech(
+          model.decodeResponse(bytes),
+          bytes.length,
+          () -> support.recordSpeechSpend(prepared.inputLen, prepared.prefetch));
+    }
+
+    @Override
+    public CloudSpeechExecutor.StreamDrain newStreamDrain() {
+      return OpenRouterTtsBackend::drainRawBody;
+    }
+
+    @Override
+    public void recordSpendOnFirstChunk(CloudSpeechExecutor.PreparedSpeech prepared) {
+      support.recordSpeechSpend(prepared.inputLen, prepared.prefetch);
+    }
+
+    @Override
+    public String failureNotice(int httpCode) {
+      return OpenRouterTtsBackend.failureNotice(httpCode);
+    }
+
+    @Override
+    public String emptyBodyNotice() {
+      return "OpenRouter TTS returned an empty response; this line was not voiced.";
+    }
+  }
+
+  /** Reads the raw PCM body in network-read-sized chunks so playback starts on the first read. */
+  private static void drainRawBody(ResponseBody body, CloudSpeechExecutor.ChunkSink chunk)
+      throws IOException {
+    InputStream in = body.byteStream();
+    byte[] buffer = new byte[STREAM_READ_BUFFER];
+    int read;
+    while ((read = in.read(buffer)) != -1) {
+      if (read == 0) {
+        continue;
+      }
+      chunk.accept(buffer, read);
     }
   }
 }

@@ -9,48 +9,63 @@ import org.junit.Test;
 /** The cloud cache-key variant string: which fragments are appended, and in what order. */
 public class CloudCacheKeyBuilderTest {
 
-  private static final CharacterProfile PROFILE =
-      new CharacterProfile("Troll", "South London.", "Slow and simple.", "Heavy.");
+  private static String build(
+      String modelId,
+      String voice,
+      int speedPercent,
+      String text,
+      int maxChars,
+      CharacterProfile profile,
+      String language,
+      boolean skipTranslation) {
+    return CloudCacheKeyBuilder.build(
+        modelId, voice, speedPercent, text, maxChars, profile, language, skipTranslation);
+  }
 
   @Test
   public void baseKeyIsModelAndVoiceWithNoFragments() {
-    assertEquals("m|v", CloudCacheKeyBuilder.build("m", "v", 100, 100, "a", 600, null, null));
+    assertEquals("m|v", build("m", "v", 100, "a", 600, null, "English", false));
   }
 
   @Test
   public void speedFragmentOnlyWhenNonDefault() {
-    assertFalse(CloudCacheKeyBuilder.build("m", "v", 100, 100, "a", 0, null, null).contains("|s"));
-    assertTrue(
-        CloudCacheKeyBuilder.build("m", "v", 150, 100, "a", 0, null, null).contains("|s150"));
+    assertFalse(build("m", "v", 100, "a", 0, null, "English", false).contains("|s"));
+    assertTrue(build("m", "v", 150, "a", 0, null, "English", false).contains("|s150"));
   }
 
   @Test
   public void capFragmentOnlyWhenLineWouldTruncate() {
     assertFalse(
         "a line within the cap is not re-keyed",
-        CloudCacheKeyBuilder.build("m", "v", 100, 100, "ab", 3, null, null).contains("|c"));
+        build("m", "v", 100, "ab", 3, null, "English", false).contains("|c"));
     assertTrue(
         "a line longer than the cap folds the cap in",
-        CloudCacheKeyBuilder.build("m", "v", 100, 100, "abcdef", 3, null, null).contains("|c3"));
+        build("m", "v", 100, "abcdef", 3, null, "English", false).contains("|c3"));
   }
 
   @Test
   public void profileFragmentIsTheProfileContentKey() {
-    String withProfile = CloudCacheKeyBuilder.build("m", "v", 100, 100, "a", 0, PROFILE, null);
-    assertEquals("m|v|p" + PROFILE.cacheKey(), withProfile);
+    String withProfile = build("m", "v", 100, "a", 0, TestFixtures.TROLL_PROFILE, "English", false);
+    assertEquals("m|v|p" + TestFixtures.TROLL_PROFILE.cacheKey(), withProfile);
   }
 
   @Test
-  public void languageFragmentWhenPresent() {
+  public void languageFragmentOnlyWhenTheLineIsActuallyTranslated() {
     assertTrue(
-        CloudCacheKeyBuilder.build("m", "v", 100, 100, "a", 0, null, "french")
-            .contains("|lfrench"));
+        "a translated line folds the lowercased language in",
+        build("m", "v", 100, "a", 0, null, "French", false).contains("|lfrench"));
+    assertFalse(
+        "a skip-translation line keeps the plain pre-translation key",
+        build("m", "v", 100, "a", 0, null, "French", true).contains("|l"));
+    assertFalse(
+        "plain English adds no language fragment",
+        build("m", "v", 100, "a", 0, null, "English", false).contains("|l"));
   }
 
   @Test
   public void fragmentsAreAppendedInModelVoiceSpeedCapProfileLanguageOrder() {
     assertEquals(
-        "m|v|s150|c3|p" + PROFILE.cacheKey() + "|lfrench",
-        CloudCacheKeyBuilder.build("m", "v", 150, 100, "abcdef", 3, PROFILE, "french"));
+        "m|v|s150|c3|p" + TestFixtures.TROLL_PROFILE.cacheKey() + "|lfrench",
+        build("m", "v", 150, "abcdef", 3, TestFixtures.TROLL_PROFILE, "French", false));
   }
 }

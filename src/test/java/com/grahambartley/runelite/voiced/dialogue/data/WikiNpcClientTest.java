@@ -4,7 +4,6 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-import com.google.gson.Gson;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -22,7 +21,7 @@ public class WikiNpcClientTest {
   public void setUp() throws Exception {
     server = new MockWebServer();
     server.start();
-    client = new WikiNpcClient(new OkHttpClient(), new Gson(), server.url("/api.php").toString());
+    client = new WikiNpcClient(new OkHttpClient(), server.url("/api.php").toString());
   }
 
   @After
@@ -46,11 +45,11 @@ public class WikiNpcClientTest {
                     "{{Infobox NPC\n|race = [[Human]]\n|gender = Female\n|leagueRegion = Desert\n"
                         + "|location = Pollnivneach\n|id = 123\n}}")));
 
-    NPCAttributes a = client.lookup("Some Trader");
+    NpcAttributes a = client.lookup("Some Trader");
     assertEquals("Human", a.getRace());
     assertEquals("Female", a.getGender());
     assertEquals("kharidian", a.getEthnicity());
-    assertEquals("Wiki", a.getSource());
+    assertEquals(AttributeSource.WIKI, a.getSource());
   }
 
   @Test

@@ -7,8 +7,8 @@ import com.grahambartley.runelite.voiced.dialogue.synthesis.ProfanityFilter;
 import org.junit.Test;
 
 /**
- * The single spoken-text chokepoint (#149): {@link DialogueTextCleaner#clean} strips markup, then
- * masks profanity unconditionally. Every voiced source (NPC dialogue, player options, public chat)
+ * The single spoken-text chokepoint: {@link DialogueTextCleaner#clean} strips markup, then masks
+ * profanity unconditionally. Every voiced source (NPC dialogue, player options, public chat)
  * funnels through it, so this one seam covers them all with no toggle to bypass.
  */
 public class DialogueTextCleanerTest {

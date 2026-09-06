@@ -14,9 +14,9 @@ import java.util.Map;
 import org.junit.Test;
 
 /**
- * Pins the shape of the bundled {@code expression-emotions.json} table (#25). Detection (#26) and
- * the backends depend on this resource parsing cleanly: every non-documentation key must be a
- * positive integer seq id and every value must name a valid, non-NEUTRAL {@link Emotion} (neutral
+ * Pins the shape of the bundled {@code expression-emotions.json} table. Emotion detection and the
+ * backends depend on this resource parsing cleanly: every non-documentation key must be a positive
+ * integer seq id and every value must name a valid, non-NEUTRAL {@link Emotion} (neutral
  * expressions are not listed; they fall through to the loader's default-to-NEUTRAL contract).
  * Documentation keys (those starting with {@code _}, e.g. the {@code _meta}/{@code _source} notes)
  * are allowed and skipped.

@@ -3,8 +3,8 @@ package com.grahambartley.runelite.voiced.dialogue.synthesis;
 import static org.junit.Assert.assertEquals;
 
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import java.util.EnumSet;
 import org.junit.Test;
 
@@ -28,7 +28,7 @@ public class GeminiTtsModelTest {
 
   @Test
   public void voiceComesFromTheGeminiVoiceMap() {
-    VoiceSpec spec = VoiceSpec.npc(NPCRace.ELF, NPCGender.FEMALE);
+    VoiceSpec spec = VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE);
     assertEquals(new GeminiVoiceMap().voiceFor(spec), model.voiceFor(spec));
   }
 
@@ -40,7 +40,7 @@ public class GeminiTtsModelTest {
 
   @Test
   public void decodesRawPcmAt24k() {
-    Pcm pcm = model.decodeResponse(RawPcmDecoderTest.raw(new short[] {0, 16384, -16384}));
+    Pcm pcm = model.decodeResponse(TestPcm.raw(new short[] {0, 16384, -16384}));
     assertEquals(24_000, pcm.getSampleRate());
     assertEquals(3, pcm.getSamples().length);
   }

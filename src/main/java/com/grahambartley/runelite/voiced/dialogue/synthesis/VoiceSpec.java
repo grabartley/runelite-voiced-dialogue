@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
@@ -12,11 +13,11 @@ import lombok.experimental.Accessors;
  * the cloud backend can map the same spec to its own voice bank. {@link #key()} produces a stable,
  * human-readable fragment used in the synthesis cache key.
  *
- * <p>For per-NPC voice variety (issue #78) an NPC spec may additionally carry a {@link #voiceSeed}:
- * a stable, backend-neutral integer derived from the NPC's identity, so two NPCs of the same
- * race+gender can be spread across a gender-appropriate sub-pool and sound different (but stable)
- * from each other. {@link #UNSPECIFIED_SEED} ({@code -1}) means "no explicit choice" so the backend
- * anchors the spec to the first voice of its race/gender pool.
+ * <p>For per-NPC voice variety an NPC spec may additionally carry a {@link #voiceSeed}: a stable,
+ * backend-neutral integer derived from the NPC's identity, so two NPCs of the same race+gender can
+ * be spread across a gender-appropriate sub-pool and sound different (but stable) from each other.
+ * {@link #UNSPECIFIED_SEED} ({@code -1}) means "no explicit choice" so the backend anchors the spec
+ * to the first voice of its race/gender pool.
  *
  * <p>A spec flagged {@link #child} resolves to a youthful, gender-correct sub-pool instead of its
  * adult race anchor; the race still colours the delivery through the character-profile text, and
@@ -30,27 +31,27 @@ public class VoiceSpec {
   public static final int UNSPECIFIED_SEED = -1;
 
   boolean player;
-  VoiceManager.NPCRace race;
-  VoiceManager.NPCGender gender;
+  NpcRace race;
+  NpcGender gender;
   int voiceSeed;
   boolean child;
 
   /** A player voice of the given gender. Race is not meaningful for the player. */
-  public static VoiceSpec player(VoiceManager.NPCGender gender) {
-    return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SEED, false);
+  public static VoiceSpec player(NpcGender gender) {
+    return new VoiceSpec(true, NpcRace.HUMAN, gender, UNSPECIFIED_SEED, false);
   }
 
   /** An NPC voice for the given race and gender, with no per-NPC variety seed. */
-  public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender) {
+  public static VoiceSpec npc(NpcRace race, NpcGender gender) {
     return new VoiceSpec(false, race, gender, UNSPECIFIED_SEED, false);
   }
 
   /**
-   * An NPC voice for the given race and gender carrying a stable per-NPC variety seed (issue #78),
-   * spreading same-race/gender NPCs across a gender sub-pool. A negative seed is normalised to
-   * {@link #UNSPECIFIED_SEED} so it is treated as absent.
+   * An NPC voice for the given race and gender carrying a stable per-NPC variety seed, spreading
+   * same-race/gender NPCs across a gender sub-pool. A negative seed is normalised to {@link
+   * #UNSPECIFIED_SEED} so it is treated as absent.
    */
-  public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed) {
+  public static VoiceSpec npc(NpcRace race, NpcGender gender, int seed) {
     return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, false);
   }
 
@@ -58,8 +59,7 @@ public class VoiceSpec {
    * An NPC voice additionally carrying the child flag, so a young NPC resolves to the youthful
    * voice sub-pool of its gender rather than its adult race anchor.
    */
-  public static VoiceSpec npc(
-      VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed, boolean child) {
+  public static VoiceSpec npc(NpcRace race, NpcGender gender, int seed, boolean child) {
     return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, child);
   }
 

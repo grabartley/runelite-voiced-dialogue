@@ -2,29 +2,21 @@ package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 /**
- * The failure-path infrastructure every cloud TTS backend shares: the once-per-session user notice,
- * the standardized {@link CloudSynthTrace} failure logging, the backed-off network retry wait, the
- * speaking-pace clamp, the session spend counters, and the small response/PCM helpers. Each backend
- * composes one instance rather than inheriting, so endpoints, payload shapes, and retry counts stay
- * provider-specific while the plumbing exists exactly once.
+ * The stateful per-backend plumbing every cloud TTS backend shares: the once-per-session user
+ * notice, the standardized {@link CloudSynthTrace} failure logging, the backed-off network retry
+ * wait, the speaking-pace clamp, and the session spend counters. Each backend composes one instance
+ * rather than inheriting, so retry budgets and provider identity stay provider-specific while the
+ * plumbing exists exactly once. Stateless HTTP helpers live in {@link CloudHttp}.
  */
 @Slf4j
 final class CloudBackendSupport {
-
-  /** RFC 6585 Too Many Requests, absent from {@link java.net.HttpURLConnection}'s constants. */
-  static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   /** Speaking pace as a percentage of normal: the default and clamp range. */
   static final int DEFAULT_SPEED_PERCENT = 100;
@@ -32,12 +24,6 @@ final class CloudBackendSupport {
   private static final int MIN_SPEED_PERCENT = 50;
 
   private static final int MAX_SPEED_PERCENT = 200;
-
-  /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
-  private static final int BODY_SNIPPET_MAX_BYTES = 300;
-
-  /** Shared empty body for failure traces where no response bytes were (or could be) read. */
-  static final byte[] EMPTY_BODY = new byte[0];
 
   private final VoicedDialogueConfig config;
   private final TtsProvider provider;
@@ -158,21 +144,8 @@ final class CloudBackendSupport {
             bytes.length,
             message));
     if (config.debugMode() && bytes.length > 0) {
-      log.info("[TTS cloud] {} body snippet: {}", kind, bodySnippet(bytes));
+      log.info("[TTS cloud] {} body snippet: {}", kind, CloudHttp.bodySnippet(bytes));
     }
-  }
-
-  /** The {@code logFailure} variant for providers whose responses carry no generation id. */
-  void logFailure(
-      String kind,
-      int attempt,
-      long elapsedMs,
-      int inputLen,
-      int code,
-      String message,
-      String contentType,
-      byte[] bytes) {
-    logFailure(kind, attempt, elapsedMs, inputLen, code, message, contentType, "", bytes);
   }
 
   /** The no-response variant of {@code logFailure} for connect, timeout, and unexpected errors. */
@@ -218,48 +191,5 @@ final class CloudBackendSupport {
       return MAX_SPEED_PERCENT;
     }
     return percent;
-  }
-
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
-  static long elapsedMs(long startNanos) {
-    return (System.nanoTime() - startNanos) / 1_000_000L;
-  }
-
-  /** Concatenates the decoded stream chunks into one sample buffer for caching. */
-  static float[] flatten(List<float[]> chunks, int totalSamples) {
-    float[] out = new float[totalSamples];
-    int pos = 0;
-    for (float[] chunk : chunks) {
-      System.arraycopy(chunk, 0, out, pos, chunk.length);
-      pos += chunk.length;
-    }
-    return out;
-  }
-
-  static String headerOrEmpty(Response response, String name) {
-    String value = response.header(name);
-    return value == null ? "" : value;
-  }
-
-  /** Reads a small non-audio error body for diagnostics, tolerating a read failure. */
-  static byte[] errorBody(Response response) {
-    try {
-      ResponseBody body = response.body();
-      return body == null ? EMPTY_BODY : body.bytes();
-    } catch (IOException e) {
-      return EMPTY_BODY;
-    }
-  }
-
-  static boolean isNonBlank(String value) {
-    return value != null && !value.trim().isEmpty();
-  }
-
-  /** First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. */
-  private static String bodySnippet(byte[] bytes) {
-    int n = Math.min(bytes.length, BODY_SNIPPET_MAX_BYTES);
-    String text =
-        new String(bytes, 0, n, StandardCharsets.UTF_8).replaceAll("\\p{Cntrl}+", " ").trim();
-    return bytes.length > n ? text + "..." : text;
   }
 }

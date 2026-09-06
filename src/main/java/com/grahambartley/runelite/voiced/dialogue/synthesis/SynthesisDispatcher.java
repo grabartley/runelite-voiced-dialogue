@@ -4,23 +4,23 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.CaveEchoPolicy;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.voice.EmotionResolver;
-import com.grahambartley.runelite.voiced.dialogue.voice.ProfileResolver;
+import com.grahambartley.runelite.voiced.dialogue.voice.ResolvedSpeaker;
+import com.grahambartley.runelite.voiced.dialogue.voice.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceTraceFormatter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Builds {@link SynthesisRequest}s for dialogue and public-chat lines and hands them to the
- * off-thread synth + playback pipeline. Every speak path shares the same availability guard, voice
- * resolution, profile resolution, emotion resolution, and cave-echo gate, so this is the single
- * place a line becomes a request. Never blocks the game thread.
+ * off-thread synth + playback pipeline. Every speak path shares the same availability guard,
+ * speaker resolution, emotion resolution, and cave-echo gate, so this is the single place a line
+ * becomes a request. Never blocks the game thread.
  */
 @Slf4j
 public final class SynthesisDispatcher {
 
   private final VoiceManager voiceManager;
   private final EmotionResolver emotionResolver;
-  private final ProfileResolver profileResolver;
   private final CaveEchoPolicy caveEchoPolicy;
   private final VoicedDialogueConfig config;
   private final BackendProvider backendProvider;
@@ -29,14 +29,12 @@ public final class SynthesisDispatcher {
   public SynthesisDispatcher(
       VoiceManager voiceManager,
       EmotionResolver emotionResolver,
-      ProfileResolver profileResolver,
       CaveEchoPolicy caveEchoPolicy,
       VoicedDialogueConfig config,
       BackendProvider backendProvider,
       DialogueAudioService audioService) {
     this.voiceManager = voiceManager;
     this.emotionResolver = emotionResolver;
-    this.profileResolver = profileResolver;
     this.caveEchoPolicy = caveEchoPolicy;
     this.config = config;
     this.backendProvider = backendProvider;
@@ -45,22 +43,22 @@ public final class SynthesisDispatcher {
 
   /**
    * Speaks a dialogue line. The caller passes the speaker's chat-head expression animation id (or
-   * {@link DialogueWidgetReader#NO_EXPRESSION} when there is no head); it is resolved to an {@link
-   * Emotion} and ridden into the request.
+   * {@link com.grahambartley.runelite.voiced.dialogue.dialogue.DialogueWidgetReader#NO_EXPRESSION}
+   * when there is no head); it is resolved to an {@link Emotion} and ridden into the request.
    */
-  public void speakDialogue(String text, String speaker, String npcName, int headAnimationId) {
+  public void speakDialogue(String text, Speaker speaker, String npcName, int headAnimationId) {
     Emotion emotion = emotionResolver.resolve(headAnimationId, config.cloudEmotion());
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
-    VoiceSpec voice = voiceManager.resolveVoice(speaker, npcName);
-    boolean player = VoiceManager.SPEAKER_PLAYER.equals(speaker);
+    ResolvedSpeaker resolved = voiceManager.resolve(speaker, npcName);
+    boolean player = speaker == Speaker.PLAYER;
     dispatch(
         new SynthesisRequest(
             text,
-            voice,
+            resolved.voice(),
             emotion,
-            profileResolver.resolve(speaker, npcName),
+            resolved.profile(),
             /* skipTranslation= */ false,
             player),
         npcName);
@@ -72,13 +70,13 @@ public final class SynthesisDispatcher {
    * so chat is spoken exactly as typed.
    */
   public void speakPublicChat(String text) {
-    VoiceSpec voice = voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null);
+    ResolvedSpeaker resolved = voiceManager.resolve(Speaker.PLAYER, null);
     dispatch(
         new SynthesisRequest(
             text,
-            voice,
+            resolved.voice(),
             Emotion.NEUTRAL,
-            profileResolver.resolve(VoiceManager.SPEAKER_PLAYER, null),
+            resolved.profile(),
             /* skipTranslation= */ true,
             /* player= */ true),
         null);

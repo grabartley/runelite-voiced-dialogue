@@ -18,8 +18,8 @@ import org.junit.runner.RunWith;
 
 /**
  * Covers the cave-echo seams: {@link CaveEchoPolicy#isUndergroundPoint(WorldPoint)}, the coordinate
- * predicate behind underground detection; {@link CaveEchoPolicy#shouldEchoLine}, the pure gate; and
- * {@link CaveEchoPolicy#isUnderground()}, the client read that feeds the gate.
+ * predicate behind underground detection; {@link CaveEchoPolicy#isUnderground()}, the client read
+ * that feeds the gate; and {@link CaveEchoPolicy#shouldEcho()}, the gate itself.
  */
 @RunWith(JUnitParamsRunner.class)
 public class CaveEchoPolicyTest {
@@ -63,21 +63,6 @@ public class CaveEchoPolicyTest {
     }
   }
 
-  private Object[] shouldEchoLineCases() {
-    return new Object[] {
-      new Object[] {true, true, true},
-      new Object[] {false, true, false},
-      new Object[] {true, false, false},
-    };
-  }
-
-  @Test
-  @Parameters(method = "shouldEchoLineCases")
-  public void shouldEchoLineGatesOnToggleAndUnderground(
-      boolean caveEchoEnabled, boolean underground, boolean expected) {
-    assertEquals(expected, CaveEchoPolicy.shouldEchoLine(caveEchoEnabled, underground));
-  }
-
   @Test
   public void isUndergroundReadsTheLivePlayerLocation() {
     Client client = mock(Client.class);
@@ -98,16 +83,26 @@ public class CaveEchoPolicyTest {
     assertFalse("an overworld tile reads as surface", policy.isUnderground());
   }
 
+  private Object[] shouldEchoCases() {
+    return new Object[] {
+      new Object[] {true, 9000, true},
+      new Object[] {false, 9000, false},
+      new Object[] {true, 3200, false},
+    };
+  }
+
   @Test
-  public void shouldEchoCombinesToggleAndLocation() {
+  @Parameters(method = "shouldEchoCases")
+  public void shouldEchoGatesOnToggleAndLocation(
+      boolean caveEchoEnabled, int worldY, boolean expected) {
     Client client = mock(Client.class);
     VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
     Player player = mock(Player.class);
     when(client.getLocalPlayer()).thenReturn(player);
     when(client.isInInstancedRegion()).thenReturn(false);
-    when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, 9000, 0));
-    when(config.cloudCaveEcho()).thenReturn(true);
+    when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, worldY, 0));
+    when(config.cloudCaveEcho()).thenReturn(caveEchoEnabled);
 
-    assertTrue(new CaveEchoPolicy(client, config).shouldEcho());
+    assertEquals(expected, new CaveEchoPolicy(client, config).shouldEcho());
   }
 }

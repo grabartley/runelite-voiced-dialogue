@@ -1,8 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.voice;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
-
 /**
  * Formats the debug voice-resolution trace strings. Pure string building, so the whole resolution
  * path (world hit/id, table hit/miss, detected race/gender + source) and the chosen per-NPC variety
@@ -15,8 +12,8 @@ public final class VoiceTraceFormatter {
   static String buildNpcTrace(
       String npcName,
       Integer npcId,
-      NPCRace race,
-      NPCGender gender,
+      NpcRace race,
+      NpcGender gender,
       boolean child,
       String source,
       int seed) {
@@ -24,7 +21,7 @@ public final class VoiceTraceFormatter {
         "[TTS voice] npc='%s' world=%s race=%s gender=%s lifeStage=%s source=%s -> seed=%d",
         npcName,
         npcId == null ? "MISS" : "HIT(id=" + npcId + ")",
-        race == null ? "UNKNOWN" : race,
+        race,
         gender,
         child ? "child" : "adult",
         source,
@@ -43,8 +40,8 @@ public final class VoiceTraceFormatter {
       boolean player,
       String npcName,
       String emotion,
-      NPCRace race,
-      NPCGender gender,
+      NpcRace race,
+      NpcGender gender,
       boolean child,
       int seed,
       String profileName,
@@ -64,7 +61,7 @@ public final class VoiceTraceFormatter {
         accent == null ? "-" : "'" + accent + "'");
   }
 
-  static String buildPlayerTrace(NPCGender gender) {
+  static String buildPlayerTrace(NpcGender gender) {
     return String.format("[TTS voice] player -> gender=%s", gender);
   }
 }

@@ -28,7 +28,6 @@ public class LruCacheTest {
     cache.put("a", 1);
     cache.put("b", 2);
 
-    // Touch "a" so "b" becomes the least-recently used.
     assertEquals(Integer.valueOf(1), cache.get("a"));
     cache.put("c", 3);
 

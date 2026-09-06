@@ -1,7 +1,8 @@
 package com.grahambartley.runelite.voiced.dialogue.dialogue;
 
 import net.runelite.api.Client;
-import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.Player;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 
 /**
@@ -28,10 +29,8 @@ public final class DialogueWidgetReader {
   }
 
   /**
-   * Reads the chat-head expression animation id from the given dialogue head widget id ({@code
-   * InterfaceID.ChatLeft.HEAD} for NPC lines, {@code InterfaceID.ChatRight.HEAD} for player lines).
-   * Returns {@link #NO_EXPRESSION} when the head widget is absent (sprite/objectbox dialogues have
-   * no head), so the caller resolves NEUTRAL.
+   * Sprite and objectbox dialogues carry no chat head at all, so an absent head widget yields
+   * {@link #NO_EXPRESSION} and the caller resolves NEUTRAL.
    */
   int headAnimationId(int headWidgetId) {
     Widget head = client.getWidget(headWidgetId);
@@ -41,9 +40,8 @@ public final class DialogueWidgetReader {
     return head.getAnimationId();
   }
 
-  /** Extracts the NPC name from the dialogue name widget, or the current interacting NPC. */
   String currentNpcName() {
-    Widget npcNameWidget = client.getWidget(ComponentID.DIALOG_NPC_NAME);
+    Widget npcNameWidget = client.getWidget(InterfaceID.ChatLeft.NAME);
     if (npcNameWidget != null && !npcNameWidget.isHidden()) {
       String npcName = npcNameWidget.getText();
       if (npcName != null && !npcName.isEmpty()) {
@@ -51,8 +49,9 @@ public final class DialogueWidgetReader {
       }
     }
 
-    if (client.getLocalPlayer() != null && client.getLocalPlayer().getInteracting() != null) {
-      String interactingName = client.getLocalPlayer().getInteracting().getName();
+    Player local = client.getLocalPlayer();
+    if (local != null && local.getInteracting() != null) {
+      String interactingName = local.getInteracting().getName();
       if (interactingName != null && !interactingName.isEmpty()) {
         return interactingName.trim();
       }

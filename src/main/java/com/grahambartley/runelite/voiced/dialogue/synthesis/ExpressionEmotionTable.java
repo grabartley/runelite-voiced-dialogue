@@ -24,9 +24,9 @@ import lombok.extern.slf4j.Slf4j;
  * makes a neutral expression, an unseen id, a non-human head, or the one-tick race where the head
  * animation lags the line a safe no-op rather than a crash.
  *
- * <p>Emotion detection (#26) wires its runtime {@code EmotionResolver} on top of this loader to
- * read the live widget and thread the resolved {@link Emotion} into each {@link SynthesisRequest};
- * this class keeps the table + default contract loadable and testable in isolation.
+ * <p>Emotion detection wires its runtime {@code EmotionResolver} on top of this loader to read the
+ * live widget and thread the resolved {@link Emotion} into each {@link SynthesisRequest}; this
+ * class keeps the table + default contract loadable and testable in isolation.
  */
 @Slf4j
 public class ExpressionEmotionTable {
@@ -119,10 +119,5 @@ public class ExpressionEmotionTable {
       return Emotion.NEUTRAL;
     }
     return table.getOrDefault(animationId, Emotion.NEUTRAL);
-  }
-
-  /** Number of mapped ids in the loaded table (for logging and tests). */
-  public int size() {
-    return table.size();
   }
 }

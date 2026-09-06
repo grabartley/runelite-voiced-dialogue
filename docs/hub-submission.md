@@ -1,127 +1,75 @@
-# Plugin Hub submission runbook
+# Plugin Hub listing
 
-How to list **Voiced Dialogue** (internal name `voiced-dialogue`) on the official
-[RuneLite Plugin Hub](https://github.com/runelite/plugin-hub). This is a maintainer action; it
-is not part of the normal plugin build.
+How **Voiced Dialogue** (internal name `voiced-dialogue`) is listed on the official
+[RuneLite Plugin Hub](https://github.com/runelite/plugin-hub), and how a new version
+reaches users. This is maintainer reference; none of it is part of the normal plugin build.
 
 ## How the Hub consumes this repo
 
 The Hub does not host the plugin jar. It hosts a one-file *commit descriptor* per plugin
-(`plugins/voiced-dialogue`) containing only a `repository=` and a `commit=`. The Hub
-packager clones this repo at that exact commit, builds the jar from `src/main` per the
-`build=standard` build type, reads `runelite-plugin.properties` for the display metadata
-(`displayName`, `author`, `support`, `description`, `tags`, `version`), and reads the
-descriptor for the listing `warning=`/`authors=`.
+(`plugins/voiced-dialogue` in `runelite/plugin-hub`) containing a `repository=` pointing at
+this repo and a `commit=` pinning the release commit to build. The Hub packager clones this
+repo at that exact commit, builds the jar from `src/main` per the `build=standard` build
+type, reads `runelite-plugin.properties` for the display metadata (`displayName`, `author`,
+`support`, `description`, `tags`, `version`), and reads the descriptor for the listing
+`warning=`/`authors=`.
 
 The split matters:
 
 | Field | Lives in | Why |
 |-------|----------|-----|
-| `displayName`, `author`, `support`, `description`, `tags`, `version`, `build` | `runelite-plugin.properties` (this repo) | Read from the repo at the tagged commit. `build=standard` is required and tells the packager to build `src/main` with its own Gradle setup. |
-| `repository`, `commit` | `plugins/voiced-dialogue` descriptor (plugin-hub fork) | The only required descriptor fields. |
-| `warning`, `authors`, `jarSizeLimitMiB` | `plugins/voiced-dialogue` descriptor (plugin-hub fork) | The packager reads these from the descriptor, not from the properties file. A `warning=` in `runelite-plugin.properties` is an unused prop and never reaches the user; it must go in the descriptor. |
+| `displayName`, `author`, `support`, `description`, `tags`, `version`, `build` | `runelite-plugin.properties` (this repo) | Read from the repo at the pinned commit. `build=standard` tells the packager to build `src/main` with its own Gradle setup. |
+| `repository`, `commit` | `plugins/voiced-dialogue` descriptor (runelite/plugin-hub) | The only required descriptor fields. |
+| `warning`, `authors`, `jarSizeLimitMiB` | `plugins/voiced-dialogue` descriptor (runelite/plugin-hub) | The packager reads these from the descriptor, not from the properties file. A `warning=` in `runelite-plugin.properties` is an unused prop and never reaches the user. |
 
-The off-machine-data disclosure (OpenRouter) is therefore carried by the descriptor's
-`warning=` line, mirroring how the `tts` and NaturalSpeech listings disclose off-machine
-data. A pre-filled descriptor is kept at
-[`docs/plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue) in this
-repo; copy it into the fork and fill in the commit.
+## The off-machine-data disclosure
 
-## Prerequisites (must be true before submitting)
+The descriptor's `warning=` line carries the disclosure that dialogue text leaves the
+machine, covering both providers. This is the canonical copy of that text:
 
-- The repository is public.
-- A `LICENSE` exists at the repo root (this repo ships MIT).
-- A `v<version>` GitHub Release exists, cut by the `Release` deploy. Its tagged commit carries the
-  matching `version` in `runelite-plugin.properties` (the deploy writes and commits it). Do not submit
-  before the deploy has published the release.
-- `runelite-plugin.properties` is non-placeholder (no `Example` / `Nobody` /
-  `An example greeter plugin`, which the packager rejects), and declares `build=standard`. Its
-  `version` is the single source of truth, set by the deploy from the dispatched bump; you do not edit
-  it by hand.
-- The plugin jar builds clean: no native libraries, no model, well under the 10 MiB
-  source/jar limit. `./gradlew jar` produces a ~362 KiB jar (mostly the bundled
-  `npc-voices.json` data table).
-- The plugin `src/main` sources compile under **Java 11**. `build=standard` replaces our
-  `build.gradle` with the Hub's, which hard-sets `options.release=11`, so any Java 12+ syntax
-  or API in main sources (records, pattern-matching `instanceof`, `Stream.toList()`, ...) fails
-  the Hub build. Our own `compileJava` pins `options.release=11` to catch this locally; keep it
-  that way. Tests are unaffected (the Hub never builds them).
+> This plugin sends the NPC and player dialogue text it voices to your chosen provider,
+> Google AI Studio or OpenRouter (third-party services not controlled or verified by the
+> RuneLite developers), over HTTPS, using your API key, to synthesize speech.
 
-## Step 1: Cut the matching release
+How the repo satisfies the Hub's rules behind that disclosure (injected HTTP client, key
+handling, no bundled binaries, and so on) is recorded in
+[`hub-compliance-checklist.md`](hub-compliance-checklist.md).
 
-The `Release` deploy creates the tag and the release the descriptor points at. Dispatch `Release`
-(Actions tab -> "Run workflow") with the `bump` (`patch`/`minor`/`major`) and the `release_type`. It
-computes the next version from the latest `v*` tag, writes it into `runelite-plugin.properties`,
-commits that back to `main`, tags the commit `v<version>`, and publishes the release with the plugin
-jars. You never edit a version number by hand. Then copy that tag's commit sha for the descriptor:
+## Shipping a new version
 
-```bash
-git fetch --tags
-git rev-parse v1.0.0   # the tag the deploy created; copy the full 40-char sha for the descriptor
-```
+The Hub serves whatever commit the descriptor pins, so an update is two steps:
 
-## Step 2: Fork and branch plugin-hub
+1. **Cut the release.** Dispatch the `Release` workflow (Actions tab -> "Run workflow")
+   with the `bump` (`patch`/`minor`/`major`) and the `release_type`. It computes the next
+   version from the latest `v*` tag, writes it into `runelite-plugin.properties`, tags the
+   commit `v<version>`, and publishes the GitHub Release with the plugin jars. Version
+   numbers are never edited by hand. Then copy the tag's commit sha:
 
-```bash
-# fork https://github.com/runelite/plugin-hub once, via the GitHub UI or:
-gh repo fork runelite/plugin-hub --clone
-cd plugin-hub
-git checkout -B voiced-dialogue upstream/master
-```
+   ```bash
+   git fetch --tags
+   git rev-parse v<version>   # copy the full 40-char sha
+   ```
 
-## Step 3: Add the descriptor
+2. **Repoint the descriptor.** On a fresh branch off `upstream/master` in a fork of
+   `runelite/plugin-hub`, update only `commit=` in `plugins/voiced-dialogue` to that sha and
+   open a small PR against `runelite/plugin-hub`.
 
-Create `plugins/voiced-dialogue` (no file extension) by copying
-`docs/plugin-hub-manifest/voiced-dialogue` from this repo and replacing the commit
-placeholder with the sha from Step 1:
+The PR runs the Hub's build plus a `RuneLite Plugin Hub Checks` automated audit. A green
+check on both means it built and passed. If `Hub Checks` requests changes, fix them in this
+repo, cut a fresh release, update `commit=` on the same PR, and push again (keep everything
+in one PR).
 
-```
-repository=https://github.com/grabartley/runelite-voiced-dialogue.git
-commit=<full 40-char sha from `git rev-parse v1.0.0`>
-authors=grabartley
-warning=This plugin sends the NPC and player dialogue text it voices to your chosen provider, Google AI Studio or OpenRouter (third-party services not controlled or verified by the RuneLite developers), over HTTPS, using your API key, to synthesize speech.
-```
+## What the listing depends on
 
-The descriptor file name **is** the internal plugin name and must be lowercase
-alphanumeric plus dashes: `voiced-dialogue`.
+These must stay true for the Hub build to keep working:
 
-## Step 4: Open the PR against runelite/plugin-hub
-
-```bash
-git add plugins/voiced-dialogue
-git commit -m "add voiced-dialogue"
-git push -u origin voiced-dialogue
-gh pr create -R runelite/plugin-hub -w
-```
-
-Write a short PR description of what the plugin does.
-
-## Step 5: Watch CI and iterate
-
-The PR runs `.github/workflows/build.yml / build (pull_request)` and a `RuneLite Plugin
-Hub Checks` job:
-
-- A green check on both means it built and passed the automated audit.
-- If `Hub Checks` says **Changes are needed**, read the requested changes, fix them on
-  this repo, push a new tag/commit, update `commit=` in the descriptor, and push again to
-  the same PR (keep everything in one PR; do not open new ones).
-
-Common automated-audit failures and how this repo already avoids them:
-
-| Check | Status here |
-|-------|-------------|
-| No bundled native libraries / no model in the jar | Cloud-only: there is no synthesis engine or model at all; the jar is classes + three data resources only. |
-| No `new OkHttpClient()` / `new OkHttpClient.Builder()` / `new Gson()` / `new GsonBuilder()` (disallowed APIs) | All HTTP/JSON uses the injected `OkHttpClient` / `Gson`. |
-| Resources via `getResourceAsStream` (jar not unpacked) | All bundled JSON loads via `getResourceAsStream`. |
-| Jar under 10 MiB | ~362 KiB. No `jarSizeLimitMiB` override needed. |
-| `displayName` / `author` / `description` not the template placeholders | Set to real values. |
-
-## Step 6: Updating later
-
-To ship a new version after merge, update only `commit=` in `plugins/voiced-dialogue` on a
-fresh branch off `upstream/master` and open another small PR.
-
-## Out of scope for this runbook
-
-This runbook covers only the Hub listing. The plugin is Cloud-only, so there is no engine
-bundle to build or sign.
+- The repository is public and `LICENSE` exists at the repo root (MIT).
+- `runelite-plugin.properties` declares `build=standard` and carries real, non-placeholder
+  metadata. Its `version` is written by the `Release` workflow onto the tagged commit.
+- The jar stays clean and small: no native libraries, no model, well under the Hub's 10 MiB
+  limit (the built jar is ~362 KiB, mostly the bundled `npc-voices.json` table).
+- `src/main` compiles under **Java 11**. `build=standard` replaces this repo's
+  `build.gradle` with the Hub's, which hard-sets `options.release=11`, so any Java 12+
+  syntax or API in main sources fails the Hub build. Our own `compileJava` pins
+  `options.release=11` to catch this locally; keep it that way. Tests are unaffected (the
+  Hub never builds them).

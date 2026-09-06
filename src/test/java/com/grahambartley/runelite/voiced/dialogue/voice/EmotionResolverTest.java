@@ -9,8 +9,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * Covers the emotion-decision seam {@link EmotionResolver#resolve(int, boolean)} backing #26's
- * chat-head detection. The table is the real bundled {@code expression-emotions.json} (loaded at
+ * Covers the emotion-decision seam {@link EmotionResolver#resolve(int, boolean)} behind chat-head
+ * detection. The table is the real bundled {@code expression-emotions.json} (loaded at
  * construction, no client needed), so these exercise the same mapped ids the live widget read feeds
  * in. The raw widget read itself ({@link DialogueWidgetReader}) is covered separately.
  */

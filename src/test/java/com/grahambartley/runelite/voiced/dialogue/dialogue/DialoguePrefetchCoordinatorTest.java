@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,7 +14,8 @@ import com.grahambartley.runelite.voiced.dialogue.synthesis.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
-import com.grahambartley.runelite.voiced.dialogue.voice.ProfileResolver;
+import com.grahambartley.runelite.voiced.dialogue.voice.ResolvedSpeaker;
+import com.grahambartley.runelite.voiced.dialogue.voice.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import java.util.List;
 import net.runelite.api.widgets.Widget;
@@ -29,7 +31,6 @@ import org.mockito.ArgumentCaptor;
 public class DialoguePrefetchCoordinatorTest {
 
   private final VoiceManager voiceManager = mock(VoiceManager.class);
-  private final ProfileResolver profileResolver = mock(ProfileResolver.class);
   private final DialoguePrefetcher prefetcher = mock(DialoguePrefetcher.class);
   private final BackendProvider backendProvider = mock(BackendProvider.class);
   private final SynthesisBackend backend = mock(SynthesisBackend.class);
@@ -38,7 +39,6 @@ public class DialoguePrefetchCoordinatorTest {
   private final DialoguePrefetchCoordinator coordinator =
       new DialoguePrefetchCoordinator(
           voiceManager,
-          profileResolver,
           new DialogueTextCleaner(new ProfanityFilter()),
           prefetcher,
           backendProvider,
@@ -68,8 +68,8 @@ public class DialoguePrefetchCoordinatorTest {
   public void offersOnlyRealOptionsSkippingHeaderBlankAndNull() {
     when(config.prefetch()).thenReturn(true);
     when(backend.isAvailable()).thenReturn(true);
-    when(voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null))
-        .thenReturn(mock(VoiceSpec.class));
+    when(voiceManager.resolve(Speaker.PLAYER, null))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
 
     Widget[] children = {
       option("Select an Option"), option("Yes, I'll help."), null, option(""), option("No thanks.")
@@ -91,8 +91,8 @@ public class DialoguePrefetchCoordinatorTest {
   public void everyOfferedLineIsMarkedSpeculativeSoSpendReadsAsWarming() {
     when(config.prefetch()).thenReturn(true);
     when(backend.isAvailable()).thenReturn(true);
-    when(voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null))
-        .thenReturn(mock(VoiceSpec.class));
+    when(voiceManager.resolve(Speaker.PLAYER, null))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
 
     Widget[] children = {option("Yes, I'll help."), option("No thanks.")};
     Widget options = mock(Widget.class);
@@ -108,6 +108,59 @@ public class DialoguePrefetchCoordinatorTest {
           offered.prefetch());
       assertTrue("it is still the player's own line", offered.player());
     }
+  }
+
+  @Test
+  public void anUnchangedOptionMenuIsNotRebuiltOnEveryTick() {
+    when(config.prefetch()).thenReturn(true);
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolve(Speaker.PLAYER, null))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+    Widget options = menu("Yes, I'll help.", "No thanks.");
+
+    coordinator.prefetchOptions(options);
+    coordinator.prefetchOptions(options);
+    coordinator.prefetchOptions(options);
+
+    verify(prefetcher, times(1)).offer(org.mockito.ArgumentMatchers.anyList());
+  }
+
+  @Test
+  public void aChangedOptionMenuIsRebuilt() {
+    when(config.prefetch()).thenReturn(true);
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolve(Speaker.PLAYER, null))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+
+    coordinator.prefetchOptions(menu("Yes, I'll help.", "No thanks."));
+    coordinator.prefetchOptions(menu("Tell me more.", "Goodbye."));
+
+    verify(prefetcher, times(2)).offer(org.mockito.ArgumentMatchers.anyList());
+  }
+
+  @Test
+  public void resetLetsTheSameMenuWarmAgainInTheNextConversation() {
+    when(config.prefetch()).thenReturn(true);
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolve(Speaker.PLAYER, null))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+
+    coordinator.prefetchOptions(menu("Yes, I'll help.", "No thanks."));
+    coordinator.reset();
+    coordinator.prefetchOptions(menu("Yes, I'll help.", "No thanks."));
+
+    verify(prefetcher).reset();
+    verify(prefetcher, times(2)).offer(org.mockito.ArgumentMatchers.anyList());
+  }
+
+  private static Widget menu(String... texts) {
+    Widget[] children = new Widget[texts.length];
+    for (int i = 0; i < texts.length; i++) {
+      children[i] = option(texts[i]);
+    }
+    Widget options = mock(Widget.class);
+    when(options.getDynamicChildren()).thenReturn(children);
+    return options;
   }
 
   private static Widget option(String text) {

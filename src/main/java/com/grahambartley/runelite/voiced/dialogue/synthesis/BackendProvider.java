@@ -50,25 +50,13 @@ public final class BackendProvider {
   /**
    * Applies the emotion-downgrade rule for a backend: if the backend cannot voice the request's
    * emotion, the emotion is rewritten to {@link Emotion#NEUTRAL}. This is the single definition of
-   * the rule, shared by {@link #synthesize} and the pipeline's cache-key computation.
+   * the rule, shared by {@link #synthesizeWith} and the pipeline's cache-key computation.
    */
   public static SynthesisRequest downgradeFor(SynthesisBackend backend, SynthesisRequest request) {
     if (backend.supportedEmotions().contains(request.emotion())) {
       return request;
     }
     return request.withEmotion(Emotion.NEUTRAL);
-  }
-
-  /**
-   * Convenience entry that resolves {@link #active()} and synthesizes in one call, applying the
-   * emotion-downgrade rule first so the backend only ever receives an emotion it supports. Returns
-   * {@code null} on failure. Use this only when cache-key parity does not matter (e.g. tests); the
-   * pipeline instead resolves {@link #active()} itself and calls {@link #synthesizeWith} so the
-   * backend reflected in the cache key is the one that actually runs.
-   */
-  public Pcm synthesize(SynthesisRequest request) {
-    SynthesisBackend backend = active();
-    return backend.synthesize(downgradeFor(backend, request));
   }
 
   /**

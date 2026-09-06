@@ -2,8 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.voice;
 
 import static org.junit.Assert.assertEquals;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Test;
@@ -16,57 +14,57 @@ public class NpcDemographicParserTest {
   private Object[] raceCases() {
     return new Object[] {
       // Exact enum names map directly.
-      new Object[] {"DWARF", NPCRace.DWARF},
-      new Object[] {"goblin", NPCRace.GOBLIN},
+      new Object[] {"DWARF", NpcRace.DWARF},
+      new Object[] {"goblin", NpcRace.GOBLIN},
       // Keyword variants bucket onto the nearest race.
-      new Object[] {"Old man", NPCRace.HUMAN},
-      new Object[] {"Elven warrior", NPCRace.ELF},
-      new Object[] {"Imcando dwarf", NPCRace.DWARF},
-      new Object[] {"Gnome child", NPCRace.GOBLIN},
-      new Object[] {"Mountain giant", NPCRace.TROLL},
-      new Object[] {"Skeleton mage", NPCRace.UNDEAD},
-      new Object[] {"Restless ghost", NPCRace.UNDEAD},
-      new Object[] {"Green dragon", NPCRace.DEMON},
-      new Object[] {"Jungle gorilla", NPCRace.GORILLA},
-      new Object[] {"Karamja primate", NPCRace.MONKEY},
-      new Object[] {"Battle mage", NPCRace.WIZARD},
-      new Object[] {"Tortuga elder", NPCRace.TORTUGAN},
-      new Object[] {"Icyene queen", NPCRace.ICYENE},
-      new Object[] {"Arceuus", NPCRace.ARCEUUS},
-      new Object[] {"Citizen of Arceuus", NPCRace.ARCEUUS},
-      new Object[] {"Citizens of Arceuus", NPCRace.ARCEUUS},
+      new Object[] {"Old man", NpcRace.HUMAN},
+      new Object[] {"Elven warrior", NpcRace.ELF},
+      new Object[] {"Imcando dwarf", NpcRace.DWARF},
+      new Object[] {"Gnome child", NpcRace.GOBLIN},
+      new Object[] {"Mountain giant", NpcRace.TROLL},
+      new Object[] {"Skeleton mage", NpcRace.UNDEAD},
+      new Object[] {"Restless ghost", NpcRace.UNDEAD},
+      new Object[] {"Green dragon", NpcRace.DEMON},
+      new Object[] {"Jungle gorilla", NpcRace.GORILLA},
+      new Object[] {"Karamja primate", NpcRace.MONKEY},
+      new Object[] {"Battle mage", NpcRace.WIZARD},
+      new Object[] {"Tortuga elder", NpcRace.TORTUGAN},
+      new Object[] {"Icyene queen", NpcRace.ICYENE},
+      new Object[] {"Arceuus", NpcRace.ARCEUUS},
+      new Object[] {"Citizen of Arceuus", NpcRace.ARCEUUS},
+      new Object[] {"Citizens of Arceuus", NpcRace.ARCEUUS},
       // A half-blood hits the human keyword arm first and stays HUMAN (Safalaan).
-      new Object[] {"Half Icyene, half human", NPCRace.HUMAN},
+      new Object[] {"Half Icyene, half human", NpcRace.HUMAN},
       // Unknown or empty falls through to UNKNOWN.
-      new Object[] {null, NPCRace.UNKNOWN},
-      new Object[] {"", NPCRace.UNKNOWN},
-      new Object[] {"Penguin", NPCRace.UNKNOWN},
+      new Object[] {null, NpcRace.UNKNOWN},
+      new Object[] {"", NpcRace.UNKNOWN},
+      new Object[] {"Penguin", NpcRace.UNKNOWN},
     };
   }
 
   @Test
   @Parameters(method = "raceCases")
-  public void mapsRawRaceToEnum(String raw, NPCRace expected) {
+  public void mapsRawRaceToEnum(String raw, NpcRace expected) {
     assertEquals(expected, NpcDemographicParser.toRace(raw));
   }
 
   private Object[] genderCases() {
     return new Object[] {
-      new Object[] {"FEMALE", NPCGender.FEMALE},
-      new Object[] {"Woman", NPCGender.FEMALE},
-      new Object[] {"Noble lady", NPCGender.FEMALE},
-      new Object[] {"Old man", NPCGender.MALE},
-      new Object[] {"Lord of the manor", NPCGender.MALE},
+      new Object[] {"FEMALE", NpcGender.FEMALE},
+      new Object[] {"Woman", NpcGender.FEMALE},
+      new Object[] {"Noble lady", NpcGender.FEMALE},
+      new Object[] {"Old man", NpcGender.MALE},
+      new Object[] {"Lord of the manor", NpcGender.MALE},
       // Empty is UNKNOWN; an unrecognised non-empty value defaults to MALE.
-      new Object[] {null, NPCGender.UNKNOWN},
-      new Object[] {"", NPCGender.UNKNOWN},
-      new Object[] {"indeterminate", NPCGender.MALE},
+      new Object[] {null, NpcGender.UNKNOWN},
+      new Object[] {"", NpcGender.UNKNOWN},
+      new Object[] {"indeterminate", NpcGender.MALE},
     };
   }
 
   @Test
   @Parameters(method = "genderCases")
-  public void mapsRawGenderToEnum(String raw, NPCGender expected) {
+  public void mapsRawGenderToEnum(String raw, NpcGender expected) {
     assertEquals(expected, NpcDemographicParser.toGender(raw));
   }
 }

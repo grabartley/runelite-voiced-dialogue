@@ -5,54 +5,47 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import org.junit.Test;
 
 /**
- * The backward-compatible constructors and the routing flags carried alongside the spoken line:
- * existing call sites must keep producing a translating, non-speculative NPC request, and {@code
- * withEmotion} must carry every flag through so a re-emotioned copy is not silently re-translated,
- * re-classed, or re-counted as a line the player heard.
+ * The short-constructor defaults and the routing flags carried alongside the spoken line: a bare
+ * request must produce a translating, non-speculative NPC line, and {@code withEmotion} must carry
+ * every flag through so a re-emotioned copy is not silently re-translated, re-classed, or
+ * re-counted as a line the player heard.
  */
 public class SynthesisRequestTest {
 
-  private static final VoiceSpec VOICE = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+  private static final VoiceSpec VOICE = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
   @Test
-  public void legacyConstructorsDefaultToTranslating() {
+  public void shortConstructorDefaultsToTranslating() {
     assertFalse(
         "the 3-arg form leaves translation enabled",
         new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).skipTranslation());
-    assertFalse(
-        "the 4-arg form leaves translation enabled",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null).skipTranslation());
   }
 
   @Test
   public void withEmotionPreservesSkipTranslation() {
-    SynthesisRequest publicChat = new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true);
+    SynthesisRequest publicChat =
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true, false);
     assertTrue(
         "a re-emotioned copy keeps skip-translation, so a downgrade never re-enables translation",
         publicChat.withEmotion(Emotion.HAPPY).skipTranslation());
 
-    SynthesisRequest dialogue = new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false);
+    SynthesisRequest dialogue =
+        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false, false);
     assertFalse(
         "a normal line stays translating after a downgrade",
         dialogue.withEmotion(Emotion.NEUTRAL).skipTranslation());
   }
 
   @Test
-  public void legacyConstructorsDefaultToNpcSpeakerClass() {
+  public void shortConstructorDefaultsToNpcSpeakerClass() {
     assertFalse(
         "the 3-arg form voices as an NPC line",
         new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).player());
-    assertFalse(
-        "the 4-arg form voices as an NPC line",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null).player());
-    assertFalse(
-        "the 5-arg form voices as an NPC line",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true).player());
   }
 
   @Test
@@ -71,8 +64,6 @@ public class SynthesisRequestTest {
   @Test
   public void everyConstructorDefaultsToALiveLineRatherThanAPrefetch() {
     assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).prefetch());
-    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null).prefetch());
-    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true).prefetch());
     assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true, true).prefetch());
   }
 

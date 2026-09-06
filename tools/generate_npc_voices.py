@@ -11,10 +11,9 @@ which is authoritative and current. Talkable NPCs transclude ``Template:Infobox
 NPC`` (carrying ``race``, ``gender``, ``leagueRegion``, ``location`` and cache
 ``id``s); talkable creatures transclude ``Template:Infobox Monster`` (which
 carries none of those, so their race comes from the page's categories). We map
-each id -> {race, gender, ethnicity}. This replaces the older heuristic name
-classifier: race and gender now come straight from the wiki, so townsfolk get the
-correct gender (e.g. Cecilia is Female) and newer NPCs (Varlamore, etc.) are
-covered as soon as the wiki documents them.
+each id -> {race, gender, ethnicity}. Race and gender come straight from the
+wiki, so townsfolk get the correct gender (e.g. Cecilia is Female) and newly
+released NPCs are covered as soon as the wiki documents them.
 
 Pipeline
 --------

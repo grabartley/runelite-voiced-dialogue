@@ -30,6 +30,9 @@ public class StreamingAudioPlayer implements AudioOutput {
 
   private static final int CHUNK_BYTES = 4096;
 
+  /** How long the player thread waits on the chunk queue before re-checking its generation. */
+  private static final int QUEUE_POLL_MS = 20;
+
   private final LineFactory lineFactory;
   private final AtomicLong generation = new AtomicLong();
   private volatile SourceDataLine line;
@@ -49,40 +52,18 @@ public class StreamingAudioPlayer implements AudioOutput {
     }
     long gen = generation.incrementAndGet();
     byte[] pcm = PcmAudio.toPcm16LE(samples);
-    AudioFormat format = PcmAudio.format(sampleRate);
-    SourceDataLine open = null;
+    SourceDataLine sdl = null;
     try {
-      open = lineFactory.getLine(format);
-      open.open(format);
-      applyVolume(open, volumePercent);
-      open.start();
-      this.line = open;
-
-      int offset = 0;
-      while (offset < pcm.length) {
-        if (generation.get() != gen) {
-          break;
-        }
-        int len = Math.min(CHUNK_BYTES, pcm.length - offset);
-        // write() blocks until the line can accept more, pacing playback to real time.
-        offset += open.write(pcm, offset, len);
-      }
+      sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
+      writeChunked(sdl, pcm, gen);
       if (generation.get() == gen) {
-        open.drain();
+        sdl.drain();
       }
     } catch (Exception e) {
       log.warn("Audio playback failed: {}", e.getMessage());
     } finally {
-      if (open != null) {
-        try {
-          open.stop();
-          open.close();
-        } catch (Exception ignored) {
-          // best-effort line teardown
-        }
-      }
-      if (this.line == open) {
-        this.line = null;
+      if (sdl != null) {
+        releaseLine(sdl);
       }
     }
   }
@@ -90,10 +71,7 @@ public class StreamingAudioPlayer implements AudioOutput {
   @Override
   public AudioStream beginStream(int volumePercent) {
     // Share the buffered path's generation counter, so a new line or stop() interrupts a streamed
-    // line and vice versa. The producer (a synthesis worker) hands chunks to write() as it reads
-    // the
-    // body at network speed; a dedicated player thread drains them to the line in real time, so the
-    // worker is freed as soon as the body is read rather than held for the whole spoken duration.
+    // line and vice versa.
     long gen = generation.incrementAndGet();
     return new BufferedLineStream(gen, volumePercent);
   }
@@ -143,12 +121,14 @@ public class StreamingAudioPlayer implements AudioOutput {
 
     @Override
     public void write(float[] samples, int sampleRate) {
-      // Drop superseded/empty chunks (and never start a player for them) so the producer, after a
-      // skip, keeps draining the body cheaply for the cache without pacing to a line no one hears.
       if (samples == null || samples.length == 0 || generation.get() != gen) {
         return;
       }
-      this.sampleRate = sampleRate;
+      // The line is opened once, on the first non-empty chunk, so the whole stream is fixed to that
+      // first chunk's rate; a later chunk must never redefine it.
+      if (this.sampleRate < 0) {
+        this.sampleRate = sampleRate;
+      }
       queue.offer(samples);
       startPlayer();
     }
@@ -174,25 +154,16 @@ public class StreamingAudioPlayer implements AudioOutput {
     private void playLoop() {
       SourceDataLine sdl = null;
       try {
-        AudioFormat format = PcmAudio.format(sampleRate);
-        sdl = lineFactory.getLine(format);
-        sdl.open(format);
-        applyVolume(sdl, volumePercent);
-        sdl.start();
-        line = sdl; // publish so stop() can flush the active line
+        sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
         while (generation.get() == gen) {
-          float[] chunk = queue.poll(20, TimeUnit.MILLISECONDS);
+          float[] chunk = queue.poll(QUEUE_POLL_MS, TimeUnit.MILLISECONDS);
           if (chunk == null) {
             if (ended && queue.isEmpty()) {
-              break; // producer finished and the buffer is drained
+              break;
             }
-            continue; // waiting on the next chunk
+            continue;
           }
-          byte[] pcm = PcmAudio.toPcm16LE(chunk);
-          int offset = 0;
-          while (offset < pcm.length && generation.get() == gen) {
-            offset += sdl.write(pcm, offset, Math.min(CHUNK_BYTES, pcm.length - offset));
-          }
+          writeChunked(sdl, PcmAudio.toPcm16LE(chunk), gen);
         }
         if (generation.get() == gen) {
           sdl.drain();
@@ -201,17 +172,53 @@ public class StreamingAudioPlayer implements AudioOutput {
         log.warn("Audio streaming failed: {}", e.getMessage());
       } finally {
         if (sdl != null) {
-          try {
-            sdl.stop();
-            sdl.close();
-          } catch (Exception ignored) {
-            // best-effort teardown
-          }
-        }
-        if (line == sdl) {
-          line = null;
+          releaseLine(sdl);
         }
       }
+    }
+  }
+
+  /**
+   * Opens, configures and starts a line, publishing it so {@link #stop()} can flush whatever is
+   * currently playing. A line that fails part-way through is torn down here, so a caller that never
+   * receives it can never leak it.
+   */
+  private SourceDataLine openLine(AudioFormat format, int volumePercent)
+      throws LineUnavailableException {
+    SourceDataLine sdl = lineFactory.getLine(format);
+    boolean opened = false;
+    try {
+      sdl.open(format);
+      applyVolume(sdl, volumePercent);
+      sdl.start();
+      this.line = sdl;
+      opened = true;
+      return sdl;
+    } finally {
+      if (!opened) {
+        releaseLine(sdl);
+      }
+    }
+  }
+
+  /** Writes the whole buffer in chunks, bailing as soon as a newer generation supersedes it. */
+  private void writeChunked(SourceDataLine sdl, byte[] pcm, long gen) {
+    int offset = 0;
+    while (offset < pcm.length && generation.get() == gen) {
+      // write() blocks until the line can accept more, pacing playback to real time.
+      offset += sdl.write(pcm, offset, Math.min(CHUNK_BYTES, pcm.length - offset));
+    }
+  }
+
+  private void releaseLine(SourceDataLine sdl) {
+    try {
+      sdl.stop();
+      sdl.close();
+    } catch (Exception ignored) {
+      // best-effort line teardown
+    }
+    if (this.line == sdl) {
+      this.line = null;
     }
   }
 

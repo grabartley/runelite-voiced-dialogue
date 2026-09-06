@@ -9,147 +9,133 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import com.grahambartley.runelite.voiced.dialogue.data.NPCAttributes;
-import com.grahambartley.runelite.voiced.dialogue.data.NPCDemographicAnalyzer;
+import com.grahambartley.runelite.voiced.dialogue.data.AttributeSource;
+import com.grahambartley.runelite.voiced.dialogue.data.LifeStage;
+import com.grahambartley.runelite.voiced.dialogue.data.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.data.NpcLearningService;
+import com.grahambartley.runelite.voiced.dialogue.data.NpcProfileTable;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
-import java.util.HashSet;
-import java.util.Set;
-import net.runelite.api.NPC;
 import org.junit.Test;
 
-/** NPC name to {@link VoiceSpec} resolution, including detection-failure fallbacks and learning. */
+/**
+ * A resolved NPC identity to a {@link VoiceSpec}, including detection-failure fallbacks and
+ * learning.
+ */
 public class NpcVoiceResolverTest {
 
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
-  private final NPCDemographicAnalyzer analyzer = mock(NPCDemographicAnalyzer.class);
-  private final NpcFinder finder = mock(NpcFinder.class);
-  private final Set<String> childNames = new HashSet<>();
-  private final NpcVoiceResolver resolver =
-      new NpcVoiceResolver(config, analyzer, finder, childNames::contains);
+  private final NpcVoiceResolver resolver = new NpcVoiceResolver(config);
 
   @Test
   public void blankNameResolvesToDefaultHumanMale() {
-    VoiceSpec spec = resolver.resolve("");
-    assertDefaultHumanMale(spec);
+    assertDefaultHumanMale(resolver.resolve("", identity(null, null, false)));
   }
 
   @Test
   public void npcNotInWorldResolvesToDefaultHumanMale() {
-    when(finder.findByName("Hans")).thenReturn(null);
-    assertDefaultHumanMale(resolver.resolve("Hans"));
+    assertDefaultHumanMale(resolver.resolve("Hans", identity(null, null, false)));
   }
 
   @Test
   public void analysisFailureResolvesToDefaultHumanMale() {
-    NPC npc = mock(NPC.class);
-    when(npc.getId()).thenReturn(5);
-    when(finder.findByName("Hans")).thenReturn(npc);
-    when(analyzer.analyzeNPC(npc)).thenReturn(null);
-    assertDefaultHumanMale(resolver.resolve("Hans"));
+    assertDefaultHumanMale(resolver.resolve("Hans", identity(5, null, false)));
   }
 
   @Test
   public void detectedNpcCarriesItsRaceAndGender() {
-    NPC npc = mock(NPC.class);
-    when(npc.getId()).thenReturn(101);
-    when(finder.findByName("Goblin")).thenReturn(npc);
-    NPCAttributes attrs = attributes("Goblin", "Male", "StaticTable");
-    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
     NpcLearningService learning = mock(NpcLearningService.class);
     resolver.setLearningService(learning);
 
-    VoiceSpec spec = resolver.resolve("Goblin");
+    VoiceSpec spec =
+        resolver.resolve(
+            "Goblin",
+            identity(101, attributes("Goblin", "Male", AttributeSource.STATIC_TABLE), false));
 
-    assertEquals(NPCRace.GOBLIN, spec.race());
-    assertEquals(NPCGender.MALE, spec.gender());
+    assertEquals(NpcRace.GOBLIN, spec.race());
+    assertEquals(NpcGender.MALE, spec.gender());
     assertFalse(spec.player());
     verify(learning, never()).considerLearning(101, "Goblin");
   }
 
   @Test
   public void unknownRaceVoicesAsHumanAndTriggersLearning() {
-    NPC npc = mock(NPC.class);
-    when(npc.getId()).thenReturn(202);
-    when(finder.findByName("Penguin")).thenReturn(npc);
-    NPCAttributes attrs = attributes("Penguin", "Female", "learned");
-    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
     NpcLearningService learning = mock(NpcLearningService.class);
     resolver.setLearningService(learning);
 
-    VoiceSpec spec = resolver.resolve("Penguin");
+    VoiceSpec spec =
+        resolver.resolve(
+            "Penguin",
+            identity(202, attributes("Penguin", "Female", AttributeSource.LEARNED), false));
 
-    assertEquals("an unrecognised race voices as human", NPCRace.HUMAN, spec.race());
-    assertEquals(NPCGender.FEMALE, spec.gender());
+    assertEquals("an unrecognised race voices as human", NpcRace.HUMAN, spec.race());
+    assertEquals(NpcGender.FEMALE, spec.gender());
     verify(learning).considerLearning(202, "Penguin");
   }
 
   @Test
-  public void tableLifeStageMarkerFlagsTheSpecAsChild() {
-    NPC npc = mock(NPC.class);
-    when(npc.getId()).thenReturn(3501);
-    when(finder.findByName("Shilop")).thenReturn(npc);
-    NPCAttributes attrs = attributes("Human", "Male", "StaticTable");
-    when(attrs.isChild()).thenReturn(true);
-    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
+  public void anUndetectedGenderVoicesAsTheDefaultMale() {
+    VoiceSpec spec =
+        resolver.resolve(
+            "Nulgar", identity(303, attributes("Human", null, AttributeSource.LEARNED), false));
 
-    VoiceSpec spec = resolver.resolve("Shilop");
+    assertEquals(NpcGender.MALE, spec.gender());
+  }
+
+  @Test
+  public void tableLifeStageMarkerFlagsTheSpecAsChild() {
+    NpcAttributes attrs = attributes("Human", "Male", AttributeSource.STATIC_TABLE);
+    attrs.setLifeStage(LifeStage.CHILD);
+
+    VoiceSpec spec = resolver.resolve("Shilop", identity(3501, attrs, false));
 
     assertTrue("the table life-stage marker makes a child spec", spec.child());
-    assertEquals(NPCRace.HUMAN, spec.race());
-    assertEquals(NPCGender.MALE, spec.gender());
+    assertEquals(NpcRace.HUMAN, spec.race());
+    assertEquals(NpcGender.MALE, spec.gender());
   }
 
   @Test
   public void childNamedNpcFlagsTheSpecAsChildWithoutATableMarker() {
-    childNames.add("Schoolboy");
-    NPC npc = mock(NPC.class);
-    when(npc.getId()).thenReturn(1919);
-    when(finder.findByName("Schoolboy")).thenReturn(npc);
-    NPCAttributes attrs = attributes("Human", "Male", "StaticTable");
-    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
+    VoiceSpec spec =
+        resolver.resolve(
+            "Schoolboy",
+            identity(1919, attributes("Human", "Male", AttributeSource.STATIC_TABLE), true));
 
-    assertTrue(
-        "a child-name keyword match makes a child spec", resolver.resolve("Schoolboy").child());
+    assertTrue("a child-name keyword match makes a child spec", spec.child());
   }
 
   @Test
   public void childNamedNpcStaysAChildEvenWhenDetectionFails() {
-    childNames.add("Child");
-    when(finder.findByName("Child")).thenReturn(null);
-
-    VoiceSpec spec = resolver.resolve("Child");
+    VoiceSpec spec = resolver.resolve("Child", identity(null, null, true));
 
     assertTrue("the default fallback keeps the child flag from the name", spec.child());
-    assertEquals(NPCRace.HUMAN, spec.race());
-    assertEquals(NPCGender.MALE, spec.gender());
+    assertEquals(NpcRace.HUMAN, spec.race());
+    assertEquals(NpcGender.MALE, spec.gender());
   }
 
   @Test
   public void adultsResolveWithoutTheChildFlag() {
-    NPC npc = mock(NPC.class);
-    when(npc.getId()).thenReturn(3105);
-    when(finder.findByName("Hans")).thenReturn(npc);
-    NPCAttributes attrs = attributes("Human", "Male", "StaticTable");
-    when(analyzer.analyzeNPC(npc)).thenReturn(attrs);
+    VoiceSpec spec =
+        resolver.resolve(
+            "Hans",
+            identity(3105, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false));
 
-    assertFalse(resolver.resolve("Hans").child());
+    assertFalse(spec.child());
   }
 
   private void assertDefaultHumanMale(VoiceSpec spec) {
-    assertEquals(NPCRace.HUMAN, spec.race());
-    assertEquals(NPCGender.MALE, spec.gender());
+    assertEquals(NpcRace.HUMAN, spec.race());
+    assertEquals(NpcGender.MALE, spec.gender());
     assertFalse("default voice is not a player spec", spec.player());
     assertTrue("default voice still gets a per-NPC variety seed", spec.hasVoiceSeed());
   }
 
-  private static NPCAttributes attributes(String race, String gender, String source) {
-    NPCAttributes attributes = mock(NPCAttributes.class);
-    when(attributes.getRace()).thenReturn(race);
-    when(attributes.getGender()).thenReturn(gender);
-    when(attributes.getSource()).thenReturn(source);
-    return attributes;
+  private static NpcIdentity identity(Integer worldId, NpcAttributes attributes, boolean child) {
+    NpcProfileTable.NameMatch nameMatch = mock(NpcProfileTable.NameMatch.class);
+    when(nameMatch.child()).thenReturn(child);
+    return new NpcIdentity(worldId, attributes, nameMatch);
+  }
+
+  private static NpcAttributes attributes(String race, String gender, String source) {
+    return new NpcAttributes(race, gender, source);
   }
 }

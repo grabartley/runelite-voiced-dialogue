@@ -5,32 +5,34 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Verifies the static NPC voice table lookup: known ids resolve to the baked-in race/gender,
- * unknown ids fall back deterministically, and no live data source is consulted. The lookup is
- * exercised by id directly so the heavy {@code net.runelite.api.NPC} interface needn't be mocked.
+ * unknown ids fall back deterministically, a transformed NPC falls back to its base id, and no live
+ * data source is consulted.
  */
-public class NPCDemographicAnalyzerTest {
+public class NpcDemographicAnalyzerTest {
 
-  private NPCDemographicAnalyzer analyzer;
+  private NpcDemographicAnalyzer analyzer;
 
   @Before
   public void setUp() {
-    analyzer = new NPCDemographicAnalyzer();
+    analyzer = new NpcDemographicAnalyzer();
     analyzer.initialize();
   }
 
   @Test
   public void bundledTableLoadsEntries() {
-    // The generated resource ships with a substantial set of entries, far more than the old
-    // 24-entry hand list, so most distinctive NPCs no longer rely on the default.
     assertTrue("expected the bundled table to load many entries", analyzer.getTableSize() > 500);
   }
 
@@ -51,10 +53,9 @@ public class NPCDemographicAnalyzerTest {
 
   @Test
   public void dialogueNpcsResolveToCorrectGenderAndRace() {
-    // High-traffic peaceful dialogue NPCs (the acceptance-criteria sample) must
-    // now be present with the correct gender so male and female townsfolk get
-    // distinct voices, instead of collapsing to the
-    // human-male default. Ids are real cache ids verified against the osrs data.
+    // High-traffic peaceful dialogue NPCs, so male and female townsfolk get distinct voices instead
+    // of collapsing to the human-male default. Ids are real cache ids verified against the osrs
+    // data.
     assertAttributes(3105, "Human", "Male"); // Hans
     assertAttributes(306, "Human", "Male"); // Lumbridge Guide
     assertAttributes(225, "Human", "Female"); // Cook (servant), female per the wiki
@@ -80,20 +81,29 @@ public class NPCDemographicAnalyzerTest {
 
   @Test
   public void knownEntriesAreMarkedAsTableSourced() {
-    NPCAttributes hans = analyzer.lookup(3105, "Hans");
-    assertEquals("StaticTable", hans.getSource());
+    NpcAttributes hans = analyze(3105, "Hans");
+    assertEquals(AttributeSource.STATIC_TABLE, hans.getSource());
     assertEquals(3105, hans.getNpcId());
   }
 
   @Test
+  public void aTransformedNpcFallsBackToItsBaseId() {
+    // A multiloc NPC reports an active id the table does not know and a base (composition) id it
+    // does, so the base id must still find the entry.
+    NpcAttributes attributes = analyze(999_000_001, 3105, "Hans");
+    assertEquals(AttributeSource.STATIC_TABLE, attributes.getSource());
+    assertEquals(3105, attributes.getNpcId());
+  }
+
+  @Test
   public void unknownIdFallsBackToUnknownRaceSoFallbackVoiceApplies() {
-    // Race must be Unknown (not Human) so VoiceManager routes through the configured fallback voice
-    // rather than silently using the human voice and making the fallback toggle a no-op.
-    NPCAttributes attributes = analyzer.lookup(987654321, "Totally Made Up NPC");
+    // Race must be Unknown (not Human) so voice resolution routes through the configured fallback
+    // voice rather than silently using the human voice.
+    NpcAttributes attributes = analyze(987654321, "Totally Made Up NPC");
     assertNotNull(attributes);
     assertEquals("Unknown", attributes.getRace());
     assertEquals("Male", attributes.getGender());
-    assertEquals("Default", attributes.getSource());
+    assertEquals(AttributeSource.DEFAULT, attributes.getSource());
     assertEquals(987654321, attributes.getNpcId());
   }
 
@@ -101,17 +111,17 @@ public class NPCDemographicAnalyzerTest {
   public void unknownFemaleNamedNpcGetsBestGuessFemaleGender() {
     // The lone runtime name check: an explicit female word reports a best-guess Female gender for
     // missing-id NPCs. Race stays Unknown, which voices with the single default voice regardless.
-    assertEquals("Female", analyzer.lookup(987654322, "Mysterious Woman").getGender());
-    assertEquals("Female", analyzer.lookup(987654323, "Lost Princess").getGender());
+    assertEquals("Female", analyze(987654322, "Mysterious Woman").getGender());
+    assertEquals("Female", analyze(987654323, "Lost Princess").getGender());
     // No female signal stays Male; a substring inside a larger word must not trigger it.
-    assertEquals("Male", analyzer.lookup(987654324, "Old Sailor").getGender());
-    assertEquals("Male", analyzer.lookup(987654325, "Womanizer Larry").getGender());
+    assertEquals("Male", analyze(987654324, "Old Sailor").getGender());
+    assertEquals("Male", analyze(987654325, "Womanizer Larry").getGender());
   }
 
   @Test
   public void unknownIdFallbackIsStable() {
-    NPCAttributes first = analyzer.lookup(424242, "Unknown");
-    NPCAttributes second = analyzer.lookup(424242, "Unknown");
+    NpcAttributes first = analyze(424242, "Unknown");
+    NpcAttributes second = analyze(424242, "Unknown");
     assertEquals(first.getRace(), second.getRace());
     assertEquals(first.getGender(), second.getGender());
   }
@@ -122,47 +132,67 @@ public class NPCDemographicAnalyzerTest {
   }
 
   @Test
+  public void anNpcWithoutACompositionReturnsNull() {
+    NPC npc = mock(NPC.class);
+    when(npc.getComposition()).thenReturn(null);
+    assertNull(analyzer.analyzeNPC(npc));
+  }
+
+  @Test
   public void learnedStoreIsConsultedForIdsMissingFromTheBundledTable() throws Exception {
     Path file = Files.createTempDirectory("learned").resolve("l.json");
     LearnedNpcStore store = new LearnedNpcStore(file, new Gson());
     store.learn(987001, "Elf", "Female", "tirannwn");
     analyzer.setLearnedStore(store);
 
-    NPCAttributes a = analyzer.lookup(987001, "A New Elf");
+    NpcAttributes a = analyze(987001, "A New Elf");
     assertEquals("Elf", a.getRace());
     assertEquals("Female", a.getGender());
     assertEquals("tirannwn", a.getEthnicity());
-    assertEquals("Learned", a.getSource());
+    assertEquals(AttributeSource.LEARNED, a.getSource());
   }
 
   @Test
   public void lookupWorksWithoutInitializeUsingDefault() {
     // A fresh analyzer that was never initialized must still resolve safely (empty table ->
-    // default)
-    // rather than throwing, so a missing resource can never break voice selection.
-    NPCDemographicAnalyzer fresh = new NPCDemographicAnalyzer();
-    NPCAttributes attributes = fresh.lookup(101, "Goblin");
+    // default) rather than throwing, so a missing resource can never break voice selection.
+    analyzer = new NpcDemographicAnalyzer();
+    NpcAttributes attributes = analyze(101, "Goblin");
     assertEquals("Unknown", attributes.getRace());
     assertEquals("Male", attributes.getGender());
-    assertEquals("Default", attributes.getSource());
+    assertEquals(AttributeSource.DEFAULT, attributes.getSource());
   }
 
   @Test
   public void markedChildrenCarryTheChildLifeStageFromTheBundledTable() {
     // Real child NPCs marked via overrides.json: Shilop (Gertrude's son) and Rory (young cyclops).
-    assertTrue("Shilop is a child", analyzer.lookup(3501, null).isChild());
-    assertTrue("Rory is a child", analyzer.lookup(2136, null).isChild());
+    assertTrue("Shilop is a child", analyze(3501, null).isChild());
+    assertTrue("Rory is a child", analyze(2136, null).isChild());
   }
 
   @Test
   public void unmarkedNpcsAreAdults() {
-    assertFalse("Hans is an adult", analyzer.lookup(3105, null).isChild());
+    assertFalse("Hans is an adult", analyze(3105, null).isChild());
   }
 
   private void assertAttributes(int npcId, String expectedRace, String expectedGender) {
-    NPCAttributes attributes = analyzer.lookup(npcId, null);
+    NpcAttributes attributes = analyze(npcId, null);
     assertNotNull("expected a table entry for id " + npcId, attributes);
     assertEquals("race for id " + npcId, expectedRace, attributes.getRace());
     assertEquals("gender for id " + npcId, expectedGender, attributes.getGender());
+  }
+
+  private NpcAttributes analyze(int npcId, String npcName) {
+    return analyze(npcId, npcId, npcName);
+  }
+
+  private NpcAttributes analyze(int activeId, int baseId, String npcName) {
+    NPCComposition composition = mock(NPCComposition.class);
+    when(composition.getId()).thenReturn(baseId);
+    when(composition.getName()).thenReturn(npcName);
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(activeId);
+    when(npc.getComposition()).thenReturn(composition);
+    return analyzer.analyzeNPC(npc);
   }
 }

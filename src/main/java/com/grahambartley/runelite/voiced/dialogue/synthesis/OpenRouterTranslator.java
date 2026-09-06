@@ -4,15 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 /**
  * Translates a dialogue line into the configured spoken language before it is voiced, via
@@ -27,31 +23,18 @@ import okhttp3.ResponseBody;
  * gracefully rather than voicing the wrong language or caching a mistranslation.
  */
 @Slf4j
-final class OpenRouterTranslator {
+final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
 
   /**
    * The lightweight model used for the translation hop: fast and cheap relative to the TTS call.
+   * The same Flash Lite model the direct Gemini hop uses, under OpenRouter's namespace.
    */
-  static final String MODEL = "google/gemini-3.1-flash-lite";
-
-  static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-  private static final String USER_AGENT = "runelite-voiced-dialogue";
-
-  /** OpenRouter app-attribution headers, shown as the app name/URL in its usage dashboard. */
-  private static final String APP_TITLE = "RuneLite Voiced Dialogue";
-
-  private static final String APP_URL = "https://github.com/grabartley/runelite-voiced-dialogue";
-
-  private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
+  static final String MODEL = "google/" + GeminiAiStudioTranslator.MODEL;
 
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
   private final Gson gson;
   private final String endpoint;
-
-  OpenRouterTranslator(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
-    this(httpClient, config, gson, PRODUCTION_ENDPOINT);
-  }
 
   /** Test seam: points the translation request at a mock server instead of the live host. */
   OpenRouterTranslator(
@@ -71,6 +54,13 @@ final class OpenRouterTranslator {
     if (text == null || text.isEmpty()) {
       return text;
     }
+    CloudTranslatorCall.Outcome outcome =
+        CloudTranslatorCall.run(httpClient, config, this, text, language, apiKey);
+    return outcome == null ? null : outcome.text;
+  }
+
+  @Override
+  public Request buildRequest(String text, String language, String apiKey) {
     JsonObject payload = new JsonObject();
     payload.addProperty("model", MODEL);
     JsonArray messages = new JsonArray();
@@ -79,59 +69,11 @@ final class OpenRouterTranslator {
     payload.add("messages", messages);
     OpenRouterProvider.apply(payload);
 
-    Request httpRequest =
-        new Request.Builder()
-            .url(endpoint)
-            .addHeader("Authorization", "Bearer " + apiKey)
-            .addHeader("User-Agent", USER_AGENT)
-            .addHeader("HTTP-Referer", APP_URL)
-            .addHeader("X-Title", APP_TITLE)
-            .post(
-                RequestBody.create(
-                    JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
-            .build();
-
-    long start = System.nanoTime();
-    try (Response response = httpClient.newCall(httpRequest).execute()) {
-      ResponseBody body = response.body();
-      String raw = body == null ? "" : body.string();
-      long elapsedMs = CloudBackendSupport.elapsedMs(start);
-      if (!response.isSuccessful()) {
-        log.warn(
-            "[TTS cloud] translate fail reason=non-2xx http={} elapsedMs={} inLen={} detail={}",
-            response.code(),
-            elapsedMs,
-            text.length(),
-            response.message());
-        return null;
-      }
-      String translated = extractContent(raw);
-      if (translated == null || translated.isEmpty()) {
-        log.warn(
-            "[TTS cloud] translate fail reason=no-content http={} elapsedMs={} inLen={}",
-            response.code(),
-            elapsedMs,
-            text.length());
-        return null;
-      }
-      if (config.debugMode()) {
-        log.info(
-            "[TTS cloud] translate ok lang={} elapsedMs={} inLen={} outLen={} -> \"{}\"",
-            language,
-            elapsedMs,
-            text.length(),
-            translated.length(),
-            translated);
-      }
-      return translated;
-    } catch (IOException | RuntimeException e) {
-      log.warn(
-          "[TTS cloud] translate fail reason=error elapsedMs={} inLen={} detail={}",
-          CloudBackendSupport.elapsedMs(start),
-          text.length(),
-          e.getMessage());
-      return null;
-    }
+    return OpenRouterProvider.attributedRequest(endpoint, apiKey)
+        .post(
+            RequestBody.create(
+                CloudHttp.JSON_MEDIA_TYPE, gson.toJson(payload).getBytes(StandardCharsets.UTF_8)))
+        .build();
   }
 
   private static JsonObject message(String role, String content) {
@@ -142,7 +84,8 @@ final class OpenRouterTranslator {
   }
 
   /** Pulls {@code choices[0].message.content} out of a chat-completions response, trimmed. */
-  private String extractContent(String raw) {
+  @Override
+  public String extractText(String raw) {
     if (raw == null || raw.isEmpty()) {
       return null;
     }

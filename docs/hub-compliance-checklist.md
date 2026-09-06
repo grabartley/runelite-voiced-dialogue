@@ -1,15 +1,15 @@
-# Plugin Hub compliance checklist
+# Plugin Hub compliance record
 
-Pre-submission audit of **Voiced Dialogue** (internal name `voiced-dialogue`) against the
-[RuneLite Plugin Hub](https://github.com/runelite/plugin-hub) rules, focused on the
-requirements the Hub review is strictest about: outbound network access, third-party API
-usage, user-provided secrets, bundled binaries, and user consent. The compliance story is
-**Cloud-only, no subprocess, no bundled binaries**: the plugin voices dialogue solely through
-outbound HTTPS to the configured provider (`generativelanguage.googleapis.com` for Google AI
-Studio, or `openrouter.ai`), spawns no external process, and ships no engine,
-native library, or model.
+What the [RuneLite Plugin Hub](https://github.com/runelite/plugin-hub) requires of
+**Voiced Dialogue** (internal name `voiced-dialogue`) and how this repo satisfies it,
+focused on the requirements the Hub review is strictest about: outbound network access,
+third-party API usage, user-provided secrets, bundled binaries, and user consent. The
+compliance story is **Cloud-only, no subprocess, no bundled binaries**: the plugin voices
+dialogue solely through outbound HTTPS to the configured provider
+(`generativelanguage.googleapis.com` for Google AI Studio, or `openrouter.ai`), spawns no
+external process, and ships no engine, native library, or model.
 
-This is the verification record. The step-by-step submission flow lives in
+This is the verification record. How the Hub listing itself works lives in
 [`hub-submission.md`](hub-submission.md).
 
 ## Requirements
@@ -21,22 +21,27 @@ path (`grep -rn "new OkHttpClient" src/` returns nothing). Every component recei
 RuneLite's injected `OkHttpClient` and, where it needs different timeouts or a keepalive
 pool, derives from it via `newBuilder()` (allowed):
 
-- `VoicedDialoguePlugin.java` — `@Inject private OkHttpClient okHttpClient;`, passed into every
+- `VoicedDialoguePlugin.java`: `@Inject private OkHttpClient okHttpClient;`, passed into every
   network component.
-- `OpenRouterTtsBackend.java` — derives a keepalive client via
-  `httpClient.newBuilder()...build()`.
-- `OpenRouterTranslator.java` — derives a call-timeout client via `httpClient.newBuilder()`.
-- `data/WikiNpcClient.java` — optional NPC auto-learn lookups, also through the injected
+- `OpenRouterTtsBackend.java`: derives a keepalive HTTP/1.1 client via
+  `httpClient.newBuilder()...build()`; `OpenRouterTranslator` and the warm-up path share that
+  derived client.
+- `GeminiAiStudioTtsBackend.java`: derives its own keepalive client via
+  `httpClient.newBuilder()...build()`; `GeminiAiStudioTranslator` shares that derived client.
+- `OpenRouterUsageClient.java`: the `::voicedspend` balance read, using the injected client
+  as-is.
+- `data/WikiNpcClient.java`: optional NPC auto-learn lookups, also through the injected
   client.
 
 ### All network and synthesis stays off the game thread
 
 **Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors (a 2-thread
 bounded synthesis pool, a warm-up thread for the cloud connection handshake, and a 2-thread
-prefetch pool); the OpenRouter HTTP calls execute on those threads. Disk cache I/O also stays
-on those pool threads: the prefetch fast-path checks only the in-memory tier, so the game
-thread never reads the on-disk cache. NPC auto-learn lookups run on their own
-`tts-wiki-learn` daemon thread. User-facing notices are hopped back to the client thread via
+prefetch pool); the cloud HTTP calls for both providers execute on those threads. Disk cache
+I/O also stays on those pool threads: the prefetch fast-path checks only the in-memory tier,
+so the game thread never reads the on-disk cache. NPC auto-learn lookups run on their own
+`tts-wiki-learn` daemon thread, and the `::voicedspend` balance read runs on a dedicated
+spend executor thread. User-facing notices are hopped back to the client thread via
 `clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread never makes a network
 call, reads the disk cache, or blocks on synthesis.
 
@@ -58,9 +63,9 @@ a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which
   declared `secret = true` (`VoicedDialogueConfig.java`), so RuneLite masks them in the UI and
   config store.
 - Each key is read only to authenticate its own provider: the `Authorization: Bearer <key>`
-  header in `OpenRouterTtsBackend` and `OpenRouterTranslator`, and the `x-goog-api-key` header
-  in `GeminiAiStudioTtsBackend` and `GeminiAiStudioTranslator`. Neither key is ever sent to the
-  other provider's host.
+  header in `OpenRouterTtsBackend`, `OpenRouterTranslator`, and `OpenRouterUsageClient`, and
+  the `x-goog-api-key` header in `GeminiAiStudioTtsBackend` and `GeminiAiStudioTranslator`.
+  Neither key is ever sent to the other provider's host.
 - Never logged: error logs record HTTP status, content-type, generation id, and a body
   snippet, never the key or the `Authorization` header. No `log.*` statement references the
   key.
@@ -73,13 +78,12 @@ a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which
 - First-run onboarding chat notice (`ChatNoticeManager`): "...Your dialogue text is then sent
   to that provider to be voiced. Until a key is set, lines stay silent."
 - The **Voice Provider** setting names the service that receives the text and bills the calls.
-- The Hub listing itself carries the off-machine-data `warning=` in the descriptor (see
-  [`hub-submission.md`](hub-submission.md) and
-  [`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)).
+- The Hub listing itself carries the off-machine-data `warning=` in the descriptor; the
+  canonical disclosure text lives in [`hub-submission.md`](hub-submission.md).
 
 ### Graceful behaviour when outbound network is blocked or the key is invalid
 
-**Verified by code audit** (manual QA still required, see below). Each backend
+**Verified by code audit** (re-verify by hand per below). Each backend
 gates on `isAvailable()` (false when no key) and wraps every request in try/catch: non-2xx
 responses, empty/undecodable/truncated audio, `IOException`, and unexpected
 `RuntimeException` all return `null` after a one-time chat notice. A `null` synthesis result
@@ -110,28 +114,26 @@ API in main sources fails locally before it reaches the Hub. `src/main` carries 
 pattern-matching `instanceof`, or other Java 12+ constructs; tests stay on release 17 and are
 never built by the Hub.
 
-## Hub listing text (for the descriptor / properties)
+## Hub listing text
 
-From `runelite-plugin.properties`:
+From `runelite-plugin.properties` (the `version` is written by the `Release` workflow onto
+each tagged release commit):
 
 - **displayName:** Voiced Dialogue
 - **author:** Graham Bartley
 - **support:** https://github.com/grabartley/runelite-voiced-dialogue
 - **description:** Voices NPC and player dialogue using cloud text-to-speech (Google AI Studio or OpenRouter).
 - **tags:** tts, voice, dialogue, audio, immersion, accessibility, npc, speech, talk, text-to-speech
-- **version:** 0.1.0
 - **build:** standard
 
-Descriptor `warning=` (off-machine-data disclosure, from
-[`plugin-hub-manifest/voiced-dialogue`](plugin-hub-manifest/voiced-dialogue)): "This plugin
-sends the NPC and player dialogue text it voices to your chosen provider, Google AI Studio or
-OpenRouter (third-party services not controlled or verified by the RuneLite developers), over
-HTTPS, using your API key, to synthesize speech."
+The descriptor's `warning=` disclosure text is kept in
+[`hub-submission.md`](hub-submission.md).
 
-## Manual QA still required before submission
+## Re-verifying by hand
 
-Code review confirms the above, but the network-blocked path and jar contents should be
-confirmed by hand on the target machine per `run-game-client`:
+Code review confirms the above; the network-blocked path and jar contents are re-confirmed
+by hand on the target machine (per `run-game-client`) whenever this record needs
+re-validating:
 
 1. Run with the network disabled or an invalid key and confirm dialogue stays silent with a
    single chat notice, no crash, and no game-thread exception in the logs.

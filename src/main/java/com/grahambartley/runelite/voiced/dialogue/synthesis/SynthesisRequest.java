@@ -16,20 +16,18 @@ import lombok.experimental.Accessors;
  *
  * <p>The profile is the resolved per-speaker delivery template ({@link CharacterProfile}); it is
  * {@code null} when character profiles are off or no profile applies. The cloud backend renders it
- * as a leading AUDIO PROFILE block. A {@code null} profile leaves the request body byte-for-byte as
- * before, so existing cache entries stay valid.
+ * as a leading AUDIO PROFILE block; a {@code null} profile adds nothing to the request body.
  *
  * <p>{@code skipTranslation} forces the line to be voiced verbatim even when a non-English spoken
  * language or a global quirk is configured: the cloud backend skips the translation hop and the
  * {@code |l<language>} cache segment for such a request. It is {@code true} only for the player's
- * own public chat (voiced as typed); every dialogue line leaves it {@code false}, so the request
- * body and cache key stay byte-for-byte as before.
+ * own public chat (voiced as typed); every dialogue line leaves it {@code false}.
  *
  * <p>{@code player} marks the line as the player's own speech rather than an NPC's, so the cloud
  * backend can pick the per-speaker-class Speaking Style (Player vs NPC). It is {@code true} for
  * player dialogue, public chat, and prefetched options (all lines the player speaks) and {@code
- * false} for NPC lines. The legacy constructors default it {@code false}, so an unmarked request
- * voices as an NPC line as before.
+ * false} for NPC lines; the short constructor defaults it {@code false}, so an unmarked request
+ * voices as an NPC line.
  *
  * <p>{@code prefetch} marks the line as speculative cache warming rather than something the player
  * is hearing now, so {@link SpendTracker} can report warming separately from lines actually voiced.
@@ -78,24 +76,9 @@ public final class SynthesisRequest {
     this(text, voice, emotion, profile, skipTranslation, player, false);
   }
 
-  /** A request with no character profile (backward-compatible 3-arg form). */
+  /** A translating NPC request with no character profile. */
   public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
     this(text, voice, emotion, null, false, false);
-  }
-
-  /** A translating request with a character profile (backward-compatible 4-arg form). */
-  public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion, CharacterProfile profile) {
-    this(text, voice, emotion, profile, false, false);
-  }
-
-  /** A request with explicit translation behaviour but no speaker-class flag (5-arg form). */
-  public SynthesisRequest(
-      String text,
-      VoiceSpec voice,
-      Emotion emotion,
-      CharacterProfile profile,
-      boolean skipTranslation) {
-    this(text, voice, emotion, profile, skipTranslation, false);
   }
 
   /**

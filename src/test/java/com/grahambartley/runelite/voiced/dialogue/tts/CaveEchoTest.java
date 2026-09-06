@@ -37,7 +37,7 @@ public class CaveEchoTest {
   public void outputLengthIsInputPlusTail() {
     int rate = 24_000;
     int d = delaySamples(rate);
-    int hops = (int) Math.ceil(Math.log(1e-3) / Math.log(CaveEcho.FEEDBACK));
+    int hops = (int) Math.ceil(Math.log(CaveEcho.TAIL_FLOOR) / Math.log(CaveEcho.FEEDBACK));
     int tail = Math.min(hops * d, CaveEcho.MAX_TAIL_MS * rate / 1000);
     float[] in = new float[100];
     Pcm out = CaveEcho.apply(new Pcm(in, rate));

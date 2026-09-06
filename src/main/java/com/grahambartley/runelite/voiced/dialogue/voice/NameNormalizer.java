@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.voice;
 
+import java.util.regex.Pattern;
+
 /**
  * Normalises an NPC name for tolerant matching: strips any {@code <...>} tags, converts
  * non-breaking spaces to regular spaces, and trims. Case is left to the caller's comparison. This
@@ -8,12 +10,16 @@ package com.grahambartley.runelite.voiced.dialogue.voice;
  */
 final class NameNormalizer {
 
+  private static final Pattern TAG = Pattern.compile("<[^>]*>");
+
+  private static final char NON_BREAKING_SPACE = ' ';
+
   private NameNormalizer() {}
 
   static String normalize(String name) {
     if (name == null) {
       return "";
     }
-    return name.replaceAll("<[^>]*>", "").replace(' ', ' ').trim();
+    return TAG.matcher(name).replaceAll("").replace(NON_BREAKING_SPACE, ' ').trim();
   }
 }

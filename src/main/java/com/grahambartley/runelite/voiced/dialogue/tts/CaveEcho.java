@@ -15,6 +15,9 @@ public final class CaveEcho {
   static final float DAMPING = 0.40f;
   static final int MAX_TAIL_MS = 2000;
 
+  /** Amplitude (~-60 dB) the repeats must decay to before the appended tail can stop. */
+  static final double TAIL_FLOOR = 1e-3;
+
   /**
    * Returns a new, echoed {@link Pcm}. Never mutates {@code dry}: the cached buffer is shared by
    * reference.
@@ -24,8 +27,8 @@ public final class CaveEcho {
     int rate = dry.getSampleRate();
     int d = Math.max(1, Math.round(DELAY_MS * rate / 1000f));
 
-    // Repeats decay by FEEDBACK each hop; append just enough tail to reach ~-60 dB, capped.
-    int hops = (int) Math.ceil(Math.log(1e-3) / Math.log(FEEDBACK));
+    // Repeats decay by FEEDBACK each hop; append just enough tail to reach TAIL_FLOOR, capped.
+    int hops = (int) Math.ceil(Math.log(TAIL_FLOOR) / Math.log(FEEDBACK));
     int tail = Math.min(hops * d, MAX_TAIL_MS * rate / 1000);
     float[] out = new float[in.length + tail];
 

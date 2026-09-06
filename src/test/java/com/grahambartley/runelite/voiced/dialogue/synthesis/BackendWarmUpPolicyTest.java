@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * Pure decision logic for the runtime warm-up trigger (#75): only the plugin group plus a
+ * Pure decision logic for the runtime warm-up trigger: only the plugin group plus a
  * backend-affecting key should warm.
  */
 @RunWith(JUnitParamsRunner.class)
