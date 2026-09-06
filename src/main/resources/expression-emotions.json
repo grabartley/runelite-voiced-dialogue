@@ -1,5 +1,5 @@
 {
-  "_meta": "Maps OSRS dialogue chat-head expression animation (seq) ids to com.grahambartley.runelite.voiced.dialogue.synthesis.Emotion names. Only non-NEUTRAL expressions are listed; every id absent from this table (the neutral generic expressions like chatneu/chatquiz/chatbored, all talk/idle/listen poses, and any non-human head) resolves to NEUTRAL by ExpressionEmotionTable's default contract.",
+  "_meta": "Maps OSRS dialogue chat-head expression animation (seq) ids to com.grahambartley.runelite.voiced.dialogue.profile.Emotion names. Only non-NEUTRAL expressions are listed; every id absent from this table (the neutral generic expressions like chatneu/chatquiz/chatbored, all talk/idle/listen poses, and any non-human head) resolves to NEUTRAL by ExpressionEmotionTable's default contract.",
   "_source": "Derived from the live OSRS cache seq name dump (seqtypes.txt). The generic block 567-617 is the universal default chat-head expression set the standard dialogue system uses for the player and most NPCs (chathap=happy, chatlaugh=happy, chatsad=sad, chatang=angry, chatscared/chatshock=scared); the higher ids are per-NPC chat-head expressions. See docs/emotion-detection.md for the exact regeneration procedure when Jagex adds new ones.",
   "7": "HAPPY",
   "567": "HAPPY",

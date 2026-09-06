@@ -25,6 +25,36 @@ cd runelite-voiced-dialogue
 ./gradlew test
 ```
 
+## Package layout
+
+Packages under `com.grahambartley.runelite.voiced.dialogue` follow the lifecycle of a single
+dialogue line, and the dependency graph runs one way only.
+
+| Package | Holds |
+|---|---|
+| (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties` |
+| `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, public chat, prefetch |
+| `speech` | Turning a line into audio: the shared cloud call flow, both provider backends, the off-thread pipeline |
+| `speech.spend` | Session cost accounting behind `::voicedspend` |
+| `cache` | The memory and disk tiers that keep a line from being billed twice |
+| `profile` | Resolving who is speaking into how they sound: voice spec, character profile, emotion |
+| `speaker` | Who the speaker is: NPC lookup, demographics, races, the wiki auto-learn path |
+| `audio` | PCM decoding and playback, plus the cave echo effect |
+
+Dependencies point from the top of that table toward the bottom, and the graph has no cycles:
+
+```
+capture  -> profile, speech
+speech   -> audio, cache, profile, speaker, speech.spend
+cache    -> audio, profile
+profile  -> speaker
+speaker, audio, speech.spend  -> nothing else in the plugin
+```
+
+`audio`, `speaker` and `speech.spend` are leaves; nothing outside the plugin root depends on
+`capture`. An import that runs against this direction means a class is in the wrong package,
+not that the rule needs an exception.
+
 ## Launch the dev client
 
 Run the `com.grahambartley.runelite.voiced.dialogue.VoicedDialoguePluginRunner` class (in the

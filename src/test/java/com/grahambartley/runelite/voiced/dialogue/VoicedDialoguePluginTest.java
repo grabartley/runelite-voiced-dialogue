@@ -8,12 +8,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendProvider;
-import com.grahambartley.runelite.voiced.dialogue.synthesis.Emotion;
-import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
-import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
-import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
-import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
+import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
+import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.speech.BackendProvider;
+import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicInteger;

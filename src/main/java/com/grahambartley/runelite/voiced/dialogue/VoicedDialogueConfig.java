@@ -1,6 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
