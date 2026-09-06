@@ -22,14 +22,14 @@ import net.runelite.client.events.ConfigChanged;
 import org.junit.Test;
 
 /**
- * Verifies the plugin's runtime warm-up orchestration (#75): a {@link ConfigChanged} for the plugin
- * group and a backend-affecting key (entering an OpenRouter key) re-runs the backend's off-thread
- * warm-up exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing.
- * The pure decision behind the trigger lives in {@code BackendWarmUpPolicy}.
+ * Verifies the plugin's runtime warm-up orchestration: a {@link ConfigChanged} for the plugin group
+ * and a backend-affecting key (entering an OpenRouter key) re-runs the backend's off-thread warm-up
+ * exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing. The pure
+ * decision behind the trigger lives in {@code BackendWarmUpPolicy}.
  *
- * <p>Also covers the startup pin that records an established OpenRouter player's reliance on that
- * provider, so a shipped provider they hold no key for is never voiced through; the decision itself
- * lives in {@code ProviderDefaultPolicy}.
+ * <p>Also covers the startup pin that records the provider a profile actually holds a key for, so a
+ * profile is never left voicing through a provider it cannot reach; the decision itself lives in
+ * {@code ProviderDefaultPolicy}.
  */
 public class VoicedDialoguePluginTest {
 
@@ -80,7 +80,7 @@ public class VoicedDialoguePluginTest {
         .thenReturn(null);
     VoicedDialoguePlugin plugin = pluginWith(configManager, "sk-or-abc");
 
-    plugin.pinProviderForExistingOpenRouterPlayers();
+    plugin.pinProviderWhenOnlyOpenRouterKeyed();
 
     verify(configManager)
         .setConfiguration(
@@ -97,7 +97,7 @@ public class VoicedDialoguePluginTest {
         .thenReturn(null);
     VoicedDialoguePlugin plugin = pluginWith(configManager, "");
 
-    plugin.pinProviderForExistingOpenRouterPlayers();
+    plugin.pinProviderWhenOnlyOpenRouterKeyed();
 
     verify(configManager, never()).setConfiguration(anyString(), anyString(), any());
   }
@@ -110,7 +110,7 @@ public class VoicedDialoguePluginTest {
         .thenReturn(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO.name());
     VoicedDialoguePlugin plugin = pluginWith(configManager, "sk-or-abc");
 
-    plugin.pinProviderForExistingOpenRouterPlayers();
+    plugin.pinProviderWhenOnlyOpenRouterKeyed();
 
     verify(configManager, never()).setConfiguration(anyString(), anyString(), any());
   }

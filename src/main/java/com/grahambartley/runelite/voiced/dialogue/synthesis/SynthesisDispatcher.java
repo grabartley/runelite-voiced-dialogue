@@ -5,6 +5,7 @@ import com.grahambartley.runelite.voiced.dialogue.tts.CaveEchoPolicy;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.voice.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.voice.ResolvedSpeaker;
+import com.grahambartley.runelite.voiced.dialogue.voice.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceTraceFormatter;
 import lombok.extern.slf4j.Slf4j;
@@ -45,13 +46,13 @@ public final class SynthesisDispatcher {
    * {@link com.grahambartley.runelite.voiced.dialogue.dialogue.DialogueWidgetReader#NO_EXPRESSION}
    * when there is no head); it is resolved to an {@link Emotion} and ridden into the request.
    */
-  public void speakDialogue(String text, String speaker, String npcName, int headAnimationId) {
+  public void speakDialogue(String text, Speaker speaker, String npcName, int headAnimationId) {
     Emotion emotion = emotionResolver.resolve(headAnimationId, config.cloudEmotion());
     if (config.debugMode()) {
       log.info("[TTS voice] resolved emotion {} for head animation {}", emotion, headAnimationId);
     }
     ResolvedSpeaker resolved = voiceManager.resolve(speaker, npcName);
-    boolean player = VoiceManager.SPEAKER_PLAYER.equals(speaker);
+    boolean player = speaker == Speaker.PLAYER;
     dispatch(
         new SynthesisRequest(
             text,
@@ -69,7 +70,7 @@ public final class SynthesisDispatcher {
    * so chat is spoken exactly as typed.
    */
   public void speakPublicChat(String text) {
-    ResolvedSpeaker resolved = voiceManager.resolve(VoiceManager.SPEAKER_PLAYER, null);
+    ResolvedSpeaker resolved = voiceManager.resolve(Speaker.PLAYER, null);
     dispatch(
         new SynthesisRequest(
             text,

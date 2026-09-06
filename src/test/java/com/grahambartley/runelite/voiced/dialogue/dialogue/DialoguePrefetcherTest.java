@@ -12,15 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
 
-/** Session dedup, the per-session cap, the enable gate, and reset/cancel behaviour. */
+/** Session dedup, the per-session cap, and reset/cancel behaviour. */
 public class DialoguePrefetcherTest {
 
   private final List<SynthesisRequest> warmed = new ArrayList<>();
   private int cancels;
-  private boolean enabled = true;
 
   private DialoguePrefetcher prefetcher() {
-    return new DialoguePrefetcher(warmed::add, () -> cancels++, () -> enabled);
+    return new DialoguePrefetcher(warmed::add, () -> cancels++);
   }
 
   private static SynthesisRequest req(String text) {
@@ -84,16 +83,6 @@ public class DialoguePrefetcherTest {
 
     assertEquals("only the real line is warmed", 1, warmed.size());
     assertEquals("Real line.", warmed.get(0).text());
-  }
-
-  @Test
-  public void disabledGateMakesOfferANoOp() {
-    enabled = false;
-    DialoguePrefetcher prefetcher = prefetcher();
-
-    prefetcher.offer(options("Yes.", "No."));
-
-    assertEquals("nothing is warmed when prefetch is off", 0, warmed.size());
   }
 
   @Test

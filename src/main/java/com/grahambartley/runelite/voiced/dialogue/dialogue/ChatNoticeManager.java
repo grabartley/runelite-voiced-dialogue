@@ -21,8 +21,8 @@ import net.runelite.client.config.ConfigManager;
  * player did not ask for, written straight into the chat box so it cannot be delayed. A command
  * response follows the client's convention for {@code ::} commands and goes through {@link
  * ChatMessageManager}, which also makes it postable from a background thread. A fresh instance is
- * created on each start-up, so the per-session guards reset on a stop/start exactly as before;
- * onboarding additionally persists across sessions via {@link #ONBOARDING_SEEN_KEY}.
+ * created on each start-up, so the per-session guards reset on a stop/start; onboarding
+ * additionally persists across sessions via {@link #ONBOARDING_SEEN_KEY}.
  */
 @Slf4j
 public final class ChatNoticeManager {
@@ -33,7 +33,7 @@ public final class ChatNoticeManager {
    */
   static final String ONBOARDING_SEEN_KEY = "onboardingSeen";
 
-  /** Chat-markup hex colour for plugin notices, so they stand out red from ordinary game chat. */
+  /** Red, so an unprompted plugin notice stands out from ordinary dialogue and game spam. */
   private static final String CHAT_NOTICE_COLOR = "ff3333";
 
   private static final String ONBOARDING_MESSAGE =
@@ -48,7 +48,6 @@ public final class ChatNoticeManager {
   private final ConfigManager configManager;
   private final ClientThread clientThread;
   private final ChatMessageManager chatMessageManager;
-  private final VoicedDialogueConfig config;
 
   private boolean onboardingChecked;
   private boolean cloudKeyNoticeChecked;
@@ -57,13 +56,11 @@ public final class ChatNoticeManager {
       Client client,
       ConfigManager configManager,
       ClientThread clientThread,
-      ChatMessageManager chatMessageManager,
-      VoicedDialogueConfig config) {
+      ChatMessageManager chatMessageManager) {
     this.client = client;
     this.configManager = configManager;
     this.clientThread = clientThread;
     this.chatMessageManager = chatMessageManager;
-    this.config = config;
   }
 
   /**
@@ -119,7 +116,6 @@ public final class ChatNoticeManager {
     addGameMessage(backend.missingKeyNotice());
   }
 
-  /** Pure decision for {@link #maybeWarnMissingCloudKey}: warn only when the key is unavailable. */
   static boolean shouldWarnMissingCloudKey(boolean keyAvailable) {
     return !keyAvailable;
   }
@@ -151,11 +147,7 @@ public final class ChatNoticeManager {
             .build());
   }
 
-  /**
-   * Posts a single red, plugin-tagged notice into the game chat box. Red marks it as a plugin
-   * notice that stands out from ordinary dialogue and game spam. Must be called on the client
-   * thread.
-   */
+  /** Must be called on the client thread. */
   private void addGameMessage(String message) {
     String line = "<col=" + CHAT_NOTICE_COLOR + ">[Voiced Dialogue] " + message + "</col>";
     client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", line, null);

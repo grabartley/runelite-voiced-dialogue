@@ -111,12 +111,10 @@ public interface VoicedDialogueConfig extends Config {
       this.phrase = phrase;
     }
 
-    /** Whether this is the no-op default. */
     public boolean isNone() {
       return this == NONE;
     }
 
-    /** The style descriptor appended to the spoken language for the translation model. */
     public String phrase() {
       return phrase;
     }
@@ -203,17 +201,14 @@ public interface VoicedDialogueConfig extends Config {
       this.displayName = displayName;
     }
 
-    /** Whether this is English, the no-translation default. */
     public boolean isEnglish() {
       return this == ENGLISH;
     }
 
-    /** The natural language name fed to the translation model as the target language. */
     public String label() {
       return label;
     }
 
-    /** The BCP-47 code sent as {@code language_code} so the line is pronounced natively. */
     public String code() {
       return code;
     }
@@ -223,10 +218,6 @@ public interface VoicedDialogueConfig extends Config {
       return displayName;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // General
-  // ---------------------------------------------------------------------------
 
   @ConfigItem(
       keyName = "ttsProvider",
@@ -311,10 +302,6 @@ public interface VoicedDialogueConfig extends Config {
     return true;
   }
 
-  // ---------------------------------------------------------------------------
-  // Voices
-  // ---------------------------------------------------------------------------
-
   @ConfigItem(
       keyName = "playerVoice",
       name = "Player Voice",
@@ -374,10 +361,6 @@ public interface VoicedDialogueConfig extends Config {
   default boolean autoLearnNewNpcs() {
     return false;
   }
-
-  // ---------------------------------------------------------------------------
-  // Delivery
-  // ---------------------------------------------------------------------------
 
   @ConfigItem(
       keyName = "cloudEmotion",
@@ -439,10 +422,6 @@ public interface VoicedDialogueConfig extends Config {
   default boolean cloudCaveEcho() {
     return false;
   }
-
-  // ---------------------------------------------------------------------------
-  // Advanced
-  // ---------------------------------------------------------------------------
 
   @ConfigItem(
       keyName = "cacheSizeLimitMiB",

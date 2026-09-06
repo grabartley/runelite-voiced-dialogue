@@ -12,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.OpenRouterTtsBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
 import junitparams.JUnitParamsRunner;
@@ -39,9 +38,8 @@ public class ChatNoticeManagerTest {
   private final ConfigManager configManager = mock(ConfigManager.class);
   private final ClientThread clientThread = mock(ClientThread.class);
   private final ChatMessageManager chatMessageManager = mock(ChatMessageManager.class);
-  private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final ChatNoticeManager manager =
-      new ChatNoticeManager(client, configManager, clientThread, chatMessageManager, config);
+      new ChatNoticeManager(client, configManager, clientThread, chatMessageManager);
 
   private Object[] onboardingCases() {
     return new Object[] {

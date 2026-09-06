@@ -5,7 +5,7 @@ description: Add a brand-new first-class race (e.g. Tortugan, Monkey) to the plu
 
 # Add a first-class race
 
-Use this when a species should become a **first-class `NPCRace`** with its own dedicated cloud voice and its own racial accent, the way Elf, Dwarf, Goblin, Monkey, Gorilla and Tortugan are. This is bigger than [[add-npc-profile]] (which only edits race/gender/ethnicity within the existing race set) and bigger than a region batch ([[fill-npc-profiles-batch]]). When you only need to make one NPC sound right, or push an accent via an existing ethnicity, use [[add-npc-profile]] instead.
+Use this when a species should become a **first-class `NpcRace`** with its own dedicated cloud voice and its own racial accent, the way Elf, Dwarf, Goblin, Monkey, Gorilla and Tortugan are. This is bigger than [[add-npc-profile]] (which only edits race/gender/ethnicity within the existing race set) and bigger than a region batch ([[fill-npc-profiles-batch]]). When you only need to make one NPC sound right, or push an accent via an existing ethnicity, use [[add-npc-profile]] instead.
 
 ## Inputs
 
@@ -19,9 +19,9 @@ Cloud profile resolution combines layers: `default -> byRace[race] -> byEthnicit
 
 ## The wiring points (touch every one)
 
-1. **`src/main/java/com/grahambartley/voice/VoiceManager.java`** — add the constant to the `NPCRace` enum, just before `UNKNOWN`.
-2. **`src/main/java/com/grahambartley/voice/NpcDemographicParser.java`** — add an `else if (raceLower.contains("..."))` arm to `toRace(...)` so a raw wiki/learned race string still maps to the new `NPCRace` constant (the runtime auto-learn path uses this, not just the generator).
-3. **`src/main/java/com/grahambartley/synthesis/GeminiVoiceMap.java`** — add a `put(NPCRace.<RACE>, male(...), female(...))` in the constructor (see Gemini rule). This is the sole voice map and it keys the timbre on race+gender.
+1. **`src/main/java/com/grahambartley/runelite/voiced/dialogue/voice/NpcRace.java`** — add the constant to the `NpcRace` enum, just before `UNKNOWN`.
+2. **`src/main/java/com/grahambartley/runelite/voiced/dialogue/voice/RaceBucket.java`** — add a bucket constant: `<BUCKET>("<Race>", NpcRace.<RACE>, <wiki keyword regex or null>, "<stored-text keyword>", ...)`. This one table feeds both text-to-race stages, so the new race keyword lands in the runtime auto-learn path (via `forWikiText`) and the stored-race path (via `forBucketName`/`forKeyword`) at once; `NpcDemographicParser` reads it and needs no edit of its own. If the wiki emits the race, add the bucket to `WIKI_SCAN` in an order that does not collide with a broader bucket.
+3. **`src/main/java/com/grahambartley/runelite/voiced/dialogue/synthesis/GeminiVoiceMap.java`** — add a `put(NpcRace.<RACE>, male(...), female(...))` in the constructor (see Gemini rule). This is the sole voice map and it keys the timbre on race+gender.
 4. **`tools/generate_npc_voices.py`** — add the race to `VALID_RACES`; add a `RACE_BUCKET_RULES` regex (ordered so it does not collide with a broader bucket); add a `CATEGORY_RACE_RULES` entry so Infobox-Monster pages (no race field) still bucket by category.
 5. **`tools/profiles.json`** — add a `byRace["<RACE>"]` entry: `name`, `accent`, `style`, `pace`. This is where the racial accent lives.
 6. **`tools/overrides.json`** — add the race to the `_comment` valid-race list, then one one-line `npcs[id]` entry per NPC id (race + gender, no ethnicity).
@@ -60,7 +60,7 @@ Then:
 ```
 ./gradlew spotlessApply && ./gradlew test spotlessCheck
 ```
-Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`, `GEMINI_VOICE_CATALOG` if you introduce a new voice), `NpcProfilesResourceTest` (`everyRaceBucketResolvesToItsOwnLayer` list + a stated-accent assertion).
+Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`, `GEMINI_VOICE_CATALOG` if you introduce a new voice), `RaceBucketTest` (the wiki-text and bucket-name case tables), `NpcProfilesResourceTest` (`everyRaceBucketResolvesToItsOwnLayer` list + a stated-accent assertion).
 
 ## World rules (non-negotiable prose constraints)
 

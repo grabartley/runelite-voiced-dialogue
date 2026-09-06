@@ -17,6 +17,7 @@ import com.grahambartley.runelite.voiced.dialogue.tts.CaveEchoPolicy;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.voice.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.voice.ResolvedSpeaker;
+import com.grahambartley.runelite.voiced.dialogue.voice.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,12 +53,11 @@ public class SynthesisDispatcherTest {
     when(config.cloudEmotion()).thenReturn(true);
     VoiceSpec spec = mock(VoiceSpec.class);
     CharacterProfile profile = mock(CharacterProfile.class);
-    when(voiceManager.resolve(VoiceManager.SPEAKER_NPC, "Bob"))
-        .thenReturn(new ResolvedSpeaker(spec, profile));
+    when(voiceManager.resolve(Speaker.NPC, "Bob")).thenReturn(new ResolvedSpeaker(spec, profile));
     when(emotionResolver.resolve(614, true)).thenReturn(Emotion.ANGRY);
     when(caveEchoPolicy.shouldEcho()).thenReturn(true);
 
-    dispatcher.speakDialogue("Grr!", VoiceManager.SPEAKER_NPC, "Bob", 614);
+    dispatcher.speakDialogue("Grr!", Speaker.NPC, "Bob", 614);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
     verify(audioService).speak(req.capture(), eq(true));
@@ -74,8 +74,7 @@ public class SynthesisDispatcherTest {
   public void publicChatIsNeutralPlayerTranslationBypassed() {
     when(backend.isAvailable()).thenReturn(true);
     VoiceSpec spec = mock(VoiceSpec.class);
-    when(voiceManager.resolve(VoiceManager.SPEAKER_PLAYER, null))
-        .thenReturn(new ResolvedSpeaker(spec, null));
+    when(voiceManager.resolve(Speaker.PLAYER, null)).thenReturn(new ResolvedSpeaker(spec, null));
     when(caveEchoPolicy.shouldEcho()).thenReturn(false);
 
     dispatcher.speakPublicChat("hello world");
@@ -93,10 +92,10 @@ public class SynthesisDispatcherTest {
   public void nothingIsSpokenWhenTheBackendIsUnavailable() {
     when(backend.isAvailable()).thenReturn(false);
     ResolvedSpeaker resolved = new ResolvedSpeaker(mock(VoiceSpec.class), null);
-    when(voiceManager.resolve(VoiceManager.SPEAKER_NPC, "Bob")).thenReturn(resolved);
-    when(voiceManager.resolve(VoiceManager.SPEAKER_PLAYER, null)).thenReturn(resolved);
+    when(voiceManager.resolve(Speaker.NPC, "Bob")).thenReturn(resolved);
+    when(voiceManager.resolve(Speaker.PLAYER, null)).thenReturn(resolved);
 
-    dispatcher.speakDialogue("Grr!", VoiceManager.SPEAKER_NPC, "Bob", 614);
+    dispatcher.speakDialogue("Grr!", Speaker.NPC, "Bob", 614);
     dispatcher.speakPublicChat("hello");
 
     verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());

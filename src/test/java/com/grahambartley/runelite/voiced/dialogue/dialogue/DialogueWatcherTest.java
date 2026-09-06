@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.dialogue;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -11,11 +12,11 @@ import static org.mockito.Mockito.when;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisDispatcher;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.voice.Speaker;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.runelite.api.Client;
-import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,8 +24,9 @@ import org.junit.runner.RunWith;
 
 /**
  * The per-tick dialogue scan: speaks a new NPC or player line once (deduped against the last spoken
- * text) and edge-triggers the close interrupt only on the open-&gt;closed transition, so idle ticks
- * never truncate a playing public-chat clip.
+ * text) and edge-triggers both the close interrupt and the prefetch reset only on the
+ * open-&gt;closed transition, so idle ticks never truncate a playing public-chat clip nor churn the
+ * prefetch session.
  */
 @RunWith(JUnitParamsRunner.class)
 public class DialogueWatcherTest {
@@ -34,7 +36,6 @@ public class DialogueWatcherTest {
   private final SynthesisDispatcher dispatcher = mock(SynthesisDispatcher.class);
   private final DialoguePrefetchCoordinator prefetchCoordinator =
       mock(DialoguePrefetchCoordinator.class);
-  private final DialoguePrefetcher prefetcher = mock(DialoguePrefetcher.class);
   private final DialogueAudioService audioService = mock(DialogueAudioService.class);
 
   private final DialogueWatcher watcher =
@@ -44,7 +45,6 @@ public class DialogueWatcherTest {
           widgetReader,
           dispatcher,
           prefetchCoordinator,
-          prefetcher,
           audioService);
 
   @Before
@@ -77,13 +77,25 @@ public class DialogueWatcherTest {
     Widget npc = mock(Widget.class);
     when(npc.isHidden()).thenReturn(false);
     when(npc.getText()).thenReturn("Greetings!");
-    when(client.getWidget(ComponentID.DIALOG_NPC_TEXT)).thenReturn(npc);
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc);
 
     watcher.tick();
     watcher.tick();
 
     verify(dispatcher, times(1))
-        .speakDialogue(eq("Greetings!"), eq(VoiceManager.SPEAKER_NPC), eq("Bob"), anyInt());
+        .speakDialogue(eq("Greetings!"), eq(Speaker.NPC), eq("Bob"), anyInt());
+  }
+
+  @Test
+  public void aPlayerLineSpeaksAsThePlayerWithNoNpcName() {
+    Widget player = mock(Widget.class);
+    when(player.isHidden()).thenReturn(false);
+    when(player.getText()).thenReturn("Hello there.");
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
+
+    watcher.tick();
+
+    verify(dispatcher).speakDialogue(eq("Hello there."), eq(Speaker.PLAYER), isNull(), anyInt());
   }
 
   @Test
@@ -92,12 +104,21 @@ public class DialogueWatcherTest {
     when(npc.isHidden()).thenReturn(false);
     when(npc.getText()).thenReturn("Greetings!");
     // Open on the first tick, gone on the second.
-    when(client.getWidget(ComponentID.DIALOG_NPC_TEXT)).thenReturn(npc, (Widget) null);
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
 
     watcher.tick();
     watcher.tick();
 
     verify(audioService, times(1)).interrupt();
-    verify(prefetcher).reset();
+    verify(prefetchCoordinator, times(1)).reset();
+  }
+
+  @Test
+  public void idleTicksResetPrefetchOnlyOnTheFirstClosedTick() {
+    watcher.tick();
+    watcher.tick();
+    watcher.tick();
+
+    verify(prefetchCoordinator, times(1)).reset();
   }
 }

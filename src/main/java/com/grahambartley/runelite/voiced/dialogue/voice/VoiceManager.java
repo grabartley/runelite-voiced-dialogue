@@ -24,11 +24,6 @@ import net.runelite.api.Client;
 @Slf4j
 public class VoiceManager {
 
-  /** Speaker-type tokens passed as the {@code speaker} argument to the resolve methods. */
-  public static final String SPEAKER_PLAYER = "player";
-
-  public static final String SPEAKER_NPC = "npc";
-
   /**
    * The two selectable player voices, kept deliberately opaque ("Type A" / "Type B") so the config
    * exposes a simple either/or. Each just fixes the player's gender, which then drives the cloud
@@ -106,9 +101,9 @@ public class VoiceManager {
    * <p>The profile is {@code null} when character profiles are switched off, which keeps the
    * request and its synthesis cache key identical to what a profile-free resolution produces.
    */
-  public ResolvedSpeaker resolve(String speaker, String npcName) {
+  public ResolvedSpeaker resolve(Speaker speaker, String npcName) {
     boolean withProfile = config.cloudCharacterProfiles();
-    if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
+    if (speaker == Speaker.PLAYER) {
       return new ResolvedSpeaker(playerVoice(), withProfile ? playerProfile() : null);
     }
 

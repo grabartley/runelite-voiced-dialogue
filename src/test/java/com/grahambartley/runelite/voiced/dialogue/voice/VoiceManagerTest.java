@@ -72,18 +72,11 @@ public class VoiceManagerTest {
 
   @Test
   public void playerResolvesToPlayerSpecWithConfiguredGender() {
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_B, true).resolve("player", null).voice();
+    VoiceSpec spec = newManager(PlayerVoice.TYPE_B, true).resolve(Speaker.PLAYER, null).voice();
     assertTrue("player voice should be a player spec", spec.player());
     assertEquals(NpcGender.FEMALE, spec.gender());
     assertEquals("player:FEMALE", spec.key());
     assertFalse("the player carries no per-NPC variety seed", spec.hasVoiceSeed());
-  }
-
-  @Test
-  public void playerSpeakerMatchingIsCaseInsensitive() {
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_A, true).resolve("PLAYER", null).voice();
-    assertTrue(spec.player());
-    assertEquals(NpcGender.MALE, spec.gender());
   }
 
   // ---- NPC default-voice path ----
@@ -91,7 +84,7 @@ public class VoiceManagerTest {
   @Test
   public void undetectedNpcResolvesToTheDefaultHumanMaleVoice() {
     // The NPC is not in the world, so detection resolves to the default human-male voice.
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_A, true).resolve("npc", "Hans").voice();
+    VoiceSpec spec = newManager(PlayerVoice.TYPE_A, true).resolve(Speaker.NPC, "Hans").voice();
     assertFalse(spec.player());
     assertEquals(NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.MALE, spec.gender());
@@ -104,15 +97,15 @@ public class VoiceManagerTest {
   @Test
   public void profilesResolveForBothSpeakersWhenEnabled() {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A, true);
-    assertNotNull(manager.resolve(VoiceManager.SPEAKER_PLAYER, null).profile());
-    assertNotNull(manager.resolve(VoiceManager.SPEAKER_NPC, "Hans").profile());
+    assertNotNull(manager.resolve(Speaker.PLAYER, null).profile());
+    assertNotNull(manager.resolve(Speaker.NPC, "Hans").profile());
   }
 
   @Test
   public void noProfileIsResolvedWhenCharacterProfilesAreOff() {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A, false);
-    assertNull(manager.resolve(VoiceManager.SPEAKER_PLAYER, null).profile());
-    assertNull(manager.resolve(VoiceManager.SPEAKER_NPC, "Hans").profile());
-    assertNotNull("the voice is still resolved", manager.resolve("npc", "Hans").voice());
+    assertNull(manager.resolve(Speaker.PLAYER, null).profile());
+    assertNull(manager.resolve(Speaker.NPC, "Hans").profile());
+    assertNotNull("the voice is still resolved", manager.resolve(Speaker.NPC, "Hans").voice());
   }
 }

@@ -11,7 +11,7 @@ import com.grahambartley.runelite.voiced.dialogue.dialogue.DialoguePrefetcher;
 import com.grahambartley.runelite.voiced.dialogue.dialogue.DialogueTextCleaner;
 import com.grahambartley.runelite.voiced.dialogue.dialogue.DialogueWatcher;
 import com.grahambartley.runelite.voiced.dialogue.dialogue.DialogueWidgetReader;
-import com.grahambartley.runelite.voiced.dialogue.dialogue.PublicChatPolicy;
+import com.grahambartley.runelite.voiced.dialogue.dialogue.PublicChatSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendWarmUpPolicy;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.GeminiAiStudioTtsBackend;
@@ -36,9 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.Player;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
@@ -88,16 +86,13 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private DialogueAudioService audioService;
 
-  /** Dedicated daemon thread for off-game-thread wiki NPC lookups (the auto-learn fallback). */
   private ExecutorService wikiExecutor;
 
   private ChatNoticeManager noticeManager;
 
-  private DialogueTextCleaner textCleaner;
-
-  private SynthesisDispatcher synthesisDispatcher;
-
   private DialogueWatcher dialogueWatcher;
+
+  private PublicChatSpeaker publicChatSpeaker;
 
   /**
    * Session-only counters behind {@code ::voicedspend}. Built fresh on every start-up, so the
@@ -118,7 +113,7 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Override
   protected void startUp() {
-    pinProviderForExistingOpenRouterPlayers();
+    pinProviderWhenOnlyOpenRouterKeyed();
     VoiceManager voiceManager = VoiceManager.create(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
@@ -138,8 +133,7 @@ public class VoicedDialoguePlugin extends Plugin {
             new WikiNpcClient(okHttpClient), learnedStore, wikiExecutor, config::autoLearnNewNpcs);
     voiceManager.enableLearning(learnedStore, learningService);
 
-    noticeManager =
-        new ChatNoticeManager(client, configManager, clientThread, chatMessageManager, config);
+    noticeManager = new ChatNoticeManager(client, configManager, clientThread, chatMessageManager);
 
     spendTracker = new SpendTracker();
     usageClient = new OpenRouterUsageClient(okHttpClient, gson);
@@ -155,11 +149,8 @@ public class VoicedDialoguePlugin extends Plugin {
     // something to subtract from. A key entered later re-baselines through onConfigChanged.
     captureOpenRouterBaseline();
 
-    // Cloud-only: dialogue is voiced through the configured provider (OpenRouter or Google AI
-    // Studio), resolved live so switching needs no restart. A backend reports available only once
-    // its API key is set, and a line it cannot voice is left silent (with a one-time notice)
-    // rather than routed to the other provider. No model or native binaries ship in the plugin
-    // jar.
+    // A line the active backend cannot voice is left silent (with a one-time notice) rather than
+    // routed to the other provider.
     OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
     openRouterBackend.setSpendTracker(spendTracker);
@@ -168,8 +159,6 @@ public class VoicedDialoguePlugin extends Plugin {
     aiStudioBackend.setNotice(noticeManager::notifyFromBackendThread);
     aiStudioBackend.setSpendTracker(spendTracker);
     backendProvider = new BackendProvider(openRouterBackend, aiStudioBackend, config::ttsProvider);
-    // Persistent on-disk cache under the plugin's RuneLite dir; on by default so repeated lines
-    // survive restarts and the cloud backend is not re-billed. Opt-out via config.
     DiskAudioCache diskCache =
         config.persistentCache()
             ? new DiskAudioCache(ttsDir.resolve("cache"), config.cacheSizeLimitMiB() * 1024L * 1024)
@@ -187,15 +176,13 @@ public class VoicedDialoguePlugin extends Plugin {
     // connection handshake, and the game thread never blocks on it.
     audioService.prewarm(backendProvider::warmUpActive);
     // Speculative prefetch warms the cache for the dialogue options the player can see; it shares
-    // the audio service's dedup and both cache tiers, runs off the game thread, and is gated by the
-    // prefetch config (read live, so toggling it takes effect immediately).
+    // the audio service's dedup and both cache tiers, and runs off the game thread.
     DialoguePrefetcher prefetcher =
-        new DialoguePrefetcher(
-            audioService::prefetch, audioService::cancelPrefetch, config::prefetch);
+        new DialoguePrefetcher(audioService::prefetch, audioService::cancelPrefetch);
 
-    textCleaner = new DialogueTextCleaner(new ProfanityFilter());
+    DialogueTextCleaner textCleaner = new DialogueTextCleaner(new ProfanityFilter());
     CaveEchoPolicy caveEchoPolicy = new CaveEchoPolicy(client, config);
-    synthesisDispatcher =
+    SynthesisDispatcher synthesisDispatcher =
         new SynthesisDispatcher(
             voiceManager,
             new EmotionResolver(),
@@ -213,8 +200,9 @@ public class VoicedDialoguePlugin extends Plugin {
             new DialogueWidgetReader(client),
             synthesisDispatcher,
             prefetchCoordinator,
-            prefetcher,
             audioService);
+    publicChatSpeaker =
+        new PublicChatSpeaker(client, textCleaner, synthesisDispatcher, config::voicePublicChat);
 
     log.info("VoicedDialogue started");
   }
@@ -229,9 +217,8 @@ public class VoicedDialoguePlugin extends Plugin {
       spendExecutor.shutdownNow();
       spendExecutor = null;
     }
-    synthesisDispatcher = null;
     dialogueWatcher = null;
-    textCleaner = null;
+    publicChatSpeaker = null;
     if (audioService != null) {
       audioService.close();
       audioService = null;
@@ -249,7 +236,7 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onGameTick(final GameTick tick) {
-    if (noticeManager == null || backendProvider == null) {
+    if (noticeManager == null || backendProvider == null || dialogueWatcher == null) {
       return;
     }
     noticeManager.maybeShowOnboarding();
@@ -257,29 +244,12 @@ public class VoicedDialoguePlugin extends Plugin {
     dialogueWatcher.tick();
   }
 
-  /**
-   * Voices the local player's own public chat (default off). Only the player's {@code PUBLICCHAT}
-   * stream is spoken; other players' public messages, and every other chat type, are ignored. The
-   * message is cleaned with the same {@link DialogueTextCleaner} as dialogue and voiced through the
-   * player path with translation bypassed.
-   */
   @Subscribe
   public void onChatMessage(ChatMessage event) {
-    if (!config.voicePublicChat() || event.getType() != ChatMessageType.PUBLICCHAT) {
+    if (publicChatSpeaker == null) {
       return;
     }
-    Player local = client.getLocalPlayer();
-    if (local == null || !PublicChatPolicy.isSelfPublicChat(event.getName(), local.getName())) {
-      return;
-    }
-    if (synthesisDispatcher == null) {
-      return;
-    }
-    String cleaned = textCleaner.clean(event.getMessage());
-    if (cleaned.isEmpty()) {
-      return;
-    }
-    synthesisDispatcher.speakPublicChat(cleaned);
+    publicChatSpeaker.onChatMessage(event);
   }
 
   /**
@@ -292,7 +262,11 @@ public class VoicedDialoguePlugin extends Plugin {
    */
   @Subscribe
   public void onCommandExecuted(CommandExecuted event) {
-    if (!SpendReport.matches(event.getCommand()) || spendTracker == null || noticeManager == null) {
+    if (!SpendReport.matches(event.getCommand())
+        || spendTracker == null
+        || noticeManager == null
+        || usageClient == null
+        || creditMeter == null) {
       return;
     }
     List<SpendTracker.ProviderSpend> snapshot = spendTracker.snapshot();
@@ -339,7 +313,7 @@ public class VoicedDialoguePlugin extends Plugin {
     String key = config.openRouterApiKey();
     OpenRouterUsageClient reader = usageClient;
     OpenRouterCreditMeter meter = creditMeter;
-    if (meter.hasBaselineFor(key)) {
+    if (reader == null || meter == null || meter.hasBaselineFor(key)) {
       return;
     }
     submitSpendTask(() -> meter.recordBaseline(key, reader.fetchUsage(key)));
@@ -359,11 +333,12 @@ public class VoicedDialoguePlugin extends Plugin {
   }
 
   /**
-   * Makes a player's reliance on OpenRouter explicit in config, so a shipped provider they hold no
-   * key for is never voiced through. Runs once per profile: after this the choice is recorded, so
-   * {@link ProviderDefaultPolicy} declines to touch it again.
+   * Records the provider a profile actually holds a key for, so a profile keyed only for OpenRouter
+   * is never left voicing through a provider it cannot reach. Writes at most once per profile: the
+   * write is itself the recorded choice, so {@link ProviderDefaultPolicy} declines to touch it
+   * again.
    */
-  void pinProviderForExistingOpenRouterPlayers() {
+  void pinProviderWhenOnlyOpenRouterKeyed() {
     String stored =
         configManager.getConfiguration(
             VoicedDialogueConfig.GROUP, VoicedDialogueConfig.PROVIDER_KEY);

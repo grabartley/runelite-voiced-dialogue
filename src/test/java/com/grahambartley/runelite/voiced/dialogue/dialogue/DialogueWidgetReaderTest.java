@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
-import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import org.junit.Test;
 
@@ -34,7 +34,7 @@ public class DialogueWidgetReaderTest {
   @Test
   public void nameWidgetTextIsTrimmed() {
     Widget nameWidget = mock(Widget.class);
-    when(client.getWidget(ComponentID.DIALOG_NPC_NAME)).thenReturn(nameWidget);
+    when(client.getWidget(InterfaceID.ChatLeft.NAME)).thenReturn(nameWidget);
     when(nameWidget.isHidden()).thenReturn(false);
     when(nameWidget.getText()).thenReturn(" Hans ");
     assertEquals("Hans", reader.currentNpcName());
@@ -42,7 +42,7 @@ public class DialogueWidgetReaderTest {
 
   @Test
   public void fallsBackToTheInteractingNpcWhenNameWidgetAbsent() {
-    when(client.getWidget(ComponentID.DIALOG_NPC_NAME)).thenReturn(null);
+    when(client.getWidget(InterfaceID.ChatLeft.NAME)).thenReturn(null);
     Player local = mock(Player.class);
     Actor interacting = mock(Actor.class);
     when(client.getLocalPlayer()).thenReturn(local);
@@ -53,7 +53,7 @@ public class DialogueWidgetReaderTest {
 
   @Test
   public void lastResortIsUnknownNpc() {
-    when(client.getWidget(ComponentID.DIALOG_NPC_NAME)).thenReturn(null);
+    when(client.getWidget(InterfaceID.ChatLeft.NAME)).thenReturn(null);
     when(client.getLocalPlayer()).thenReturn(null);
     assertEquals("Unknown NPC", reader.currentNpcName());
   }
