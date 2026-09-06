@@ -92,7 +92,7 @@ public class DialogueWatcherTest {
   }
 
   @Test
-  public void newPlayerLineSpeaksAsThePlayerWithNoNpcNameThenIsDeduped() {
+  public void newPlayerLineIsSpokenOnceThenDeduped() {
     Widget player = visibleWidget("Hello there.");
     when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
 
@@ -142,6 +142,7 @@ public class DialogueWatcherTest {
     watcher.tick();
     watcher.tick();
 
+    verify(dispatcher).speakDialogue(eq("Hello."), eq(Speaker.PLAYER), isNull(), anyInt());
     verify(dispatcher, times(1)).speakDialogue(eq("Yes."), eq(Speaker.NPC), eq("Bob"), anyInt());
   }
 
