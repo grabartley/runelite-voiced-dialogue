@@ -6,15 +6,15 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
  * Mutable {@link VoicedDialogueConfig} for synthesis tests: settable API keys, char cap, pace,
  * language, and speaking styles. Everything not overridden keeps the interface default.
  */
-final class MutableTestConfig implements VoicedDialogueConfig {
+public final class MutableTestConfig implements VoicedDialogueConfig {
 
-  String openRouterKey = "";
-  String googleAiStudioKey = "";
-  int maxChars;
-  int speedPercent = 100;
-  VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
-  VoicedDialogueConfig.SpeakingStyle playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
-  VoicedDialogueConfig.SpeakingStyle npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
+  public String openRouterKey = "";
+  public String googleAiStudioKey = "";
+  public int maxChars;
+  public int speedPercent = 100;
+  public VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
+  public VoicedDialogueConfig.SpeakingStyle playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
+  public VoicedDialogueConfig.SpeakingStyle npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
 
   @Override
   public String openRouterApiKey() {

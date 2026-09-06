@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 /**
  * Turns two readings of an OpenRouter key's all-time credit usage into what this session spent.

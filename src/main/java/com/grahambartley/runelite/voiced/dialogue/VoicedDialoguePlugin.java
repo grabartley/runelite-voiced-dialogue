@@ -21,12 +21,12 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.WikiNpcClient;
 import com.grahambartley.runelite.voiced.dialogue.speech.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.speech.BackendWarmUpPolicy;
 import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
-import com.grahambartley.runelite.voiced.dialogue.speech.GeminiAiStudioTtsBackend;
-import com.grahambartley.runelite.voiced.dialogue.speech.OpenRouterCreditMeter;
-import com.grahambartley.runelite.voiced.dialogue.speech.OpenRouterTtsBackend;
-import com.grahambartley.runelite.voiced.dialogue.speech.OpenRouterUsageClient;
 import com.grahambartley.runelite.voiced.dialogue.speech.ProviderDefaultPolicy;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
+import com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioTtsBackend;
+import com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterCreditMeter;
+import com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterTtsBackend;
+import com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterUsageClient;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendReport;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.nio.file.Path;
@@ -154,8 +154,7 @@ public class VoicedDialoguePlugin extends Plugin {
     OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
     openRouterBackend.setSpendTracker(spendTracker);
-    GeminiAiStudioTtsBackend aiStudioBackend =
-        new GeminiAiStudioTtsBackend(okHttpClient, config, gson);
+    AiStudioTtsBackend aiStudioBackend = new AiStudioTtsBackend(okHttpClient, config, gson);
     aiStudioBackend.setNotice(noticeManager::notifyFromBackendThread);
     aiStudioBackend.setSpendTracker(spendTracker);
     backendProvider = new BackendProvider(openRouterBackend, aiStudioBackend, config::ttsProvider);

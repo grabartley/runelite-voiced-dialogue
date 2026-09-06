@@ -1,7 +1,8 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;

@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;

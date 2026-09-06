@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -10,6 +10,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudTtsText;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -19,7 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /** Request shape, content extraction, and graceful failure of the Gemini translation hop. */
-public class GeminiAiStudioTranslatorTest {
+public class AiStudioTranslatorTest {
 
   private MockWebServer server;
   private OkHttpClient client;
@@ -38,14 +39,12 @@ public class GeminiAiStudioTranslatorTest {
     server.shutdown();
   }
 
-  private GeminiAiStudioTranslator translator() {
-    return new GeminiAiStudioTranslator(
+  private AiStudioTranslator translator() {
+    return new AiStudioTranslator(
         client,
         config,
         gson,
-        server
-            .url("/v1beta/models/" + GeminiAiStudioTranslator.MODEL + ":generateContent")
-            .toString());
+        server.url("/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent").toString());
   }
 
   private static String translationResponse(String content) {
@@ -69,8 +68,7 @@ public class GeminiAiStudioTranslatorTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(translationResponse("  Bonjour  ")));
 
-    GeminiAiStudioTranslator.Translation result =
-        translator().translate("Hello", "French", "AIza-abc");
+    AiStudioTranslator.Translation result = translator().translate("Hello", "French", "AIza-abc");
 
     assertEquals("Bonjour", result.text);
 
@@ -104,7 +102,7 @@ public class GeminiAiStudioTranslatorTest {
 
   @Test
   public void emptyInputIsReturnedWithoutCallingTheNetwork() {
-    GeminiAiStudioTranslator.Translation result = translator().translate("", "French", "AIza-abc");
+    AiStudioTranslator.Translation result = translator().translate("", "French", "AIza-abc");
 
     assertEquals("", result.text);
     assertEquals("no HTTP request for empty input", 0, server.getRequestCount());

@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
@@ -28,7 +28,7 @@ import java.util.Map;
  * seed. Every child voice is drawn from the gender it already belongs to above, so the gender
  * disjointness invariant holds with children included.
  */
-final class GeminiVoiceMap {
+public final class GeminiVoiceMap {
 
   /** Neutral default when a spec has no specific mapping (a clear, even male voice). */
   static final String DEFAULT_VOICE = "Charon";
@@ -40,7 +40,7 @@ final class GeminiVoiceMap {
   private final Map<NpcGender, String[]> playerVoices;
   private final Map<NpcGender, String[]> childVoices;
 
-  GeminiVoiceMap() {
+  public GeminiVoiceMap() {
     playerVoices = new EnumMap<>(NpcGender.class);
     playerVoices.put(NpcGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NpcGender.FEMALE, new String[] {"Aoede", "Autonoe"});
@@ -112,7 +112,7 @@ final class GeminiVoiceMap {
    * NPCs across the sub-pool deterministically; a spec with no seed resolves to the first (anchor)
    * voice of its race/gender pool, so bare specs are stable too.
    */
-  String voiceFor(VoiceSpec spec) {
+  public String voiceFor(VoiceSpec spec) {
     if (spec == null) {
       return DEFAULT_VOICE;
     }

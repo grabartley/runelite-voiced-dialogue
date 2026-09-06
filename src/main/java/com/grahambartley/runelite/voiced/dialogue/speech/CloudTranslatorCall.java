@@ -16,10 +16,10 @@ import okhttp3.ResponseBody;
  * caching a mistranslation.
  */
 @Slf4j
-final class CloudTranslatorCall {
+public final class CloudTranslatorCall {
 
   /** The provider-specific half of a translation call. */
-  interface Ops {
+  public interface Ops {
 
     /** Builds the provider's translation request for one line. */
     Request buildRequest(String text, String language, String apiKey);
@@ -29,11 +29,11 @@ final class CloudTranslatorCall {
   }
 
   /** A completed translation plus the raw body it was extracted from. */
-  static final class Outcome {
-    final String text;
-    final String raw;
+  public static final class Outcome {
+    public final String text;
+    public final String raw;
 
-    Outcome(String text, String raw) {
+    public Outcome(String text, String raw) {
       this.text = text;
       this.raw = raw;
     }
@@ -45,7 +45,7 @@ final class CloudTranslatorCall {
    * Runs one translation call, returning the extracted text and raw body, or {@code null} on any
    * failure (non-2xx, network error, empty/unparseable body).
    */
-  static Outcome run(
+  public static Outcome run(
       OkHttpClient httpClient,
       VoicedDialogueConfig config,
       Ops ops,

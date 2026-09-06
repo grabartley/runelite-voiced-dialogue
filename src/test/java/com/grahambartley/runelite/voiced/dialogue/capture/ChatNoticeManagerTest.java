@@ -12,8 +12,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.grahambartley.runelite.voiced.dialogue.speech.OpenRouterTtsBackend;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
+import com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterTtsBackend;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.runelite.api.ChatMessageType;

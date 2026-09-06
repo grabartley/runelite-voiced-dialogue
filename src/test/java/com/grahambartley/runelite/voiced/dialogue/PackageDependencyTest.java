@@ -31,14 +31,22 @@ public class PackageDependencyTest {
   private static final String BASE = "com.grahambartley.runelite.voiced.dialogue";
   private static final Path MAIN = Paths.get("src/main/java", BASE.replace('.', '/'));
 
-  /** A package may import a strictly lower tier, never a peer and never a higher one. */
+  /**
+   * A package may import a strictly lower tier, never a peer and never a higher one.
+   *
+   * <p>The two provider transports share a tier deliberately: peers cannot import each other, which
+   * is what keeps OpenRouter and Google AI Studio from reaching across into one another.
+   */
   private static final Map<String, Integer> TIER = new HashMap<>();
 
   static {
     TIER.put("", 7);
     TIER.put("capture", 6);
+    TIER.put("speech.openrouter", 6);
+    TIER.put("speech.aistudio", 6);
     TIER.put("speech", 5);
     TIER.put("cache", 4);
+    TIER.put("speech.model", 4);
     TIER.put("profile", 3);
     TIER.put("speaker", 2);
     TIER.put("audio", 1);

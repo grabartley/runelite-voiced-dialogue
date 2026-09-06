@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
  * clears it so prefetch resumes immediately.
  */
 @Slf4j
-final class RateLimitBackoff {
+public final class RateLimitBackoff {
 
   /** Base 429 back-off; doubled per consecutive limit hit and capped so prefetch never storms. */
   private static final long BACKOFF_BASE_MILLIS = 1_000;

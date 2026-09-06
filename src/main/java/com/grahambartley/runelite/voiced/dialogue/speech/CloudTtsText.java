@@ -8,7 +8,7 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
  * prompt. Kept in one place so every provider transforms a line identically, which keeps their
  * synthesis caches and the model-side prompt caches keyed the same way.
  */
-final class CloudTtsText {
+public final class CloudTtsText {
 
   private CloudTtsText() {}
 
@@ -75,7 +75,7 @@ final class CloudTtsText {
    * language} (no timestamps, names, or per-line text) so the same language always produces the
    * byte-identical prefix the model's prompt cache keys on.
    */
-  static String translatorSystemPrompt(String language) {
+  public static String translatorSystemPrompt(String language) {
     return "You are a translation engine for an Old School RuneScape dialogue voice plugin."
         + " Translate the user's line into "
         + language

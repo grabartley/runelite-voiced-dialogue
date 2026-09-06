@@ -18,17 +18,17 @@ import okhttp3.ResponseBody;
  * constants, the derived keepalive client every backend runs on, and the small response-reading
  * utilities the failure traces need.
  */
-final class CloudHttp {
+public final class CloudHttp {
 
   /** RFC 6585 Too Many Requests, absent from {@link java.net.HttpURLConnection}'s constants. */
-  static final int HTTP_TOO_MANY_REQUESTS = 429;
+  public static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   /** Shared empty body for failure traces where no response bytes were (or could be) read. */
   static final byte[] EMPTY_BODY = new byte[0];
 
-  static final String USER_AGENT = "runelite-voiced-dialogue";
+  public static final String USER_AGENT = "runelite-voiced-dialogue";
 
-  static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
+  public static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
   /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
@@ -46,7 +46,7 @@ final class CloudHttp {
    * own warm connection pool so back-to-back lines skip the TCP/TLS handshake, and its own
    * connect/read/call timeouts without mutating the shared client's globals.
    */
-  static OkHttpClient deriveClient(
+  public static OkHttpClient deriveClient(
       OkHttpClient base, RetryTuning tuning, Duration keepAlive, boolean pinHttp1) {
     OkHttpClient.Builder builder = base.newBuilder();
     if (pinHttp1) {
@@ -67,7 +67,7 @@ final class CloudHttp {
     return (System.nanoTime() - startNanos) / 1_000_000L;
   }
 
-  static String headerOrEmpty(Response response, String name) {
+  public static String headerOrEmpty(Response response, String name) {
     String value = response.header(name);
     return value == null ? "" : value;
   }
@@ -82,7 +82,7 @@ final class CloudHttp {
     }
   }
 
-  static boolean isNonBlank(String value) {
+  public static boolean isNonBlank(String value) {
     return value != null && !value.trim().isEmpty();
   }
 

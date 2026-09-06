@@ -9,19 +9,19 @@ import java.time.Duration;
  * Studio streams a line as it is generated, so a line is audible early and only its full generation
  * has to fit the ceiling. OpenRouter sends nothing until the whole clip exists, so the entire wait
  * for a line arrives as one read and grows with the line's length, which is why its ceiling is far
- * higher and why {@link OpenRouterTtsBackend} narrows it per line rather than letting every request
+ * higher and why {@code OpenRouterTtsBackend} narrows it per line rather than letting every request
  * inherit the worst case.
  *
  * <p>Tests build instances directly to shrink the budgets to milliseconds.
  */
-final class RetryTuning {
+public final class RetryTuning {
 
   /** TCP/TLS handshake budget. Short: a slow connect should fail the line fast rather than hang. */
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
 
   /**
    * OpenRouter's ceiling. High because a long line's whole generation is spent before any audio is
-   * returned; the per-line budget in {@link OpenRouterTtsBackend#callBudgetFor} is what an
+   * returned; the per-line budget in {@code OpenRouterTtsBackend#callBudgetFor} is what an
    * individual request actually gets.
    */
   private static final Duration OPEN_ROUTER_CEILING = Duration.ofSeconds(120);
@@ -44,11 +44,11 @@ final class RetryTuning {
 
   final Duration connectTimeout;
   final Duration readTimeout;
-  final Duration callTimeout;
+  public final Duration callTimeout;
   final long retryBackoffBaseMillis;
   final long retryJitterMillis;
 
-  RetryTuning(
+  public RetryTuning(
       Duration connectTimeout,
       Duration readTimeout,
       Duration callTimeout,
@@ -61,11 +61,11 @@ final class RetryTuning {
     this.retryJitterMillis = retryJitterMillis;
   }
 
-  static RetryTuning openRouter() {
+  public static RetryTuning openRouter() {
     return ceiling(OPEN_ROUTER_CEILING);
   }
 
-  static RetryTuning googleAiStudio() {
+  public static RetryTuning googleAiStudio() {
     return ceiling(AI_STUDIO_CEILING);
   }
 

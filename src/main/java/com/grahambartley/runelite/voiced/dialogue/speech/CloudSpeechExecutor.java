@@ -6,6 +6,8 @@ import com.grahambartley.runelite.voiced.dialogue.audio.PcmCompleteness;
 import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiEmotionStyle;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
@@ -25,19 +27,19 @@ import okhttp3.ResponseBody;
  * quirks: payload shape, transport, body decoding, and notice wording.
  */
 @Slf4j
-final class CloudSpeechExecutor {
+public final class CloudSpeechExecutor {
 
   /**
    * One speech call plus a single retry, for a transient empty, truncated, or timed-out line (the
    * retry after a timeout is spaced by a backoff, the others are immediate).
    */
-  static final int MAX_SPEECH_ATTEMPTS = 2;
+  public static final int MAX_SPEECH_ATTEMPTS = 2;
 
   /** The provider-specific half of a speech call. */
-  interface Ops {
+  public interface Ops {
 
     /** The provider's configured API key, untrimmed; blank means the backend is unavailable. */
-    String apiKey();
+    public String apiKey();
 
     /** The user-facing notice surfaced on every line attempted without an API key. */
     String missingKeyNotice();
@@ -82,7 +84,7 @@ final class CloudSpeechExecutor {
   }
 
   /** Reads one provider's streaming body, handing raw audio chunks to the shared accumulator. */
-  interface StreamDrain {
+  public interface StreamDrain {
 
     /** Reads the whole response body, passing each raw audio chunk to {@code chunk}. */
     void drain(ResponseBody body, ChunkSink chunk) throws IOException;
@@ -100,19 +102,19 @@ final class CloudSpeechExecutor {
   }
 
   /** One raw audio chunk read off a streaming body. */
-  interface ChunkSink {
+  public interface ChunkSink {
     void accept(byte[] bytes, int len);
   }
 
   /** The shared preparation of a line: trimmed key, final spoken input, and pace. */
-  static final class SpokenLine {
-    final String apiKey;
-    final String input;
-    final boolean translating;
-    final double speedRatio;
-    final int speedPercent;
+  public static final class SpokenLine {
+    public final String apiKey;
+    public final String input;
+    public final boolean translating;
+    public final double speedRatio;
+    public final int speedPercent;
 
-    SpokenLine(
+    public SpokenLine(
         String apiKey, String input, boolean translating, double speedRatio, int speedPercent) {
       this.apiKey = apiKey;
       this.input = input;
@@ -123,14 +125,14 @@ final class CloudSpeechExecutor {
   }
 
   /** The built speech request(s) plus the values both response loops need. */
-  static final class PreparedSpeech {
+  public static final class PreparedSpeech {
     final Request buffered;
     final Request streaming;
-    final double speedRatio;
-    final int inputLen;
-    final boolean prefetch;
+    public final double speedRatio;
+    public final int inputLen;
+    public final boolean prefetch;
 
-    PreparedSpeech(
+    public PreparedSpeech(
         Request buffered, Request streaming, double speedRatio, int inputLen, boolean prefetch) {
       this.buffered = buffered;
       this.streaming = streaming;
@@ -140,16 +142,16 @@ final class CloudSpeechExecutor {
     }
 
     /** For a provider whose buffered and streaming paths POST the same request. */
-    PreparedSpeech(Request request, double speedRatio, int inputLen, boolean prefetch) {
+    public PreparedSpeech(Request request, double speedRatio, int inputLen, boolean prefetch) {
       this(request, request, speedRatio, inputLen, prefetch);
     }
   }
 
   /** A buffered body decoded: how much audio it carried, and the PCM if it was decodable. */
-  static final class DecodedSpeech {
+  public static final class DecodedSpeech {
 
     /** A response that carried no audio at all (retried once, like an empty body). */
-    static final DecodedSpeech EMPTY = new DecodedSpeech(null, 0, () -> {});
+    public static final DecodedSpeech EMPTY = new DecodedSpeech(null, 0, () -> {});
 
     final Pcm pcm;
     final int audioBytes;
@@ -157,7 +159,7 @@ final class CloudSpeechExecutor {
     /** Records this call's spend; run only once the line is confirmed complete. */
     final Runnable bankSpend;
 
-    DecodedSpeech(Pcm pcm, int audioBytes, Runnable bankSpend) {
+    public DecodedSpeech(Pcm pcm, int audioBytes, Runnable bankSpend) {
       this.pcm = pcm;
       this.audioBytes = audioBytes;
       this.bankSpend = bankSpend;
@@ -172,7 +174,7 @@ final class CloudSpeechExecutor {
   private final Ops ops;
   private final RateLimitBackoff backoff = new RateLimitBackoff();
 
-  CloudSpeechExecutor(
+  public CloudSpeechExecutor(
       VoicedDialogueConfig config,
       CloudBackendSupport support,
       GeminiTtsModel model,
@@ -187,11 +189,11 @@ final class CloudSpeechExecutor {
     this.ops = ops;
   }
 
-  boolean isThrottled() {
+  public boolean isThrottled() {
     return backoff.isThrottled();
   }
 
-  String cacheVariant(SynthesisRequest request) {
+  public String cacheVariant(SynthesisRequest request) {
     return CloudCacheKeyBuilder.build(
         cacheModelId,
         model.voiceFor(request.voice()),
@@ -203,7 +205,7 @@ final class CloudSpeechExecutor {
         request.skipTranslation());
   }
 
-  Pcm synthesize(SynthesisRequest request) {
+  public Pcm synthesize(SynthesisRequest request) {
     PreparedSpeech prepared = prepare(request);
     if (prepared == null) {
       return null;
@@ -211,7 +213,7 @@ final class CloudSpeechExecutor {
     return runBuffered(prepared);
   }
 
-  Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
+  public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
     PreparedSpeech prepared = prepare(request);
     if (prepared == null) {
       return null;

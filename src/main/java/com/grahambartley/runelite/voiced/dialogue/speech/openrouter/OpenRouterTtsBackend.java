@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -9,6 +9,16 @@ import com.grahambartley.runelite.voiced.dialogue.audio.RawPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import com.grahambartley.runelite.voiced.dialogue.speech.BackendProvider;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudBackendSupport;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudSpeechExecutor;
+import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiEmotionStyle;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiVoiceMap;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.io.IOException;
 import java.io.InputStream;

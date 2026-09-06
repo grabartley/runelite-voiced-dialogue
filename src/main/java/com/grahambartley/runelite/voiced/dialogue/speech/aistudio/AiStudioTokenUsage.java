@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -18,9 +18,9 @@ import com.google.gson.JsonObject;
  * treats output as audio and {@link #forText} treats it as text, rather than one parser guessing
  * from the response shape.
  */
-final class GeminiTokenUsage {
+final class AiStudioTokenUsage {
 
-  static final GeminiTokenUsage NONE = new GeminiTokenUsage(0, 0, 0);
+  static final AiStudioTokenUsage NONE = new AiStudioTokenUsage(0, 0, 0);
 
   /** Input tokens the call consumed. */
   final long promptTokens;
@@ -31,7 +31,7 @@ final class GeminiTokenUsage {
   /** Text output tokens, for a translation call. */
   final long textTokens;
 
-  GeminiTokenUsage(long promptTokens, long audioTokens, long textTokens) {
+  AiStudioTokenUsage(long promptTokens, long audioTokens, long textTokens) {
     this.promptTokens = promptTokens;
     this.audioTokens = audioTokens;
     this.textTokens = textTokens;
@@ -42,11 +42,11 @@ final class GeminiTokenUsage {
    * its events as a running total, so the last one carries the whole call; taking the maximum gets
    * that without assuming the events arrive in order, and cannot double-count a cumulative figure.
    */
-  GeminiTokenUsage max(GeminiTokenUsage other) {
+  AiStudioTokenUsage max(AiStudioTokenUsage other) {
     if (other == null) {
       return this;
     }
-    return new GeminiTokenUsage(
+    return new AiStudioTokenUsage(
         Math.max(promptTokens, other.promptTokens),
         Math.max(audioTokens, other.audioTokens),
         Math.max(textTokens, other.textTokens));
@@ -57,7 +57,7 @@ final class GeminiTokenUsage {
    * candidatesTokensDetails}, falling back to {@code candidatesTokenCount} when the response omits
    * the per-modality breakdown, since a speech call's candidates are audio in their entirety.
    */
-  static GeminiTokenUsage forSpeech(Gson gson, String raw) {
+  static AiStudioTokenUsage forSpeech(Gson gson, String raw) {
     return forSpeech(parse(gson, raw));
   }
 
@@ -65,7 +65,7 @@ final class GeminiTokenUsage {
    * The {@link #forSpeech(Gson, String)} variant for a caller that already parsed the response
    * document (to extract its audio), so a multi-megabyte body is never parsed twice.
    */
-  static GeminiTokenUsage forSpeech(JsonObject response) {
+  static AiStudioTokenUsage forSpeech(JsonObject response) {
     JsonObject usage = usageMetadata(response);
     if (usage == null) {
       return NONE;
@@ -78,7 +78,7 @@ final class GeminiTokenUsage {
   }
 
   /** Usage for a text call (the translation hop), whose output bills at the text rate. */
-  static GeminiTokenUsage forText(Gson gson, String raw) {
+  static AiStudioTokenUsage forText(Gson gson, String raw) {
     JsonObject usage = usageMetadata(parse(gson, raw));
     if (usage == null) {
       return NONE;
@@ -86,10 +86,10 @@ final class GeminiTokenUsage {
     return of(asLong(usage, "promptTokenCount"), 0, asLong(usage, "candidatesTokenCount"));
   }
 
-  private static GeminiTokenUsage of(long prompt, long audio, long text) {
+  private static AiStudioTokenUsage of(long prompt, long audio, long text) {
     return prompt == 0 && audio == 0 && text == 0
         ? NONE
-        : new GeminiTokenUsage(prompt, audio, text);
+        : new AiStudioTokenUsage(prompt, audio, text);
   }
 
   /** A response document parsed, or {@code null} when it is unreadable. */

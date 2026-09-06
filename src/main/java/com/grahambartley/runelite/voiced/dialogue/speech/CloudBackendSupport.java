@@ -17,10 +17,10 @@ import lombok.extern.slf4j.Slf4j;
  * plumbing exists exactly once. Stateless HTTP helpers live in {@link CloudHttp}.
  */
 @Slf4j
-final class CloudBackendSupport {
+public final class CloudBackendSupport {
 
   /** Speaking pace as a percentage of normal: the default and clamp range. */
-  static final int DEFAULT_SPEED_PERCENT = 100;
+  public static final int DEFAULT_SPEED_PERCENT = 100;
 
   private static final int MIN_SPEED_PERCENT = 50;
 
@@ -45,7 +45,7 @@ final class CloudBackendSupport {
   /** Guards the one-time notice so a sustained outage does not spam the chat box. */
   private boolean warned;
 
-  CloudBackendSupport(
+  public CloudBackendSupport(
       VoicedDialogueConfig config, TtsProvider provider, int maxAttempts, RetryTuning tuning) {
     this.config = config;
     this.provider = provider;
@@ -55,12 +55,12 @@ final class CloudBackendSupport {
   }
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
-  void setNotice(Consumer<String> notice) {
+  public void setNotice(Consumer<String> notice) {
     this.notice = notice == null ? msg -> {} : notice;
   }
 
   /** Points billable-call counting at the plugin's session tracker. */
-  void setSpendTracker(SpendTracker spend) {
+  public void setSpendTracker(SpendTracker spend) {
     this.spend = spend == null ? new SpendTracker() : spend;
   }
 
@@ -70,7 +70,7 @@ final class CloudBackendSupport {
    * that returned nothing usable all stay out of the totals, and a line recovered on retry counts
    * once. {@code characters} is the input handed to the speech endpoint, which is what bills.
    */
-  void recordSpeechSpend(int characters, boolean prefetch) {
+  public void recordSpeechSpend(int characters, boolean prefetch) {
     spend.recordSpeech(provider, characters, prefetch);
   }
 
@@ -78,12 +78,13 @@ final class CloudBackendSupport {
    * The {@code recordSpeechSpend} variant for a provider that reports what it metered, so the
    * session is costed from the provider's own token counts rather than from the input length.
    */
-  void recordSpeechSpend(int characters, boolean prefetch, long audioTokens, long promptTokens) {
+  public void recordSpeechSpend(
+      int characters, boolean prefetch, long audioTokens, long promptTokens) {
     spend.recordSpeech(provider, characters, prefetch, audioTokens, promptTokens);
   }
 
   /** Counts one billable translation call for this provider, after it returned usable text. */
-  void recordTranslationSpend(int characters) {
+  public void recordTranslationSpend(int characters) {
     spend.recordTranslation(provider, characters);
   }
 
@@ -92,7 +93,7 @@ final class CloudBackendSupport {
    * The hop runs against its own model at its own rate, so its tokens are banked separately from
    * the speech call's.
    */
-  void recordTranslationSpend(int characters, long inputTokens, long outputTokens) {
+  public void recordTranslationSpend(int characters, long inputTokens, long outputTokens) {
     spend.recordTranslation(provider, characters, inputTokens, outputTokens);
   }
 

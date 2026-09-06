@@ -3,7 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 /**
  * Formats the one-line cloud synthesis trace records (success, retry, failure) into a single,
  * consistent {@code key=value} shape so a grep over {@code [TTS cloud] synth} gives every attempt's
- * outcome, timing, and failure reason. Pure string building, kept out of {@link
+ * outcome, timing, and failure reason. Pure string building, kept out of {@code
  * OpenRouterTtsBackend} so the shape is verifiable without a live HTTP call or logger.
  *
  * <p>Every record carries the attempt number, elapsed ms, and (where known) the input length, so a

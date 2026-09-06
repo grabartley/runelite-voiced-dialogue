@@ -1,6 +1,7 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import com.google.gson.JsonObject;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
 import okhttp3.Request;
 
 /**

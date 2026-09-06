@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -23,6 +23,12 @@ import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
+import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
+import com.grahambartley.runelite.voiced.dialogue.speech.TestFixtures;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiVoiceMap;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -41,7 +47,7 @@ import org.junit.Test;
  * HTTP path, headers, Gemini JSON body, base64 audio decode, SSE streaming, availability gating,
  * cache variant, translation hop, and graceful failure of the direct Google AI Studio backend.
  */
-public class GeminiAiStudioTtsBackendTest {
+public class AiStudioTtsBackendTest {
 
   private MockWebServer server;
   private OkHttpClient client;
@@ -65,20 +71,16 @@ public class GeminiAiStudioTtsBackendTest {
     return config;
   }
 
-  private GeminiAiStudioTtsBackend backend(MutableTestConfig config) {
+  private AiStudioTtsBackend backend(MutableTestConfig config) {
     // Point speech and translation at the mock server while keeping the real header, JSON body,
     // SSE decode, and error logic; millisecond retry budgets so retry paths run without real
     // waits.
-    return new GeminiAiStudioTtsBackend(
+    return new AiStudioTtsBackend(
         client,
         config,
         gson,
-        server
-            .url("/v1beta/models/" + GeminiAiStudioTtsBackend.MODEL + ":generateContent")
-            .toString(),
-        server
-            .url("/v1beta/models/" + GeminiAiStudioTranslator.MODEL + ":generateContent")
-            .toString(),
+        server.url("/v1beta/models/" + AiStudioTtsBackend.MODEL + ":generateContent").toString(),
+        server.url("/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent").toString(),
         new RetryTuning(
             Duration.ofMillis(500), Duration.ofMillis(500), Duration.ofSeconds(1), 10, 0));
   }
@@ -190,9 +192,8 @@ public class GeminiAiStudioTtsBackendTest {
   @Test
   public void missingKeyNoticeNamesTheProvider() {
     assertEquals(
-        GeminiAiStudioTtsBackend.NO_KEY_NOTICE,
-        backend(new MutableTestConfig()).missingKeyNotice());
-    assertTrue(GeminiAiStudioTtsBackend.NO_KEY_NOTICE.contains("Google AI Studio"));
+        AiStudioTtsBackend.NO_KEY_NOTICE, backend(new MutableTestConfig()).missingKeyNotice());
+    assertTrue(AiStudioTtsBackend.NO_KEY_NOTICE.contains("Google AI Studio"));
   }
 
   @Test
@@ -215,8 +216,7 @@ public class GeminiAiStudioTtsBackendTest {
     RecordedRequest recorded = server.takeRequest();
     assertEquals("POST", recorded.getMethod());
     assertEquals(
-        "/v1beta/models/" + GeminiAiStudioTtsBackend.MODEL + ":generateContent",
-        recorded.getPath());
+        "/v1beta/models/" + AiStudioTtsBackend.MODEL + ":generateContent", recorded.getPath());
     assertEquals("AIza-secret", recorded.getHeader("x-goog-api-key"));
     assertTrue(
         "a JSON content type is sent",
@@ -301,7 +301,7 @@ public class GeminiAiStudioTtsBackendTest {
   @Test
   public void non2xxFailsTheLineGracefully() {
     List<String> notices = new ArrayList<>();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setNotice(notices::add);
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
 
@@ -313,14 +313,14 @@ public class GeminiAiStudioTtsBackendTest {
   @Test
   public void rateLimitOpensTheThrottleWindowAndNamesTheQuota() {
     List<String> notices = new ArrayList<>();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setNotice(notices::add);
     server.enqueue(
         new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody("quota"));
 
     assertNull(backend.synthesize(req()));
     assertTrue("a 429 opens the prefetch back-off window", backend.isThrottled());
-    assertEquals(GeminiAiStudioTtsBackend.QUOTA_NOTICE, notices.get(0));
+    assertEquals(AiStudioTtsBackend.QUOTA_NOTICE, notices.get(0));
   }
 
   @Test
@@ -366,7 +366,7 @@ public class GeminiAiStudioTtsBackendTest {
     RecordedRequest recorded = server.takeRequest();
     assertEquals(
         "the streaming path posts to the SSE streamGenerateContent endpoint",
-        "/v1beta/models/" + GeminiAiStudioTtsBackend.MODEL + ":streamGenerateContent?alt=sse",
+        "/v1beta/models/" + AiStudioTtsBackend.MODEL + ":streamGenerateContent?alt=sse",
         recorded.getPath());
   }
 
@@ -431,7 +431,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void cacheVariantFoldsInModelAndVoiceSoRendersNeverCollide() {
-    GeminiAiStudioTtsBackend backend = backend(new MutableTestConfig());
+    AiStudioTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
         new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
@@ -440,8 +440,7 @@ public class GeminiAiStudioTtsBackendTest {
 
     String variant = backend.cacheVariant(humanMale);
     assertTrue(
-        "the variant carries the AI Studio model id",
-        variant.contains(GeminiAiStudioTtsBackend.MODEL));
+        "the variant carries the AI Studio model id", variant.contains(AiStudioTtsBackend.MODEL));
     assertTrue(
         "the variant carries the resolved Gemini voice",
         variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice())));
@@ -466,7 +465,7 @@ public class GeminiAiStudioTtsBackendTest {
     RecordedRequest translation = server.takeRequest();
     assertEquals(
         "the first hop is the Flash Lite translation model",
-        "/v1beta/models/" + GeminiAiStudioTranslator.MODEL + ":generateContent",
+        "/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent",
         translation.getPath());
     JsonObject translationBody =
         new JsonParser().parse(translation.getBody().readUtf8()).getAsJsonObject();
@@ -508,7 +507,7 @@ public class GeminiAiStudioTtsBackendTest {
   public void languageFragmentReKeysTranslatedLinesInTheCacheVariant() {
     MutableTestConfig config = new MutableTestConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    GeminiAiStudioTtsBackend backend = backend(config);
+    AiStudioTtsBackend backend = backend(config);
 
     assertTrue(
         "a translated line folds the target language into the cache variant",
@@ -542,7 +541,7 @@ public class GeminiAiStudioTtsBackendTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
@@ -566,7 +565,7 @@ public class GeminiAiStudioTtsBackendTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     backend.synthesize(req().asPrefetch());
@@ -583,7 +582,7 @@ public class GeminiAiStudioTtsBackendTest {
         Arrays.asList(TestPcm.raw(new short[] {1, 2}), TestPcm.raw(new short[] {3, 4}));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, "STOP")));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
@@ -596,7 +595,7 @@ public class GeminiAiStudioTtsBackendTest {
   public void aFailedLineThatReturnsNoAudioCostsNothing() {
     server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("bad key"));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNull(backend.synthesize(req()));
@@ -607,7 +606,7 @@ public class GeminiAiStudioTtsBackendTest {
   @Test
   public void aLineNeverSentForWantOfAKeyCostsNothing() {
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(new MutableTestConfig());
+    AiStudioTtsBackend backend = backend(new MutableTestConfig());
     backend.setSpendTracker(spend);
 
     assertNull(backend.synthesize(req()));
@@ -624,7 +623,7 @@ public class GeminiAiStudioTtsBackendTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    AiStudioTtsBackend backend = backend(config);
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
@@ -645,7 +644,7 @@ public class GeminiAiStudioTtsBackendTest {
             .setResponseCode(HTTP_OK)
             .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
@@ -665,7 +664,7 @@ public class GeminiAiStudioTtsBackendTest {
             .setResponseCode(HTTP_OK)
             .setBody("data: " + first + "\n\ndata: " + last + "\n\n"));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
@@ -681,7 +680,7 @@ public class GeminiAiStudioTtsBackendTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
+    AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
@@ -705,7 +704,7 @@ public class GeminiAiStudioTtsBackendTest {
             .setResponseCode(HTTP_OK)
             .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    AiStudioTtsBackend backend = backend(config);
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));

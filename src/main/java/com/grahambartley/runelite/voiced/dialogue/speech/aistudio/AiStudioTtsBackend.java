@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -8,6 +8,16 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudBackendSupport;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudSpeechExecutor;
+import com.grahambartley.runelite.voiced.dialogue.speech.RateLimitBackoff;
+import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiEmotionStyle;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiVoiceMap;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,7 +40,7 @@ import okio.BufferedSource;
 /**
  * Cloud synthesis directly through the Gemini API, authenticated with a Google AI Studio key.
  *
- * <p>The direct-to-Google counterpart of {@link OpenRouterTtsBackend}: the same Gemini TTS model,
+ * <p>The direct-to-Google counterpart of {@code OpenRouterTtsBackend}: the same Gemini TTS model,
  * the same {@link GeminiVoiceMap} voices, {@link GeminiEmotionStyle} emotion tags, character
  * profile prompt block, and translation-hop behavior, so a line sounds identical whichever provider
  * voices it. It differs only in transport: requests POST to {@code
@@ -45,7 +55,7 @@ import okio.BufferedSource;
  * truncated line is never cached.
  */
 @Slf4j
-public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
+public final class AiStudioTtsBackend implements SynthesisBackend {
 
   /** Stable backend id, folded into the synthesis cache key. */
   public static final String ID = "cloud-google-ai-studio";
@@ -82,7 +92,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   private final String endpoint;
   private final String streamingEndpoint;
   private final GeminiTtsModel model = new GeminiTtsModel();
-  private final GeminiAiStudioTranslator translator;
+  private final AiStudioTranslator translator;
 
   /** The shared notice/logging/backoff plumbing, parameterized by this provider's budgets. */
   private final CloudBackendSupport support;
@@ -90,13 +100,13 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   /** The shared prepare/retry/decode control flow, parameterized by this provider's quirks. */
   private final CloudSpeechExecutor executor;
 
-  public GeminiAiStudioTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
+  public AiStudioTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(
         httpClient,
         config,
         gson,
         PRODUCTION_ENDPOINT,
-        GeminiAiStudioTranslator.PRODUCTION_ENDPOINT,
+        AiStudioTranslator.PRODUCTION_ENDPOINT,
         RetryTuning.googleAiStudio());
   }
 
@@ -105,7 +115,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
    * shrink the timeout/backoff budgets) while exercising the real header, JSON body, SSE decode,
    * and error handling.
    */
-  GeminiAiStudioTtsBackend(
+  AiStudioTtsBackend(
       OkHttpClient httpClient,
       VoicedDialogueConfig config,
       Gson gson,
@@ -123,8 +133,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     this.gson = gson;
     this.endpoint = endpoint;
     this.streamingEndpoint = streamingEndpoint(endpoint);
-    this.translator =
-        new GeminiAiStudioTranslator(this.httpClient, config, gson, translatorEndpoint);
+    this.translator = new AiStudioTranslator(this.httpClient, config, gson, translatorEndpoint);
     this.executor =
         new CloudSpeechExecutor(config, support, model, "Google AI Studio", MODEL, new Ops());
   }
@@ -231,8 +240,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
     @Override
     public String translate(String text, String language, String apiKey) {
-      GeminiAiStudioTranslator.Translation translation =
-          translator.translate(text, language, apiKey);
+      AiStudioTranslator.Translation translation = translator.translate(text, language, apiKey);
       if (translation == null) {
         return null;
       }
@@ -274,7 +282,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       if (audio == null || audio.length == 0) {
         return CloudSpeechExecutor.DecodedSpeech.EMPTY;
       }
-      GeminiTokenUsage usage = GeminiTokenUsage.forSpeech(document);
+      AiStudioTokenUsage usage = AiStudioTokenUsage.forSpeech(document);
       return new CloudSpeechExecutor.DecodedSpeech(
           model.decodeResponse(audio),
           audio.length,
@@ -290,7 +298,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
     @Override
     public String failureNotice(int httpCode) {
-      return GeminiAiStudioTtsBackend.failureNotice(httpCode);
+      return AiStudioTtsBackend.failureNotice(httpCode);
     }
 
     @Override
@@ -309,7 +317,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   private final class SseStreamDrain implements CloudSpeechExecutor.StreamDrain {
 
     private String finishReason;
-    private GeminiTokenUsage usage = GeminiTokenUsage.NONE;
+    private AiStudioTokenUsage usage = AiStudioTokenUsage.NONE;
 
     @Override
     public void drain(ResponseBody body, CloudSpeechExecutor.ChunkSink chunk) throws IOException {
@@ -324,7 +332,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         if (eventFinishReason != null) {
           finishReason = eventFinishReason;
         }
-        usage = usage.max(GeminiTokenUsage.forSpeech(event));
+        usage = usage.max(AiStudioTokenUsage.forSpeech(event));
         for (byte[] audio : extractAudioChunks(event)) {
           chunk.accept(audio, audio.length);
         }

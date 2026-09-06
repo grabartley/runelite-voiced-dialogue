@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import java.util.EnumMap;
@@ -16,10 +16,10 @@ import java.util.Map;
  * -> {@code fearful}). {@link Emotion#NEUTRAL} adds no tag at all, so a neutral line is
  * byte-for-byte the plain text. This is the single place to change the tag wording.
  *
- * <p>{@link #SUPPORTED} is what {@link OpenRouterTtsBackend} advertises, so {@link BackendProvider}
+ * <p>{@link #SUPPORTED} is what {@code OpenRouterTtsBackend} advertises, so {@code BackendProvider}
  * only ever passes an emotion this map can tag.
  */
-final class GeminiEmotionStyle {
+public final class GeminiEmotionStyle {
 
   /** Emotions the Gemini backend can voice; everything else is downgraded to neutral upstream. */
   static final EnumSet<Emotion> SUPPORTED =
@@ -39,7 +39,7 @@ final class GeminiEmotionStyle {
   /**
    * The bare tag word for an emotion (e.g. {@code "happy"}), or {@code null} for neutral/unmapped.
    */
-  static String tagFor(Emotion emotion) {
+  public static String tagFor(Emotion emotion) {
     return emotion == null ? null : TAGS.get(emotion);
   }
 

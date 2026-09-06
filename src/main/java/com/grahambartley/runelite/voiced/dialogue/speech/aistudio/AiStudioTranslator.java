@@ -1,10 +1,14 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudTranslatorCall;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudTtsText;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTranslationModel;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -13,20 +17,20 @@ import okhttp3.RequestBody;
 
 /**
  * Translates a dialogue line into the configured spoken language before it is voiced, via the
- * Gemini API's {@code generateContent} endpoint. The direct-to-Google counterpart of {@link
+ * Gemini API's {@code generateContent} endpoint. The direct-to-Google counterpart of {@code
  * OpenRouterTranslator}: same role in the pipeline, same {@link
  * CloudTtsText#translatorSystemPrompt(String)} (kept shared so the two providers rewrite lines
  * identically and their prompt caches key the same way), differing only in the request/response
  * shape and the {@code x-goog-api-key} authentication.
  *
- * <p>Every failure path returns {@code null} so {@link GeminiAiStudioTtsBackend} fails the line
+ * <p>Every failure path returns {@code null} so {@link AiStudioTtsBackend} fails the line
  * gracefully rather than voicing the wrong language or caching a mistranslation.
  */
 @Slf4j
-final class GeminiAiStudioTranslator implements CloudTranslatorCall.Ops {
+final class AiStudioTranslator implements CloudTranslatorCall.Ops {
 
   /** The Gemini API name of the Flash Lite translation model, shared with the OpenRouter hop. */
-  static final String MODEL = "gemini-3.1-flash-lite";
+  static final String MODEL = GeminiTranslationModel.GEMINI_MODEL_ID;
 
   static final String PRODUCTION_ENDPOINT =
       "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
@@ -37,7 +41,7 @@ final class GeminiAiStudioTranslator implements CloudTranslatorCall.Ops {
   private final String endpoint;
 
   /** Test seam: points the translation request at a mock server instead of the live host. */
-  GeminiAiStudioTranslator(
+  AiStudioTranslator(
       OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
     this.httpClient = httpClient;
     this.config = config;
@@ -48,9 +52,9 @@ final class GeminiAiStudioTranslator implements CloudTranslatorCall.Ops {
   /** A completed translation plus the tokens the API reported metering for it. */
   static final class Translation {
     final String text;
-    final GeminiTokenUsage usage;
+    final AiStudioTokenUsage usage;
 
-    Translation(String text, GeminiTokenUsage usage) {
+    Translation(String text, AiStudioTokenUsage usage) {
       this.text = text;
       this.usage = usage;
     }
@@ -65,7 +69,7 @@ final class GeminiAiStudioTranslator implements CloudTranslatorCall.Ops {
   Translation translate(String text, String language, String apiKey) {
     if (text == null || text.isEmpty()) {
       // Same shape as the OpenRouter translator's guard: null in, null out; empty in, empty out.
-      return text == null ? null : new Translation(text, GeminiTokenUsage.NONE);
+      return text == null ? null : new Translation(text, AiStudioTokenUsage.NONE);
     }
     CloudTranslatorCall.Outcome outcome =
         CloudTranslatorCall.run(httpClient, config, this, text, language, apiKey);
@@ -74,7 +78,7 @@ final class GeminiAiStudioTranslator implements CloudTranslatorCall.Ops {
     }
     // The hop is its own billable call against its own model, so its metered tokens ride back
     // with the text rather than being lost to the session's cost.
-    return new Translation(outcome.text, GeminiTokenUsage.forText(gson, outcome.raw));
+    return new Translation(outcome.text, AiStudioTokenUsage.forText(gson, outcome.raw));
   }
 
   @Override

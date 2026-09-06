@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

@@ -1,9 +1,13 @@
-package com.grahambartley.runelite.voiced.dialogue.speech;
+package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudTranslatorCall;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudTtsText;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTranslationModel;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -23,13 +27,13 @@ import okhttp3.RequestBody;
  * gracefully rather than voicing the wrong language or caching a mistranslation.
  */
 @Slf4j
-final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
+public final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
 
   /**
    * The lightweight model used for the translation hop: fast and cheap relative to the TTS call.
    * The same Flash Lite model the direct Gemini hop uses, under OpenRouter's namespace.
    */
-  static final String MODEL = "google/" + GeminiAiStudioTranslator.MODEL;
+  static final String MODEL = GeminiTranslationModel.MODEL_ID;
 
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
