@@ -25,6 +25,36 @@ cd runelite-voiced-dialogue
 ./gradlew test
 ```
 
+## Package layout
+
+Packages under `com.grahambartley.runelite.voiced.dialogue` follow the lifecycle of a single
+dialogue line, and the dependency graph runs one way only.
+
+Each package sits at a tier. A package may import a strictly lower tier, never a higher one and
+never a peer.
+
+| Tier | Package | Holds |
+|---|---|---|
+| 7 | (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties`, and the wiring that constructs both provider backends |
+| 6 | `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, public chat, prefetch |
+| 6 | `speech.openrouter` | The OpenRouter transport: payload shape, credit metering, usage reads |
+| 6 | `speech.aistudio` | The Google AI Studio transport: `generateContent`, SSE streaming, token usage |
+| 5 | `speech` | The provider-neutral call flow: retry and back-off, HTTP helpers, the backend contract, the off-thread pipeline |
+| 4 | `speech.model` | The Gemini speech and translation models both providers serve: model ids, voice catalog, emotion tags |
+| 4 | `cache` | The memory and disk tiers that keep a line from being billed twice |
+| 3 | `profile` | Resolving who is speaking into how they sound: voice spec, character profile, emotion |
+| 2 | `speaker` | Who the speaker is: NPC lookup, demographics, races, the wiki auto-learn path |
+| 1 | `audio` | PCM decoding and playback, plus the cave echo effect |
+| 1 | `speech.spend` | Session cost accounting behind `::voicedspend` |
+
+The two provider packages share tier 6 on purpose. Peers cannot import each other, so neither
+transport can reach into the other; anything both need belongs in `speech` or `speech.model`. Only
+the plugin root, which wires them, names both.
+
+`speech` holds no provider-specific code, so the shared call flow cannot quietly grow a dependency
+on one provider's quirks. An import that runs against a tier means a class is in the wrong package,
+not that the rule needs an exception. `PackageDependencyTest` enforces this.
+
 ## Launch the dev client
 
 Run the `com.grahambartley.runelite.voiced.dialogue.VoicedDialoguePluginRunner` class (in the

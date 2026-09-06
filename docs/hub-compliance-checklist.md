@@ -26,11 +26,11 @@ pool, derives from it via `newBuilder()` (allowed):
 - `OpenRouterTtsBackend.java`: derives a keepalive HTTP/1.1 client via
   `httpClient.newBuilder()...build()`; `OpenRouterTranslator` and the warm-up path share that
   derived client.
-- `GeminiAiStudioTtsBackend.java`: derives its own keepalive client via
-  `httpClient.newBuilder()...build()`; `GeminiAiStudioTranslator` shares that derived client.
+- `AiStudioTtsBackend.java`: derives its own keepalive client via
+  `httpClient.newBuilder()...build()`; `AiStudioTranslator` shares that derived client.
 - `OpenRouterUsageClient.java`: the `::voicedspend` balance read, using the injected client
   as-is.
-- `data/WikiNpcClient.java`: optional NPC auto-learn lookups, also through the injected
+- `speaker/WikiNpcClient.java`: optional NPC auto-learn lookups, also through the injected
   client.
 
 ### All network and synthesis stays off the game thread
@@ -64,7 +64,7 @@ a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which
   config store.
 - Each key is read only to authenticate its own provider: the `Authorization: Bearer <key>`
   header in `OpenRouterTtsBackend`, `OpenRouterTranslator`, and `OpenRouterUsageClient`, and
-  the `x-goog-api-key` header in `GeminiAiStudioTtsBackend` and `GeminiAiStudioTranslator`.
+  the `x-goog-api-key` header in `AiStudioTtsBackend` and `AiStudioTranslator`.
   Neither key is ever sent to the other provider's host.
 - Never logged: error logs record HTTP status, content-type, generation id, and a body
   snippet, never the key or the `Authorization` header. No `log.*` statement references the

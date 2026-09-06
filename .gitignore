@@ -12,6 +12,7 @@ nbproject/
 .claude/worktrees/
 .claude/tmp/
 .claude/settings.local.json
+CLAUDE.md
 .playwright-mcp/
 
 # Local secrets (never commit)

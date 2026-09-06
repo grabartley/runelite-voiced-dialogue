@@ -1,0 +1,110 @@
+package com.grahambartley.runelite.voiced.dialogue.speech;
+
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
+import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+/**
+ * One line to synthesize: the text, the resolved {@link VoiceSpec}, the desired {@link Emotion},
+ * and an optional {@link CharacterProfile} steering delivery.
+ *
+ * <p>This is the single unit that flows from the dialogue pipeline into a {@link SynthesisBackend}.
+ * The emotion is the <em>requested</em> emotion; {@link BackendProvider} may downgrade it to {@link
+ * Emotion#NEUTRAL} for backends that cannot voice it before {@link SynthesisBackend#synthesize} is
+ * called.
+ *
+ * <p>The profile is the resolved per-speaker delivery template ({@link CharacterProfile}); it is
+ * {@code null} when character profiles are off or no profile applies. The cloud backend renders it
+ * as a leading AUDIO PROFILE block; a {@code null} profile adds nothing to the request body.
+ *
+ * <p>{@code skipTranslation} forces the line to be voiced verbatim even when a non-English spoken
+ * language or a global quirk is configured: the cloud backend skips the translation hop and the
+ * {@code |l<language>} cache segment for such a request. It is {@code true} only for the player's
+ * own public chat (voiced as typed); every dialogue line leaves it {@code false}.
+ *
+ * <p>{@code player} marks the line as the player's own speech rather than an NPC's, so the cloud
+ * backend can pick the per-speaker-class Speaking Style (Player vs NPC). It is {@code true} for
+ * player dialogue, public chat, and prefetched options (all lines the player speaks) and {@code
+ * false} for NPC lines; the short constructor defaults it {@code false}, so an unmarked request
+ * voices as an NPC line.
+ *
+ * <p>{@code prefetch} marks the line as speculative cache warming rather than something the player
+ * is hearing now, so {@link SpendTracker} can report warming separately from lines actually voiced.
+ * It steers nothing about how the line is rendered and is deliberately outside the cache key, so a
+ * prefetched line and the real line that follows it resolve to the same cached audio.
+ */
+@Getter
+@Accessors(fluent = true)
+@EqualsAndHashCode
+@ToString
+public final class SynthesisRequest {
+
+  private final String text;
+  private final VoiceSpec voice;
+  private final Emotion emotion;
+  private final CharacterProfile profile;
+  private final boolean skipTranslation;
+  private final boolean player;
+  private final boolean prefetch;
+
+  private SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player,
+      boolean prefetch) {
+    this.text = text;
+    this.voice = voice;
+    this.emotion = emotion;
+    this.profile = profile;
+    this.skipTranslation = skipTranslation;
+    this.player = player;
+    this.prefetch = prefetch;
+  }
+
+  /** A live (non-prefetch) request with every rendering field given explicitly. */
+  public SynthesisRequest(
+      String text,
+      VoiceSpec voice,
+      Emotion emotion,
+      CharacterProfile profile,
+      boolean skipTranslation,
+      boolean player) {
+    this(text, voice, emotion, profile, skipTranslation, player, false);
+  }
+
+  /** A translating NPC request with no character profile. */
+  public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
+    this(text, voice, emotion, null, false, false);
+  }
+
+  /**
+   * Returns a copy of this request with a different emotion, leaving text, voice, profile, and the
+   * translation and speaker-class behaviour intact.
+   */
+  public SynthesisRequest withEmotion(Emotion newEmotion) {
+    if (newEmotion == emotion) {
+      return this;
+    }
+    return new SynthesisRequest(
+        text, voice, newEmotion, profile, skipTranslation, player, prefetch);
+  }
+
+  /**
+   * Returns a copy of this request marked as speculative prefetch, leaving every rendering field
+   * intact so it still resolves to the same audio and the same cache entry as the live line.
+   */
+  public SynthesisRequest asPrefetch() {
+    if (prefetch) {
+      return this;
+    }
+    return new SynthesisRequest(text, voice, emotion, profile, skipTranslation, player, true);
+  }
+}
