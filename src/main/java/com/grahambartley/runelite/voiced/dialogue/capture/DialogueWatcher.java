@@ -3,6 +3,8 @@ package com.grahambartley.runelite.voiced.dialogue.capture;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.function.Supplier;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
@@ -10,10 +12,11 @@ import net.runelite.api.widgets.Widget;
 
 /**
  * Scans the dialogue widgets each game tick and drives the speak/prefetch/interrupt flow: speaks a
- * new NPC or player line once (deduped against the last spoken text), warms the visible options,
- * and edge-triggers the close interrupt so audio is cut only on the open-&gt;closed transition (not
- * on every idle tick, which would truncate public-chat clips played while walking around). Reads
- * the client only on the game thread.
+ * new NPC or player line once (deduped against the last text spoken by that same speaker, so a
+ * player line matching the NPC line before it is still voiced), warms the visible options, and
+ * edge-triggers the close interrupt so audio is cut only on the open-&gt;closed transition (not on
+ * every idle tick, which would truncate public-chat clips played while walking around). Reads the
+ * client only on the game thread.
  */
 public final class DialogueWatcher {
 
@@ -24,7 +27,8 @@ public final class DialogueWatcher {
   private final DialoguePrefetchCoordinator prefetchCoordinator;
   private final DialogueAudioService audioService;
 
-  private String lastSpoken = "";
+  private final Map<Speaker, String> lastSpokenBySpeaker = new EnumMap<>(Speaker.class);
+
   private boolean wasDialogueOpen;
   private boolean wasFullyClosed;
 
@@ -65,7 +69,7 @@ public final class DialogueWatcher {
     boolean dialogueOpen = npcVisible || playerVisible;
     if (shouldInterruptOnClose(dialogueOpen, wasDialogueOpen)) {
       audioService.interrupt();
-      lastSpoken = "";
+      lastSpokenBySpeaker.clear();
     }
     wasDialogueOpen = dialogueOpen;
 
@@ -83,10 +87,10 @@ public final class DialogueWatcher {
   private void speakIfNew(
       Widget dialogue, int headWidgetId, Speaker speaker, Supplier<String> npcName) {
     String text = dialogue.getText();
-    if (text == null || text.isEmpty() || text.equals(lastSpoken)) {
+    if (text == null || text.isEmpty() || text.equals(lastSpokenBySpeaker.get(speaker))) {
       return;
     }
-    lastSpoken = text;
+    lastSpokenBySpeaker.put(speaker, text);
     dispatcher.speakDialogue(
         textCleaner.clean(text),
         speaker,

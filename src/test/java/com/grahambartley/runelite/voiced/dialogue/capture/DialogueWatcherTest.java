@@ -23,10 +23,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * The per-tick dialogue scan: speaks a new NPC or player line once (deduped against the last spoken
- * text) and edge-triggers both the close interrupt and the prefetch reset only on the
- * open-&gt;closed transition, so idle ticks never truncate a playing public-chat clip nor churn the
- * prefetch session.
+ * The per-tick dialogue scan: speaks a new NPC or player line once (deduped per speaker against the
+ * last text that speaker said) and edge-triggers both the close interrupt and the prefetch reset
+ * only on the open-&gt;closed transition, so idle ticks never truncate a playing public-chat clip
+ * nor churn the prefetch session.
  */
 @RunWith(JUnitParamsRunner.class)
 public class DialogueWatcherTest {
@@ -52,6 +52,13 @@ public class DialogueWatcherTest {
     when(widgetReader.currentNpcName()).thenReturn("Bob");
   }
 
+  private Widget visibleWidget(String text) {
+    Widget widget = mock(Widget.class);
+    when(widget.isHidden()).thenReturn(false);
+    when(widget.getText()).thenReturn(text);
+    return widget;
+  }
+
   private Object[] interruptOnCloseCases() {
     return new Object[] {
       // dialogue just closed -> cut its audio once
@@ -74,9 +81,7 @@ public class DialogueWatcherTest {
 
   @Test
   public void newNpcLineIsSpokenOnceThenDeduped() {
-    Widget npc = mock(Widget.class);
-    when(npc.isHidden()).thenReturn(false);
-    when(npc.getText()).thenReturn("Greetings!");
+    Widget npc = visibleWidget("Greetings!");
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc);
 
     watcher.tick();
@@ -87,10 +92,19 @@ public class DialogueWatcherTest {
   }
 
   @Test
+  public void newPlayerLineIsSpokenOnceThenDeduped() {
+    Widget player = visibleWidget("Yes.");
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(dispatcher, times(1)).speakDialogue(eq("Yes."), eq(Speaker.PLAYER), isNull(), anyInt());
+  }
+
+  @Test
   public void aPlayerLineSpeaksAsThePlayerWithNoNpcName() {
-    Widget player = mock(Widget.class);
-    when(player.isHidden()).thenReturn(false);
-    when(player.getText()).thenReturn("Hello there.");
+    Widget player = visibleWidget("Hello there.");
     when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
 
     watcher.tick();
@@ -99,10 +113,52 @@ public class DialogueWatcherTest {
   }
 
   @Test
+  public void anNpcLineFollowedByAnIdenticalPlayerLineSpeaksBoth() {
+    Widget npc = visibleWidget("Yes.");
+    Widget player = visibleWidget("Yes.");
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(null, player);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(dispatcher).speakDialogue(eq("Yes."), eq(Speaker.NPC), eq("Bob"), anyInt());
+    verify(dispatcher).speakDialogue(eq("Yes."), eq(Speaker.PLAYER), isNull(), anyInt());
+  }
+
+  @Test
+  public void aPlayerLineFollowedByAnIdenticalNpcLineSpeaksBoth() {
+    Widget player = visibleWidget("Okay.");
+    Widget npc = visibleWidget("Okay.");
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player, (Widget) null);
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(null, npc);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(dispatcher).speakDialogue(eq("Okay."), eq(Speaker.PLAYER), isNull(), anyInt());
+    verify(dispatcher).speakDialogue(eq("Okay."), eq(Speaker.NPC), eq("Bob"), anyInt());
+  }
+
+  @Test
+  public void reopenedDialogueRepeatsTheSameLineAfterTheCloseResetsBothSpeakers() {
+    Widget npc = visibleWidget("Greetings!");
+    Widget player = visibleWidget("Yes.");
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, null, npc);
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player, null, player);
+
+    watcher.tick();
+    watcher.tick();
+    watcher.tick();
+
+    verify(dispatcher, times(2))
+        .speakDialogue(eq("Greetings!"), eq(Speaker.NPC), eq("Bob"), anyInt());
+    verify(dispatcher, times(2)).speakDialogue(eq("Yes."), eq(Speaker.PLAYER), isNull(), anyInt());
+  }
+
+  @Test
   public void dialogueClosingInterruptsAudioAndResetsPrefetch() {
-    Widget npc = mock(Widget.class);
-    when(npc.isHidden()).thenReturn(false);
-    when(npc.getText()).thenReturn("Greetings!");
+    Widget npc = visibleWidget("Greetings!");
     // Open on the first tick, gone on the second.
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
 
