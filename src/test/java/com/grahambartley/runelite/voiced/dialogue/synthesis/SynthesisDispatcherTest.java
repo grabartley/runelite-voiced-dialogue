@@ -16,22 +16,21 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.CaveEchoPolicy;
 import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.voice.EmotionResolver;
-import com.grahambartley.runelite.voiced.dialogue.voice.ProfileResolver;
+import com.grahambartley.runelite.voiced.dialogue.voice.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 /**
- * The single place a dialogue or public-chat line becomes a {@link SynthesisRequest}: voice,
- * emotion, profile, player flag, and the cave-echo gate are all assembled here, behind one
+ * The single place a dialogue or public-chat line becomes a {@link SynthesisRequest}: the resolved
+ * speaker, emotion, player flag, and the cave-echo gate are all assembled here, behind one
  * availability guard, and handed to the off-thread audio service.
  */
 public class SynthesisDispatcherTest {
 
   private final VoiceManager voiceManager = mock(VoiceManager.class);
   private final EmotionResolver emotionResolver = mock(EmotionResolver.class);
-  private final ProfileResolver profileResolver = mock(ProfileResolver.class);
   private final CaveEchoPolicy caveEchoPolicy = mock(CaveEchoPolicy.class);
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
   private final BackendProvider backendProvider = mock(BackendProvider.class);
@@ -40,13 +39,7 @@ public class SynthesisDispatcherTest {
 
   private final SynthesisDispatcher dispatcher =
       new SynthesisDispatcher(
-          voiceManager,
-          emotionResolver,
-          profileResolver,
-          caveEchoPolicy,
-          config,
-          backendProvider,
-          audioService);
+          voiceManager, emotionResolver, caveEchoPolicy, config, backendProvider, audioService);
 
   @Before
   public void setUp() {
@@ -59,9 +52,9 @@ public class SynthesisDispatcherTest {
     when(config.cloudEmotion()).thenReturn(true);
     VoiceSpec spec = mock(VoiceSpec.class);
     CharacterProfile profile = mock(CharacterProfile.class);
-    when(voiceManager.resolveVoice(VoiceManager.SPEAKER_NPC, "Bob")).thenReturn(spec);
+    when(voiceManager.resolve(VoiceManager.SPEAKER_NPC, "Bob"))
+        .thenReturn(new ResolvedSpeaker(spec, profile));
     when(emotionResolver.resolve(614, true)).thenReturn(Emotion.ANGRY);
-    when(profileResolver.resolve(VoiceManager.SPEAKER_NPC, "Bob")).thenReturn(profile);
     when(caveEchoPolicy.shouldEcho()).thenReturn(true);
 
     dispatcher.speakDialogue("Grr!", VoiceManager.SPEAKER_NPC, "Bob", 614);
@@ -81,7 +74,8 @@ public class SynthesisDispatcherTest {
   public void publicChatIsNeutralPlayerTranslationBypassed() {
     when(backend.isAvailable()).thenReturn(true);
     VoiceSpec spec = mock(VoiceSpec.class);
-    when(voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null)).thenReturn(spec);
+    when(voiceManager.resolve(VoiceManager.SPEAKER_PLAYER, null))
+        .thenReturn(new ResolvedSpeaker(spec, null));
     when(caveEchoPolicy.shouldEcho()).thenReturn(false);
 
     dispatcher.speakPublicChat("hello world");
@@ -98,6 +92,9 @@ public class SynthesisDispatcherTest {
   @Test
   public void nothingIsSpokenWhenTheBackendIsUnavailable() {
     when(backend.isAvailable()).thenReturn(false);
+    ResolvedSpeaker resolved = new ResolvedSpeaker(mock(VoiceSpec.class), null);
+    when(voiceManager.resolve(VoiceManager.SPEAKER_NPC, "Bob")).thenReturn(resolved);
+    when(voiceManager.resolve(VoiceManager.SPEAKER_PLAYER, null)).thenReturn(resolved);
 
     dispatcher.speakDialogue("Grr!", VoiceManager.SPEAKER_NPC, "Bob", 614);
     dispatcher.speakPublicChat("hello");

@@ -5,8 +5,8 @@ import static org.junit.Assert.assertSame;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import java.util.EnumSet;
 import org.junit.Test;
 
@@ -62,7 +62,7 @@ public class BackendProviderTest {
   }
 
   private static SynthesisRequest req(Emotion emotion) {
-    return new SynthesisRequest("hi", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), emotion);
+    return new SynthesisRequest("hi", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), emotion);
   }
 
   @Test

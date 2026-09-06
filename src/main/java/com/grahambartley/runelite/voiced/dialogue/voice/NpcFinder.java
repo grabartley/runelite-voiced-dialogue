@@ -19,7 +19,7 @@ final class NpcFinder {
   }
 
   NPC findByName(String targetName) {
-    if (client == null || client.getNpcs() == null) {
+    if (client.getNpcs() == null) {
       return null;
     }
 

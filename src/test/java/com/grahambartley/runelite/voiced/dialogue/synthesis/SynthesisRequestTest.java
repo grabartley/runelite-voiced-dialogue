@@ -5,8 +5,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import org.junit.Test;
 
 /**
@@ -17,7 +17,7 @@ import org.junit.Test;
  */
 public class SynthesisRequestTest {
 
-  private static final VoiceSpec VOICE = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+  private static final VoiceSpec VOICE = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
   @Test
   public void shortConstructorDefaultsToTranslating() {

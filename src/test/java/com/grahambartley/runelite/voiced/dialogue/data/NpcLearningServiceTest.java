@@ -28,7 +28,7 @@ public class NpcLearningServiceTest {
   public void setUp() throws Exception {
     server = new MockWebServer();
     server.start();
-    client = new WikiNpcClient(new OkHttpClient(), gson, server.url("/api.php").toString());
+    client = new WikiNpcClient(new OkHttpClient(), server.url("/api.php").toString());
     store = new LearnedNpcStore(Files.createTempDirectory("learn").resolve("l.json"), gson);
   }
 

@@ -28,7 +28,6 @@ import com.grahambartley.runelite.voiced.dialogue.tts.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.tts.DiskAudioCache;
 import com.grahambartley.runelite.voiced.dialogue.tts.StreamingAudioPlayer;
 import com.grahambartley.runelite.voiced.dialogue.voice.EmotionResolver;
-import com.grahambartley.runelite.voiced.dialogue.voice.ProfileResolver;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
 import java.nio.file.Path;
 import java.util.List;
@@ -120,7 +119,7 @@ public class VoicedDialoguePlugin extends Plugin {
   @Override
   protected void startUp() {
     pinProviderForExistingOpenRouterPlayers();
-    VoiceManager voiceManager = new VoiceManager(config, client);
+    VoiceManager voiceManager = VoiceManager.create(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
     // Runtime "learn a new NPC" fallback: the learned cache is always consulted (so previously
@@ -136,10 +135,7 @@ public class VoicedDialoguePlugin extends Plugin {
             });
     NpcLearningService learningService =
         new NpcLearningService(
-            new WikiNpcClient(okHttpClient, gson),
-            learnedStore,
-            wikiExecutor,
-            config::autoLearnNewNpcs);
+            new WikiNpcClient(okHttpClient), learnedStore, wikiExecutor, config::autoLearnNewNpcs);
     voiceManager.enableLearning(learnedStore, learningService);
 
     noticeManager =
@@ -198,20 +194,18 @@ public class VoicedDialoguePlugin extends Plugin {
             audioService::prefetch, audioService::cancelPrefetch, config::prefetch);
 
     textCleaner = new DialogueTextCleaner(new ProfanityFilter());
-    ProfileResolver profileResolver = new ProfileResolver(voiceManager, config);
     CaveEchoPolicy caveEchoPolicy = new CaveEchoPolicy(client, config);
     synthesisDispatcher =
         new SynthesisDispatcher(
             voiceManager,
             new EmotionResolver(),
-            profileResolver,
             caveEchoPolicy,
             config,
             backendProvider,
             audioService);
     DialoguePrefetchCoordinator prefetchCoordinator =
         new DialoguePrefetchCoordinator(
-            voiceManager, profileResolver, textCleaner, prefetcher, backendProvider, config);
+            voiceManager, textCleaner, prefetcher, backendProvider, config);
     dialogueWatcher =
         new DialogueWatcher(
             client,

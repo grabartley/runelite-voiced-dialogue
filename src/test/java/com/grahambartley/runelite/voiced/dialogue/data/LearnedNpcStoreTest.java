@@ -1,7 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.Gson;
 import java.nio.file.Files;
@@ -20,13 +22,15 @@ public class LearnedNpcStoreTest {
 
     store.learn(123, "Dwarf", "Female", "kharidian");
 
-    NPCAttributes a = store.get(123);
+    NpcAttributes a = store.get(123);
     assertEquals("Dwarf", a.getRace());
     assertEquals("Female", a.getGender());
     assertEquals("kharidian", a.getEthnicity());
-    assertEquals("Learned", a.getSource());
+    assertEquals(AttributeSource.LEARNED, a.getSource());
     assertEquals(123, a.getNpcId());
     assertNull("an unlearned id is absent", store.get(999));
+    assertTrue("a learned id is present", store.contains(123));
+    assertFalse("an unlearned id is absent", store.contains(999));
   }
 
   @Test
@@ -35,7 +39,7 @@ public class LearnedNpcStoreTest {
     new LearnedNpcStore(file, gson).learn(456, "Human", "Male", null);
 
     LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
-    NPCAttributes a = reloaded.get(456);
+    NpcAttributes a = reloaded.get(456);
     assertEquals("Human", a.getRace());
     assertEquals("Male", a.getGender());
     assertNull("a null ethnicity is not persisted", a.getEthnicity());

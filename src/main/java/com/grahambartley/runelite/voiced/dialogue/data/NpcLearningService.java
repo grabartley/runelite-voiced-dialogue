@@ -42,12 +42,12 @@ public final class NpcLearningService {
     if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty()) {
       return;
     }
-    if (store.get(npcId) != null || !attempted.add(npcId)) {
+    if (store.contains(npcId) || !attempted.add(npcId)) {
       return;
     }
     executor.execute(
         () -> {
-          NPCAttributes attributes = client.lookup(npcName);
+          NpcAttributes attributes = client.lookup(npcName);
           if (attributes == null) {
             log.debug("[TTS learn] wiki had no usable entry for '{}' (id {})", npcName, npcId);
             return;

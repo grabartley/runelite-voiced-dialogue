@@ -2,24 +2,24 @@ package com.grahambartley.runelite.voiced.dialogue.voice;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.data.LearnedNpcStore;
-import com.grahambartley.runelite.voiced.dialogue.data.NPCAttributes;
-import com.grahambartley.runelite.voiced.dialogue.data.NPCDemographicAnalyzer;
+import com.grahambartley.runelite.voiced.dialogue.data.NpcAttributes;
+import com.grahambartley.runelite.voiced.dialogue.data.NpcDemographicAnalyzer;
 import com.grahambartley.runelite.voiced.dialogue.data.NpcLearningService;
 import com.grahambartley.runelite.voiced.dialogue.data.NpcProfileTable;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.NPC;
 
 /**
  * Resolves an NPC (or the player) to a backend-neutral {@link VoiceSpec} and the per-speaker {@link
- * CharacterProfile}. A thin facade over focused collaborators: NPC lookup ({@link NpcFinder}),
- * voice resolution ({@link NpcVoiceResolver}), and trace formatting ({@link VoiceTraceFormatter}).
+ * CharacterProfile}. A thin facade over focused collaborators: NPC identity ({@link
+ * NpcIdentityResolver}), voice resolution ({@link NpcVoiceResolver}), profile layering ({@link
+ * NpcProfileTable}), and trace formatting ({@link VoiceTraceFormatter}).
  *
  * <p>The spec carries the detected race and gender so the cloud backend can map them to its own
  * voice bank, plus a stable per-NPC variety seed so same-race/gender NPCs are spread across a
- * sub-pool and sound distinct (#78).
+ * sub-pool and sound distinct.
  */
 @Slf4j
 public class VoiceManager {
@@ -29,48 +29,25 @@ public class VoiceManager {
 
   public static final String SPEAKER_NPC = "npc";
 
-  public enum NPCRace {
-    HUMAN,
-    ELF,
-    DWARF,
-    GOBLIN,
-    MONKEY,
-    GORILLA,
-    TROLL,
-    UNDEAD,
-    DEMON,
-    WIZARD,
-    TORTUGAN,
-    ICYENE,
-    ARCEUUS,
-    UNKNOWN
-  }
-
-  public enum NPCGender {
-    MALE,
-    FEMALE,
-    UNKNOWN
-  }
-
   /**
    * The two selectable player voices, kept deliberately opaque ("Type A" / "Type B") so the config
    * exposes a simple either/or. Each just fixes the player's gender, which then drives the cloud
    * voice.
    */
   public enum PlayerVoice {
-    TYPE_A(NPCGender.MALE, "Type A"),
-    TYPE_B(NPCGender.FEMALE, "Type B");
+    TYPE_A(NpcGender.MALE, "Type A"),
+    TYPE_B(NpcGender.FEMALE, "Type B");
 
-    private final NPCGender gender;
+    private final NpcGender gender;
     private final String label;
 
-    PlayerVoice(NPCGender gender, String label) {
+    PlayerVoice(NpcGender gender, String label) {
       this.gender = gender;
       this.label = label;
     }
 
     /** The gender this player voice fixes for cloud voice resolution. */
-    public NPCGender getGender() {
+    public NpcGender getGender() {
       return gender;
     }
 
@@ -81,20 +58,31 @@ public class VoiceManager {
   }
 
   private final VoicedDialogueConfig config;
-  private final NPCDemographicAnalyzer demographicAnalyzer;
+  private final NpcDemographicAnalyzer demographicAnalyzer;
   private final NpcProfileTable profileTable;
-  private final NpcFinder npcFinder;
+  private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
 
-  public VoiceManager(VoicedDialogueConfig config, Client client) {
+  /** Builds a manager over freshly loaded copies of both bundled tables. */
+  public static VoiceManager create(VoicedDialogueConfig config, Client client) {
+    NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
+    demographicAnalyzer.initialize();
+    NpcProfileTable profileTable = new NpcProfileTable();
+    profileTable.initialize();
+    return new VoiceManager(config, client, demographicAnalyzer, profileTable);
+  }
+
+  public VoiceManager(
+      VoicedDialogueConfig config,
+      Client client,
+      NpcDemographicAnalyzer demographicAnalyzer,
+      NpcProfileTable profileTable) {
     this.config = config;
-    this.demographicAnalyzer = new NPCDemographicAnalyzer();
-    this.demographicAnalyzer.initialize();
-    this.profileTable = new NpcProfileTable();
-    this.profileTable.initialize();
-    this.npcFinder = new NpcFinder(client);
-    this.npcVoiceResolver =
-        new NpcVoiceResolver(config, demographicAnalyzer, npcFinder, profileTable::isChildName);
+    this.demographicAnalyzer = demographicAnalyzer;
+    this.profileTable = profileTable;
+    this.identityResolver =
+        new NpcIdentityResolver(new NpcFinder(client), demographicAnalyzer, profileTable);
+    this.npcVoiceResolver = new NpcVoiceResolver(config);
   }
 
   /**
@@ -108,40 +96,60 @@ public class VoiceManager {
   }
 
   /**
-   * Resolves the {@link CharacterProfile} steering a line's delivery: the player's configured
-   * profile for player lines, or the NPC profile built by combining every matching layer (default,
-   * race, every keyword category that matches, and any per-NPC override) keyed on the NPC's
-   * composition id and display name. Never returns {@code null}.
+   * Resolves who is speaking a line, once: the NPC behind the name is looked up a single time and
+   * both the voice and the profile are derived from that one result. The player uses the gender of
+   * the configured player voice and their configured profile; an NPC uses its detected race and
+   * gender plus a stable per-NPC variety seed, and the profile built by combining every matching
+   * layer (default, race, ethnicity, every keyword category that matches, and any per-NPC
+   * override).
+   *
+   * <p>The profile is {@code null} when character profiles are switched off, which keeps the
+   * request and its synthesis cache key identical to what a profile-free resolution produces.
    */
-  public CharacterProfile resolveProfile(String speaker, String npcName) {
+  public ResolvedSpeaker resolve(String speaker, String npcName) {
+    boolean withProfile = config.cloudCharacterProfiles();
     if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
-      CharacterProfile profile =
-          profileTable.resolvePlayer(
-              config.playerAccent(), config.playerPersona(), config.playerPace());
-      if (config.debugMode()) {
-        log.info("[TTS profile] player -> '{}' accent='{}'", profile.name(), profile.accent());
-      }
-      return profile;
+      return new ResolvedSpeaker(playerVoice(), withProfile ? playerProfile() : null);
     }
 
-    Integer npcId = null;
+    NpcIdentity identity = identityResolver.resolve(npcName);
+    VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
+    return new ResolvedSpeaker(voice, withProfile ? npcProfile(npcName, identity) : null);
+  }
+
+  private VoiceSpec playerVoice() {
+    NpcGender gender = config.playerVoice().getGender();
+    if (config.debugMode()) {
+      log.info(VoiceTraceFormatter.buildPlayerTrace(gender));
+    }
+    return VoiceSpec.player(gender);
+  }
+
+  private CharacterProfile playerProfile() {
+    CharacterProfile profile =
+        profileTable.resolvePlayer(
+            config.playerAccent(), config.playerPersona(), config.playerPace());
+    if (config.debugMode()) {
+      log.info("[TTS profile] player -> '{}' accent='{}'", profile.name(), profile.accent());
+    }
+    return profile;
+  }
+
+  private CharacterProfile npcProfile(String npcName, NpcIdentity identity) {
+    Integer npcId = identity.worldId();
     String race = null;
     String ethnicity = null;
-    NPC npc = npcFinder.findByName(npcName);
-    if (npc != null) {
-      npcId = npc.getId();
-      NPCAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
-      if (attributes != null) {
-        race = attributes.getRace();
-        ethnicity = attributes.getEthnicity();
-        // The id the analyzer actually matched (active or base), so a bespoke byId profile keyed by
-        // the wiki id resolves even for transformed multiloc NPCs.
-        npcId = attributes.getNpcId();
-      }
+    NpcAttributes attributes = identity.attributes();
+    if (attributes != null) {
+      race = attributes.getRace();
+      ethnicity = attributes.getEthnicity();
+      // The id the analyzer actually matched (active or base), so a bespoke byId profile keyed by
+      // the wiki id resolves even for transformed multiloc NPCs.
+      npcId = attributes.getNpcId();
     }
 
     NpcProfileTable.Resolution resolution =
-        profileTable.resolveNpc(npcId, npcName, race, ethnicity);
+        profileTable.resolveNpc(npcId, identity.nameMatch(), race, ethnicity);
     if (config.debugMode()) {
       log.info(
           "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}')",
@@ -154,26 +162,5 @@ public class VoiceManager {
           resolution.profile().accent());
     }
     return resolution.profile();
-  }
-
-  /**
-   * Resolves a backend-neutral {@link VoiceSpec} for a line of dialogue. The player uses the gender
-   * of the configured player voice; an NPC uses its detected race and gender plus a stable per-NPC
-   * variety seed the cloud backend spreads across its voice sub-pool.
-   */
-  public VoiceSpec resolveVoice(String speaker, String npcName) {
-    if (SPEAKER_PLAYER.equalsIgnoreCase(speaker)) {
-      NPCGender gender = playerGender();
-      if (config != null && config.debugMode()) {
-        log.info(VoiceTraceFormatter.buildPlayerTrace(gender));
-      }
-      return VoiceSpec.player(gender);
-    }
-    return npcVoiceResolver.resolve(npcName);
-  }
-
-  /** Gender implied by the configured player voice. */
-  private NPCGender playerGender() {
-    return config.playerVoice().getGender();
   }
 }

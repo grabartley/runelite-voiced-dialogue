@@ -1,9 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.data;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.voice.RaceBucket;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -40,22 +40,23 @@ public final class WikiNpcClient {
   private static final Pattern LOCATION = field("location");
   private static final Pattern MENAPHITE =
       Pattern.compile("sophanem|menaphos|menaphite|necropolis", Pattern.CASE_INSENSITIVE);
+  private static final Pattern REF_TAG = Pattern.compile("<ref[^>]*>.*?</ref>");
+  private static final Pattern HTML_TAG = Pattern.compile("<[^>]+>");
+  private static final Pattern TEMPLATE = Pattern.compile("\\{\\{[^}]*\\}\\}");
 
   private static Pattern field(String key) {
     return Pattern.compile("\\|\\s*" + key + "\\d*\\s*=\\s*([^\\n|]+)", Pattern.CASE_INSENSITIVE);
   }
 
   private final OkHttpClient httpClient;
-  private final Gson gson;
   private final String api;
 
-  public WikiNpcClient(OkHttpClient httpClient, Gson gson) {
-    this(httpClient, gson, PRODUCTION_API);
+  public WikiNpcClient(OkHttpClient httpClient) {
+    this(httpClient, PRODUCTION_API);
   }
 
-  WikiNpcClient(OkHttpClient httpClient, Gson gson, String api) {
+  WikiNpcClient(OkHttpClient httpClient, String api) {
     this.httpClient = httpClient.newBuilder().callTimeout(CALL_TIMEOUT).build();
-    this.gson = gson;
     this.api = api;
   }
 
@@ -63,7 +64,7 @@ public final class WikiNpcClient {
    * Resolves race/gender/ethnicity for an NPC by wiki page name, or {@code null} when it cannot be
    * found or parsed. The returned attributes carry source {@code "Wiki"}.
    */
-  public NPCAttributes lookup(String npcName) {
+  public NpcAttributes lookup(String npcName) {
     if (npcName == null || npcName.trim().isEmpty()) {
       return null;
     }
@@ -99,8 +100,7 @@ public final class WikiNpcClient {
       String gender = normaliseGender(firstField(GENDER, wikitext));
       String ethnicity =
           ethnicityKey(firstField(LEAGUE_REGION, wikitext), firstField(LOCATION, wikitext));
-      NPCAttributes attributes = new NPCAttributes(race, gender, "Wiki", 0.9);
-      attributes.setName(npcName);
+      NpcAttributes attributes = new NpcAttributes(race, gender, AttributeSource.WIKI);
       attributes.setEthnicity(ethnicity);
       return attributes;
     } catch (Exception e) {
@@ -141,53 +141,24 @@ public final class WikiNpcClient {
       return null;
     }
     String value = m.group(1);
-    value = value.replaceAll("<ref[^>]*>.*?</ref>", "");
-    value = value.replaceAll("<[^>]+>", "");
+    value = REF_TAG.matcher(value).replaceAll("");
+    value = HTML_TAG.matcher(value).replaceAll("");
     value = value.replace("[[", "").replace("]]", "");
-    value = value.replaceAll("\\{\\{[^}]*\\}\\}", "");
+    value = TEMPLATE.matcher(value).replaceAll("");
     return value.trim();
   }
 
-  /** Maps wiki race text onto a voice bucket; mirrors RACE_BUCKET_RULES in the generator. */
+  /**
+   * Maps wiki race text onto the voice bucket name stored in the tables. Anything the shared {@link
+   * RaceBucket} table does not recognise is a person until proven otherwise, so an obscure race
+   * still gets a human voice rather than none.
+   */
   static String bucketForRace(String raceText) {
     if (raceText == null || raceText.isEmpty()) {
       return null;
     }
-    String t = raceText.toLowerCase(Locale.ROOT);
-    if (t.matches(
-        ".*(vampyre|vampire|\\bvyre\\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|revenant|"
-            + "mummy|banshee|spectre|wraith|ankou|lich|reanimat).*")) {
-      return "Undead";
-    }
-    if (t.matches(
-        ".*(demon|devil|\\bimp\\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal).*")) {
-      return "Demon";
-    }
-    if (t.matches(".*gnome.*")) {
-      return "Gnome";
-    }
-    if (t.matches(".*(goblin|hobgoblin).*")) {
-      return "Goblin";
-    }
-    if (t.matches(".*(monkey|gorilla|primate|baboon|mandril).*")) {
-      return "Monkey";
-    }
-    if (t.matches(".*(dwarf|dwarven).*")) {
-      return "Dwarf";
-    }
-    if (t.matches(".*(\\belf\\b|\\belves\\b|elven).*")) {
-      return "Elf";
-    }
-    if (t.matches(".*(troll|\\bgiant\\b|cyclops|ogre|\\bent\\b|\\bgolem\\b).*")) {
-      return "Troll";
-    }
-    if (t.matches(".*(wizard|sorcerer|sorceress|necromancer|\\bmage\\b).*")) {
-      return "Wizard";
-    }
-    if (t.matches(".*(\\bhuman\\b|\\bman\\b|\\bwoman\\b).*")) {
-      return "Human";
-    }
-    return "Human";
+    RaceBucket bucket = RaceBucket.forWikiText(raceText);
+    return bucket == null ? RaceBucket.HUMAN.bucketName() : bucket.bucketName();
   }
 
   private static String normaliseGender(String genderText) {

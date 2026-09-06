@@ -2,8 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.voice;
 
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
 import org.junit.Test;
 
 /** The debug voice-resolution trace strings. */
@@ -13,7 +11,7 @@ public class VoiceTraceFormatterTest {
   public void buildNpcTraceShowsWorldHitSourceAndSeed() {
     String trace =
         VoiceTraceFormatter.buildNpcTrace(
-            "Goblin", 101, NPCRace.GOBLIN, NPCGender.MALE, false, "table-hit", 24);
+            "Goblin", 101, NpcRace.GOBLIN, NpcGender.MALE, false, "table-hit", 24);
     assertTrue(trace, trace.contains("npc='Goblin'"));
     assertTrue(trace, trace.contains("world=HIT(id=101)"));
     assertTrue(trace, trace.contains("race=GOBLIN"));
@@ -26,7 +24,7 @@ public class VoiceTraceFormatterTest {
   public void buildNpcTraceShowsWorldMissForUntabledNpc() {
     String trace =
         VoiceTraceFormatter.buildNpcTrace(
-            "Hans", null, NPCRace.UNKNOWN, NPCGender.UNKNOWN, false, "not-in-world", 26);
+            "Hans", null, NpcRace.UNKNOWN, NpcGender.UNKNOWN, false, "not-in-world", 26);
     assertTrue(trace, trace.contains("world=MISS"));
     assertTrue(trace, trace.contains("race=UNKNOWN"));
     assertTrue(trace, trace.contains("seed=26"));
@@ -40,8 +38,8 @@ public class VoiceTraceFormatterTest {
             false,
             "Hans",
             "HAPPY",
-            NPCRace.HUMAN,
-            NPCGender.MALE,
+            NpcRace.HUMAN,
+            NpcGender.MALE,
             false,
             26,
             "Hans",
@@ -67,8 +65,8 @@ public class VoiceTraceFormatterTest {
             true,
             null,
             "NEUTRAL",
-            NPCRace.HUMAN,
-            NPCGender.FEMALE,
+            NpcRace.HUMAN,
+            NpcGender.FEMALE,
             false,
             -1,
             null,
@@ -84,7 +82,7 @@ public class VoiceTraceFormatterTest {
   public void buildNpcTraceShowsChildAge() {
     String trace =
         VoiceTraceFormatter.buildNpcTrace(
-            "Shilop", 3501, NPCRace.HUMAN, NPCGender.MALE, true, "table-hit", 12);
+            "Shilop", 3501, NpcRace.HUMAN, NpcGender.MALE, true, "table-hit", 12);
     assertTrue(trace, trace.contains("lifeStage=child"));
   }
 
@@ -96,8 +94,8 @@ public class VoiceTraceFormatterTest {
             false,
             "Shilop",
             "HAPPY",
-            NPCRace.HUMAN,
-            NPCGender.MALE,
+            NpcRace.HUMAN,
+            NpcGender.MALE,
             true,
             12,
             "Shilop",
@@ -107,7 +105,7 @@ public class VoiceTraceFormatterTest {
 
   @Test
   public void buildPlayerTraceShowsGender() {
-    String trace = VoiceTraceFormatter.buildPlayerTrace(NPCGender.FEMALE);
+    String trace = VoiceTraceFormatter.buildPlayerTrace(NpcGender.FEMALE);
     assertTrue(trace, trace.contains("player ->"));
     assertTrue(trace, trace.contains("gender=FEMALE"));
   }

@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
@@ -30,18 +31,18 @@ public class VoiceSpec {
   public static final int UNSPECIFIED_SEED = -1;
 
   boolean player;
-  VoiceManager.NPCRace race;
-  VoiceManager.NPCGender gender;
+  NpcRace race;
+  NpcGender gender;
   int voiceSeed;
   boolean child;
 
   /** A player voice of the given gender. Race is not meaningful for the player. */
-  public static VoiceSpec player(VoiceManager.NPCGender gender) {
-    return new VoiceSpec(true, VoiceManager.NPCRace.HUMAN, gender, UNSPECIFIED_SEED, false);
+  public static VoiceSpec player(NpcGender gender) {
+    return new VoiceSpec(true, NpcRace.HUMAN, gender, UNSPECIFIED_SEED, false);
   }
 
   /** An NPC voice for the given race and gender, with no per-NPC variety seed. */
-  public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender) {
+  public static VoiceSpec npc(NpcRace race, NpcGender gender) {
     return new VoiceSpec(false, race, gender, UNSPECIFIED_SEED, false);
   }
 
@@ -50,7 +51,7 @@ public class VoiceSpec {
    * same-race/gender NPCs across a gender sub-pool. A negative seed is normalised to {@link
    * #UNSPECIFIED_SEED} so it is treated as absent.
    */
-  public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed) {
+  public static VoiceSpec npc(NpcRace race, NpcGender gender, int seed) {
     return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, false);
   }
 
@@ -58,8 +59,7 @@ public class VoiceSpec {
    * An NPC voice additionally carrying the child flag, so a young NPC resolves to the youthful
    * voice sub-pool of its gender rather than its adult race anchor.
    */
-  public static VoiceSpec npc(
-      VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed, boolean child) {
+  public static VoiceSpec npc(NpcRace race, NpcGender gender, int seed, boolean child) {
     return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, child);
   }
 

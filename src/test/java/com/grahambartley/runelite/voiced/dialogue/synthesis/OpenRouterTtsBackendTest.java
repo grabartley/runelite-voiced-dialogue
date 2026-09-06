@@ -19,8 +19,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,7 +102,7 @@ public class OpenRouterTtsBackendTest {
 
   private static SynthesisRequest req() {
     return new SynthesisRequest(
-        "Hello & welcome", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        "Hello & welcome", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
   }
 
   @Test
@@ -146,7 +146,7 @@ public class OpenRouterTtsBackendTest {
 
     SynthesisRequest request =
         new SynthesisRequest(
-            "Hello & welcome", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), emotion);
+            "Hello & welcome", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), emotion);
     backend(keyedConfig()).synthesize(request);
 
     return sentBody().get("input").getAsString();
@@ -202,7 +202,7 @@ public class OpenRouterTtsBackendTest {
     enqueuePcm((short) 1);
 
     SynthesisRequest female =
-        new SynthesisRequest("Hi", VoiceSpec.npc(NPCRace.ELF, NPCGender.FEMALE), Emotion.NEUTRAL);
+        new SynthesisRequest("Hi", VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE), Emotion.NEUTRAL);
     backend(keyedConfig()).synthesize(female);
 
     assertEquals(
@@ -216,9 +216,9 @@ public class OpenRouterTtsBackendTest {
     OpenRouterTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
     SynthesisRequest elfFemale =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.ELF, NPCGender.FEMALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE), Emotion.NEUTRAL);
 
     String variant = backend.cacheVariant(humanMale);
     assertTrue(
@@ -242,7 +242,7 @@ public class OpenRouterTtsBackendTest {
         .synthesize(
             new SynthesisRequest(
                 "You no take candle!",
-                VoiceSpec.npc(NPCRace.TROLL, NPCGender.MALE),
+                VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE),
                 Emotion.ANGRY,
                 TestFixtures.TROLL_PROFILE,
                 false,
@@ -262,7 +262,7 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void cacheVariantFoldsInProfileSoDifferentProfilesNeverCollide() {
     OpenRouterTtsBackend backend = backend(new MutableTestConfig());
-    VoiceSpec voice = VoiceSpec.npc(NPCRace.TROLL, NPCGender.MALE);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE);
     SynthesisRequest noProfile = new SynthesisRequest("a", voice, Emotion.NEUTRAL);
     SynthesisRequest withProfile =
         new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
@@ -297,7 +297,7 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = new MutableTestConfig();
     OpenRouterTtsBackend backend = backend(config);
     SynthesisRequest line =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
 
     String atDefaultPace = backend.cacheVariant(line);
     config.speedPercent = 150;
@@ -312,10 +312,10 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = new MutableTestConfig();
     OpenRouterTtsBackend backend = backend(config);
     SynthesisRequest shortLine =
-        new SynthesisRequest("ab", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest("ab", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
     SynthesisRequest longLine =
         new SynthesisRequest(
-            "abcdef", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+            "abcdef", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
 
     String shortAtDefault = backend.cacheVariant(shortLine);
     String longAtDefault = backend.cacheVariant(longLine);
@@ -340,7 +340,7 @@ public class OpenRouterTtsBackendTest {
     backend(config)
         .synthesize(
             new SynthesisRequest(
-                longLine, VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL));
+                longLine, VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL));
 
     String input = sentBody().get("input").getAsString();
     assertTrue("the sent input respects the cap", input.length() <= 30);
@@ -403,7 +403,7 @@ public class OpenRouterTtsBackendTest {
     backend(config)
         .synthesize(
             new SynthesisRequest(
-                "Well met.", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL));
+                "Well met.", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL));
 
     RecordedRequest translation = server.takeRequest();
     assertTrue(
@@ -429,7 +429,7 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = new MutableTestConfig();
     OpenRouterTtsBackend backend = backend(config);
     SynthesisRequest line =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
 
     String plain = backend.cacheVariant(line);
     assertFalse("plain English with no style adds no language fragment", plain.contains("|l"));
@@ -444,7 +444,7 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = keyedConfig();
     config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
-    VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
     // The NPC line: NPC style None -> straight to speech, a single call, no translation hop.
     enqueuePcm((short) 1);
@@ -482,7 +482,7 @@ public class OpenRouterTtsBackendTest {
     config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
     OpenRouterTtsBackend backend = backend(config);
-    VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
     SynthesisRequest playerLine =
         new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, /* player= */ true);
     SynthesisRequest npcLine =
@@ -500,7 +500,7 @@ public class OpenRouterTtsBackendTest {
     config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     OpenRouterTtsBackend backend = backend(config);
-    VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
     SynthesisRequest playerLine =
         new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, /* player= */ true);
     SynthesisRequest npcLine =
@@ -519,7 +519,7 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = new MutableTestConfig();
     OpenRouterTtsBackend backend = backend(config);
     SynthesisRequest line =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
 
     String english = backend.cacheVariant(line);
     assertFalse("English (default) adds no language fragment", english.contains("|l"));
@@ -542,7 +542,7 @@ public class OpenRouterTtsBackendTest {
     backend(config)
         .synthesize(
             new SynthesisRequest(
-                "Hello", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL));
+                "Hello", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL));
 
     RecordedRequest first = server.takeRequest();
     assertTrue("the translation hop runs first", first.getPath().endsWith("/chat/completions"));
@@ -571,7 +571,7 @@ public class OpenRouterTtsBackendTest {
         .synthesize(
             new SynthesisRequest(
                 "Hello",
-                VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE),
+                VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
                 Emotion.NEUTRAL,
                 null,
                 true,
@@ -602,7 +602,7 @@ public class OpenRouterTtsBackendTest {
         .synthesize(
             new SynthesisRequest(
                 "Hello",
-                VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE),
+                VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
                 Emotion.NEUTRAL,
                 null,
                 false,
@@ -619,7 +619,7 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = new MutableTestConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     OpenRouterTtsBackend backend = backend(config);
-    VoiceSpec voice = VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
     SynthesisRequest dialogue =
         new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, false);

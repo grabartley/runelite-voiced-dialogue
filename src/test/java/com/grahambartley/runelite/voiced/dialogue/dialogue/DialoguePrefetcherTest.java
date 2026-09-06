@@ -6,8 +6,8 @@ import static org.junit.Assert.assertTrue;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
@@ -25,7 +25,7 @@ public class DialoguePrefetcherTest {
 
   private static SynthesisRequest req(String text) {
     return new SynthesisRequest(
-        text, VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        text, VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
   }
 
   private static List<SynthesisRequest> options(String... texts) {

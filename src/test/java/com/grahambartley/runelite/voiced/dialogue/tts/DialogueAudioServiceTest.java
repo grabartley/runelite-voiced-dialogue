@@ -13,8 +13,8 @@ import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.tts.TieredSynthesisCache.CacheKey;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -191,11 +191,11 @@ public class DialogueAudioServiceTest {
     return service(provider, output, disk, executor, 8, 100, false);
   }
 
-  private static SynthesisRequest req(String text, NPCRace race, NPCGender gender) {
+  private static SynthesisRequest req(String text, NpcRace race, NpcGender gender) {
     return new SynthesisRequest(text, VoiceSpec.npc(race, gender), Emotion.NEUTRAL);
   }
 
-  private static SynthesisRequest req(String text, NPCRace race, NPCGender gender, Emotion e) {
+  private static SynthesisRequest req(String text, NpcRace race, NpcGender gender, Emotion e) {
     return new SynthesisRequest(text, VoiceSpec.npc(race, gender), e);
   }
 
@@ -206,9 +206,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Hello adventurer", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
-    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Hello adventurer", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("second identical line should hit the cache", 1, backend.requests.size());
@@ -222,7 +222,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Hello", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("a live miss opens a stream", 1, output.beginStreamCalls);
@@ -239,7 +239,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Hello", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("the toggle off keeps the buffered path", 1, output.streamCalls);
@@ -253,9 +253,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Encore", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Encore", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
-    svc.speak(req("Encore", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Encore", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("the streamed line was cached, so only one synth", 1, backend.requests.size());
@@ -270,7 +270,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Boo", NPCRace.HUMAN, NPCGender.MALE), /* applyEcho= */ true);
+    svc.speak(req("Boo", NpcRace.HUMAN, NpcGender.MALE), /* applyEcho= */ true);
     executor.runAll();
 
     assertEquals(
@@ -285,7 +285,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
 
-    svc.prefetch(req("Later", NPCRace.HUMAN, NPCGender.MALE));
+    svc.prefetch(req("Later", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("prefetch opens no stream", 0, output.beginStreamCalls);
@@ -323,7 +323,7 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
     skipHook[0] = svc::interrupt; // interrupting advances the epoch, like a Continue-click
 
-    svc.speak(req("Skipme", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Skipme", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("the line was synthesized once", 1, synthed.size());
@@ -331,7 +331,7 @@ public class DialogueAudioServiceTest {
         "the stream is released even though it was skipped mid-line", 1, output.endStreamCalls);
 
     // The whole line was still cached despite the skip: a repeat is a cache hit.
-    svc.speak(req("Skipme", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Skipme", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("the skipped line was cached, so the repeat does not re-synth", 1, synthed.size());
@@ -362,14 +362,14 @@ public class DialogueAudioServiceTest {
         };
     DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
 
-    svc.speak(req("Clipped", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Clipped", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("it still played through the stream", 1, output.streamedChunks.size());
     assertEquals("the stream is released even on a null return", 1, output.endStreamCalls);
 
     // Nothing was cached, so a repeat drives the backend again (never persisted clipped).
-    svc.speak(req("Clipped", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Clipped", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals(
@@ -400,7 +400,7 @@ public class DialogueAudioServiceTest {
         };
     DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
 
-    svc.speak(req("ThreeParts", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("ThreeParts", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("every chunk was forwarded to the player", 3, output.streamedChunks.size());
@@ -411,7 +411,7 @@ public class DialogueAudioServiceTest {
     assertEquals("stream ended once", 1, output.endStreamCalls);
 
     // The complete line is cached: the repeat is a buffered cache hit, no second synth.
-    svc.speak(req("ThreeParts", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("ThreeParts", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
     assertEquals("the repeat is served from cache", 1, synths[0]);
     assertEquals("and plays buffered", 1, output.streamCalls);
@@ -424,9 +424,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Greetings", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Greetings", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
-    svc.speak(req("Greetings", NPCRace.ELF, NPCGender.FEMALE));
+    svc.speak(req("Greetings", NpcRace.ELF, NpcGender.FEMALE));
     executor.runAll();
 
     assertEquals("different voices are distinct cache keys", 2, backend.requests.size());
@@ -440,9 +440,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Halt", NPCRace.HUMAN, NPCGender.MALE, Emotion.NEUTRAL));
+    svc.speak(req("Halt", NpcRace.HUMAN, NpcGender.MALE, Emotion.NEUTRAL));
     executor.runAll();
-    svc.speak(req("Halt", NPCRace.HUMAN, NPCGender.MALE, Emotion.ANGRY));
+    svc.speak(req("Halt", NpcRace.HUMAN, NpcGender.MALE, Emotion.ANGRY));
     executor.runAll();
 
     assertEquals("emotion is part of the cache key, no collision", 2, backend.requests.size());
@@ -458,8 +458,8 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
     // Two lines enqueued before either runs: advancing dialogue supersedes the first.
-    svc.speak(req("First line", NPCRace.HUMAN, NPCGender.MALE));
-    svc.speak(req("Second line", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("First line", NpcRace.HUMAN, NpcGender.MALE));
+    svc.speak(req("Second line", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("stale first line should never synthesize", 1, backend.requests.size());
@@ -474,8 +474,8 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("a", NPCRace.HUMAN, NPCGender.MALE));
-    svc.speak(req("b", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("a", NpcRace.HUMAN, NpcGender.MALE));
+    svc.speak(req("b", NpcRace.HUMAN, NpcGender.MALE));
 
     assertEquals("each speak interrupts whatever is playing", 2, output.stopCalls);
   }
@@ -487,7 +487,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Queued line", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Queued line", NpcRace.HUMAN, NpcGender.MALE));
     svc.interrupt();
     executor.runAll();
 
@@ -509,7 +509,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(failing), output, executor, 8, 100);
 
-    svc.speak(req("anything", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("anything", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("null synth result should not play", 0, output.streamCalls);
@@ -522,7 +522,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("", NpcRace.HUMAN, NpcGender.MALE));
     svc.speak(null);
     executor.runAll();
 
@@ -538,7 +538,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 42);
 
-    svc.speak(req("line", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("line", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals(42, output.lastVolume);
@@ -553,9 +553,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Be gone", NPCRace.HUMAN, NPCGender.MALE, Emotion.NEUTRAL));
+    svc.speak(req("Be gone", NpcRace.HUMAN, NpcGender.MALE, Emotion.NEUTRAL));
     executor.runAll();
-    svc.speak(req("Be gone", NPCRace.HUMAN, NPCGender.MALE, Emotion.ANGRY));
+    svc.speak(req("Be gone", NpcRace.HUMAN, NpcGender.MALE, Emotion.ANGRY));
     executor.runAll();
 
     assertEquals("downgraded emotion reuses the neutral cache entry", 1, backend.requests.size());
@@ -566,7 +566,7 @@ public class DialogueAudioServiceTest {
   @Test
   public void lineSynthesizedInOneSessionIsServedFromDiskInTheNext() {
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
-    SynthesisRequest line = req("Welcome to Lumbridge", NPCRace.HUMAN, NPCGender.FEMALE);
+    SynthesisRequest line = req("Welcome to Lumbridge", NpcRace.HUMAN, NpcGender.FEMALE);
 
     // Session 1: fresh service with a fresh in-memory cache, real disk cache. Synthesizes once.
     FakeBackend backend1 = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
@@ -624,7 +624,7 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc =
         streamingService(provider(blocking), output, new DeferredExecutor(), 8, 100);
     CacheKey key = new CacheKey("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
-    SynthesisRequest request = req("Echo", NPCRace.HUMAN, NPCGender.MALE);
+    SynthesisRequest request = req("Echo", NpcRace.HUMAN, NpcGender.MALE);
 
     // Epoch is 0 on a fresh service (no speak yet), so runStreaming(0, ...) passes its epoch guard.
     Thread owner = new Thread(() -> svc.runStreaming(0, blocking, request, key));
@@ -674,10 +674,10 @@ public class DialogueAudioServiceTest {
     FakeOutput output = new FakeOutput();
     DialogueAudioService svc = service(provider(backend), output, pool, 8, 100);
     try {
-      svc.speak(req("Blocker", NPCRace.HUMAN, NPCGender.MALE));
+      svc.speak(req("Blocker", NpcRace.HUMAN, NpcGender.MALE));
       assertTrue("the blocker occupied a worker", blockerEntered.await(2, TimeUnit.SECONDS));
 
-      svc.speak(req("Second", NPCRace.HUMAN, NPCGender.MALE));
+      svc.speak(req("Second", NpcRace.HUMAN, NpcGender.MALE));
       long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
       while (output.streamCalls == 0 && System.nanoTime() < deadline) {
         Thread.onSpinWait();
@@ -711,7 +711,7 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(slow), output, executor, 8, 100);
     holder[0] = svc;
 
-    svc.speak(req("Stale cloud line", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Stale cloud line", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals(
@@ -725,7 +725,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.prefetch(req("Yes, I'll help.", NPCRace.HUMAN, NPCGender.MALE));
+    svc.prefetch(req("Yes, I'll help.", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("prefetch synthesizes the line", 1, backend.requests.size());
@@ -733,7 +733,7 @@ public class DialogueAudioServiceTest {
     assertEquals("prefetch never interrupts playback", 0, output.stopCalls);
 
     // The real line now arrives: it must come from the warmed cache, not a second synth.
-    svc.speak(req("Yes, I'll help.", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Yes, I'll help.", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("the spoken line is served from the prefetched cache", 1, backend.requests.size());
@@ -746,9 +746,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speak(req("Already heard", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Already heard", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
-    svc.prefetch(req("Already heard", NPCRace.HUMAN, NPCGender.MALE));
+    svc.prefetch(req("Already heard", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("prefetch never re-synthesizes a cached line", 1, backend.requests.size());
@@ -761,7 +761,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.prefetch(req("Don't pile on the 429", NPCRace.HUMAN, NPCGender.MALE));
+    svc.prefetch(req("Don't pile on the 429", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals("a rate-limited backend is never prefetched", 0, backend.requests.size());
@@ -774,7 +774,7 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
     // Queued but not yet run: leaving the node cancels it before it can spend.
-    svc.prefetch(req("Branch the player left", NPCRace.HUMAN, NPCGender.MALE));
+    svc.prefetch(req("Branch the player left", NpcRace.HUMAN, NpcGender.MALE));
     svc.cancelPrefetch();
     executor.runAll();
 
@@ -803,7 +803,7 @@ public class DialogueAudioServiceTest {
     // memory tier is empty: everything before the executor drains runs on the caller's thread, so
     // any disk read counted there is a game-thread disk read.
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
-    SynthesisRequest line = req("Only on disk", NPCRace.HUMAN, NPCGender.MALE);
+    SynthesisRequest line = req("Only on disk", NpcRace.HUMAN, NpcGender.MALE);
     FakeBackend seedBackend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor seedExec = new DeferredExecutor();
     DialogueAudioService seeder =
@@ -838,9 +838,9 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc =
         diskService(provider(warm), new FakeOutput(), new DiskAudioCache(cacheDir), executor);
 
-    svc.prefetch(req("Tell me about the quest.", NPCRace.HUMAN, NPCGender.MALE));
+    svc.prefetch(req("Tell me about the quest.", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
-    svc.speak(req("Tell me about the quest.", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Tell me about the quest.", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
     assertEquals(
@@ -854,7 +854,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Echoing cave line", NPCRace.HUMAN, NPCGender.MALE), true);
+    svc.speak(req("Echoing cave line", NpcRace.HUMAN, NpcGender.MALE), true);
     executor.runAll();
 
     assertEquals("the echoed line still plays once", 1, output.streamCalls);
@@ -870,11 +870,11 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Same line", NPCRace.HUMAN, NPCGender.MALE), true);
+    svc.speak(req("Same line", NpcRace.HUMAN, NpcGender.MALE), true);
     executor.runAll();
     int echoedLength = output.lastSamples.length;
 
-    svc.speak(req("Same line", NPCRace.HUMAN, NPCGender.MALE), false);
+    svc.speak(req("Same line", NpcRace.HUMAN, NpcGender.MALE), false);
     executor.runAll();
 
     assertEquals("echo never triggers a second synth", 1, backend.requests.size());
@@ -892,7 +892,7 @@ public class DialogueAudioServiceTest {
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     FakeBackend cloud = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
     SynthesisRequest line =
-        req("Have you any quests?", NPCRace.HUMAN, NPCGender.MALE, Emotion.HAPPY);
+        req("Have you any quests?", NpcRace.HUMAN, NpcGender.MALE, Emotion.HAPPY);
 
     // Session 1 on the cloud backend: one paid synth call.
     DeferredExecutor exec1 = new DeferredExecutor();
@@ -938,14 +938,14 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Hello adventurer", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
     SpendTracker.ProviderSpend afterFirst = spend.snapshot().get(0);
     assertEquals("the first hearing is a real backend call", 1, afterFirst.voicedLines());
 
-    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    svc.speak(req("Hello adventurer", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
-    svc.prefetch(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE).asPrefetch());
+    svc.prefetch(req("Hello adventurer", NpcRace.HUMAN, NpcGender.MALE).asPrefetch());
     executor.runAll();
 
     SpendTracker.ProviderSpend after = spend.snapshot().get(0);

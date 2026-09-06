@@ -31,6 +31,15 @@ public class NpcProfileTableTest {
           + "\"byId\":{\"_comment\":\"x\",\"100\":{\"name\":\"Vanstrom\",\"style\":\"An ancient vampyre lord.\"}}"
           + "}";
 
+  private static NpcProfileTable.Resolution resolve(
+      NpcProfileTable table, Integer npcId, String npcName, String race, String ethnicity) {
+    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity);
+  }
+
+  private static boolean isChild(NpcProfileTable table, String npcName) {
+    return table.matchName(npcName).child();
+  }
+
   private static NpcProfileTable table() {
     JsonObject profiles = new JsonParser().parse(JSON).getAsJsonObject();
     return NpcProfileTable.fromProfilesJson(profiles);
@@ -38,7 +47,7 @@ public class NpcProfileTableTest {
 
   @Test
   public void noMatchingLayerFallsBackToTheCompleteDefault() {
-    CharacterProfile p = table().resolveNpc(null, "Random Bloke", null, null).profile();
+    CharacterProfile p = resolve(table(), null, "Random Bloke", null, null).profile();
     assertEquals("Default", p.name());
     assertEquals("British RP.", p.accent());
     assertEquals("Plain.", p.style());
@@ -47,7 +56,7 @@ public class NpcProfileTableTest {
 
   @Test
   public void raceLayerOverridesDefaultAndInheritsUnsetFields() {
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Mountain Troll", "Troll", null);
+    NpcProfileTable.Resolution r = resolve(table(), null, "Mountain Troll", "Troll", null);
     assertEquals("race:Troll", r.source());
     assertEquals("Troll", r.profile().name());
     assertEquals("Brixton.", r.profile().accent());
@@ -58,7 +67,7 @@ public class NpcProfileTableTest {
   @Test
   public void ethnicityAccentTintsPlainFolkOverTheRaceAccent() {
     // A desert human: ethnicity tints the accent over the human default, persona unchanged.
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Desert Trader", "Human", "kharidian");
+    NpcProfileTable.Resolution r = resolve(table(), null, "Desert Trader", "Human", "kharidian");
     assertEquals("race:Human+ethnicity:kharidian", r.source());
     assertEquals(
         "the ethnicity accent wins for plain folk", "Middle Eastern.", r.profile().accent());
@@ -69,7 +78,7 @@ public class NpcProfileTableTest {
   @Test
   public void ethnicityIsSkippedForDistinctiveRaces() {
     // A dwarf-equivalent (Troll here) in the desert keeps its racial accent, not the ethnicity's.
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Desert Troll", "Troll", "kharidian");
+    NpcProfileTable.Resolution r = resolve(table(), null, "Desert Troll", "Troll", "kharidian");
     assertEquals("ethnicity is not applied to a distinctive race", "race:Troll", r.source());
     assertEquals("Brixton.", r.profile().accent());
   }
@@ -77,14 +86,14 @@ public class NpcProfileTableTest {
   @Test
   public void aKeywordCategoryStillBeatsTheEthnicityAccent() {
     // A vampyre in the desert: the distinctive category accent beats the ethnicity one.
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Feral Vampyre", "Human", "kharidian");
+    NpcProfileTable.Resolution r = resolve(table(), null, "Feral Vampyre", "Human", "kharidian");
     assertEquals("race:Human+ethnicity:kharidian+keyword:vampyre", r.source());
     assertEquals("Transylvanian.", r.profile().accent());
   }
 
   @Test
   public void raceAndCategoryCombineStyleWhileTheCategoryAccentWins() {
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Vampyre Brute", "Troll", null);
+    NpcProfileTable.Resolution r = resolve(table(), null, "Vampyre Brute", "Troll", null);
     assertEquals("race:Troll+keyword:vampyre", r.source());
     assertEquals("the most specific name wins", "Vampyre", r.profile().name());
     assertEquals(
@@ -96,7 +105,7 @@ public class NpcProfileTableTest {
 
   @Test
   public void multipleCategoriesAllCombine() {
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Imp Vampyre", null, null);
+    NpcProfileTable.Resolution r = resolve(table(), null, "Imp Vampyre", null, null);
     assertEquals(
         "both categories appear in declaration order", "keyword:vampyre+keyword:imp", r.source());
     assertTrue(r.profile().style().contains("Predatory."));
@@ -106,7 +115,7 @@ public class NpcProfileTableTest {
 
   @Test
   public void perIdOverrideAddsOnTopAndWinsSingleValuedFields() {
-    NpcProfileTable.Resolution r = table().resolveNpc(100, "Vampyre Vanstrom", "Undead", null);
+    NpcProfileTable.Resolution r = resolve(table(), 100, "Vampyre Vanstrom", "Undead", null);
     assertEquals("every match contributes", "keyword:vampyre+id:100", r.source());
     assertEquals("the bespoke name wins", "Vanstrom", r.profile().name());
     assertTrue(
@@ -122,8 +131,8 @@ public class NpcProfileTableTest {
 
   @Test
   public void raceMatchingIsCaseInsensitive() {
-    assertEquals("Troll", table().resolveNpc(null, "x", "TROLL", null).profile().name());
-    assertEquals("Troll", table().resolveNpc(null, "x", "troll", null).profile().name());
+    assertEquals("Troll", resolve(table(), null, "x", "TROLL", null).profile().name());
+    assertEquals("Troll", resolve(table(), null, "x", "troll", null).profile().name());
   }
 
   @Test
@@ -131,11 +140,11 @@ public class NpcProfileTableTest {
     assertEquals(
         "'imp' must not match inside 'important'",
         "Default",
-        table().resolveNpc(null, "Important Person", null, null).profile().name());
+        resolve(table(), null, "Important Person", null, null).profile().name());
     assertEquals(
         "'imp' matches the whole word",
         "Imp",
-        table().resolveNpc(null, "Imp", null, null).profile().name());
+        resolve(table(), null, "Imp", null, null).profile().name());
   }
 
   @Test
@@ -164,16 +173,16 @@ public class NpcProfileTableTest {
   @Test
   public void childAgeCategoryMarksMatchingNamesAsChildren() {
     NpcProfileTable t = table();
-    assertTrue("'Child' matches the child category", t.isChildName("Child"));
-    assertTrue("'Street urchin' matches the child category", t.isChildName("Street urchin"));
-    assertFalse("an adult name is not a child", t.isChildName("Random Bloke"));
-    assertFalse("a non-child category match is not a child", t.isChildName("Imp"));
-    assertFalse("a null name is not a child", t.isChildName(null));
+    assertTrue("'Child' matches the child category", isChild(t, "Child"));
+    assertTrue("'Street urchin' matches the child category", isChild(t, "Street urchin"));
+    assertFalse("an adult name is not a child", isChild(t, "Random Bloke"));
+    assertFalse("a non-child category match is not a child", isChild(t, "Imp"));
+    assertFalse("a null name is not a child", isChild(t, null));
   }
 
   @Test
   public void childCategoryStyleLayersOverTheRaceStyle() {
-    NpcProfileTable.Resolution r = table().resolveNpc(null, "Troll child", "Troll", null);
+    NpcProfileTable.Resolution r = resolve(table(), null, "Troll child", "Troll", null);
     assertEquals("race:Troll+keyword:child", r.source());
     assertEquals("Big and dim. Bright and young.", r.profile().style());
     assertEquals(

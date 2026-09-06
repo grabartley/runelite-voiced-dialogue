@@ -1,12 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.data;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +25,7 @@ import net.runelite.api.NPCComposition;
  * never affects race or table-backed NPCs.
  */
 @Slf4j
-public class NPCDemographicAnalyzer {
+public class NpcDemographicAnalyzer {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
   private static final String DEFAULT_RACE = "Unknown";
@@ -47,7 +44,7 @@ public class NPCDemographicAnalyzer {
           Pattern.CASE_INSENSITIVE);
 
   /** Immutable npcId -> {race, gender} table loaded once from the bundled resource. */
-  private Map<Integer, NPCAttributes> voiceTable = Collections.emptyMap();
+  private Map<Integer, NpcAttributes> voiceTable = Collections.emptyMap();
 
   /**
    * Optional writable cache of NPCs learned at runtime via the wiki fallback, consulted after the
@@ -71,7 +68,7 @@ public class NPCDemographicAnalyzer {
    * Returns a deterministic default for ids missing from the table; returns {@code null} only when
    * the NPC (or its composition) is itself null.
    */
-  public NPCAttributes analyzeNPC(NPC npc) {
+  public NpcAttributes analyzeNPC(NPC npc) {
     if (npc == null) {
       return null;
     }
@@ -82,30 +79,19 @@ public class NPCDemographicAnalyzer {
     // Prefer the NPC's active id, which matches the wiki/cache ids the table is keyed by. A
     // transformed multiloc NPC (many Karamja, quest and morphing NPCs) reports a different
     // composition (base) id than its active id, and only the active id is in the table; falling
-    // back
-    // to the base id keeps the simple, non-transformed NPCs working unchanged.
+    // back to the base id keeps the simple, non-transformed NPCs working unchanged.
     int activeId = npc.getId();
     int baseId = composition.getId();
-    NPCAttributes known = lookupKnown(activeId);
+    NpcAttributes known = lookupKnown(activeId);
     if (known == null && baseId != activeId) {
       known = lookupKnown(baseId);
     }
     return known != null ? known : defaultAttributes(activeId, composition.getName());
   }
 
-  /**
-   * Resolves race/gender for an NPC id by a single map lookup. Ids missing from the table get a
-   * deterministic default (race {@code Unknown}, gender from the female-name hint), and race {@code
-   * Unknown} always voices with the single default voice.
-   */
-  public NPCAttributes lookup(int npcId, String npcName) {
-    NPCAttributes known = lookupKnown(npcId);
-    return known != null ? known : defaultAttributes(npcId, npcName);
-  }
-
   /** A bundled-table or learned hit for an id, or {@code null} when neither knows it. */
-  private NPCAttributes lookupKnown(int npcId) {
-    NPCAttributes attributes = voiceTable.get(npcId);
+  private NpcAttributes lookupKnown(int npcId) {
+    NpcAttributes attributes = voiceTable.get(npcId);
     if (attributes != null) {
       return attributes;
     }
@@ -117,18 +103,15 @@ public class NPCDemographicAnalyzer {
     return voiceTable.size();
   }
 
-  private NPCAttributes defaultAttributes(int npcId, String npcName) {
+  private NpcAttributes defaultAttributes(int npcId, String npcName) {
     String gender =
         npcName != null && FEMALE_NAME_HINT.matcher(npcName).find() ? "Female" : DEFAULT_GENDER;
-    NPCAttributes defaultData = new NPCAttributes(DEFAULT_RACE, gender, "Default", 0.0);
+    NpcAttributes defaultData = new NpcAttributes(DEFAULT_RACE, gender, AttributeSource.DEFAULT);
     defaultData.setNpcId(npcId);
-    defaultData.setName(npcName);
-    defaultData.setNotes("No table entry - using default");
     return defaultData;
   }
 
-  private Map<Integer, NPCAttributes> loadVoiceTable() {
-    Map<Integer, NPCAttributes> table = new HashMap<>();
+  private Map<Integer, NpcAttributes> loadVoiceTable() {
     try (InputStream stream = getClass().getResourceAsStream(TABLE_RESOURCE)) {
       if (stream == null) {
         log.warn(
@@ -136,45 +119,20 @@ public class NPCDemographicAnalyzer {
         return Collections.emptyMap();
       }
 
-      // Note: the bundled Gson predates the static JsonParser.parseReader API, so the instance
-      // method is used here.
-      JsonObject root =
-          new JsonParser()
-              .parse(new InputStreamReader(stream, StandardCharsets.UTF_8))
-              .getAsJsonObject();
-      if (!root.has("npcs")) {
+      Map<Integer, NpcAttributes> table =
+          NpcEntriesReader.read(
+              new InputStreamReader(stream, StandardCharsets.UTF_8),
+              AttributeSource.STATIC_TABLE,
+              (key, e) ->
+                  log.warn("Skipping malformed NPC voice entry {}: {}", key, e.getMessage()));
+      if (table == null) {
         log.warn("NPC voice table {} has no 'npcs' object - using default voice", TABLE_RESOURCE);
         return Collections.emptyMap();
       }
-
-      JsonObject npcs = root.getAsJsonObject("npcs");
-      for (String npcIdStr : npcs.keySet()) {
-        try {
-          int npcId = Integer.parseInt(npcIdStr);
-          JsonObject entry = npcs.getAsJsonObject(npcIdStr);
-
-          NPCAttributes attributes =
-              new NPCAttributes(
-                  entry.get("race").getAsString(),
-                  entry.get("gender").getAsString(),
-                  "StaticTable",
-                  1.0);
-          attributes.setNpcId(npcId);
-          if (entry.has("ethnicity") && !entry.get("ethnicity").isJsonNull()) {
-            attributes.setEthnicity(entry.get("ethnicity").getAsString());
-          }
-          if (entry.has("lifeStage") && !entry.get("lifeStage").isJsonNull()) {
-            attributes.setLifeStage(entry.get("lifeStage").getAsString());
-          }
-          table.put(npcId, attributes);
-        } catch (RuntimeException e) {
-          log.warn("Skipping malformed NPC voice entry {}: {}", npcIdStr, e.getMessage());
-        }
-      }
+      return Collections.unmodifiableMap(table);
     } catch (Exception e) {
       log.error("Failed to load NPC voice table {}: {}", TABLE_RESOURCE, e.getMessage());
       return Collections.emptyMap();
     }
-    return Collections.unmodifiableMap(table);
   }
 }

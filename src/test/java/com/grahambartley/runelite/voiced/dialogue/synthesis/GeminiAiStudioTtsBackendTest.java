@@ -17,8 +17,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
-import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.voice.NpcRace;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,7 +80,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   private static SynthesisRequest req() {
     return new SynthesisRequest(
-        "Hello & welcome", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        "Hello & welcome", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
   }
 
   /** The {@code contents[0].parts[0].text} a request or response document carries. */
@@ -260,7 +260,7 @@ public class GeminiAiStudioTtsBackendTest {
         .synthesize(
             new SynthesisRequest(
                 "You no take candle!",
-                VoiceSpec.npc(NPCRace.TROLL, NPCGender.MALE),
+                VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE),
                 Emotion.ANGRY,
                 TestFixtures.TROLL_PROFILE,
                 false,
@@ -429,9 +429,9 @@ public class GeminiAiStudioTtsBackendTest {
     GeminiAiStudioTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
     SynthesisRequest elfFemale =
-        new SynthesisRequest("a", VoiceSpec.npc(NPCRace.ELF, NPCGender.FEMALE), Emotion.NEUTRAL);
+        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE), Emotion.NEUTRAL);
 
     String variant = backend.cacheVariant(humanMale);
     assertTrue(

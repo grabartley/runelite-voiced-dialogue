@@ -14,11 +14,6 @@ import org.junit.Test;
 public class NpcFinderTest {
 
   @Test
-  public void nullClientFindsNothing() {
-    assertNull(new NpcFinder(null).findByName("Hans"));
-  }
-
-  @Test
   public void nullWorldListFindsNothing() {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(null);

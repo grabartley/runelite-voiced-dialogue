@@ -1,29 +1,23 @@
 package com.grahambartley.runelite.voiced.dialogue.data;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.data.NpcProfileLayers.CategoryRule;
+import com.grahambartley.runelite.voiced.dialogue.data.NpcProfileLayers.Layer;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.DirectionSanitizer;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.ProfanityFilter;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Loads and resolves the character voice profiles bundled in {@code /npc-voices.json} under the
- * top-level {@code profiles} key (produced offline by {@code tools/generate_npc_voices.py} from
- * {@code tools/profiles.json}).
+ * Resolves the character voice profiles bundled in {@code /npc-voices.json} under the top-level
+ * {@code profiles} key (produced offline by {@code tools/generate_npc_voices.py} from {@code
+ * tools/profiles.json}), which {@link NpcProfileParser} loads.
  *
  * <p>Resolution <em>combines</em> every matching layer: {@code default} (always complete), {@code
  * byRace[race]}, {@code byEthnicity[ethnicity]}, <em>every</em> {@code byCategory} entry whose
@@ -43,17 +37,6 @@ public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
 
-  /**
-   * Last-resort British default used only when the bundled {@code profiles.default} is missing or
-   * incomplete, so resolution never returns {@code null} or an NPE even on a malformed resource.
-   */
-  private static final CharacterProfile BUILTIN_DEFAULT =
-      new CharacterProfile(
-          "Gielinor Commoner",
-          "British English, Received Pronunciation, as heard in southern England.",
-          "A grounded medieval fantasy townsperson; plain, sincere, and natural.",
-          "Steady and conversational.");
-
   /** The resolved profile plus the layer that won, for debug logging. */
   @Value
   @Accessors(fluent = true)
@@ -63,162 +46,132 @@ public final class NpcProfileTable {
   }
 
   /**
-   * A sparse profile layer: any field may be {@code null}, meaning "inherit from the layer below".
+   * The keyword categories one display name matches, resolved once per line and read by both the
+   * voice (life stage) and the profile (layers).
    */
-  @Value
-  @Accessors(fluent = true)
-  private static class Layer {
-    String name;
-    String accent;
-    String style;
-    String pace;
+  public static final class NameMatch {
+
+    static final NameMatch NONE = new NameMatch(Collections.emptyList());
+
+    private final List<CategoryRule> rules;
+
+    NameMatch(List<CategoryRule> rules) {
+      this.rules = rules;
+    }
+
+    /**
+     * Whether the name matches a child keyword category ({@code "lifeStage": "child"}), so
+     * generically named children (Child, Schoolboy, Street urchin, ...) voice from the youthful
+     * sub-pool without a per-id table entry.
+     */
+    public boolean child() {
+      for (CategoryRule rule : rules) {
+        if (rule.child()) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
-  /**
-   * An ordered keyword rule: the layer applies when any keyword word-matches the display name. A
-   * rule carrying {@code "lifeStage": "child"} additionally marks matching NPCs as children.
-   */
-  @Value
-  @Accessors(fluent = true)
-  private static class CategoryRule {
-    String id;
-    List<String> keywords;
-    Layer layer;
-    boolean child;
+  /** One contributing layer and the label naming it in the debug trace. */
+  private static final class MatchedLayer {
+    private final Layer layer;
+    private final String source;
+
+    MatchedLayer(Layer layer, String source) {
+      this.layer = layer;
+      this.source = source;
+    }
   }
 
   /**
    * Neutralizes the three free-text player direction fields (injection break-out + profanity)
    * before they are baked into the player {@link CharacterProfile}. Unconditional, no toggle.
    */
-  private final DirectionSanitizer directionSanitizer =
-      new DirectionSanitizer(new ProfanityFilter());
+  private final DirectionSanitizer directionSanitizer;
 
-  private CharacterProfile defaultProfile = BUILTIN_DEFAULT;
-  private Layer playerLayer = null;
-  private Map<String, Layer> byRace = Collections.emptyMap();
-  private Map<String, Layer> byEthnicity = Collections.emptyMap();
-  private List<CategoryRule> byCategory = Collections.emptyList();
-  private Map<Integer, Layer> byId = Collections.emptyMap();
+  private NpcProfileLayers layers = NpcProfileLayers.EMPTY;
   private boolean loaded = false;
+
+  public NpcProfileTable() {
+    this(new DirectionSanitizer(new ProfanityFilter()));
+  }
+
+  public NpcProfileTable(DirectionSanitizer directionSanitizer) {
+    this.directionSanitizer = directionSanitizer;
+  }
 
   /** Loads the {@code profiles} section from the bundled resource. */
   public void initialize() {
-    try (InputStream stream = getClass().getResourceAsStream(TABLE_RESOURCE)) {
-      if (stream == null) {
-        log.warn(
-            "NPC profile table {} not found - using the built-in British default for every line",
-            TABLE_RESOURCE);
-        return;
-      }
-      JsonObject root =
-          new JsonParser()
-              .parse(new InputStreamReader(stream, StandardCharsets.UTF_8))
-              .getAsJsonObject();
-      if (!root.has("profiles") || !root.get("profiles").isJsonObject()) {
-        log.warn(
-            "NPC profile table {} has no 'profiles' object - using the built-in British default",
-            TABLE_RESOURCE);
-        return;
-      }
-      parseProfiles(root.getAsJsonObject("profiles"));
-      loaded = true;
-      log.info(
-          "NPC profiles loaded: {} race, {} ethnicity, {} keyword categories, {} bespoke NPC"
-              + " overrides",
-          byRace.size(),
-          byEthnicity.size(),
-          byCategory.size(),
-          byId.size());
-    } catch (Exception e) {
-      log.error("Failed to load NPC profile table {}: {}", TABLE_RESOURCE, e.getMessage());
+    NpcProfileLayers parsed = NpcProfileParser.loadResource(TABLE_RESOURCE);
+    if (parsed == null) {
+      return;
     }
+    this.layers = parsed;
+    this.loaded = true;
+    log.info(
+        "NPC profiles loaded: {} race, {} ethnicity, {} keyword categories, {} bespoke NPC"
+            + " overrides",
+        layers.byRace().size(),
+        layers.byEthnicity().size(),
+        layers.byCategory().size(),
+        layers.byId().size());
   }
 
   /** Test seam: build a table directly from a parsed {@code profiles} object. */
   static NpcProfileTable fromProfilesJson(JsonObject profiles) {
     NpcProfileTable table = new NpcProfileTable();
-    table.parseProfiles(profiles);
+    table.layers = NpcProfileParser.parse(profiles);
     table.loaded = true;
     return table;
   }
 
-  private void parseProfiles(JsonObject profiles) {
-    CharacterProfile parsedDefault = parseComplete(optObject(profiles, "default"));
-    if (parsedDefault != null) {
-      this.defaultProfile = parsedDefault;
-    } else {
-      log.warn("profiles.default is missing or incomplete - using the built-in British default");
+  /** Every category whose keyword is in the display name, in declaration order (may be empty). */
+  public NameMatch matchName(String npcName) {
+    if (npcName == null || npcName.isEmpty()) {
+      return NameMatch.NONE;
     }
-
-    this.playerLayer = parseLayer(optObject(profiles, "player"));
-
-    this.byRace = parseLayerMap(optObject(profiles, "byRace"));
-    this.byEthnicity = parseLayerMap(optObject(profiles, "byEthnicity"));
-
-    List<CategoryRule> categories = new ArrayList<>();
-    if (profiles.has("byCategory") && profiles.get("byCategory").isJsonArray()) {
-      JsonArray arr = profiles.getAsJsonArray("byCategory");
-      for (JsonElement el : arr) {
-        if (!el.isJsonObject()) {
-          continue;
-        }
-        JsonObject entry = el.getAsJsonObject();
-        if (!entry.has("keywords") || !entry.get("keywords").isJsonArray()) {
-          continue;
-        }
-        List<String> keywords = new ArrayList<>();
-        for (JsonElement kw : entry.getAsJsonArray("keywords")) {
-          keywords.add(kw.getAsString().toLowerCase(Locale.ROOT));
-        }
-        String id = entry.has("id") ? entry.get("id").getAsString() : "category";
-        boolean child = "child".equalsIgnoreCase(optString(entry, "lifeStage"));
-        categories.add(new CategoryRule(id, keywords, parseLayer(entry), child));
-      }
-    }
-    this.byCategory = Collections.unmodifiableList(categories);
-
-    Map<Integer, Layer> ids = new HashMap<>();
-    JsonObject idObj = optObject(profiles, "byId");
-    if (idObj != null) {
-      for (String key : idObj.keySet()) {
-        if (isComment(key) || !idObj.get(key).isJsonObject()) {
-          continue;
-        }
-        try {
-          ids.put(Integer.parseInt(key), parseLayer(idObj.getAsJsonObject(key)));
-        } catch (NumberFormatException e) {
-          log.warn("Skipping non-numeric byId profile key '{}'", key);
+    String lower = npcName.toLowerCase(Locale.ROOT);
+    List<CategoryRule> matches = new ArrayList<>();
+    for (CategoryRule rule : layers.byCategory()) {
+      for (String keyword : rule.keywords()) {
+        if (wordContains(lower, keyword)) {
+          matches.add(rule);
+          break;
         }
       }
     }
-    this.byId = Collections.unmodifiableMap(ids);
+    return new NameMatch(matches);
   }
 
   /**
    * Resolves the complete profile for an NPC by <em>combining</em> every matching layer: the race
-   * bucket, the ethnicity accent, every keyword category whose keyword is in the display name, and
-   * the per-NPC override. An NPC can be more than one thing at once (a Fremennik human, a ghost
-   * pirate), so all matches contribute. {@code style} accumulates across every contributing layer
-   * so the persona blends; {@code name}, {@code accent}, and {@code pace} are single-valued, so the
-   * most specific layer that sets each one wins (per-NPC override, then the last matching category,
-   * then race, then the default), which keeps a coherent accent and pace rather than stacking
-   * contradictory directions. Never returns {@code null}.
+   * bucket, the ethnicity accent, every keyword category the display name matched, and the per-NPC
+   * override. An NPC can be more than one thing at once (a Fremennik human, a ghost pirate), so all
+   * matches contribute. {@code style} accumulates across every contributing layer so the persona
+   * blends; {@code name}, {@code accent}, and {@code pace} are single-valued, so the most specific
+   * layer that sets each one wins (per-NPC override, then the last matching category, then race,
+   * then the default), which keeps a coherent accent and pace rather than stacking contradictory
+   * directions. Never returns {@code null}.
    *
    * @param npcId the live NPC id, or {@code null} when unknown (no bespoke override is applied)
-   * @param npcName the display name used for keyword matching, may be {@code null}
+   * @param nameMatch the categories the display name matched, from {@link #matchName(String)}
    * @param race the resolved race bucket (e.g. {@code "Troll"}), may be {@code null}
    * @param ethnicity the NPC's ethnicity accent key (e.g. {@code "kharidian"}), may be {@code null}
    */
-  public Resolution resolveNpc(Integer npcId, String npcName, String race, String ethnicity) {
-    // Contributing layers, least specific first, so a later layer wins single-valued fields.
-    List<Layer> layers = new ArrayList<>();
-    List<String> sources = new ArrayList<>();
+  public Resolution resolveNpc(Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
+    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity));
+  }
 
-    Layer raceLayer = race == null ? null : byRace.get(race.toLowerCase(Locale.ROOT));
+  /** The contributing layers, least specific first, so a later layer wins single-valued fields. */
+  private List<MatchedLayer> collectLayers(
+      Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
+    List<MatchedLayer> matched = new ArrayList<>();
+
+    Layer raceLayer = race == null ? null : layers.byRace().get(race.toLowerCase(Locale.ROOT));
     if (raceLayer != null) {
-      layers.add(raceLayer);
-      sources.add("race:" + race);
+      matched.add(new MatchedLayer(raceLayer, "race:" + race));
     }
     // Ethnicity tints only the plain folk (Human / unknown race); a distinctive race keeps its own
     // accent wherever it is found, so a dwarf stays gruff and Scottish even in the desert.
@@ -227,26 +180,29 @@ public final class NpcProfileTable {
     Layer ethnicityLayer =
         (ethnicity == null || !plainRace)
             ? null
-            : byEthnicity.get(ethnicity.toLowerCase(Locale.ROOT));
+            : layers.byEthnicity().get(ethnicity.toLowerCase(Locale.ROOT));
     if (ethnicityLayer != null) {
-      layers.add(ethnicityLayer);
-      sources.add("ethnicity:" + ethnicity);
+      matched.add(new MatchedLayer(ethnicityLayer, "ethnicity:" + ethnicity));
     }
-    for (CategoryRule rule : matchCategories(npcName)) {
-      layers.add(rule.layer());
-      sources.add("keyword:" + rule.id());
+    for (CategoryRule rule : nameMatch.rules) {
+      matched.add(new MatchedLayer(rule.layer(), "keyword:" + rule.id()));
     }
-    Layer idLayer = npcId == null ? null : byId.get(npcId);
+    Layer idLayer = npcId == null ? null : layers.byId().get(npcId);
     if (idLayer != null) {
-      layers.add(idLayer);
-      sources.add("id:" + npcId);
+      matched.add(new MatchedLayer(idLayer, "id:" + npcId));
     }
+    return matched;
+  }
 
+  private Resolution mergeLayers(List<MatchedLayer> matched) {
+    CharacterProfile defaultProfile = layers.defaultProfile();
     String name = defaultProfile.name();
     String accent = defaultProfile.accent();
     String pace = defaultProfile.pace();
     List<String> styleParts = new ArrayList<>();
-    for (Layer layer : layers) {
+    List<String> sources = new ArrayList<>();
+    for (MatchedLayer entry : matched) {
+      Layer layer = entry.layer;
       if (layer.name() != null) {
         name = layer.name();
       }
@@ -259,6 +215,7 @@ public final class NpcProfileTable {
       if (layer.style() != null) {
         styleParts.add(layer.style());
       }
+      sources.add(entry.source);
     }
     String style = styleParts.isEmpty() ? defaultProfile.style() : String.join(" ", styleParts);
     String source = sources.isEmpty() ? "default" : String.join("+", sources);
@@ -274,7 +231,7 @@ public final class NpcProfileTable {
    * emitting an empty direction. The player's name label is never overridden by config.
    */
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {
-    CharacterProfile base = apply(defaultProfile, playerLayer);
+    CharacterProfile base = apply(layers.defaultProfile(), layers.playerLayer());
     return new CharacterProfile(
         base.name(),
         sanitizedOr(accent, base.accent()),
@@ -293,38 +250,6 @@ public final class NpcProfileTable {
   /** Whether the bundled {@code profiles} section loaded successfully. */
   public boolean isLoaded() {
     return loaded;
-  }
-
-  /**
-   * Whether the display name matches a child keyword category ({@code "lifeStage": "child"}), so
-   * generically named children (Child, Schoolboy, Street urchin, ...) voice from the youthful
-   * sub-pool without a per-id table entry.
-   */
-  public boolean isChildName(String npcName) {
-    for (CategoryRule rule : matchCategories(npcName)) {
-      if (rule.child()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /** Every category whose keyword is in the display name, in declaration order (may be empty). */
-  private List<CategoryRule> matchCategories(String npcName) {
-    if (npcName == null || npcName.isEmpty()) {
-      return Collections.emptyList();
-    }
-    String lower = npcName.toLowerCase(Locale.ROOT);
-    List<CategoryRule> matches = new ArrayList<>();
-    for (CategoryRule rule : byCategory) {
-      for (String keyword : rule.keywords()) {
-        if (wordContains(lower, keyword)) {
-          matches.add(rule);
-          break;
-        }
-      }
-    }
-    return matches;
   }
 
   /**
@@ -358,66 +283,6 @@ public final class NpcProfileTable {
         layer.accent() != null ? layer.accent() : base.accent(),
         layer.style() != null ? layer.style() : base.style(),
         layer.pace() != null ? layer.pace() : base.pace());
-  }
-
-  /**
-   * Parses an object of {@code key -> sparse layer} (e.g. byRace, byEthnicity), keyed lower-case.
-   */
-  private static Map<String, Layer> parseLayerMap(JsonObject obj) {
-    if (obj == null) {
-      return Collections.emptyMap();
-    }
-    Map<String, Layer> map = new HashMap<>();
-    for (String key : obj.keySet()) {
-      if (isComment(key) || !obj.get(key).isJsonObject()) {
-        continue;
-      }
-      map.put(key.toLowerCase(Locale.ROOT), parseLayer(obj.getAsJsonObject(key)));
-    }
-    return Collections.unmodifiableMap(map);
-  }
-
-  /** Parses a sparse layer; absent fields stay {@code null} so they inherit. */
-  private static Layer parseLayer(JsonObject obj) {
-    if (obj == null) {
-      return null;
-    }
-    return new Layer(
-        optString(obj, "name"),
-        optString(obj, "accent"),
-        optString(obj, "style"),
-        optString(obj, "pace"));
-  }
-
-  /**
-   * Parses a layer that must be complete (all four fields); returns {@code null} if any is absent.
-   */
-  private static CharacterProfile parseComplete(JsonObject obj) {
-    Layer layer = parseLayer(obj);
-    if (layer == null
-        || layer.name() == null
-        || layer.accent() == null
-        || layer.style() == null
-        || layer.pace() == null) {
-      return null;
-    }
-    return new CharacterProfile(layer.name(), layer.accent(), layer.style(), layer.pace());
-  }
-
-  private static JsonObject optObject(JsonObject parent, String key) {
-    return parent.has(key) && parent.get(key).isJsonObject() ? parent.getAsJsonObject(key) : null;
-  }
-
-  private static String optString(JsonObject obj, String key) {
-    if (!obj.has(key) || obj.get(key).isJsonNull()) {
-      return null;
-    }
-    String value = obj.get(key).getAsString();
-    return value.isEmpty() ? null : value;
-  }
-
-  private static boolean isComment(String key) {
-    return key.startsWith("_");
   }
 
   private static boolean isBlank(String value) {
