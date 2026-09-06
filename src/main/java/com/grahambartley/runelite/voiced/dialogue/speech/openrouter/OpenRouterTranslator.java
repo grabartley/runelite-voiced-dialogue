@@ -27,7 +27,7 @@ import okhttp3.RequestBody;
  * gracefully rather than voicing the wrong language or caching a mistranslation.
  */
 @Slf4j
-public final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
+final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
 
   /**
    * The lightweight model used for the translation hop: fast and cheap relative to the TTS call.

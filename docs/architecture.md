@@ -2,7 +2,7 @@
 
 Every dialogue line is voiced through a single pipeline: a cloud speech call implemented by the
 `SynthesisBackend` that `BackendProvider` supplies. Two backends exist, one per **Voice Provider**
-setting: Google AI Studio (`GeminiAiStudioTtsBackend`, the recommended provider) and OpenRouter
+setting: Google AI Studio (`AiStudioTtsBackend`, the recommended provider) and OpenRouter
 (`OpenRouterTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
 every call, so switching takes effect on the next line with no restart, and also applies the
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
@@ -45,7 +45,7 @@ problem fails that line gracefully (it is left unvoiced) and surfaces a one-time
 
 ## The Google AI Studio speech call
 
-With **Voice Provider** set to Google AI Studio, `GeminiAiStudioTtsBackend` sends the same content
+With **Voice Provider** set to Google AI Studio, `AiStudioTtsBackend` sends the same content
 directly to the Gemini API instead: a `generateContent` request to
 `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent`,
 authenticated with a Google AI Studio API key in the `x-goog-api-key` header. It needs its own key
@@ -62,7 +62,7 @@ network timeout, a rate-limit back-off on 429 (on the Gemini API that means quot
 says so), and a `cacheVariant` built from the same fields under the distinct
 `cloud-google-ai-studio` backend id, so the two providers' cache entries never collide.
 
-The translation hop has a direct counterpart too: `GeminiAiStudioTranslator` sends the same shared
+The translation hop has a direct counterpart too: `AiStudioTranslator` sends the same shared
 system prompt to `gemini-3.1-flash-lite` through the Gemini API, so a non-English language or a
 speaking style works without an OpenRouter key.
 
@@ -95,14 +95,14 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   unknown rather than zero without a baseline, and a key swap resets it, since usage on another key
   is a different running total. The Gemini API returns no cost at all and its real billing sits
   behind the Cloud Billing API, so AI Studio is costed from the token counts it does report:
-  `GeminiTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
+  `AiStudioTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
   which report a running total), and `SpendPricing` converts those measured tokens at Google's
   published rate. The readout labels that conversion an estimate and OpenRouter's figure as billed.
 
   The translation hop is a second billable call against a second model, and each provider accounts
   for it differently. On OpenRouter it bills to the same key, so it is inside the usage delta with
   no extra work. On AI Studio it is a separate `generateContent` call whose tokens are read through
-  `GeminiTokenUsage.forText` and banked in their own counters. The split matters: the hop's output
+  `AiStudioTokenUsage.forText` and banked in their own counters. The split matters: the hop's output
   is text, and reading it through the speech parser would price it as audio at more than twenty
   times its rate, so the two parse entry points exist precisely to keep that from happening.
   Balance reads run on a dedicated daemon thread, never the game thread, and the finished lines hop
@@ -156,7 +156,7 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   already-cached lines are skipped, and leaving the node cancels still-queued prefetches. Gated by
   **Prefetch Dialogue**.
 - **Optional translation.** With **Spoken Language** set to anything but English, the active
-  provider's translator (`OpenRouterTranslator` or `GeminiAiStudioTranslator`)
+  provider's translator (`OpenRouterTranslator` or `AiStudioTranslator`)
   translates each line through the Gemini flash-lite model (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,
   which then carries a BCP-47 `language_code` derived from the base language. The language (with any

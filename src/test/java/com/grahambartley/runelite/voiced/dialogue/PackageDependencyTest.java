@@ -11,9 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -53,8 +55,37 @@ public class PackageDependencyTest {
     TIER.put("speech.spend", 1);
   }
 
+  /**
+   * The only root-package types any tier may import.
+   *
+   * <p>{@code VoicedDialogueConfig} sits at the root because the Plugin Hub pins it there, not
+   * because it belongs to the top of the layering, so every tier reads it. {@code
+   * VoicedDialoguePlugin} is the composition root and must stay unreachable: it is what wires the
+   * two provider backends together, and a package that imports it inherits both.
+   */
+  private static final Set<String> ROOT_TYPES_ANY_TIER =
+      Collections.singleton("VoicedDialogueConfig");
+
   private static final Pattern IMPORT =
-      Pattern.compile("^import (?:static )?" + Pattern.quote(BASE) + "\\.([a-z][\\w.]*)\\.[A-Z]");
+      Pattern.compile("^import (?:static )?" + Pattern.quote(BASE) + "\\.([\\w.]+);");
+
+  /**
+   * The package an import resolves to: the leading segments that name packages rather than types.
+   *
+   * <p>Taking everything before the first capitalised segment is what makes a nested or static
+   * import ({@code cache.TieredSynthesisCache.CacheKey}) resolve to its package rather than to a
+   * type, so it is checked like any other import instead of being waved through.
+   */
+  private static String packageOfImport(String path) {
+    StringBuilder pkg = new StringBuilder();
+    for (String segment : path.split("\\.")) {
+      if (!Character.isLowerCase(segment.charAt(0))) {
+        break;
+      }
+      pkg.append(pkg.length() == 0 ? "" : ".").append(segment);
+    }
+    return pkg.toString();
+  }
 
   @Test
   public void everyPackageIsPlacedInTheLayering() throws IOException {
@@ -78,8 +109,27 @@ public class PackageDependencyTest {
         if (!matcher.find()) {
           continue;
         }
-        String to = matcher.group(1);
-        if (from.equals(to) || !TIER.containsKey(to) || TIER.get(from) > TIER.get(to)) {
+        String to = packageOfImport(matcher.group(1));
+        if (from.equals(to)) {
+          continue;
+        }
+        if (to.isEmpty()) {
+          String type = matcher.group(1).split("\\.")[0];
+          if (!ROOT_TYPES_ANY_TIER.contains(type)) {
+            violations.add(
+                String.format(
+                    "%s imports root type %s in %s", label(from), type, source.getFileName()));
+          }
+          continue;
+        }
+        if (!TIER.containsKey(to)) {
+          violations.add(
+              String.format(
+                  "%s imports unplaced package %s in %s",
+                  label(from), label(to), source.getFileName()));
+          continue;
+        }
+        if (TIER.get(from) > TIER.get(to)) {
           continue;
         }
         violations.add(
