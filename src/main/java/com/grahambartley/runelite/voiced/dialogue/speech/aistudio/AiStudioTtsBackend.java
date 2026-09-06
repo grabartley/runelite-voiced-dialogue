@@ -74,15 +74,6 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       "Add your Google AI Studio API key in the Voiced Dialogue settings to hear dialogue; without"
           + " a key, lines are not voiced.";
 
-  /**
-   * User-facing notice for HTTP 429, which on the Gemini API means the key's quota or rate limit is
-   * exhausted rather than a transient blip, so the fix is the account rather than the key.
-   */
-  static final String QUOTA_NOTICE =
-      "Your Google AI Studio quota was hit, so dialogue cannot be voiced right now. The free tier"
-          + " allows only a handful of speech requests per day, so enable billing at"
-          + " aistudio.google.com, or switch Voice Provider to OpenRouter.";
-
   /** Idle connections are kept this long so back-to-back lines reuse a pooled connection. */
   private static final Duration KEEP_ALIVE = Duration.ofMinutes(5);
 
@@ -212,13 +203,13 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
   }
 
   /**
-   * The one-time user notice for a non-2xx speech response. A 429 is the Gemini API's
-   * quota/rate-limit rejection and gets the dedicated notice; anything else keeps the generic
+   * The one-time user notice for a non-2xx speech response. A 429 is the Gemini API's quota
+   * rejection and is worded from the quota its body reports; anything else keeps the generic
    * check-your-key message with the code for context.
    */
-  static String failureNotice(int httpCode) {
+  static String failureNotice(Gson gson, int httpCode, byte[] body) {
     if (httpCode == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
-      return QUOTA_NOTICE;
+      return AiStudioQuotaFailure.noticeFor(gson, body);
     }
     return "Google AI Studio TTS request failed (HTTP "
         + httpCode
@@ -297,8 +288,8 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     }
 
     @Override
-    public String failureNotice(int httpCode) {
-      return AiStudioTtsBackend.failureNotice(httpCode);
+    public String failureNotice(int httpCode, byte[] body) {
+      return AiStudioTtsBackend.failureNotice(gson, httpCode, body);
     }
 
     @Override

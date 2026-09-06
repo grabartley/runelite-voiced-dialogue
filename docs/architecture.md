@@ -59,7 +59,9 @@ Pace** is rendered as a leading `SPEAKING PACE` prompt direction instead. The
 server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
 mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
 network timeout, a rate-limit back-off on 429 (on the Gemini API that means quota, and the notice
-says so), and a `cacheVariant` built from the same fields under the distinct
+is worded from the `google.rpc.QuotaFailure` violation in the rejection body, so a free-tier ceiling
+and a paid per-model cap read differently), and a `cacheVariant` built from the same fields under
+the distinct
 `cloud-google-ai-studio` backend id, so the two providers' cache entries never collide.
 
 The translation hop has a direct counterpart too: `AiStudioTranslator` sends the same shared

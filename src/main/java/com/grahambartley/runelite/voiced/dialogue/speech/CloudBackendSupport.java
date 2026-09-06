@@ -146,7 +146,7 @@ public final class CloudBackendSupport {
             bytes.length,
             message));
     if (config.debugMode() && bytes.length > 0) {
-      log.info("[TTS cloud] {} body snippet: {}", kind, CloudHttp.bodySnippet(bytes));
+      log.info("[TTS cloud] {} body snippet: {}", kind, CloudHttp.bodySnippet(bytes, code));
     }
   }
 

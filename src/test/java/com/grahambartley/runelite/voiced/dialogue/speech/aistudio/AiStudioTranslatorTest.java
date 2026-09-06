@@ -6,7 +6,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
@@ -47,26 +46,12 @@ public class AiStudioTranslatorTest {
         server.url("/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent").toString());
   }
 
-  private static String translationResponse(String content) {
-    JsonObject textPart = new JsonObject();
-    textPart.addProperty("text", content);
-    JsonArray parts = new JsonArray();
-    parts.add(textPart);
-    JsonObject contentObj = new JsonObject();
-    contentObj.add("parts", parts);
-    JsonObject candidate = new JsonObject();
-    candidate.add("content", contentObj);
-    JsonArray candidates = new JsonArray();
-    candidates.add(candidate);
-    JsonObject body = new JsonObject();
-    body.add("candidates", candidates);
-    return body.toString();
-  }
-
   @Test
   public void translatesAndReturnsTrimmedContent() throws Exception {
     server.enqueue(
-        new MockResponse().setResponseCode(HTTP_OK).setBody(translationResponse("  Bonjour  ")));
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(AiStudioResponses.translation("  Bonjour  ")));
 
     AiStudioTranslator.Translation result = translator().translate("Hello", "French", "AIza-abc");
 

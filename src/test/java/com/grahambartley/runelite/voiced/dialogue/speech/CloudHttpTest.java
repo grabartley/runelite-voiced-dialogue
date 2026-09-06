@@ -1,10 +1,13 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
+import static com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp.HTTP_TOO_MANY_REQUESTS;
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import okhttp3.MediaType;
 import okhttp3.Protocol;
 import okhttp3.Request;
@@ -44,12 +47,30 @@ public class CloudHttpTest {
 
   @Test
   public void bodySnippetFlattensControlCharactersAndMarksTruncation() {
-    assertEquals("line one line two", CloudHttp.bodySnippet("line one\n\nline two".getBytes()));
+    assertEquals(
+        "line one line two", CloudHttp.bodySnippet("line one\n\nline two".getBytes(), HTTP_OK));
 
-    byte[] big = new byte[400];
-    java.util.Arrays.fill(big, (byte) 'a');
-    String snippet = CloudHttp.bodySnippet(big);
+    String snippet = CloudHttp.bodySnippet(filler(400), HTTP_OK);
     assertTrue("an over-long body is marked as truncated", snippet.endsWith("..."));
+  }
+
+  @Test
+  public void bodySnippetKeepsMoreOfAnErrorBodyThanASuccessfulOne() {
+    byte[] body = filler(1_500);
+
+    assertTrue(
+        "a quota failure states its cause past the success-path budget",
+        CloudHttp.bodySnippet(body, HTTP_TOO_MANY_REQUESTS).length()
+            > CloudHttp.bodySnippet(body, HTTP_OK).length());
+    assertFalse(
+        "an error body within the larger budget is kept whole",
+        CloudHttp.bodySnippet(filler(1_500), HTTP_TOO_MANY_REQUESTS).endsWith("..."));
+  }
+
+  private static byte[] filler(int length) {
+    byte[] bytes = new byte[length];
+    Arrays.fill(bytes, (byte) 'a');
+    return bytes;
   }
 
   private static Response response() {

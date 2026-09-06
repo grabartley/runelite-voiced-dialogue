@@ -76,8 +76,11 @@ public final class CloudSpeechExecutor {
      */
     default void recordSpendOnFirstChunk(PreparedSpeech prepared) {}
 
-    /** The one-time user notice for a non-2xx speech response. */
-    String failureNotice(int httpCode);
+    /**
+     * The one-time user notice for a non-2xx speech response. {@code body} is the rejection's own
+     * bytes, which is where a provider states the cause it should be worded from.
+     */
+    String failureNotice(int httpCode, byte[] body);
 
     /** The one-time user notice for a 2xx response that carried no audio at all. */
     String emptyBodyNotice();
@@ -322,7 +325,7 @@ public final class CloudSpeechExecutor {
           if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
-          support.warnOnce(ops.failureNotice(response.code()));
+          support.warnOnce(ops.failureNotice(response.code(), bytes));
           support.logFailure(
               "non-2xx",
               attempt,
@@ -459,7 +462,9 @@ public final class CloudSpeechExecutor {
           if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited();
           }
-          support.warnOnce(ops.failureNotice(response.code()));
+          // Read once: the body is a one-shot stream, and both the notice and the trace need it.
+          byte[] bytes = CloudHttp.errorBody(response);
+          support.warnOnce(ops.failureNotice(response.code(), bytes));
           support.logFailure(
               "non-2xx",
               attempt,
@@ -469,7 +474,7 @@ public final class CloudSpeechExecutor {
               response.message(),
               contentType,
               generationId,
-              CloudHttp.errorBody(response));
+              bytes);
           return null;
         }
         backoff.recordSuccess();
