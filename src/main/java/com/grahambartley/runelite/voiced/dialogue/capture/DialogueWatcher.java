@@ -12,11 +12,10 @@ import net.runelite.api.widgets.Widget;
 
 /**
  * Scans the dialogue widgets each game tick and drives the speak/prefetch/interrupt flow: speaks a
- * new NPC or player line once (deduped against the last text spoken by that same speaker, so a
- * player line matching the NPC line before it is still voiced), warms the visible options, and
- * edge-triggers the close interrupt so audio is cut only on the open-&gt;closed transition (not on
- * every idle tick, which would truncate public-chat clips played while walking around). Reads the
- * client only on the game thread.
+ * new NPC or player line once (deduped per speaker against the last text that speaker said), warms
+ * the visible options, and edge-triggers the close interrupt so audio is cut only on the
+ * open-&gt;closed transition (not on every idle tick, which would truncate public-chat clips played
+ * while walking around). Reads the client only on the game thread.
  */
 public final class DialogueWatcher {
 

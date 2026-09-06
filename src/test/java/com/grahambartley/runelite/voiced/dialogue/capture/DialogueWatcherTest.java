@@ -92,24 +92,15 @@ public class DialogueWatcherTest {
   }
 
   @Test
-  public void newPlayerLineIsSpokenOnceThenDeduped() {
-    Widget player = visibleWidget("Yes.");
-    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
-
-    watcher.tick();
-    watcher.tick();
-
-    verify(dispatcher, times(1)).speakDialogue(eq("Yes."), eq(Speaker.PLAYER), isNull(), anyInt());
-  }
-
-  @Test
-  public void aPlayerLineSpeaksAsThePlayerWithNoNpcName() {
+  public void newPlayerLineSpeaksAsThePlayerWithNoNpcNameThenIsDeduped() {
     Widget player = visibleWidget("Hello there.");
     when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
 
     watcher.tick();
+    watcher.tick();
 
-    verify(dispatcher).speakDialogue(eq("Hello there."), eq(Speaker.PLAYER), isNull(), anyInt());
+    verify(dispatcher, times(1))
+        .speakDialogue(eq("Hello there."), eq(Speaker.PLAYER), isNull(), anyInt());
   }
 
   @Test
@@ -117,7 +108,7 @@ public class DialogueWatcherTest {
     Widget npc = visibleWidget("Yes.");
     Widget player = visibleWidget("Yes.");
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
-    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(null, player);
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn((Widget) null, player);
 
     watcher.tick();
     watcher.tick();
@@ -141,15 +132,30 @@ public class DialogueWatcherTest {
   }
 
   @Test
-  public void reopenedDialogueRepeatsTheSameLineAfterTheCloseResetsBothSpeakers() {
-    Widget npc = visibleWidget("Greetings!");
-    Widget player = visibleWidget("Yes.");
+  public void aSpeakerRepeatingItsOwnLineAfterTheOtherSpeakerStaysDeduped() {
+    Widget npc = visibleWidget("Yes.");
+    Widget player = visibleWidget("Hello.");
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, null, npc);
-    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player, null, player);
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(null, player, null);
 
     watcher.tick();
     watcher.tick();
     watcher.tick();
+
+    verify(dispatcher, times(1)).speakDialogue(eq("Yes."), eq(Speaker.NPC), eq("Bob"), anyInt());
+  }
+
+  @Test
+  public void reopenedDialogueRepeatsBothSpeakersLinesAfterTheCloseResetsThem() {
+    Widget npc = visibleWidget("Greetings!");
+    Widget player = visibleWidget("Yes.");
+    // One side renders per tick: NPC, player, fully closed, then the same conversation again.
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, null, null, npc, null);
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(null, player, null, null, player);
+
+    for (int tick = 0; tick < 5; tick++) {
+      watcher.tick();
+    }
 
     verify(dispatcher, times(2))
         .speakDialogue(eq("Greetings!"), eq(Speaker.NPC), eq("Bob"), anyInt());
