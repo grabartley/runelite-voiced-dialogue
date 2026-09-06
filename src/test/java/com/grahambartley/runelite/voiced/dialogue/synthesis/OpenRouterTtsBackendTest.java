@@ -1333,4 +1333,119 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "re-warming a warm pool spends nothing", WARM_UP_CONNECTIONS, server.getRequestCount());
   }
+
+  @Test
+  public void aVoicedLineCountsOnceAgainstTheCharactersActuallySent() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1, 2}))));
+    SpendTracker spend = new SpendTracker();
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    JsonObject sent =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals(VoicedDialogueConfig.TtsProvider.OPENROUTER, recorded.provider());
+    assertEquals(1, recorded.voicedLines());
+    assertEquals(0, recorded.prefetchedLines());
+    assertEquals(
+        "the counted characters are the input the endpoint bills on",
+        sent.get("input").getAsString().length(),
+        recorded.speechCharacters());
+  }
+
+  @Test
+  public void aPrefetchedLineCountsAsWarmingRatherThanAsAVoicedLine() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1, 2}))));
+    SpendTracker spend = new SpendTracker();
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesize(req().asPrefetch());
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals(0, recorded.voicedLines());
+    assertEquals(1, recorded.prefetchedLines());
+    assertTrue("warming still costs characters", recorded.speechCharacters() > 0);
+  }
+
+  @Test
+  public void aStreamedLineCountsOnceWhenTheFirstAudioArrives() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1, 2, 3, 4}))));
+    SpendTracker spend = new SpendTracker();
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesizeStreaming(req(), (samples, rate) -> {});
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("a streamed line is one billable line", 1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aFailedLineThatReturnsNoAudioCostsNothing() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("bad key"));
+    SpendTracker spend = new SpendTracker();
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNull(backend.synthesize(req()));
+
+    assertTrue("a rejected line never reaches the readout", spend.snapshot().isEmpty());
+  }
+
+  @Test
+  public void aLineNeverSentForWantOfAKeyCostsNothing() {
+    SpendTracker spend = new SpendTracker();
+    OpenRouterTtsBackend backend = backend(new TestConfig());
+    backend.setSpendTracker(spend);
+
+    assertNull(backend.synthesize(req()));
+
+    assertTrue(spend.snapshot().isEmpty());
+  }
+
+  @Test
+  public void theTranslationHopIsCountedInItsOwnBucket() {
+    TestConfig config = new TestConfig();
+    config.key = "sk-or-abc";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("Bonjour")));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(new Buffer().write(RawPcmDecoderTest.raw(new short[] {1, 2}))));
+    SpendTracker spend = new SpendTracker();
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("one translation call", 1, recorded.translationCalls());
+    assertEquals(
+        "translation bills on the source line",
+        "Hello & welcome".length(),
+        recorded.translationCharacters());
+    assertEquals("the spoken line is still counted once", 1, recorded.voicedLines());
+  }
 }

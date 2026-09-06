@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -19,6 +20,7 @@ import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import okhttp3.OkHttpClient;
@@ -103,6 +105,27 @@ public class GeminiAiStudioTtsBackendTest {
   /** A complete Gemini JSON response carrying the samples as one base64 inlineData part. */
   private static String audioResponse(short[] samples) {
     return responseDocument(RawPcmDecoderTest.raw(samples), "STOP");
+  }
+
+  /** A complete response whose usageMetadata reports what the API metered for the call. */
+  private static String audioResponseWithUsage(short[] samples, long audioTokens, long textTokens) {
+    return withUsage(audioResponse(samples), audioTokens, textTokens);
+  }
+
+  /** Folds a usageMetadata block into an existing response document. */
+  private static String withUsage(String document, long audioTokens, long textTokens) {
+    JsonObject detail = new JsonObject();
+    detail.addProperty("modality", "AUDIO");
+    detail.addProperty("tokenCount", audioTokens);
+    JsonArray details = new JsonArray();
+    details.add(detail);
+    JsonObject usage = new JsonObject();
+    usage.addProperty("promptTokenCount", textTokens);
+    usage.addProperty("candidatesTokenCount", audioTokens);
+    usage.add("candidatesTokensDetails", details);
+    JsonObject body = new JsonParser().parse(document).getAsJsonObject();
+    body.add("usageMetadata", usage);
+    return body.toString();
   }
 
   private static String responseDocument(byte[] audioBytes, String finishReason) {
@@ -575,5 +598,215 @@ public class GeminiAiStudioTtsBackendTest {
         RawPcmDecoder.decode(RawPcmDecoderTest.raw(samples), 24_000).getSamples(),
         streamed.getSamples(),
         0f);
+  }
+
+  @Test
+  public void aVoicedLineCountsOnceAgainstTheCharactersActuallySent() throws Exception {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    JsonObject sent =
+        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
+    String input =
+        sent.getAsJsonArray("contents")
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonArray("parts")
+            .get(0)
+            .getAsJsonObject()
+            .get("text")
+            .getAsString();
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, recorded.provider());
+    assertEquals(1, recorded.voicedLines());
+    assertEquals(0, recorded.prefetchedLines());
+    assertEquals(
+        "the counted characters are the input the endpoint bills on",
+        input.length(),
+        recorded.speechCharacters());
+  }
+
+  @Test
+  public void aPrefetchedLineCountsAsWarmingRatherThanAsAVoicedLine() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesize(req().asPrefetch());
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals(0, recorded.voicedLines());
+    assertEquals(1, recorded.prefetchedLines());
+    assertTrue("warming still costs characters", recorded.speechCharacters() > 0);
+  }
+
+  @Test
+  public void aStreamedLineCountsOnceWhenTheFirstAudioArrives() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    List<byte[]> chunks =
+        Arrays.asList(
+            RawPcmDecoderTest.raw(new short[] {1, 2}), RawPcmDecoderTest.raw(new short[] {3, 4}));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, "STOP")));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesizeStreaming(req(), (samples, rate) -> {});
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("a multi-chunk stream is still one billable line", 1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aFailedLineThatReturnsNoAudioCostsNothing() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("bad key"));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNull(backend.synthesize(req()));
+
+    assertTrue("a rejected line never reaches the readout", spend.snapshot().isEmpty());
+  }
+
+  @Test
+  public void aLineNeverSentForWantOfAKeyCostsNothing() {
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(new TestConfig());
+    backend.setSpendTracker(spend);
+
+    assertNull(backend.synthesize(req()));
+
+    assertTrue(spend.snapshot().isEmpty());
+  }
+
+  @Test
+  public void theTranslationHopIsCountedInItsOwnBucket() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(geminiTranslation("Bonjour")));
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("one translation call", 1, recorded.translationCalls());
+    assertEquals(
+        "translation bills on the source line",
+        "Hello & welcome".length(),
+        recorded.translationCharacters());
+    assertEquals("the spoken line is still counted once", 1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aVoicedLineBanksTheTokenCountsTheApiActuallyReported() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("audio tokens are measured, not modelled", 1_700, recorded.audioTokens());
+    assertEquals(42, recorded.speechPromptTokens());
+  }
+
+  @Test
+  public void aStreamedLineBanksTheRunningTotalFromTheFinalEvent() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    // The API reports usageMetadata as a running total, so the last event carries the whole call.
+    String first =
+        withUsage(responseDocument(RawPcmDecoderTest.raw(new short[] {1, 2}), null), 400, 42);
+    String last =
+        withUsage(responseDocument(RawPcmDecoderTest.raw(new short[] {3, 4}), "STOP"), 1_700, 42);
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody("data: " + first + "\n\ndata: " + last + "\n\n"));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    backend.synthesizeStreaming(req(), (samples, rate) -> {});
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("the cumulative total is banked once, not summed", 1_700, recorded.audioTokens());
+    assertEquals(42, recorded.speechPromptTokens());
+    assertEquals(1, recorded.voicedLines());
+  }
+
+  @Test
+  public void aResponseWithoutUsageMetadataStillCountsTheLineButReportsNoTokens() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("the line was still voiced", 1, recorded.voicedLines());
+    assertEquals(
+        "no meter reading means no tokens, never a guessed one", 0, recorded.audioTokens());
+  }
+
+  @Test
+  public void theTranslationHopBanksItsOwnMeteredTokensSeparately() {
+    TestConfig config = new TestConfig();
+    config.key = "aistudio-key";
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(withUsage(geminiTranslation("Bonjour"), 75, 90)));
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
+    SpendTracker spend = new SpendTracker();
+    GeminiAiStudioTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+
+    assertNotNull(backend.synthesize(req()));
+
+    SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
+    assertEquals("the hop's input is measured", 90, recorded.translationInputTokens());
+    assertEquals("as is its output", 75, recorded.translationOutputTokens());
+    assertEquals(
+        "the hop's text output must never land in the audio bucket, which bills 25x higher",
+        1_700,
+        recorded.audioTokens());
+    assertEquals("the speech call's own prompt stays its own", 42, recorded.speechPromptTokens());
   }
 }

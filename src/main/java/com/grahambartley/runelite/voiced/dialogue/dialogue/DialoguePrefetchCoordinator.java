@@ -16,7 +16,8 @@ import net.runelite.api.widgets.Widget;
  * Warms the cache for the dialogue options the player can currently see. Each option's text is the
  * line the player will speak if it is picked, so it is built into the exact same {@link
  * SynthesisRequest} (player voice, player profile, neutral) the dispatcher would produce for that
- * line and handed to the off-thread prefetcher. The "Select an Option" header and blank rows are
+ * line, marked as speculative so spend tracking can tell warming apart from lines actually heard,
+ * and handed to the off-thread prefetcher. The "Select an Option" header and blank rows are
  * skipped. Only touches the client on the game thread; never throws.
  */
 public final class DialoguePrefetchCoordinator {
@@ -70,12 +71,13 @@ public final class DialoguePrefetchCoordinator {
       }
       candidates.add(
           new SynthesisRequest(
-              cleaned,
-              voice,
-              Emotion.NEUTRAL,
-              profile,
-              /* skipTranslation= */ false,
-              /* player= */ true));
+                  cleaned,
+                  voice,
+                  Emotion.NEUTRAL,
+                  profile,
+                  /* skipTranslation= */ false,
+                  /* player= */ true)
+              .asPrefetch());
     }
     prefetcher.offer(candidates);
   }

@@ -76,6 +76,31 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   cases.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
+- **Session spend readout.** `SpendTracker` counts billable work per provider, recorded inside each
+  backend at the point audio is confirmed (decoded, or the first chunk fed to the sink), so every
+  cache tier, deduped join, and failed call stays out of the totals. Prefetch synths land in their own
+  bucket and translation hops in another, since they bill against a different model. `::voicedspend`
+  formats a snapshot through `SpendReport`. Session-scoped and memory-only: a fresh tracker is built
+  on plugin start and nothing is written to disk.
+
+  The cost each provider reports differs, so the readout does too. OpenRouter exposes a key's
+  all-time credit usage at `/api/v1/key`; `OpenRouterUsageClient` reads it and `OpenRouterCreditMeter`
+  subtracts a baseline taken at session start, giving a genuinely billed figure. The meter reports
+  unknown rather than zero without a baseline, and a key swap resets it, since usage on another key
+  is a different running total. The Gemini API returns no cost at all and its real billing sits
+  behind the Cloud Billing API, so AI Studio is costed from the token counts it does report:
+  `GeminiTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
+  which report a running total), and `SpendPricing` converts those measured tokens at Google's
+  published rate. The readout labels that conversion an estimate and OpenRouter's figure as billed.
+
+  The translation hop is a second billable call against a second model, and each provider accounts
+  for it differently. On OpenRouter it bills to the same key, so it is inside the usage delta with
+  no extra work. On AI Studio it is a separate `generateContent` call whose tokens are read through
+  `GeminiTokenUsage.forText` and banked in their own counters. The split matters: the hop's output
+  is text, and reading it through the speech parser would price it as audio at more than twenty
+  times its rate, so the two parse entry points exist precisely to keep that from happening.
+  Balance reads run on a dedicated daemon thread, never the game thread, and the finished lines hop
+  back to the client thread to be posted.
 - **Timeout and stale-drop.** Each provider runs under its own ceiling (`RetryTuning`), sized to how
   it delivers audio: 60 seconds for Google AI Studio, whose longest measured line completes in about
   14 seconds, and 120 seconds for OpenRouter, which spends a long line's whole generation before

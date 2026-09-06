@@ -53,14 +53,27 @@ final class GeminiAiStudioTranslator {
     this.endpoint = endpoint;
   }
 
+  /** A completed translation plus the tokens the API reported metering for it. */
+  static final class Translation {
+    final String text;
+    final GeminiTokenUsage usage;
+
+    Translation(String text, GeminiTokenUsage usage) {
+      this.text = text;
+      this.usage = usage;
+    }
+  }
+
   /**
-   * Returns {@code text} translated into {@code language}, or {@code null} on any failure (non-2xx,
-   * network error, empty/unparseable body). The caller treats {@code null} as a failed line rather
-   * than voicing untranslated text under a target-language cache key.
+   * Returns {@code text} translated into {@code language} with the tokens the hop metered, or
+   * {@code null} on any failure (non-2xx, network error, empty/unparseable body). The caller treats
+   * {@code null} as a failed line rather than voicing untranslated text under a target-language
+   * cache key.
    */
-  String translate(String text, String language, String apiKey) {
+  Translation translate(String text, String language, String apiKey) {
     if (text == null || text.isEmpty()) {
-      return text;
+      // Same shape as the OpenRouter translator's guard: null in, null out; empty in, empty out.
+      return text == null ? null : new Translation(text, GeminiTokenUsage.NONE);
     }
     JsonObject systemInstruction = new JsonObject();
     systemInstruction.add("parts", parts(CloudTtsText.translatorSystemPrompt(language)));
@@ -114,7 +127,9 @@ final class GeminiAiStudioTranslator {
             translated.length(),
             translated);
       }
-      return translated;
+      // The hop is its own billable call against its own model, so its metered tokens ride back
+      // with the text rather than being lost to the session's cost.
+      return new Translation(translated, GeminiTokenUsage.forText(gson, raw));
     } catch (IOException | RuntimeException e) {
       log.warn(
           "[TTS cloud] translate fail reason=error elapsedMs={} inLen={} detail={}",

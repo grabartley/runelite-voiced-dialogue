@@ -16,7 +16,10 @@ public final class BackendWarmUpPolicy {
    * provider makes a different (possibly cold) backend the active one.
    */
   private static final Set<String> WARM_TRIGGER_KEYS =
-      Set.of("openRouterApiKey", "googleAiStudioApiKey", VoicedDialogueConfig.PROVIDER_KEY);
+      Set.of(
+          VoicedDialogueConfig.OPENROUTER_API_KEY,
+          VoicedDialogueConfig.GOOGLE_AI_STUDIO_API_KEY,
+          VoicedDialogueConfig.PROVIDER_KEY);
 
   private BackendWarmUpPolicy() {}
 

@@ -132,7 +132,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             .callTimeout(tuning.callTimeout)
             .retryOnConnectionFailure(true)
             .build();
-    this.support = new CloudBackendSupport(config, MAX_SPEECH_ATTEMPTS, tuning);
+    this.support =
+        new CloudBackendSupport(
+            config, VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, MAX_SPEECH_ATTEMPTS, tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
@@ -144,6 +146,11 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
   public void setNotice(Consumer<String> notice) {
     support.setNotice(notice);
+  }
+
+  /** Points this backend's billable-call counting at the plugin's session spend tracker. */
+  public void setSpendTracker(SpendTracker spend) {
+    support.setSpendTracker(spend);
   }
 
   @Override
@@ -247,18 +254,24 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     // language (or a global quirk) routes the capped line through the translation model, a failed
     // translation fails the line, and a skip-translation request (public chat) bypasses the hop.
     String language = effectiveSpokenLanguage(request);
-    boolean translating = CloudTtsText.needsTranslation(language) && !request.skipTranslation();
+    boolean translating =
+        CloudTtsText.needsTranslation(language)
+            && !request.skipTranslation()
+            && !cappedText.isEmpty();
     String spokenText = cappedText;
     if (translating) {
-      String translated = translator.translate(cappedText, language.trim(), key);
-      if (translated == null) {
+      GeminiAiStudioTranslator.Translation translation =
+          translator.translate(cappedText, language.trim(), key);
+      if (translation == null) {
         support.warnOnce(
             "Google AI Studio translation to "
                 + language.trim()
                 + " failed; this line was not voiced.");
         return null;
       }
-      spokenText = translated;
+      support.recordTranslationSpend(
+          cappedText.length(), translation.usage.promptTokens, translation.usage.textTokens);
+      spokenText = translation.text;
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
     CharacterProfile profile = request.profile();
@@ -301,7 +314,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     String languageCode = translating ? config.cloudLanguage().code() : null;
     JsonObject payload = buildPayload(input, model.voiceFor(request.voice()), languageCode);
     byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
-    return new PreparedCall(key, body, speedRatio, input.length());
+    return new PreparedCall(key, body, speedRatio, input.length(), request.prefetch());
   }
 
   /**
@@ -336,7 +349,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
           return null;
         }
         backoff.recordSuccess();
-        byte[] audio = extractAudio(new String(bytes, StandardCharsets.UTF_8));
+        JsonObject document = parseResponse(new String(bytes, StandardCharsets.UTF_8));
+        byte[] audio = extractAudio(document);
         if (audio == null || audio.length == 0) {
           support.logFailure(
               "empty-body",
@@ -393,6 +407,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
               CloudSynthTrace.success(
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, audio.length, ""));
         }
+        GeminiTokenUsage usage = GeminiTokenUsage.forSpeech(document);
+        support.recordSpeechSpend(
+            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
         return pcm;
       } catch (ConnectException e) {
         support.warnOnce(NETWORK_NOTICE);
@@ -441,6 +458,9 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       boolean fedSink = false;
       long firstChunkMs = -1;
       String finishReason = null;
+      // The API reports usageMetadata on its events as a running total, so this holds the largest
+      // reading seen and is banked once the stream drains.
+      GeminiTokenUsage usage = GeminiTokenUsage.NONE;
       try (Response response = httpClient.newCall(httpRequest).execute()) {
         String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
         if (!response.isSuccessful()) {
@@ -472,11 +492,13 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             if (data.isEmpty()) {
               continue;
             }
-            String eventFinishReason = extractFinishReason(data);
+            JsonObject event = parseResponse(data);
+            String eventFinishReason = extractFinishReason(event);
             if (eventFinishReason != null) {
               finishReason = eventFinishReason;
             }
-            for (byte[] audio : extractAudioChunks(data)) {
+            usage = usage.max(GeminiTokenUsage.forSpeech(event));
+            for (byte[] audio : extractAudioChunks(event)) {
               totalBytes += audio.length;
               float[] chunk = decoder.decode(audio, audio.length);
               if (chunk.length > 0) {
@@ -513,6 +535,11 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
           support.warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
           return null;
         }
+        // Audio arrived, so the call is billable whether or not the tail turns out cacheable. The
+        // token totals only complete as the stream drains, so this banks them here rather than at
+        // the first chunk.
+        support.recordSpeechSpend(
+            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
         if (config.debugMode()) {
           // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
           // stream. A first chunk that lands nearly at elapsedMs means the provider sent the audio
@@ -612,8 +639,18 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /** Concatenated audio bytes of a complete JSON response, or {@code null} when it has none. */
-  private byte[] extractAudio(String raw) {
-    List<byte[]> chunks = extractAudioChunks(raw);
+  /** One {@code GenerateContentResponse} JSON document parsed, or {@code null} when unreadable. */
+  private JsonObject parseResponse(String raw) {
+    try {
+      return gson.fromJson(raw, JsonObject.class);
+    } catch (RuntimeException e) {
+      log.debug("[TTS cloud] AI Studio response parse error: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private byte[] extractAudio(JsonObject response) {
+    List<byte[]> chunks = extractAudioChunks(response);
     if (chunks.isEmpty()) {
       return null;
     }
@@ -625,14 +662,13 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /**
-   * The base64-decoded audio bytes of every {@code inlineData} part in one {@code
-   * GenerateContentResponse} JSON document (a whole buffered body, or one SSE event's data). Empty
-   * on a parse failure or a document with no audio, so callers treat it as an empty response.
+   * The base64-decoded audio bytes of every {@code inlineData} part in one parsed {@code
+   * GenerateContentResponse} document (a whole buffered body, or one SSE event). Empty on an
+   * unreadable document or one with no audio, so callers treat it as an empty response.
    */
-  private List<byte[]> extractAudioChunks(String raw) {
+  private List<byte[]> extractAudioChunks(JsonObject response) {
     List<byte[]> chunks = new ArrayList<>();
     try {
-      JsonObject response = gson.fromJson(raw, JsonObject.class);
       JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
       if (candidates == null || candidates.size() == 0) {
         return chunks;
@@ -660,9 +696,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /** The {@code candidates[0].finishReason} of one response document, or {@code null} if absent. */
-  private String extractFinishReason(String raw) {
+  private String extractFinishReason(JsonObject response) {
     try {
-      JsonObject response = gson.fromJson(raw, JsonObject.class);
       JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
       if (candidates == null || candidates.size() == 0) {
         return null;
@@ -746,12 +781,14 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     final byte[] body;
     final double speedRatio;
     final int inputLen;
+    final boolean prefetch;
 
-    PreparedCall(String key, byte[] body, double speedRatio, int inputLen) {
+    PreparedCall(String key, byte[] body, double speedRatio, int inputLen, boolean prefetch) {
       this.key = key;
       this.body = body;
       this.speedRatio = speedRatio;
       this.inputLen = inputLen;
+      this.prefetch = prefetch;
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.dialogue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -84,6 +85,29 @@ public class DialoguePrefetchCoordinatorTest {
     assertEquals(2, offered.size());
     assertEquals("Yes, I'll help.", offered.get(0).text());
     assertEquals("No thanks.", offered.get(1).text());
+  }
+
+  @Test
+  public void everyOfferedLineIsMarkedSpeculativeSoSpendReadsAsWarming() {
+    when(config.prefetch()).thenReturn(true);
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolveVoice(VoiceManager.SPEAKER_PLAYER, null))
+        .thenReturn(mock(VoiceSpec.class));
+
+    Widget[] children = {option("Yes, I'll help."), option("No thanks.")};
+    Widget options = mock(Widget.class);
+    when(options.getDynamicChildren()).thenReturn(children);
+
+    coordinator.prefetchOptions(options);
+
+    ArgumentCaptor<List<SynthesisRequest>> captor = ArgumentCaptor.forClass(List.class);
+    verify(prefetcher).offer(captor.capture());
+    for (SynthesisRequest offered : captor.getValue()) {
+      assertTrue(
+          "a warmed option is speculative, not a line the player heard: " + offered.text(),
+          offered.prefetch());
+      assertTrue("it is still the player's own line", offered.player());
+    }
   }
 
   private static Widget option(String text) {

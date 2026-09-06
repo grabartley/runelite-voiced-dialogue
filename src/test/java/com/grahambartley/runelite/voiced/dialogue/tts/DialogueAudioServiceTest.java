@@ -6,9 +6,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.PcmSink;
+import com.grahambartley.runelite.voiced.dialogue.synthesis.SpendTracker;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
@@ -34,7 +36,7 @@ public class DialogueAudioServiceTest {
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
   /** Records synth requests and hands back canned PCM so cache behavior is observable. */
-  private static final class FakeBackend implements SynthesisBackend {
+  private static class FakeBackend implements SynthesisBackend {
     final List<String> requests = new ArrayList<>();
     private final String id;
     private final EnumSet<Emotion> supported;
@@ -1086,5 +1088,44 @@ public class DialogueAudioServiceTest {
         "a repeated line across sessions must not re-bill the cloud backend",
         afterFirstSession,
         cloud.requests.size());
+  }
+
+  /**
+   * The acceptance rule behind {@code ::voicedspend}: only a real backend call adds to the readout,
+   * so replaying a line from cache leaves the session totals exactly where they were.
+   */
+  @Test
+  public void cachedReplaysAndPrefetchHitsNeverAddToTheSpendReadout() {
+    SpendTracker spend = new SpendTracker();
+    SynthesisBackend backend =
+        new FakeBackend(EnumSet.of(Emotion.NEUTRAL)) {
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            spend.recordSpeech(
+                VoicedDialogueConfig.TtsProvider.OPENROUTER,
+                request.text().length(),
+                request.prefetch());
+            return super.synthesize(request);
+          }
+        };
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    SpendTracker.ProviderSpend afterFirst = spend.snapshot().get(0);
+    assertEquals("the first hearing is a real backend call", 1, afterFirst.voicedLines());
+
+    svc.speak(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE));
+    executor.runAll();
+    svc.prefetch(req("Hello adventurer", NPCRace.HUMAN, NPCGender.MALE).asPrefetch());
+    executor.runAll();
+
+    SpendTracker.ProviderSpend after = spend.snapshot().get(0);
+    assertEquals("a replayed line costs nothing", 1, after.voicedLines());
+    assertEquals("a prefetch of a cached line costs nothing", 0, after.prefetchedLines());
+    assertEquals(
+        "no extra characters were sent", afterFirst.speechCharacters(), after.speechCharacters());
   }
 }

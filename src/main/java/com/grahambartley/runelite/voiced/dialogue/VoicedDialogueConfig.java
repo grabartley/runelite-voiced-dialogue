@@ -16,6 +16,12 @@ public interface VoicedDialogueConfig extends Config {
   /** Key of {@link #ttsProvider()}, shared by the code that reads and writes it directly. */
   String PROVIDER_KEY = "ttsProvider";
 
+  /** Key of {@link #openRouterApiKey()}, shared by the code that reacts to it changing. */
+  String OPENROUTER_API_KEY = "openRouterApiKey";
+
+  /** Key of {@link #googleAiStudioApiKey()}, shared by the code that reacts to it changing. */
+  String GOOGLE_AI_STUDIO_API_KEY = "googleAiStudioApiKey";
+
   @ConfigSection(
       name = "General",
       description = "Provider, API keys, playback, cache.",
@@ -233,7 +239,7 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "openRouterApiKey",
+      keyName = OPENROUTER_API_KEY,
       name = "OpenRouter API Key",
       description = "Used by the OpenRouter provider. Key at openrouter.ai.",
       position = 1,
@@ -244,7 +250,7 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "googleAiStudioApiKey",
+      keyName = GOOGLE_AI_STUDIO_API_KEY,
       name = "Google AI Studio API Key",
       description = "Used by the Google AI Studio provider. Key at aistudio.google.com.",
       position = 2,
