@@ -27,9 +27,7 @@ Because emotion is encoded in the seq **name**, the table is built by harvesting
 whose name carries an emotion word and bucketing it. Everything else stays NEUTRAL by default, so the
 table only needs the non-neutral ids.
 
-> Note: a previous version of this table used ids `9760-9862` copied from a 2011-era ("508") private
-> server chat-head list. Those ids are reused by live OSRS for Tombs of Amascut / combat-achievement
-> animations, so they never matched a real dialogue head. Always derive ids from the live cache.
+> Always derive ids from the live cache; stale id lists collide with unrelated live animations.
 
 ## Regenerating the table (when Jagex adds new expressions)
 
@@ -56,8 +54,9 @@ tool like [zwyz/osrs-cache](https://github.com/zwyz/osrs-cache).
      `chant`, `mute`, `bored`, `con`, `shifty`, `drunk`, `skull`, plus any `*_idle` resting pose of an
      otherwise-emotional head (e.g. `chathap_idle`).
 4. Write only the non-neutral ids into `expression-emotions.json` (id -> emotion, neutral omitted).
-5. Update the entry count asserted in `ExpressionEmotionTableTest.documentedIdsResolveToTheirEmotion`
-   and any representative ids in the resource tests.
+5. Update the size assertion in `ExpressionEmotionTableTest`, the representative cases in
+   `ExpressionEmotionTableTest.documentedIdResolvesToItsEmotion`, and any representative ids in the
+   resource tests.
 
 ### Verifying an id in the field
 

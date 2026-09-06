@@ -8,18 +8,15 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.ConnectionPool;
-import okhttp3.MediaType;
+import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -51,7 +48,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   public static final String ID = "cloud-google-ai-studio";
 
   /** The Gemini API name of the same model {@link GeminiTtsModel} pins through OpenRouter. */
-  static final String MODEL = "gemini-3.1-flash-tts-preview";
+  static final String MODEL = GeminiTtsModel.GEMINI_MODEL_ID;
 
   static final String PRODUCTION_ENDPOINT =
       "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
@@ -73,17 +70,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
           + " allows only a handful of speech requests per day, so enable billing at"
           + " aistudio.google.com, or switch Voice Provider to OpenRouter.";
 
-  private static final String USER_AGENT = "runelite-voiced-dialogue";
-
-  private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
-
-  /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
-  private static final int MAX_IDLE_CONNECTIONS = 8;
-
+  /** Idle connections are kept this long so back-to-back lines reuse a pooled connection. */
   private static final Duration KEEP_ALIVE = Duration.ofMinutes(5);
-
-  /** One speech call plus a single retry, for a transient empty, truncated, or timed-out line. */
-  private static final int MAX_SPEECH_ATTEMPTS = 2;
 
   private final OkHttpClient httpClient;
   private final VoicedDialogueConfig config;
@@ -92,10 +80,12 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   private final String streamingEndpoint;
   private final GeminiTtsModel model = new GeminiTtsModel();
   private final GeminiAiStudioTranslator translator;
-  private final RateLimitBackoff backoff = new RateLimitBackoff();
 
   /** The shared notice/logging/backoff plumbing, parameterized by this provider's budgets. */
   private final CloudBackendSupport support;
+
+  /** The shared prepare/retry/decode control flow, parameterized by this provider's quirks. */
+  private final CloudSpeechExecutor executor;
 
   public GeminiAiStudioTtsBackend(OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson) {
     this(
@@ -119,28 +109,21 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
       String endpoint,
       String translatorEndpoint,
       RetryTuning tuning) {
-    // Derive a long-lived keepalive client from the injected one (Hub rule: never new an
-    // OkHttpClient): own warm connection pool so back-to-back lines skip the TCP/TLS handshake,
-    // own connect/read/call timeouts without mutating the shared client's globals.
-    this.httpClient =
-        httpClient
-            .newBuilder()
-            .connectionPool(
-                new ConnectionPool(MAX_IDLE_CONNECTIONS, KEEP_ALIVE.toMinutes(), TimeUnit.MINUTES))
-            .connectTimeout(tuning.connectTimeout)
-            .readTimeout(tuning.readTimeout)
-            .callTimeout(tuning.callTimeout)
-            .retryOnConnectionFailure(true)
-            .build();
+    this.httpClient = CloudHttp.deriveClient(httpClient, tuning, KEEP_ALIVE, false);
     this.support =
         new CloudBackendSupport(
-            config, VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, MAX_SPEECH_ATTEMPTS, tuning);
+            config,
+            VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO,
+            CloudSpeechExecutor.MAX_SPEECH_ATTEMPTS,
+            tuning);
     this.config = config;
     this.gson = gson;
     this.endpoint = endpoint;
     this.streamingEndpoint = streamingEndpoint(endpoint);
     this.translator =
         new GeminiAiStudioTranslator(this.httpClient, config, gson, translatorEndpoint);
+    this.executor =
+        new CloudSpeechExecutor(config, support, model, "Google AI Studio", MODEL, new Ops());
   }
 
   /** Registers a one-time notice hook (e.g. a chat or log message) for cloud failures. */
@@ -160,7 +143,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   @Override
   public boolean isAvailable() {
-    return CloudBackendSupport.isNonBlank(config.googleAiStudioApiKey());
+    return CloudHttp.isNonBlank(config.googleAiStudioApiKey());
   }
 
   @Override
@@ -175,7 +158,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   @Override
   public boolean isThrottled() {
-    return backoff.isThrottled();
+    return executor.isThrottled();
   }
 
   /**
@@ -191,7 +174,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
         new Request.Builder()
             .url(modelEndpoint(endpoint))
             .addHeader("x-goog-api-key", config.googleAiStudioApiKey().trim())
-            .addHeader("User-Agent", USER_AGENT)
+            .addHeader("User-Agent", CloudHttp.USER_AGENT)
             .get()
             .build();
     try (Response response = httpClient.newCall(request).execute()) {
@@ -203,394 +186,158 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
 
   @Override
   public String cacheVariant(SynthesisRequest request) {
-    String language = effectiveSpokenLanguage(request);
-    String languageFragment =
-        CloudTtsText.needsTranslation(language) && !request.skipTranslation()
-            ? language.toLowerCase()
-            : null;
-    return CloudCacheKeyBuilder.build(
-        MODEL,
-        model.voiceFor(request.voice()),
-        support.speedPercent(),
-        CloudBackendSupport.DEFAULT_SPEED_PERCENT,
-        request.text(),
-        config.cloudMaxChars(),
-        request.profile(),
-        languageFragment);
+    return executor.cacheVariant(request);
   }
 
   @Override
   public Pcm synthesize(SynthesisRequest request) {
-    PreparedCall prepared = prepare(request);
-    if (prepared == null) {
-      return null;
-    }
-    return executeBuffered(prepared);
+    return executor.synthesize(request);
   }
 
   @Override
   public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
-    PreparedCall prepared = prepare(request);
-    if (prepared == null) {
-      return null;
-    }
-    return executeStreaming(prepared, sink);
+    return executor.synthesizeStreaming(request, sink);
   }
 
   /**
-   * Builds the speech call shared by the buffered and streaming paths: availability check, optional
-   * translation hop, emotion styling, character-profile block, pace direction, and language code.
-   * Returns {@code null} (after surfacing the one-time notice) when the line cannot be voiced at
-   * all: no API key, or a failed translation.
+   * The one-time user notice for a non-2xx speech response. A 429 is the Gemini API's
+   * quota/rate-limit rejection and gets the dedicated notice; anything else keeps the generic
+   * check-your-key message with the code for context.
    */
-  private PreparedCall prepare(SynthesisRequest request) {
-    if (!isAvailable()) {
-      support.noticeMissingKey(NO_KEY_NOTICE);
-      return null;
+  static String failureNotice(int httpCode) {
+    if (httpCode == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
+      return QUOTA_NOTICE;
     }
-    String key = config.googleAiStudioApiKey().trim();
-    String cappedText = CloudTtsText.capLength(request.text(), config.cloudMaxChars());
-    // Optional first hop, identical in behavior to the OpenRouter path: a non-English target
-    // language (or a global quirk) routes the capped line through the translation model, a failed
-    // translation fails the line, and a skip-translation request (public chat) bypasses the hop.
-    String language = effectiveSpokenLanguage(request);
-    boolean translating =
-        CloudTtsText.needsTranslation(language)
-            && !request.skipTranslation()
-            && !cappedText.isEmpty();
-    String spokenText = cappedText;
-    if (translating) {
+    return "Google AI Studio TTS request failed (HTTP "
+        + httpCode
+        + "); check your API key. This line was not voiced.";
+  }
+
+  /** The AI-Studio-specific half of the shared speech call: payload, transport, and notices. */
+  private final class Ops implements CloudSpeechExecutor.Ops {
+
+    @Override
+    public String apiKey() {
+      return config.googleAiStudioApiKey();
+    }
+
+    @Override
+    public String missingKeyNotice() {
+      return NO_KEY_NOTICE;
+    }
+
+    @Override
+    public String translate(String text, String language, String apiKey) {
       GeminiAiStudioTranslator.Translation translation =
-          translator.translate(cappedText, language.trim(), key);
+          translator.translate(text, language, apiKey);
       if (translation == null) {
-        support.warnOnce(
-            "Google AI Studio translation to "
-                + language.trim()
-                + " failed; this line was not voiced.");
         return null;
       }
       support.recordTranslationSpend(
-          cappedText.length(), translation.usage.promptTokens, translation.usage.textTokens);
-      spokenText = translation.text;
-    }
-    String styledInput = model.styleInput(spokenText, request.emotion());
-    CharacterProfile profile = request.profile();
-    String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
-    int speed = support.speedPercent();
-    double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
-    if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
-      // The Gemini API has no speed parameter, so a non-default pace becomes a prompt direction.
-      // Prepended (not appended) so the profile block and emotion tag still lead the transcript.
-      input = "SPEAKING PACE: " + speed + "% of normal.\n\n" + input;
+          text.length(), translation.usage.promptTokens, translation.usage.textTokens);
+      return translation.text;
     }
 
-    if (config.debugMode()) {
-      String tag = GeminiEmotionStyle.tagFor(request.emotion());
-      log.info(
-          "[TTS voice] cloud emotion {} -> {}",
-          request.emotion(),
-          tag == null ? "no tag (neutral input)" : "inline tag [" + tag + "]");
-      if (profile == null) {
-        log.info("[TTS cloud] no character profile (plain input)");
-      } else {
-        log.info(
-            "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
-            profile.name(),
-            profile.accent(),
-            profile.cacheKey());
+    @Override
+    public CloudSpeechExecutor.PreparedSpeech buildRequests(
+        CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
+      String input = line.input;
+      if (line.speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
+        // The Gemini API has no speed parameter, so a non-default pace becomes a prompt direction.
+        // Prepended (not appended) so the profile block and emotion tag still lead the transcript.
+        input = "SPEAKING PACE: " + line.speedPercent + "% of normal.\n\n" + input;
       }
-      if (cappedText.length() != request.text().length()) {
-        log.info(
-            "[TTS cloud] line capped {} -> {} chars (cloudMaxChars={})",
-            request.text().length(),
-            cappedText.length(),
-            config.cloudMaxChars());
-      }
-      if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
-        log.info("[TTS cloud] speed {}", speedRatio);
-      }
+      String languageCode = line.translating ? config.cloudLanguage().code() : null;
+      JsonObject payload = buildPayload(input, model.voiceFor(request.voice()), languageCode);
+      byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
+      return new CloudSpeechExecutor.PreparedSpeech(
+          buildHttpRequest(endpoint, line.apiKey, body),
+          buildHttpRequest(streamingEndpoint, line.apiKey, body),
+          line.speedRatio,
+          input.length(),
+          request.prefetch());
     }
 
-    String languageCode = translating ? config.cloudLanguage().code() : null;
-    JsonObject payload = buildPayload(input, model.voiceFor(request.voice()), languageCode);
-    byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
-    return new PreparedCall(key, body, speedRatio, input.length(), request.prefetch());
+    @Override
+    public Call newCall(Request httpRequest, int inputLength) {
+      return httpClient.newCall(httpRequest);
+    }
+
+    @Override
+    public CloudSpeechExecutor.DecodedSpeech decodeBuffered(
+        byte[] bytes, CloudSpeechExecutor.PreparedSpeech prepared) {
+      JsonObject document = parseResponse(new String(bytes, StandardCharsets.UTF_8));
+      byte[] audio = extractAudio(document);
+      if (audio == null || audio.length == 0) {
+        return CloudSpeechExecutor.DecodedSpeech.EMPTY;
+      }
+      GeminiTokenUsage usage = GeminiTokenUsage.forSpeech(document);
+      return new CloudSpeechExecutor.DecodedSpeech(
+          model.decodeResponse(audio),
+          audio.length,
+          () ->
+              support.recordSpeechSpend(
+                  prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens));
+    }
+
+    @Override
+    public CloudSpeechExecutor.StreamDrain newStreamDrain() {
+      return new SseStreamDrain();
+    }
+
+    @Override
+    public String failureNotice(int httpCode) {
+      return GeminiAiStudioTtsBackend.failureNotice(httpCode);
+    }
+
+    @Override
+    public String emptyBodyNotice() {
+      return "Google AI Studio TTS returned no audio; this line was not voiced.";
+    }
   }
 
   /**
-   * The buffered path: one {@code generateContent} call, audio decoded from the base64 parts of the
-   * JSON body. A transient empty or truncated line gets one retry, a network timeout gets one
-   * backed-off retry, and every failure returns {@code null}, mirroring the OpenRouter path.
+   * Reads {@code streamGenerateContent} server-sent events, base64-decoding each audio part. Each
+   * event's document is parsed once and shared by the finish-reason, usage, and audio extraction.
+   * The API reports {@code usageMetadata} on its events as a running total, so the drain holds the
+   * largest reading seen; the token totals only complete as the stream drains, which is why the
+   * spend is banked after the drain rather than at the first chunk.
    */
-  private Pcm executeBuffered(PreparedCall prepared) {
-    Request httpRequest = buildHttpRequest(endpoint, prepared);
-    for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
-      long attemptStart = System.nanoTime();
-      try (Response response = httpClient.newCall(httpRequest).execute()) {
-        ResponseBody body = response.body();
-        byte[] bytes = body == null ? new byte[0] : body.bytes();
-        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
+  private final class SseStreamDrain implements CloudSpeechExecutor.StreamDrain {
 
-        if (!response.isSuccessful()) {
-          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited();
-          }
-          support.warnOnce(failureNotice(response.code()));
-          support.logFailure(
-              "non-2xx",
-              attempt,
-              elapsedMs,
-              prepared.inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              bytes);
-          return null;
-        }
-        backoff.recordSuccess();
-        JsonObject document = parseResponse(new String(bytes, StandardCharsets.UTF_8));
-        byte[] audio = extractAudio(document);
-        if (audio == null || audio.length == 0) {
-          support.logFailure(
-              "empty-body",
-              attempt,
-              elapsedMs,
-              prepared.inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              bytes);
-          if (attempt < MAX_SPEECH_ATTEMPTS) {
-            log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-            continue;
-          }
-          support.warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
-          return null;
-        }
-        Pcm pcm = model.decodeResponse(audio);
-        if (pcm == null) {
-          support.warnOnce(
-              "Google AI Studio TTS returned audio that could not be decoded; this line was not"
-                  + " voiced.");
-          support.logFailure(
-              "undecodable",
-              attempt,
-              elapsedMs,
-              prepared.inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              bytes);
-          return null;
-        }
-        if (PcmCompleteness.isTruncated(pcm, prepared.speedRatio)) {
-          if (attempt < MAX_SPEECH_ATTEMPTS) {
-            log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-            continue;
-          }
-          support.warnOnce(
-              "Google AI Studio TTS returned a truncated line; this line was not voiced.");
-          support.logFailure(
-              "truncated",
-              attempt,
-              elapsedMs,
-              prepared.inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              bytes);
-          return null;
-        }
-        if (config.debugMode()) {
-          log.info(
-              CloudSynthTrace.success(
-                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, audio.length, ""));
-        }
-        GeminiTokenUsage usage = GeminiTokenUsage.forSpeech(document);
-        support.recordSpeechSpend(
-            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
-        return pcm;
-      } catch (ConnectException e) {
-        support.warnOnce(NETWORK_NOTICE);
-        support.logNetworkFailure(
-            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), prepared.inputLen, e);
-        return null;
-      } catch (IOException e) {
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-        if (attempt < MAX_SPEECH_ATTEMPTS) {
-          log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          support.backoffBeforeNetworkRetry(attempt);
+    private String finishReason;
+    private GeminiTokenUsage usage = GeminiTokenUsage.NONE;
+
+    @Override
+    public void drain(ResponseBody body, CloudSpeechExecutor.ChunkSink chunk) throws IOException {
+      BufferedSource source = body.source();
+      String data;
+      while ((data = readSseData(source)) != null) {
+        if (data.isEmpty()) {
           continue;
         }
-        support.warnOnce(NETWORK_NOTICE);
-        support.logNetworkFailure("network", attempt, elapsedMs, prepared.inputLen, e);
-        return null;
-      } catch (RuntimeException e) {
-        support.warnOnce(
-            "Google AI Studio TTS request failed unexpectedly; this line was not voiced.");
-        support.logNetworkFailure(
-            "unexpected",
-            attempt,
-            CloudBackendSupport.elapsedMs(attemptStart),
-            prepared.inputLen,
-            e);
-        return null;
+        JsonObject event = parseResponse(data);
+        String eventFinishReason = extractFinishReason(event);
+        if (eventFinishReason != null) {
+          finishReason = eventFinishReason;
+        }
+        usage = usage.max(GeminiTokenUsage.forSpeech(event));
+        for (byte[] audio : extractAudioChunks(event)) {
+          chunk.accept(audio, audio.length);
+        }
       }
     }
-    return null;
-  }
 
-  /**
-   * The streaming path: reads {@code streamGenerateContent} server-sent events, base64-decodes each
-   * audio part, hands the decoded samples to {@code sink} for immediate playback, and accumulates
-   * the whole line for caching. An empty stream (nothing handed over yet) is retried like the
-   * buffered path; once any chunk has reached the sink the line is committed, so a mid-stream
-   * failure plays what arrived and is not retried. A line whose accumulated audio is incomplete (no
-   * {@code STOP} finish, odd byte count, or a truncated tail) still played but returns {@code null}
-   * so it is not cached, and re-fetches next time.
-   */
-  private Pcm executeStreaming(PreparedCall prepared, PcmSink sink) {
-    Request httpRequest = buildHttpRequest(streamingEndpoint, prepared);
-    int rate = model.sampleRate();
-    for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
-      long attemptStart = System.nanoTime();
-      boolean fedSink = false;
-      long firstChunkMs = -1;
-      String finishReason = null;
-      // The API reports usageMetadata on its events as a running total, so this holds the largest
-      // reading seen and is banked once the stream drains.
-      GeminiTokenUsage usage = GeminiTokenUsage.NONE;
-      try (Response response = httpClient.newCall(httpRequest).execute()) {
-        String contentType = CloudBackendSupport.headerOrEmpty(response, "Content-Type");
-        if (!response.isSuccessful()) {
-          if (response.code() == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited();
-          }
-          support.warnOnce(failureNotice(response.code()));
-          support.logFailure(
-              "non-2xx",
-              attempt,
-              CloudBackendSupport.elapsedMs(attemptStart),
-              prepared.inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              CloudBackendSupport.errorBody(response));
-          return null;
-        }
-        backoff.recordSuccess();
-        StreamingPcmDecoder decoder = new StreamingPcmDecoder();
-        List<float[]> chunks = new ArrayList<>();
-        int sampleCount = 0;
-        long totalBytes = 0;
-        ResponseBody body = response.body();
-        if (body != null) {
-          BufferedSource source = body.source();
-          String data;
-          while ((data = readSseData(source)) != null) {
-            if (data.isEmpty()) {
-              continue;
-            }
-            JsonObject event = parseResponse(data);
-            String eventFinishReason = extractFinishReason(event);
-            if (eventFinishReason != null) {
-              finishReason = eventFinishReason;
-            }
-            usage = usage.max(GeminiTokenUsage.forSpeech(event));
-            for (byte[] audio : extractAudioChunks(event)) {
-              totalBytes += audio.length;
-              float[] chunk = decoder.decode(audio, audio.length);
-              if (chunk.length > 0) {
-                // Feed playback first so it starts on the earliest samples, then keep the chunk
-                // for the cache. After a skip the sink drops the chunk cheaply, so the loop keeps
-                // draining the stream to completion and the finished line is still cached, never
-                // re-billed on a later hearing.
-                sink.accept(chunk, rate);
-                if (!fedSink) {
-                  firstChunkMs = CloudBackendSupport.elapsedMs(attemptStart);
-                }
-                fedSink = true;
-                chunks.add(chunk);
-                sampleCount += chunk.length;
-              }
-            }
-          }
-        }
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-        if (totalBytes == 0) {
-          support.logFailure(
-              "empty-body",
-              attempt,
-              elapsedMs,
-              prepared.inputLen,
-              response.code(),
-              response.message(),
-              contentType,
-              new byte[0]);
-          if (attempt < MAX_SPEECH_ATTEMPTS) {
-            log.debug(CloudSynthTrace.retry("empty-body", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-            continue;
-          }
-          support.warnOnce("Google AI Studio TTS returned no audio; this line was not voiced.");
-          return null;
-        }
-        // Audio arrived, so the call is billable whether or not the tail turns out cacheable. The
-        // token totals only complete as the stream drains, so this banks them here rather than at
-        // the first chunk.
-        support.recordSpeechSpend(
-            prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
-        if (config.debugMode()) {
-          // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
-          // stream. A first chunk that lands nearly at elapsedMs means the provider sent the audio
-          // in one burst and streaming playback could not start any earlier.
-          log.info(
-              "{} firstChunkMs={}",
-              CloudSynthTrace.success(
-                  attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, (int) totalBytes, ""),
-              firstChunkMs);
-        }
-        Pcm pcm = new Pcm(CloudBackendSupport.flatten(chunks, sampleCount), rate);
-        // The audio already played through the sink; only return it for caching when it is a
-        // whole, complete line: the stream finished with STOP, no half sample is pending, and the
-        // tail releases into silence. There is no retry here since replaying would double it.
-        if (!"STOP".equals(finishReason)
-            || decoder.hasPendingByte()
-            || PcmCompleteness.isTruncated(pcm, prepared.speedRatio)) {
-          log.debug("[TTS cloud] streamed line played but not cached (incomplete tail)");
-          return null;
-        }
-        return pcm;
-      } catch (ConnectException e) {
-        support.warnOnce(NETWORK_NOTICE);
-        support.logNetworkFailure(
-            "connect", attempt, CloudBackendSupport.elapsedMs(attemptStart), prepared.inputLen, e);
-        return null;
-      } catch (IOException e) {
-        long elapsedMs = CloudBackendSupport.elapsedMs(attemptStart);
-        // Retry only while no audio has played; once a chunk reached the sink, replaying the line
-        // would double it, so a mid-stream cut plays what arrived and fails without a retry.
-        if (!fedSink && attempt < MAX_SPEECH_ATTEMPTS) {
-          log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
-          support.backoffBeforeNetworkRetry(attempt);
-          continue;
-        }
-        support.warnOnce(NETWORK_NOTICE);
-        support.logNetworkFailure("network", attempt, elapsedMs, prepared.inputLen, e);
-        return null;
-      } catch (RuntimeException e) {
-        support.warnOnce(
-            "Google AI Studio TTS request failed unexpectedly; this line was not voiced.");
-        support.logNetworkFailure(
-            "unexpected",
-            attempt,
-            CloudBackendSupport.elapsedMs(attemptStart),
-            prepared.inputLen,
-            e);
-        return null;
-      }
+    @Override
+    public boolean finishedCleanly() {
+      return "STOP".equals(finishReason);
     }
-    return null;
+
+    @Override
+    public void bankSpend(CloudSpeechExecutor.PreparedSpeech prepared) {
+      support.recordSpeechSpend(
+          prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
+    }
   }
 
   /**
@@ -629,16 +376,15 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     return payload;
   }
 
-  private Request buildHttpRequest(String target, PreparedCall prepared) {
+  private static Request buildHttpRequest(String target, String apiKey, byte[] body) {
     return new Request.Builder()
         .url(target)
-        .addHeader("x-goog-api-key", prepared.key)
-        .addHeader("User-Agent", USER_AGENT)
-        .post(RequestBody.create(JSON_MEDIA_TYPE, prepared.body))
+        .addHeader("x-goog-api-key", apiKey)
+        .addHeader("User-Agent", CloudHttp.USER_AGENT)
+        .post(RequestBody.create(CloudHttp.JSON_MEDIA_TYPE, body))
         .build();
   }
 
-  /** Concatenated audio bytes of a complete JSON response, or {@code null} when it has none. */
   /** One {@code GenerateContentResponse} JSON document parsed, or {@code null} when unreadable. */
   private JsonObject parseResponse(String raw) {
     try {
@@ -649,6 +395,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     }
   }
 
+  /** Concatenated audio bytes of a complete JSON response, or {@code null} when it has none. */
   private byte[] extractAudio(JsonObject response) {
     List<byte[]> chunks = extractAudioChunks(response);
     if (chunks.isEmpty()) {
@@ -696,7 +443,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /** The {@code candidates[0].finishReason} of one response document, or {@code null} if absent. */
-  private String extractFinishReason(JsonObject response) {
+  private static String extractFinishReason(JsonObject response) {
     try {
       JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
       if (candidates == null || candidates.size() == 0) {
@@ -746,49 +493,5 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   private static String modelEndpoint(String endpoint) {
     int action = endpoint.indexOf(":generateContent");
     return action < 0 ? endpoint : endpoint.substring(0, action);
-  }
-
-  /**
-   * The spoken language actually requested of the model for this line, identical to the OpenRouter
-   * rule: the configured language with the speaker-class Speaking Style appended.
-   */
-  String effectiveSpokenLanguage(SynthesisRequest request) {
-    VoicedDialogueConfig.SpeakingStyle style =
-        request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
-    return CloudTtsText.combineLanguage(config.cloudLanguage().label(), style);
-  }
-
-  /**
-   * The one-time user notice for a non-2xx speech response. A 429 is the Gemini API's
-   * quota/rate-limit rejection and gets the dedicated notice; anything else keeps the generic
-   * check-your-key message with the code for context.
-   */
-  static String failureNotice(int httpCode) {
-    if (httpCode == CloudBackendSupport.HTTP_TOO_MANY_REQUESTS) {
-      return QUOTA_NOTICE;
-    }
-    return "Google AI Studio TTS request failed (HTTP "
-        + httpCode
-        + "); check your API key. This line was not voiced.";
-  }
-
-  private static final String NETWORK_NOTICE =
-      "Google AI Studio TTS request could not reach the network; this line was not voiced.";
-
-  /** The prepared speech call: the key and JSON body plus the values both response loops need. */
-  private static final class PreparedCall {
-    final String key;
-    final byte[] body;
-    final double speedRatio;
-    final int inputLen;
-    final boolean prefetch;
-
-    PreparedCall(String key, byte[] body, double speedRatio, int inputLen, boolean prefetch) {
-      this.key = key;
-      this.body = body;
-      this.speedRatio = speedRatio;
-      this.inputLen = inputLen;
-      this.prefetch = prefetch;
-    }
   }
 }

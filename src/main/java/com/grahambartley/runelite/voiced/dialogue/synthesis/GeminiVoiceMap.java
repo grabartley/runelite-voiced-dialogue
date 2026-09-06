@@ -14,8 +14,8 @@ import java.util.Map;
  * API. Each race/gender pair anchors to a small, gender-correct sub-pool of voices chosen for race
  * character (gravelly timbres for dwarves and trolls, refined for elves, wizards and the ascended
  * Citizens of Arceuus, light for goblins, breathy for the undead). Two NPCs of the same race and
- * gender are spread across that sub-pool by the per-NPC seed already stamped on the spec (issue
- * #78), so they sound distinct but stable across sessions.
+ * gender are spread across that sub-pool by the per-NPC seed already stamped on the spec, so they
+ * sound distinct but stable across sessions.
  *
  * <p>Gender-correctness is structural: a male spec can only ever resolve to a voice from a male
  * sub-pool and a female spec to a female sub-pool, so no race maps two genders onto the same voice.
@@ -60,9 +60,8 @@ final class GeminiVoiceMap {
     // Voice depth is inferred from the catalog's character adjectives: gravelly (Algenib), firm
     // (Alnilam, Orus), even (Schedar), breathy (Enceladus) and informative (Charon, Rasalgethi,
     // Sadaltager) are the deep, mature end; upbeat (Puck) and casual (Zubenelgenubi) are bright.
-    // Big,
-    // imposing races (troll/ogre, demon, undead, dwarf) anchor to the deep end so they sound large
-    // rather than high-pitched; goblins stay deliberately bright and small.
+    // Big, imposing races (troll/ogre, demon, undead, dwarf) anchor to the deep end so they sound
+    // large rather than high-pitched; goblins stay deliberately bright and small.
     // Human (most common): clear, neutral, mid-depth voices.
     put(NPCRace.HUMAN, male("Charon", "Iapetus"), female("Despina", "Erinome"));
     // Elf (refined, elegant): clear/refined voices.
@@ -108,9 +107,9 @@ final class GeminiVoiceMap {
   }
 
   /**
-   * Resolves the Gemini voice for a spec. The per-NPC seed on the spec (issue #78) spreads
-   * same-race/gender NPCs across the sub-pool deterministically; a spec with no seed resolves to
-   * the first (anchor) voice of its race/gender pool, so bare specs are stable too.
+   * Resolves the Gemini voice for a spec. The per-NPC seed on the spec spreads same-race/gender
+   * NPCs across the sub-pool deterministically; a spec with no seed resolves to the first (anchor)
+   * voice of its race/gender pool, so bare specs are stable too.
    */
   String voiceFor(VoiceSpec spec) {
     if (spec == null) {

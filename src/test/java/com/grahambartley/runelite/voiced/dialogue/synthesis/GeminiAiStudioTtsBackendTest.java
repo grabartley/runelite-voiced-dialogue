@@ -19,6 +19,7 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -37,28 +38,6 @@ import org.junit.Test;
  */
 public class GeminiAiStudioTtsBackendTest {
 
-  /** Config with a settable key, pace, and language; everything else uses interface defaults. */
-  private static final class TestConfig implements VoicedDialogueConfig {
-    String key = "";
-    int speedPercent = 100;
-    VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
-
-    @Override
-    public String googleAiStudioApiKey() {
-      return key;
-    }
-
-    @Override
-    public int speakingPace() {
-      return speedPercent;
-    }
-
-    @Override
-    public VoicedDialogueConfig.SpokenLanguage cloudLanguage() {
-      return language;
-    }
-  }
-
   private MockWebServer server;
   private OkHttpClient client;
   private final Gson gson = new Gson();
@@ -75,7 +54,13 @@ public class GeminiAiStudioTtsBackendTest {
     server.shutdown();
   }
 
-  private GeminiAiStudioTtsBackend backend(TestConfig config) {
+  private static MutableTestConfig keyedConfig() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.googleAiStudioKey = "AIza-abc";
+    return config;
+  }
+
+  private GeminiAiStudioTtsBackend backend(MutableTestConfig config) {
     // Point speech and translation at the mock server while keeping the real header, JSON body,
     // SSE decode, and error logic; millisecond retry budgets so retry paths run without real
     // waits.
@@ -90,11 +75,7 @@ public class GeminiAiStudioTtsBackendTest {
             .url("/v1beta/models/" + GeminiAiStudioTranslator.MODEL + ":generateContent")
             .toString(),
         new RetryTuning(
-            java.time.Duration.ofMillis(500),
-            java.time.Duration.ofMillis(500),
-            java.time.Duration.ofSeconds(1),
-            10,
-            0));
+            Duration.ofMillis(500), Duration.ofMillis(500), Duration.ofSeconds(1), 10, 0));
   }
 
   private static SynthesisRequest req() {
@@ -102,9 +83,21 @@ public class GeminiAiStudioTtsBackendTest {
         "Hello & welcome", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
   }
 
+  /** The {@code contents[0].parts[0].text} a request or response document carries. */
+  private static String spokenText(JsonObject body) {
+    return body.getAsJsonArray("contents")
+        .get(0)
+        .getAsJsonObject()
+        .getAsJsonArray("parts")
+        .get(0)
+        .getAsJsonObject()
+        .get("text")
+        .getAsString();
+  }
+
   /** A complete Gemini JSON response carrying the samples as one base64 inlineData part. */
   private static String audioResponse(short[] samples) {
-    return responseDocument(RawPcmDecoderTest.raw(samples), "STOP");
+    return responseDocument(TestPcm.raw(samples), "STOP");
   }
 
   /** A complete response whose usageMetadata reports what the API metered for the call. */
@@ -179,26 +172,27 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void availabilityRequiresKey() {
-    TestConfig config = new TestConfig();
+    MutableTestConfig config = new MutableTestConfig();
     assertFalse("blank key -> unavailable", backend(config).isAvailable());
 
-    config.key = "   ";
+    config.googleAiStudioKey = "   ";
     assertFalse("whitespace-only key -> unavailable", backend(config).isAvailable());
 
-    config.key = "AIza-abc";
+    config.googleAiStudioKey = "AIza-abc";
     assertTrue("a key set -> available", backend(config).isAvailable());
   }
 
   @Test
   public void missingKeyNoticeNamesTheProvider() {
     assertEquals(
-        GeminiAiStudioTtsBackend.NO_KEY_NOTICE, backend(new TestConfig()).missingKeyNotice());
+        GeminiAiStudioTtsBackend.NO_KEY_NOTICE,
+        backend(new MutableTestConfig()).missingKeyNotice());
     assertTrue(GeminiAiStudioTtsBackend.NO_KEY_NOTICE.contains("Google AI Studio"));
   }
 
   @Test
   public void missingKeyFailsWithoutARequest() {
-    Pcm pcm = backend(new TestConfig()).synthesize(req());
+    Pcm pcm = backend(new MutableTestConfig()).synthesize(req());
 
     assertNull("no key -> line not voiced", pcm);
     assertEquals("no HTTP call is made without a key", 0, server.getRequestCount());
@@ -206,8 +200,8 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void sendsApiKeyHeaderAndGeminiBody() throws Exception {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-secret";
+    MutableTestConfig config = keyedConfig();
+    config.googleAiStudioKey = "AIza-secret";
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1})));
 
@@ -225,16 +219,7 @@ public class GeminiAiStudioTtsBackendTest {
     assertNotNull("a User-Agent is sent", recorded.getHeader("User-Agent"));
 
     JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
-    String text =
-        body.getAsJsonArray("contents")
-            .get(0)
-            .getAsJsonObject()
-            .getAsJsonArray("parts")
-            .get(0)
-            .getAsJsonObject()
-            .get("text")
-            .getAsString();
-    assertEquals("Hello & welcome", text);
+    assertEquals("Hello & welcome", spokenText(body));
     JsonObject generationConfig = body.getAsJsonObject("generationConfig");
     assertEquals(
         "AUDIO", generationConfig.getAsJsonArray("responseModalities").get(0).getAsString());
@@ -256,12 +241,10 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void successfulResponseDecodesBase64PcmAt24k() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     short[] samples = {0, 16384, -16384, 32767};
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(samples)));
 
-    Pcm pcm = backend(config).synthesize(req());
+    Pcm pcm = backend(keyedConfig()).synthesize(req());
 
     assertNotNull("a 200 with base64 PCM yields audio", pcm);
     assertEquals(24_000, pcm.getSampleRate());
@@ -270,46 +253,33 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void emotionTagAndProfileBlockLeadTheSpokenText() throws Exception {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1})));
-    CharacterProfile profile =
-        new CharacterProfile(
-            "Troll",
-            "British English, South London Brixton accent.",
-            "A huge, slow, simple-minded troll.",
-            "Slow and heavy.");
 
-    backend(config)
+    backend(keyedConfig())
         .synthesize(
             new SynthesisRequest(
                 "You no take candle!",
                 VoiceSpec.npc(NPCRace.TROLL, NPCGender.MALE),
                 Emotion.ANGRY,
-                profile));
+                TestFixtures.TROLL_PROFILE,
+                false,
+                false));
 
     JsonObject body =
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String text =
-        body.getAsJsonArray("contents")
-            .get(0)
-            .getAsJsonObject()
-            .getAsJsonArray("parts")
-            .get(0)
-            .getAsJsonObject()
-            .get("text")
-            .getAsString();
+    String text = spokenText(body);
     assertTrue(
         "the profile block leads and the emotion-tagged transcript follows",
         text.endsWith("[angry] You no take candle!"));
-    assertTrue("the profile block is present", text.startsWith(profile.renderPromptBlock()));
+    assertTrue(
+        "the profile block is present",
+        text.startsWith(TestFixtures.TROLL_PROFILE.renderPromptBlock()));
   }
 
   @Test
   public void nonDefaultPaceBecomesAPromptDirection() throws Exception {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
+    MutableTestConfig config = keyedConfig();
     config.speedPercent = 150;
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1})));
@@ -318,26 +288,15 @@ public class GeminiAiStudioTtsBackendTest {
 
     JsonObject body =
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String text =
-        body.getAsJsonArray("contents")
-            .get(0)
-            .getAsJsonObject()
-            .getAsJsonArray("parts")
-            .get(0)
-            .getAsJsonObject()
-            .get("text")
-            .getAsString();
     assertTrue(
         "a non-default pace has no API parameter, so it is a prompt direction",
-        text.startsWith("SPEAKING PACE: 150% of normal."));
+        spokenText(body).startsWith("SPEAKING PACE: 150% of normal."));
   }
 
   @Test
   public void non2xxFailsTheLineGracefully() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     List<String> notices = new ArrayList<>();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setNotice(notices::add);
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
 
@@ -348,15 +307,11 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void rateLimitOpensTheThrottleWindowAndNamesTheQuota() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     List<String> notices = new ArrayList<>();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setNotice(notices::add);
     server.enqueue(
-        new MockResponse()
-            .setResponseCode(CloudBackendSupport.HTTP_TOO_MANY_REQUESTS)
-            .setBody("quota"));
+        new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody("quota"));
 
     assertNull(backend.synthesize(req()));
     assertTrue("a 429 opens the prefetch back-off window", backend.isThrottled());
@@ -365,24 +320,20 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void emptyAudioIsRetriedOnceThenFails() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("{\"candidates\":[]}"));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("{\"candidates\":[]}"));
 
-    assertNull(backend(config).synthesize(req()));
+    assertNull(backend(keyedConfig()).synthesize(req()));
     assertEquals("one retry for a transient empty response", 2, server.getRequestCount());
   }
 
   @Test
   public void emptyAudioRecoversOnTheRetry() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("{\"candidates\":[]}"));
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
 
-    Pcm pcm = backend(config).synthesize(req());
+    Pcm pcm = backend(keyedConfig()).synthesize(req());
 
     assertNotNull("the transient empty response is recovered by the retry", pcm);
     assertEquals(2, server.getRequestCount());
@@ -390,17 +341,16 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void streamingFeedsTheSinkPerChunkAndReturnsTheWholeLineForCaching() throws Exception {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     short[] first = {1, 2, 3};
     short[] second = {4, 5};
     List<byte[]> chunks = new ArrayList<>();
-    chunks.add(RawPcmDecoderTest.raw(first));
-    chunks.add(RawPcmDecoderTest.raw(second));
+    chunks.add(TestPcm.raw(first));
+    chunks.add(TestPcm.raw(second));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, "STOP")));
 
     List<float[]> sunk = new ArrayList<>();
-    Pcm pcm = backend(config).synthesizeStreaming(req(), (samples, rate) -> sunk.add(samples));
+    Pcm pcm =
+        backend(keyedConfig()).synthesizeStreaming(req(), (samples, rate) -> sunk.add(samples));
 
     assertEquals("each SSE audio part reaches the sink as its own chunk", 2, sunk.size());
     assertEquals(first.length, sunk.get(0).length);
@@ -417,11 +367,9 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void streamingChunkSplitAcrossSamplesIsReassembled() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     // One 16-bit sample split across two SSE events: an odd leading byte must be carried, never
     // dropped or played as a half sample.
-    byte[] whole = RawPcmDecoderTest.raw(new short[] {1, 2, 3});
+    byte[] whole = TestPcm.raw(new short[] {1, 2, 3});
     byte[] head = new byte[3];
     byte[] tail = new byte[3];
     System.arraycopy(whole, 0, head, 0, 3);
@@ -433,7 +381,7 @@ public class GeminiAiStudioTtsBackendTest {
 
     List<Float> sunk = new ArrayList<>();
     Pcm pcm =
-        backend(config)
+        backend(keyedConfig())
             .synthesizeStreaming(
                 req(),
                 (samples, rate) -> {
@@ -449,15 +397,14 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void incompleteStreamPlaysButIsNotReturnedForCaching() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     List<byte[]> chunks = new ArrayList<>();
-    chunks.add(RawPcmDecoderTest.raw(new short[] {1, 2, 3}));
+    chunks.add(TestPcm.raw(new short[] {1, 2, 3}));
     // No STOP finish reason: the stream was cut before the model finished the line.
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, null)));
 
     List<float[]> sunk = new ArrayList<>();
-    Pcm pcm = backend(config).synthesizeStreaming(req(), (samples, rate) -> sunk.add(samples));
+    Pcm pcm =
+        backend(keyedConfig()).synthesizeStreaming(req(), (samples, rate) -> sunk.add(samples));
 
     assertEquals("what arrived still played", 1, sunk.size());
     assertNull("an incomplete stream is never handed back for caching", pcm);
@@ -465,13 +412,12 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void emptyStreamIsRetriedOnceThenFails() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
 
     List<float[]> sunk = new ArrayList<>();
-    Pcm pcm = backend(config).synthesizeStreaming(req(), (samples, rate) -> sunk.add(samples));
+    Pcm pcm =
+        backend(keyedConfig()).synthesizeStreaming(req(), (samples, rate) -> sunk.add(samples));
 
     assertNull(pcm);
     assertTrue(sunk.isEmpty());
@@ -480,7 +426,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void cacheVariantFoldsInModelAndVoiceSoRendersNeverCollide() {
-    GeminiAiStudioTtsBackend backend = backend(new TestConfig());
+    GeminiAiStudioTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
         new SynthesisRequest("a", VoiceSpec.npc(NPCRace.HUMAN, NPCGender.MALE), Emotion.NEUTRAL);
@@ -502,8 +448,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void nonEnglishLanguageRoutesThroughTheGeminiTranslationHop() throws Exception {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
+    MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(geminiTranslation("Bonjour")));
@@ -533,17 +478,7 @@ public class GeminiAiStudioTtsBackendTest {
 
     RecordedRequest speech = server.takeRequest();
     JsonObject speechBody = new JsonParser().parse(speech.getBody().readUtf8()).getAsJsonObject();
-    String spokenText =
-        speechBody
-            .getAsJsonArray("contents")
-            .get(0)
-            .getAsJsonObject()
-            .getAsJsonArray("parts")
-            .get(0)
-            .getAsJsonObject()
-            .get("text")
-            .getAsString();
-    assertEquals("the translated text is what gets voiced", "Bonjour", spokenText);
+    assertEquals("the translated text is what gets voiced", "Bonjour", spokenText(speechBody));
     assertEquals(
         "a translated line carries the BCP-47 code so it is pronounced natively",
         "fr-FR",
@@ -556,8 +491,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void failedTranslationFailsTheLineWithoutASpeechCall() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
+    MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
 
@@ -567,7 +501,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void languageFragmentReKeysTranslatedLinesInTheCacheVariant() {
-    TestConfig config = new TestConfig();
+    MutableTestConfig config = new MutableTestConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     GeminiAiStudioTtsBackend backend = backend(config);
 
@@ -583,46 +517,34 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void streamedSamplesMatchTheBufferedDecodeOfTheSameBytes() {
-    TestConfig config = new TestConfig();
-    config.key = "AIza-abc";
     short[] samples = {100, -200, 300, -400, 500};
     List<byte[]> chunks = new ArrayList<>();
-    chunks.add(RawPcmDecoderTest.raw(samples));
+    chunks.add(TestPcm.raw(samples));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, "STOP")));
 
-    Pcm streamed = backend(config).synthesizeStreaming(req(), (chunk, rate) -> {});
+    Pcm streamed = backend(keyedConfig()).synthesizeStreaming(req(), (chunk, rate) -> {});
 
     assertNotNull(streamed);
     assertArrayEquals(
         "streamed decode is byte-identical to a whole-buffer decode",
-        RawPcmDecoder.decode(RawPcmDecoderTest.raw(samples), 24_000).getSamples(),
+        RawPcmDecoder.decode(TestPcm.raw(samples), 24_000).getSamples(),
         streamed.getSamples(),
         0f);
   }
 
   @Test
   public void aVoicedLineCountsOnceAgainstTheCharactersActuallySent() throws Exception {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
 
     JsonObject sent =
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String input =
-        sent.getAsJsonArray("contents")
-            .get(0)
-            .getAsJsonObject()
-            .getAsJsonArray("parts")
-            .get(0)
-            .getAsJsonObject()
-            .get("text")
-            .getAsString();
+    String input = spokenText(sent);
 
     SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
     assertEquals(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, recorded.provider());
@@ -636,12 +558,10 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void aPrefetchedLineCountsAsWarmingRatherThanAsAVoicedLine() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     backend.synthesize(req().asPrefetch());
@@ -654,14 +574,11 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void aStreamedLineCountsOnceWhenTheFirstAudioArrives() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     List<byte[]> chunks =
-        Arrays.asList(
-            RawPcmDecoderTest.raw(new short[] {1, 2}), RawPcmDecoderTest.raw(new short[] {3, 4}));
+        Arrays.asList(TestPcm.raw(new short[] {1, 2}), TestPcm.raw(new short[] {3, 4}));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(sseBody(chunks, "STOP")));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
@@ -672,11 +589,9 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void aFailedLineThatReturnsNoAudioCostsNothing() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("bad key"));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNull(backend.synthesize(req()));
@@ -687,7 +602,7 @@ public class GeminiAiStudioTtsBackendTest {
   @Test
   public void aLineNeverSentForWantOfAKeyCostsNothing() {
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(new TestConfig());
+    GeminiAiStudioTtsBackend backend = backend(new MutableTestConfig());
     backend.setSpendTracker(spend);
 
     assertNull(backend.synthesize(req()));
@@ -697,8 +612,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void theTranslationHopIsCountedInItsOwnBucket() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
+    MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(geminiTranslation("Bonjour")));
@@ -721,14 +635,12 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void aVoicedLineBanksTheTokenCountsTheApiActuallyReported() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     server.enqueue(
         new MockResponse()
             .setResponseCode(HTTP_OK)
             .setBody(audioResponseWithUsage(new short[] {1, 2}, 1_700, 42)));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
@@ -740,19 +652,15 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void aStreamedLineBanksTheRunningTotalFromTheFinalEvent() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     // The API reports usageMetadata as a running total, so the last event carries the whole call.
-    String first =
-        withUsage(responseDocument(RawPcmDecoderTest.raw(new short[] {1, 2}), null), 400, 42);
-    String last =
-        withUsage(responseDocument(RawPcmDecoderTest.raw(new short[] {3, 4}), "STOP"), 1_700, 42);
+    String first = withUsage(responseDocument(TestPcm.raw(new short[] {1, 2}), null), 400, 42);
+    String last = withUsage(responseDocument(TestPcm.raw(new short[] {3, 4}), "STOP"), 1_700, 42);
     server.enqueue(
         new MockResponse()
             .setResponseCode(HTTP_OK)
             .setBody("data: " + first + "\n\ndata: " + last + "\n\n"));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
@@ -765,12 +673,10 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void aResponseWithoutUsageMetadataStillCountsTheLineButReportsNoTokens() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_OK).setBody(audioResponse(new short[] {1, 2})));
     SpendTracker spend = new SpendTracker();
-    GeminiAiStudioTtsBackend backend = backend(config);
+    GeminiAiStudioTtsBackend backend = backend(keyedConfig());
     backend.setSpendTracker(spend);
 
     assertNotNull(backend.synthesize(req()));
@@ -783,8 +689,7 @@ public class GeminiAiStudioTtsBackendTest {
 
   @Test
   public void theTranslationHopBanksItsOwnMeteredTokensSeparately() {
-    TestConfig config = new TestConfig();
-    config.key = "aistudio-key";
+    MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(
         new MockResponse()

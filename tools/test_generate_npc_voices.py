@@ -1,8 +1,8 @@
 """Unit tests for the offline NPC voice table generator.
 
-Focused on apply_overrides, whose per-field patch semantics are the subject of the
-override-merge fix: a named field wins, an omitted field inherits the wiki base, and a
-null field is cleared, while every entry must still end up with both race and gender.
+Focused on apply_overrides and its per-field patch semantics: a named field wins, an
+omitted field inherits the wiki base, and a null field is cleared, while every entry
+must still end up with both race and gender.
 
 Run: python3 -m unittest tools.test_generate_npc_voices  (or python3 tools/test_generate_npc_voices.py)
 """

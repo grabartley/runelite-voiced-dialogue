@@ -37,7 +37,7 @@ public interface SynthesisBackend {
   /**
    * Synthesizes the request while delivering decoded audio to {@code sink} in chunks as it is
    * produced, and returns the complete {@link Pcm} for caching (or {@code null} when the line
-   * failed or is too incomplete to cache — it may still have played through the sink).
+   * failed or is too incomplete to cache; it may still have played through the sink).
    *
    * <p>Default: the buffered behavior. Synthesize the whole line, then hand it to the sink as a
    * single chunk, so a backend that cannot stream still works through the streaming call site. A

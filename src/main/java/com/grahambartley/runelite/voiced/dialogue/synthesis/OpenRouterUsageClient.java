@@ -25,8 +25,6 @@ public final class OpenRouterUsageClient {
 
   static final String PRODUCTION_ENDPOINT = "https://openrouter.ai/api/v1/key";
 
-  private static final String USER_AGENT = "runelite-voiced-dialogue";
-
   private final OkHttpClient httpClient;
   private final Gson gson;
   private final String endpoint;
@@ -47,14 +45,14 @@ public final class OpenRouterUsageClient {
    * network error, or a body without a numeric {@code usage}).
    */
   public Double fetchUsage(String apiKey) {
-    if (!CloudBackendSupport.isNonBlank(apiKey)) {
+    if (!CloudHttp.isNonBlank(apiKey)) {
       return null;
     }
     Request request =
         new Request.Builder()
             .url(endpoint)
             .addHeader("Authorization", "Bearer " + apiKey.trim())
-            .addHeader("User-Agent", USER_AGENT)
+            .addHeader("User-Agent", CloudHttp.USER_AGENT)
             .get()
             .build();
     try (Response response = httpClient.newCall(request).execute()) {

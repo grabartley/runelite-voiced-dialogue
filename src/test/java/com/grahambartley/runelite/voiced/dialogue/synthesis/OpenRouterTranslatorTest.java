@@ -1,6 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import static com.grahambartley.runelite.voiced.dialogue.synthesis.CloudBackendSupport.HTTP_TOO_MANY_REQUESTS;
+import static com.grahambartley.runelite.voiced.dialogue.synthesis.CloudHttp.HTTP_TOO_MANY_REQUESTS;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -43,23 +43,12 @@ public class OpenRouterTranslatorTest {
         client, config, gson, server.url("/api/v1/chat/completions").toString());
   }
 
-  private static String chatResponse(String content) {
-    JsonObject message = new JsonObject();
-    message.addProperty("role", "assistant");
-    message.addProperty("content", content);
-    JsonObject choice = new JsonObject();
-    choice.add("message", message);
-    JsonArray choices = new JsonArray();
-    choices.add(choice);
-    JsonObject body = new JsonObject();
-    body.add("choices", choices);
-    return body.toString();
-  }
-
   @Test
   public void translatesAndReturnsTrimmedContent() throws Exception {
     server.enqueue(
-        new MockResponse().setResponseCode(HTTP_OK).setBody(chatResponse("  Bonjour  ")));
+        new MockResponse()
+            .setResponseCode(HTTP_OK)
+            .setBody(TestFixtures.chatResponse("  Bonjour  ")));
 
     String result = translator().translate("Hello", "French", "sk-or-abc");
 

@@ -24,9 +24,6 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok:1.18.30'
 	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
-	// The plugin is Cloud-only: dialogue is voiced through OpenRouter over the injected OkHttp
-	// client. The jar ships no synthesis engine, no native libraries, and no model.
-
 	testImplementation 'junit:junit:4.12'
 	// Method-level data providers for case-driven tests (@Parameters), so repeated case assertions
 	// reuse one test body and each case is reported as its own row.
@@ -36,7 +33,6 @@ dependencies {
 	// version tracks the okhttp the RuneLite client pulls in (3.14.x) so the client and server agree.
 	testImplementation 'com.squareup.okhttp3:mockwebserver:3.14.9'
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
-	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
 }
 
 group = 'com.grahambartley.runelite.voiced.dialogue'

@@ -87,7 +87,7 @@ public class BackendProviderTest {
     StubBackend backend = new StubBackend("cloud-openrouter", true, EnumSet.of(Emotion.NEUTRAL));
     BackendProvider provider = new BackendProvider(backend);
 
-    provider.synthesize(req(Emotion.ANGRY));
+    provider.synthesizeWith(provider.active(), req(Emotion.ANGRY));
 
     assertEquals("backend never sees an unsupported emotion", Emotion.NEUTRAL, backend.lastEmotion);
     assertEquals(1, backend.synthCalls);
@@ -98,7 +98,7 @@ public class BackendProviderTest {
     StubBackend cloud = new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
     BackendProvider provider = new BackendProvider(cloud);
 
-    provider.synthesize(req(Emotion.ANGRY));
+    provider.synthesizeWith(provider.active(), req(Emotion.ANGRY));
 
     assertEquals("a supported emotion is preserved", Emotion.ANGRY, cloud.lastEmotion);
   }
@@ -108,7 +108,7 @@ public class BackendProviderTest {
     StubBackend cloud = new StubBackend("cloud-openrouter", true, EnumSet.allOf(Emotion.class));
     BackendProvider provider = new BackendProvider(cloud);
 
-    provider.synthesize(req(Emotion.SCARED));
+    provider.synthesizeWith(provider.active(), req(Emotion.SCARED));
 
     assertEquals("Cloud supports the full set, so no downgrade", Emotion.SCARED, cloud.lastEmotion);
   }

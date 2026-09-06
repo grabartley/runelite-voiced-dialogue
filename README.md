@@ -7,22 +7,13 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-> Voiced Dialogue leverages a cloud service ([Google AI Studio](https://aistudio.google.com), recommended, or [OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. Both voice through the same Gemini model, so they sound identical, but Google AI Studio starts speaking in well under a second regardless of how long the line is. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
+> Voiced Dialogue leverages a cloud service ([Google AI Studio](https://aistudio.google.com), recommended, or [OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. On the recommended provider, dialogue starts speaking in well under a second. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
 
 ## Gielinor, out loud
 
 Every quest, every shopkeeper, every back-alley stranger: **now they actually talk.** Voiced Dialogue gives NPCs and your own adventurer real AI voices in real time, turning silent text boxes into a living, breathing world you can hear.
 
 Walk up, talk, and listen. That is the whole setup.
-
-<!--
-## Hear it
-
-Template for embedded demo clips; uncomment once clips exist. Each slot is a short
-video or audio link with a one-line caption. Suggested slots: a quest conversation
-with distinct NPC voices, an angry chat-head delivering a furious line, and the same
-NPC in pirate speak or another language.
--->
 
 ## What you get
 
@@ -115,8 +106,6 @@ Set **Spoken Language** to anything other than English and every line is spoken 
 
 Everything runs off the game thread, so the client never stutters and skipping a line cuts its audio instantly. Every line you have heard is kept in a local cache and replays instantly and free, even across sessions. Turn on **Prefetch Dialogue** and the plugin pre-voices the dialogue options on your screen, so the line you pick next starts playing the moment you click it.
 
-On Google AI Studio a line starts speaking after about a second and keeps generating while you listen, so length costs you almost nothing up front. OpenRouter has no streaming support and withholds a line until it is fully generated, so its wait grows with the length of the line.
-
 </details>
 
 <details>
@@ -195,15 +184,13 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 
 ## For developers
 
-**Requirements:** Java 17 and Gradle (wrapper included). The plugin's `src/main` sources compile at release 11 for Plugin Hub compatibility, so keep them free of Java 12+ syntax and APIs; tests use Java 17.
-
 ```bash
 git clone https://github.com/grabartley/runelite-voiced-dialogue.git
 cd runelite-voiced-dialogue
-./gradlew build
+./gradlew clean build
 ```
 
-Run the `com.grahambartley.runelite.voiced.dialogue.VoicedDialoguePluginRunner` class with VM options `-ea --add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED`, either from your IDE or wired into `build.gradle`. See [docs/architecture.md](docs/architecture.md) for how the synthesis pipeline works end to end.
+Setup, tests, and launching the dev client are covered in [docs/development.md](docs/development.md); [docs/architecture.md](docs/architecture.md) explains how the synthesis pipeline works end to end.
 
 **Tech stack:** Java, the Gemini and OpenRouter speech APIs for the cloud voice, and the RuneLite plugin framework.
 

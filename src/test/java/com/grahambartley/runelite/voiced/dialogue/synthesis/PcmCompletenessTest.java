@@ -55,7 +55,7 @@ public class PcmCompletenessTest {
   public void aFastLineIsNotFlaggedWhenItsTrailingSilenceScalesWithPace() {
     // 62.5 ms of trailing silence: short of the 120 ms bar at default pace, but a complete line
     // spoken at 2x pace only needs ~60 ms, since the natural release is time-compressed with the
-    // speech. The same buffer must flag at 1.0 and not flag at 2.0 (the reported false positive).
+    // speech. The same buffer must flag at 1.0 and not flag at 2.0.
     assertTrue(
         "short trailing silence is a cut at default pace",
         PcmCompleteness.isTruncated(clip(48_000, 1_500), 1.0));

@@ -40,7 +40,7 @@ public class StreamingPcmDecoderTest {
   @Test
   public void reassemblesSamplesSplitAcrossChunkBoundaries() {
     short[] samples = {0, 16384, -16384, 32767, -32768, 1000, -1000, 12345};
-    byte[] raw = RawPcmDecoderTest.raw(samples); // 16 bytes
+    byte[] raw = TestPcm.raw(samples); // 16 bytes
     // Chunk sizes chosen to split samples across boundaries: 1 | 3 | 2 | 5 | 5.
     float[] streamed = decodeInChunks(raw, 1, 3, 2, 5, 5);
     float[] whole = RawPcmDecoder.decode(raw, 24_000).getSamples();
@@ -53,7 +53,7 @@ public class StreamingPcmDecoderTest {
     for (int i = 0; i < samples.length; i++) {
       samples[i] = (short) (i * 500 - 16000);
     }
-    byte[] raw = RawPcmDecoderTest.raw(samples);
+    byte[] raw = TestPcm.raw(samples);
     int[] oneByteEach = new int[raw.length];
     Arrays.fill(oneByteEach, 1);
     // Worst case: one byte per call, so every sample straddles two decode() calls.
@@ -65,7 +65,7 @@ public class StreamingPcmDecoderTest {
   @Test
   public void aWholeNumberOfSamplesLeavesNoPendingByte() {
     StreamingPcmDecoder dec = new StreamingPcmDecoder();
-    byte[] raw = RawPcmDecoderTest.raw(new short[] {1, 2, 3});
+    byte[] raw = TestPcm.raw(new short[] {1, 2, 3});
     dec.decode(raw, raw.length);
     assertFalse("an even byte count is a whole number of samples", dec.hasPendingByte());
   }
@@ -73,7 +73,7 @@ public class StreamingPcmDecoderTest {
   @Test
   public void anOddTrailingByteIsHeldAndReportedAsPending() {
     StreamingPcmDecoder dec = new StreamingPcmDecoder();
-    byte[] whole = RawPcmDecoderTest.raw(new short[] {1, 2}); // 4 bytes
+    byte[] whole = TestPcm.raw(new short[] {1, 2}); // 4 bytes
     byte[] withOdd = Arrays.copyOf(whole, whole.length + 1);
     withOdd[whole.length] = 0x7f; // a lone trailing low byte
     float[] out = dec.decode(withOdd, withOdd.length);

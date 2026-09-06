@@ -12,11 +12,11 @@ import lombok.experimental.Accessors;
  * the cloud backend can map the same spec to its own voice bank. {@link #key()} produces a stable,
  * human-readable fragment used in the synthesis cache key.
  *
- * <p>For per-NPC voice variety (issue #78) an NPC spec may additionally carry a {@link #voiceSeed}:
- * a stable, backend-neutral integer derived from the NPC's identity, so two NPCs of the same
- * race+gender can be spread across a gender-appropriate sub-pool and sound different (but stable)
- * from each other. {@link #UNSPECIFIED_SEED} ({@code -1}) means "no explicit choice" so the backend
- * anchors the spec to the first voice of its race/gender pool.
+ * <p>For per-NPC voice variety an NPC spec may additionally carry a {@link #voiceSeed}: a stable,
+ * backend-neutral integer derived from the NPC's identity, so two NPCs of the same race+gender can
+ * be spread across a gender-appropriate sub-pool and sound different (but stable) from each other.
+ * {@link #UNSPECIFIED_SEED} ({@code -1}) means "no explicit choice" so the backend anchors the spec
+ * to the first voice of its race/gender pool.
  *
  * <p>A spec flagged {@link #child} resolves to a youthful, gender-correct sub-pool instead of its
  * adult race anchor; the race still colours the delivery through the character-profile text, and
@@ -46,9 +46,9 @@ public class VoiceSpec {
   }
 
   /**
-   * An NPC voice for the given race and gender carrying a stable per-NPC variety seed (issue #78),
-   * spreading same-race/gender NPCs across a gender sub-pool. A negative seed is normalised to
-   * {@link #UNSPECIFIED_SEED} so it is treated as absent.
+   * An NPC voice for the given race and gender carrying a stable per-NPC variety seed, spreading
+   * same-race/gender NPCs across a gender sub-pool. A negative seed is normalised to {@link
+   * #UNSPECIFIED_SEED} so it is treated as absent.
    */
   public static VoiceSpec npc(VoiceManager.NPCRace race, VoiceManager.NPCGender gender, int seed) {
     return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, false);

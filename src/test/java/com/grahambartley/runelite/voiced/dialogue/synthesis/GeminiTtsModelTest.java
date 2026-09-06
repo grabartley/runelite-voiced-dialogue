@@ -40,7 +40,7 @@ public class GeminiTtsModelTest {
 
   @Test
   public void decodesRawPcmAt24k() {
-    Pcm pcm = model.decodeResponse(RawPcmDecoderTest.raw(new short[] {0, 16384, -16384}));
+    Pcm pcm = model.decodeResponse(TestPcm.raw(new short[] {0, 16384, -16384}));
     assertEquals(24_000, pcm.getSampleRate());
     assertEquals(3, pcm.getSamples().length);
   }

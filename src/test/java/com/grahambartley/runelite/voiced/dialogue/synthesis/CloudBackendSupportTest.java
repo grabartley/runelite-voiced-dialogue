@@ -1,8 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
@@ -12,17 +10,13 @@ import java.util.Arrays;
 import java.util.List;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import okhttp3.MediaType;
-import okhttp3.Protocol;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * The shared backend plumbing: notice guarding, the speaking-pace clamp, and the small response/PCM
- * helpers. The retry loops and failure logging that use it are pinned by each backend's own tests.
+ * The shared stateful backend plumbing: notice guarding, the speaking-pace clamp, and the retry
+ * backoff wait. The retry loops and failure logging that use it are pinned by each backend's own
+ * tests.
  */
 @RunWith(JUnitParamsRunner.class)
 public class CloudBackendSupportTest {
@@ -99,50 +93,6 @@ public class CloudBackendSupportTest {
     long start = System.nanoTime();
     support(100).backoffBeforeNetworkRetry(1);
     assertTrue(
-        "a zero base and jitter must not park the worker",
-        CloudBackendSupport.elapsedMs(start) < 1_000);
-  }
-
-  @Test
-  public void flattenConcatenatesChunksInOrder() {
-    List<float[]> chunks =
-        Arrays.asList(new float[] {1f, 2f}, new float[] {}, new float[] {3f, 4f, 5f});
-    assertArrayEquals(new float[] {1f, 2f, 3f, 4f, 5f}, CloudBackendSupport.flatten(chunks, 5), 0f);
-  }
-
-  @Test
-  public void isNonBlankRequiresANonWhitespaceCharacter() {
-    assertFalse(CloudBackendSupport.isNonBlank(null));
-    assertFalse(CloudBackendSupport.isNonBlank(""));
-    assertFalse(CloudBackendSupport.isNonBlank("   "));
-    assertTrue(CloudBackendSupport.isNonBlank("key"));
-    assertTrue(CloudBackendSupport.isNonBlank("  key  "));
-  }
-
-  @Test
-  public void headerOrEmptyNeverReturnsNull() {
-    Response response = response().newBuilder().header("Content-Type", "audio/pcm").build();
-    assertEquals("audio/pcm", CloudBackendSupport.headerOrEmpty(response, "Content-Type"));
-    assertEquals("", CloudBackendSupport.headerOrEmpty(response, "X-Missing"));
-  }
-
-  @Test
-  public void errorBodyReadsTheBytesAndTreatsAMissingBodyAsEmpty() {
-    Response withBody =
-        response()
-            .newBuilder()
-            .body(ResponseBody.create(MediaType.parse("text/plain"), "quota exceeded"))
-            .build();
-    assertArrayEquals("quota exceeded".getBytes(), CloudBackendSupport.errorBody(withBody));
-    assertArrayEquals(new byte[0], CloudBackendSupport.errorBody(response()));
-  }
-
-  private static Response response() {
-    return new Response.Builder()
-        .request(new Request.Builder().url("http://localhost/").build())
-        .protocol(Protocol.HTTP_1_1)
-        .code(200)
-        .message("OK")
-        .build();
+        "a zero base and jitter must not park the worker", CloudHttp.elapsedMs(start) < 1_000);
   }
 }

@@ -11,10 +11,9 @@ import java.util.Map;
  * <p>Gemini voices a delivery style from a bracketed tag at the head of the text (e.g. {@code
  * "[happy] Well met, traveller."}); the tag steers tone without being read aloud. The mapping here
  * is deliberately conservative: only the four non-neutral {@link Emotion}s detected from chat-head
- * animations (#25) are tagged, each to the closest tag in Gemini's documented vocabulary ({@code
- * SCARED} -> {@code fearful}). {@link Emotion#NEUTRAL} adds no tag at all, so a neutral line is
- * byte-for-byte the plain text. Tuning the exact tag wording or adding intensity is a follow-up
- * (out of scope for #109); this is the single place to change it.
+ * animations are tagged, each to the closest tag in Gemini's documented vocabulary ({@code SCARED}
+ * -> {@code fearful}). {@link Emotion#NEUTRAL} adds no tag at all, so a neutral line is
+ * byte-for-byte the plain text. This is the single place to change the tag wording.
  *
  * <p>{@link #SUPPORTED} is what {@link OpenRouterTtsBackend} advertises, so {@link BackendProvider}
  * only ever passes an emotion this map can tag.

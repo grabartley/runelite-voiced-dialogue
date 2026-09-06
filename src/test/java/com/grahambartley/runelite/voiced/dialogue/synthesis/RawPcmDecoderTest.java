@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.tts.Pcm;
-import java.io.ByteArrayOutputStream;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Test;
@@ -15,20 +14,10 @@ import org.junit.runner.RunWith;
 @RunWith(JUnitParamsRunner.class)
 public class RawPcmDecoderTest {
 
-  /** Builds the raw, headerless little-endian byte stream for the given 16-bit samples. */
-  static byte[] raw(short[] samples) {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    for (short s : samples) {
-      out.write(s & 0xff);
-      out.write((s >> 8) & 0xff);
-    }
-    return out.toByteArray();
-  }
-
   @Test
   public void decodesSampleCountAndCarriesGivenRate() {
     short[] samples = {0, 16384, -16384, 32767, -32768};
-    Pcm pcm = RawPcmDecoder.decode(raw(samples), 24_000);
+    Pcm pcm = RawPcmDecoder.decode(TestPcm.raw(samples), 24_000);
     assertEquals("the caller-provided rate is carried through", 24_000, pcm.getSampleRate());
     assertEquals("one float per 16-bit sample", samples.length, pcm.getSamples().length);
   }
@@ -36,7 +25,7 @@ public class RawPcmDecoderTest {
   @Test
   public void converts16BitToFloatRange() {
     short[] samples = {0, 16384, -16384, -32768};
-    float[] f = RawPcmDecoder.decode(raw(samples), 24_000).getSamples();
+    float[] f = RawPcmDecoder.decode(TestPcm.raw(samples), 24_000).getSamples();
     assertEquals(0f, f[0], 1e-6);
     assertEquals(0.5f, f[1], 1e-3);
     assertEquals(-0.5f, f[2], 1e-3);
@@ -48,7 +37,7 @@ public class RawPcmDecoderTest {
 
   @Test
   public void usesWhateverRateTheCallerPasses() {
-    Pcm pcm = RawPcmDecoder.decode(raw(new short[] {1, 2, 3}), 48_000);
+    Pcm pcm = RawPcmDecoder.decode(TestPcm.raw(new short[] {1, 2, 3}), 48_000);
     assertEquals("the decoder does not coerce the rate", 48_000, pcm.getSampleRate());
   }
 
@@ -64,7 +53,7 @@ public class RawPcmDecoderTest {
       new Object[] {null, 24_000},
       new Object[] {new byte[] {1}, 24_000},
       // a non-positive rate is rejected
-      new Object[] {raw(new short[] {1}), 0},
+      new Object[] {TestPcm.raw(new short[] {1}), 0},
     };
   }
 
