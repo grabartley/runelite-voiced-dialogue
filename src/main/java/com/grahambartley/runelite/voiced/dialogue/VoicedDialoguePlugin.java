@@ -145,11 +145,6 @@ public class VoicedDialoguePlugin extends Plugin {
     noticeManager =
         new ChatNoticeManager(client, configManager, clientThread, chatMessageManager, config);
 
-    // Cloud-only: dialogue is voiced through the configured provider (OpenRouter or Google AI
-    // Studio), resolved live so switching needs no restart. A backend reports available only once
-    // its API key is set, and a line it cannot voice is left silent (with a one-time notice)
-    // rather than routed to the other provider. No model or native binaries ship in the plugin
-    // jar.
     spendTracker = new SpendTracker();
     usageClient = new OpenRouterUsageClient(okHttpClient, gson);
     creditMeter = new OpenRouterCreditMeter();
@@ -163,6 +158,12 @@ public class VoicedDialoguePlugin extends Plugin {
     // Take the session's starting balance now, off the game thread, so the first ::voicedspend has
     // something to subtract from. A key entered later re-baselines through onConfigChanged.
     captureOpenRouterBaseline();
+
+    // Cloud-only: dialogue is voiced through the configured provider (OpenRouter or Google AI
+    // Studio), resolved live so switching needs no restart. A backend reports available only once
+    // its API key is set, and a line it cannot voice is left silent (with a one-time notice)
+    // rather than routed to the other provider. No model or native binaries ship in the plugin
+    // jar.
     OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
     openRouterBackend.setSpendTracker(spendTracker);
@@ -289,9 +290,11 @@ public class VoicedDialoguePlugin extends Plugin {
 
   /**
    * Answers {@code ::voicedspend} with this session's billable cloud usage: lines voiced, lines
-   * prefetched, characters actually sent, and an estimated cost, one chat line per provider used.
+   * prefetched, characters actually sent, and what it cost (OpenRouter's billed figure, or a
+   * labelled estimate where the provider reports only tokens), one chat line per provider used.
    * Cache hits cost nothing and are counted nowhere, so a session spent replaying known lines reads
-   * as zero. Runs on the client thread, where the event is dispatched, and touches no network.
+   * as zero. The handler itself only snapshots counters on the client thread; the balance read runs
+   * on the spend thread, and the readout is queued from there.
    */
   @Subscribe
   public void onCommandExecuted(CommandExecuted event) {
@@ -300,6 +303,10 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     List<SpendTracker.ProviderSpend> snapshot = spendTracker.snapshot();
     String key = config.openRouterApiKey();
+    // Captured now so the task holds its own references: shutDown nulls the fields, and the task
+    // may still be running when it does.
+    OpenRouterUsageClient reader = usageClient;
+    OpenRouterCreditMeter meter = creditMeter;
     log.debug(
         "[TTS spend] ::{} received, {} provider(s) used", SpendReport.COMMAND, snapshot.size());
     submitSpendTask(
@@ -307,7 +314,7 @@ public class VoicedDialoguePlugin extends Plugin {
           try {
             // OpenRouter states what the key has spent; reading it is a network call, so it happens
             // off the game thread.
-            Double spent = creditMeter.spentSince(key, usageClient.fetchUsage(key));
+            Double spent = meter.spentSince(key, reader.fetchUsage(key));
             ChatNoticeManager notices = noticeManager;
             if (notices == null) {
               return;
@@ -336,10 +343,12 @@ public class VoicedDialoguePlugin extends Plugin {
    */
   private void captureOpenRouterBaseline() {
     String key = config.openRouterApiKey();
-    if (creditMeter.hasBaselineFor(key)) {
+    OpenRouterUsageClient reader = usageClient;
+    OpenRouterCreditMeter meter = creditMeter;
+    if (meter.hasBaselineFor(key)) {
       return;
     }
-    submitSpendTask(() -> creditMeter.recordBaseline(key, usageClient.fetchUsage(key)));
+    submitSpendTask(() -> meter.recordBaseline(key, reader.fetchUsage(key)));
   }
 
   /** Runs a spend task on the dedicated thread, dropping it if the plugin is shutting down. */
@@ -375,14 +384,24 @@ public class VoicedDialoguePlugin extends Plugin {
   }
 
   /**
-   * Warms up the backend off the game thread when a backend-affecting config key changes at
-   * runtime, so entering an OpenRouter key does the cloud connection handshake immediately rather
-   * than starting cold on the next line. The decision lives in {@link BackendWarmUpPolicy}; the
-   * work runs on the pipeline thread via {@link DialogueAudioService#prewarm}. No-ops safely when
-   * the plugin is disabled or mid-shutdown.
+   * Reacts to a backend-affecting config key changing at runtime: warms up the backend off the game
+   * thread, so entering an OpenRouter key does the cloud connection handshake immediately rather
+   * than starting cold on the next line, and re-baselines the spend meter on an OpenRouter key
+   * change. The warm-up decision lives in {@link BackendWarmUpPolicy}; the work runs on the
+   * pipeline thread via {@link DialogueAudioService#prewarm}. No-ops safely when the plugin is
+   * disabled or mid-shutdown.
    */
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {
+    // An OpenRouter key swapped mid-session starts a different running total, so the old baseline
+    // cannot be subtracted from the new key's usage. Checked ahead of the warm-up gate so the
+    // re-baseline never depends on what happens to trigger a warm-up.
+    if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
+        && VoicedDialogueConfig.OPENROUTER_API_KEY.equals(event.getKey())
+        && creditMeter != null) {
+      creditMeter.reset();
+      captureOpenRouterBaseline();
+    }
     if (!BackendWarmUpPolicy.affectsBackendWarmUp(event.getGroup(), event.getKey())) {
       return;
     }
@@ -390,12 +409,6 @@ public class VoicedDialoguePlugin extends Plugin {
       return;
     }
     audioService.prewarm(backendProvider::warmUpActive);
-    // An OpenRouter key swapped mid-session starts a different running total, so the old baseline
-    // cannot be subtracted from the new key's usage.
-    if ("openRouterApiKey".equals(event.getKey()) && creditMeter != null) {
-      creditMeter.reset();
-      captureOpenRouterBaseline();
-    }
   }
 
   @Provides

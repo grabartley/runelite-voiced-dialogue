@@ -72,7 +72,8 @@ final class GeminiAiStudioTranslator {
    */
   Translation translate(String text, String language, String apiKey) {
     if (text == null || text.isEmpty()) {
-      return new Translation(text, GeminiTokenUsage.NONE);
+      // Same shape as the OpenRouter translator's guard: null in, null out; empty in, empty out.
+      return text == null ? null : new Translation(text, GeminiTokenUsage.NONE);
     }
     JsonObject systemInstruction = new JsonObject();
     systemInstruction.add("parts", parts(CloudTtsText.translatorSystemPrompt(language)));

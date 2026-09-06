@@ -254,7 +254,10 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
     // language (or a global quirk) routes the capped line through the translation model, a failed
     // translation fails the line, and a skip-translation request (public chat) bypasses the hop.
     String language = effectiveSpokenLanguage(request);
-    boolean translating = CloudTtsText.needsTranslation(language) && !request.skipTranslation();
+    boolean translating =
+        CloudTtsText.needsTranslation(language)
+            && !request.skipTranslation()
+            && !cappedText.isEmpty();
     String spokenText = cappedText;
     if (translating) {
       GeminiAiStudioTranslator.Translation translation =
@@ -346,7 +349,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
           return null;
         }
         backoff.recordSuccess();
-        byte[] audio = extractAudio(new String(bytes, StandardCharsets.UTF_8));
+        JsonObject document = parseResponse(new String(bytes, StandardCharsets.UTF_8));
+        byte[] audio = extractAudio(document);
         if (audio == null || audio.length == 0) {
           support.logFailure(
               "empty-body",
@@ -403,8 +407,7 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
               CloudSynthTrace.success(
                   attempt, MAX_SPEECH_ATTEMPTS, elapsedMs, prepared.inputLen, audio.length, ""));
         }
-        GeminiTokenUsage usage =
-            GeminiTokenUsage.forSpeech(gson, new String(bytes, StandardCharsets.UTF_8));
+        GeminiTokenUsage usage = GeminiTokenUsage.forSpeech(document);
         support.recordSpeechSpend(
             prepared.inputLen, prepared.prefetch, usage.audioTokens, usage.promptTokens);
         return pcm;
@@ -489,12 +492,13 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
             if (data.isEmpty()) {
               continue;
             }
-            String eventFinishReason = extractFinishReason(data);
+            JsonObject event = parseResponse(data);
+            String eventFinishReason = extractFinishReason(event);
             if (eventFinishReason != null) {
               finishReason = eventFinishReason;
             }
-            usage = usage.max(GeminiTokenUsage.forSpeech(gson, data));
-            for (byte[] audio : extractAudioChunks(data)) {
+            usage = usage.max(GeminiTokenUsage.forSpeech(event));
+            for (byte[] audio : extractAudioChunks(event)) {
               totalBytes += audio.length;
               float[] chunk = decoder.decode(audio, audio.length);
               if (chunk.length > 0) {
@@ -635,8 +639,18 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /** Concatenated audio bytes of a complete JSON response, or {@code null} when it has none. */
-  private byte[] extractAudio(String raw) {
-    List<byte[]> chunks = extractAudioChunks(raw);
+  /** One {@code GenerateContentResponse} JSON document parsed, or {@code null} when unreadable. */
+  private JsonObject parseResponse(String raw) {
+    try {
+      return gson.fromJson(raw, JsonObject.class);
+    } catch (RuntimeException e) {
+      log.debug("[TTS cloud] AI Studio response parse error: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private byte[] extractAudio(JsonObject response) {
+    List<byte[]> chunks = extractAudioChunks(response);
     if (chunks.isEmpty()) {
       return null;
     }
@@ -648,14 +662,13 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /**
-   * The base64-decoded audio bytes of every {@code inlineData} part in one {@code
-   * GenerateContentResponse} JSON document (a whole buffered body, or one SSE event's data). Empty
-   * on a parse failure or a document with no audio, so callers treat it as an empty response.
+   * The base64-decoded audio bytes of every {@code inlineData} part in one parsed {@code
+   * GenerateContentResponse} document (a whole buffered body, or one SSE event). Empty on an
+   * unreadable document or one with no audio, so callers treat it as an empty response.
    */
-  private List<byte[]> extractAudioChunks(String raw) {
+  private List<byte[]> extractAudioChunks(JsonObject response) {
     List<byte[]> chunks = new ArrayList<>();
     try {
-      JsonObject response = gson.fromJson(raw, JsonObject.class);
       JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
       if (candidates == null || candidates.size() == 0) {
         return chunks;
@@ -683,9 +696,8 @@ public final class GeminiAiStudioTtsBackend implements SynthesisBackend {
   }
 
   /** The {@code candidates[0].finishReason} of one response document, or {@code null} if absent. */
-  private String extractFinishReason(String raw) {
+  private String extractFinishReason(JsonObject response) {
     try {
-      JsonObject response = gson.fromJson(raw, JsonObject.class);
       JsonArray candidates = response == null ? null : response.getAsJsonArray("candidates");
       if (candidates == null || candidates.size() == 0) {
         return null;

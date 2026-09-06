@@ -153,17 +153,6 @@ public class SpendTrackerTest {
   }
 
   @Test
-  public void resetClearsEverySessionTotal() {
-    SpendTracker tracker = new SpendTracker();
-    tracker.recordSpeech(TtsProvider.OPENROUTER, 100, false);
-    tracker.recordTranslation(TtsProvider.GOOGLE_AI_STUDIO, 40);
-
-    tracker.reset();
-
-    assertTrue("a reset session reads as untouched", tracker.snapshot().isEmpty());
-  }
-
-  @Test
   public void concurrentRecordingLosesNoCalls() throws Exception {
     SpendTracker tracker = new SpendTracker();
     int threads = 8;

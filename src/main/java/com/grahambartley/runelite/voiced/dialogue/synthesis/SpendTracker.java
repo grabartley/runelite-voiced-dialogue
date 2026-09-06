@@ -118,11 +118,6 @@ public final class SpendTracker {
     return out;
   }
 
-  /** Drops every total, so the session starts from zero. */
-  public void reset() {
-    byProvider.clear();
-  }
-
   private Counters counters(TtsProvider provider) {
     return byProvider.computeIfAbsent(provider, p -> new Counters());
   }

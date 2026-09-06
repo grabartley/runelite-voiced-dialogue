@@ -37,10 +37,6 @@ final class GeminiTokenUsage {
     this.textTokens = textTokens;
   }
 
-  boolean isEmpty() {
-    return promptTokens == 0 && audioTokens == 0 && textTokens == 0;
-  }
-
   /**
    * The larger of two readings, field by field. A streamed call reports {@code usageMetadata} on
    * its events as a running total, so the last one carries the whole call; taking the maximum gets
@@ -62,7 +58,15 @@ final class GeminiTokenUsage {
    * the per-modality breakdown, since a speech call's candidates are audio in their entirety.
    */
   static GeminiTokenUsage forSpeech(Gson gson, String raw) {
-    JsonObject usage = usageMetadata(gson, raw);
+    return forSpeech(parse(gson, raw));
+  }
+
+  /**
+   * The {@link #forSpeech(Gson, String)} variant for a caller that already parsed the response
+   * document (to extract its audio), so a multi-megabyte body is never parsed twice.
+   */
+  static GeminiTokenUsage forSpeech(JsonObject response) {
+    JsonObject usage = usageMetadata(response);
     if (usage == null) {
       return NONE;
     }
@@ -75,7 +79,7 @@ final class GeminiTokenUsage {
 
   /** Usage for a text call (the translation hop), whose output bills at the text rate. */
   static GeminiTokenUsage forText(Gson gson, String raw) {
-    JsonObject usage = usageMetadata(gson, raw);
+    JsonObject usage = usageMetadata(parse(gson, raw));
     if (usage == null) {
       return NONE;
     }
@@ -88,14 +92,25 @@ final class GeminiTokenUsage {
         : new GeminiTokenUsage(prompt, audio, text);
   }
 
-  /** The {@code usageMetadata} block of a response document, or {@code null} when unreadable. */
-  private static JsonObject usageMetadata(Gson gson, String raw) {
+  /** A response document parsed, or {@code null} when it is unreadable. */
+  private static JsonObject parse(Gson gson, String raw) {
     if (raw == null || raw.isEmpty()) {
       return null;
     }
     try {
-      JsonObject response = gson.fromJson(raw, JsonObject.class);
-      return response == null ? null : response.getAsJsonObject("usageMetadata");
+      return gson.fromJson(raw, JsonObject.class);
+    } catch (RuntimeException e) {
+      return null;
+    }
+  }
+
+  /** The {@code usageMetadata} block of a response document, or {@code null} when unreadable. */
+  private static JsonObject usageMetadata(JsonObject response) {
+    if (response == null) {
+      return null;
+    }
+    try {
+      return response.getAsJsonObject("usageMetadata");
     } catch (RuntimeException e) {
       return null;
     }
@@ -103,25 +118,33 @@ final class GeminiTokenUsage {
 
   /** Tokens under one modality of {@code candidatesTokensDetails}, or 0. */
   private static long modalityTokens(JsonObject usage, String modality) {
-    JsonArray details = usage.getAsJsonArray("candidatesTokensDetails");
-    if (details == null) {
+    try {
+      JsonArray details = usage.getAsJsonArray("candidatesTokensDetails");
+      if (details == null) {
+        return 0;
+      }
+      long total = 0;
+      for (JsonElement element : details) {
+        JsonObject detail = element.getAsJsonObject();
+        if (detail.has("modality")
+            && modality.equalsIgnoreCase(detail.get("modality").getAsString())) {
+          total += asLong(detail, "tokenCount");
+        }
+      }
+      return total;
+    } catch (RuntimeException e) {
       return 0;
     }
-    long total = 0;
-    for (JsonElement element : details) {
-      JsonObject detail = element.getAsJsonObject();
-      if (detail.has("modality")
-          && modality.equalsIgnoreCase(detail.get("modality").getAsString())) {
-        total += asLong(detail, "tokenCount");
-      }
-    }
-    return total;
   }
 
   private static long asLong(JsonObject object, String field) {
     if (object == null || !object.has(field) || object.get(field).isJsonNull()) {
       return 0;
     }
-    return Math.max(0, object.get(field).getAsLong());
+    try {
+      return Math.max(0, object.get(field).getAsLong());
+    } catch (RuntimeException e) {
+      return 0;
+    }
   }
 }

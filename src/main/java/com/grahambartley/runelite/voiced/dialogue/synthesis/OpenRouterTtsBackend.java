@@ -414,7 +414,10 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     // (public chat) is voiced exactly as typed, so it bypasses the hop even under a non-English
     // target or a global quirk.
     String language = effectiveSpokenLanguage(request);
-    boolean translating = CloudTtsText.needsTranslation(language) && !request.skipTranslation();
+    boolean translating =
+        CloudTtsText.needsTranslation(language)
+            && !request.skipTranslation()
+            && !cappedText.isEmpty();
     String spokenText = cappedText;
     if (translating) {
       String translated = translator.translate(cappedText, language.trim(), key);

@@ -1,8 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.synthesis;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
 
 import com.google.gson.Gson;
 import org.junit.Test;
@@ -26,7 +25,6 @@ public class GeminiTokenUsageTest {
     assertEquals(1700, usage.audioTokens);
     assertEquals(42, usage.promptTokens);
     assertEquals("a speech call has no text output", 0, usage.textTokens);
-    assertFalse(usage.isEmpty());
   }
 
   @Test
@@ -52,12 +50,12 @@ public class GeminiTokenUsageTest {
 
   @Test
   public void anUnrecognisedOrAbsentBlockReportsNothingRatherThanAWrongNumber() {
-    assertTrue(parse(null).isEmpty());
-    assertTrue(parse("").isEmpty());
-    assertTrue(parse("not json").isEmpty());
-    assertTrue(parse("{}").isEmpty());
-    assertTrue(parse("{\"usageMetadata\":{}}").isEmpty());
-    assertTrue(parse("{\"candidates\":[]}").isEmpty());
+    assertSame(GeminiTokenUsage.NONE, parse(null));
+    assertSame(GeminiTokenUsage.NONE, parse(""));
+    assertSame(GeminiTokenUsage.NONE, parse("not json"));
+    assertSame(GeminiTokenUsage.NONE, parse("{}"));
+    assertSame(GeminiTokenUsage.NONE, parse("{\"usageMetadata\":{}}"));
+    assertSame(GeminiTokenUsage.NONE, parse("{\"candidates\":[]}"));
   }
 
   @Test
@@ -76,8 +74,8 @@ public class GeminiTokenUsageTest {
 
   @Test
   public void anAbsentBlockOnATextCallReportsNothing() {
-    assertTrue(GeminiTokenUsage.forText(gson, "{}").isEmpty());
-    assertTrue(GeminiTokenUsage.forText(gson, "not json").isEmpty());
+    assertSame(GeminiTokenUsage.NONE, GeminiTokenUsage.forText(gson, "{}"));
+    assertSame(GeminiTokenUsage.NONE, GeminiTokenUsage.forText(gson, "not json"));
   }
 
   @Test
@@ -85,7 +83,7 @@ public class GeminiTokenUsageTest {
     GeminiTokenUsage usage =
         parse("{\"usageMetadata\":{\"promptTokenCount\":-5,\"candidatesTokenCount\":-9}}");
 
-    assertTrue(usage.isEmpty());
+    assertSame(GeminiTokenUsage.NONE, usage);
   }
 
   @Test
