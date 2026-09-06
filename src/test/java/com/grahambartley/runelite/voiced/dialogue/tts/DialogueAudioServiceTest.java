@@ -2,8 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.tts;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
@@ -14,6 +12,7 @@ import com.grahambartley.runelite.voiced.dialogue.synthesis.SpendTracker;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.VoiceSpec;
+import com.grahambartley.runelite.voiced.dialogue.tts.TieredSynthesisCache.CacheKey;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCGender;
 import com.grahambartley.runelite.voiced.dialogue.voice.VoiceManager.NPCRace;
 import java.nio.file.Path;
@@ -26,7 +25,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -35,18 +33,16 @@ public class DialogueAudioServiceTest {
 
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
-  /** Records synth requests and hands back canned PCM so cache behavior is observable. */
-  private static class FakeBackend implements SynthesisBackend {
-    final List<String> requests = new ArrayList<>();
+  /** Backend scaffolding shared by every case here; only the synth methods differ. */
+  private abstract static class TestBackend implements SynthesisBackend {
     private final String id;
     private final EnumSet<Emotion> supported;
-    volatile boolean throttled;
 
-    FakeBackend(EnumSet<Emotion> supported) {
-      this("cloud-openrouter", supported);
+    TestBackend() {
+      this("cloud-openrouter", EnumSet.of(Emotion.NEUTRAL));
     }
 
-    FakeBackend(String id, EnumSet<Emotion> supported) {
+    TestBackend(String id, EnumSet<Emotion> supported) {
       this.id = id;
       this.supported = supported;
     }
@@ -62,13 +58,27 @@ public class DialogueAudioServiceTest {
     }
 
     @Override
-    public boolean isThrottled() {
-      return throttled;
+    public EnumSet<Emotion> supportedEmotions() {
+      return supported;
+    }
+  }
+
+  /** Records synth requests and hands back canned PCM so cache behavior is observable. */
+  private static class FakeBackend extends TestBackend {
+    final List<String> requests = new ArrayList<>();
+    volatile boolean throttled;
+
+    FakeBackend(EnumSet<Emotion> supported) {
+      this("cloud-openrouter", supported);
+    }
+
+    FakeBackend(String id, EnumSet<Emotion> supported) {
+      super(id, supported);
     }
 
     @Override
-    public EnumSet<Emotion> supportedEmotions() {
-      return supported;
+    public boolean isThrottled() {
+      return throttled;
     }
 
     @Override
@@ -147,16 +157,38 @@ public class DialogueAudioServiceTest {
   }
 
   private static DialogueAudioService service(
+      BackendProvider provider,
+      AudioOutput output,
+      DiskAudioCache diskCache,
+      Executor executor,
+      int cacheSize,
+      int volume,
+      boolean streamPlayback) {
+    // One executor for synthesis, warm-up and prefetch keeps the tests single-threaded.
+    return new DialogueAudioService(
+        provider,
+        output,
+        new TieredSynthesisCache(cacheSize, diskCache),
+        executor,
+        executor,
+        executor,
+        () -> volume,
+        () -> streamPlayback);
+  }
+
+  private static DialogueAudioService service(
       BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
-    // Buffered playback (streaming off, via the six-arg seam); the streaming path has its own tests
-    // below. No disk layer.
-    return new DialogueAudioService(provider, output, null, executor, cacheSize, () -> volume);
+    return service(provider, output, null, executor, cacheSize, volume, false);
   }
 
   private static DialogueAudioService streamingService(
       BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
-    return new DialogueAudioService(
-        provider, output, null, executor, cacheSize, () -> volume, () -> true);
+    return service(provider, output, null, executor, cacheSize, volume, true);
+  }
+
+  private static DialogueAudioService diskService(
+      BackendProvider provider, AudioOutput output, DiskAudioCache disk, Executor executor) {
+    return service(provider, output, disk, executor, 8, 100, false);
   }
 
   private static SynthesisRequest req(String text, NPCRace race, NPCGender gender) {
@@ -272,22 +304,7 @@ public class DialogueAudioServiceTest {
     // The player is what drops the post-skip chunk from the speakers; that is covered by
     // StreamingAudioPlayerTest, so here we assert the service-level caching and stream release.
     SynthesisBackend streaming =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             synthed.add(request.text());
@@ -327,24 +344,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     List<String> synthed = new ArrayList<>();
     // A backend that plays a chunk but returns null (a truncated/failed stream: heard once, not
-    // cacheable). The service must release the stream and cache nothing (INV2).
+    // cacheable). The service must release the stream and persist nothing clipped.
     SynthesisBackend streaming =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             synthed.add(request.text());
@@ -380,22 +382,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     int[] synths = {0};
     SynthesisBackend streaming =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             synths[0]++;
@@ -512,22 +499,7 @@ public class DialogueAudioServiceTest {
   @Test
   public void failedSynthIsNotCachedOrPlayed() {
     SynthesisBackend failing =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             return null;
@@ -600,13 +572,7 @@ public class DialogueAudioServiceTest {
     FakeBackend backend1 = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor exec1 = new DeferredExecutor();
     DialogueAudioService session1 =
-        new DialogueAudioService(
-            provider(backend1),
-            new FakeOutput(),
-            new DiskAudioCache(cacheDir),
-            exec1,
-            8,
-            () -> 100);
+        diskService(provider(backend1), new FakeOutput(), new DiskAudioCache(cacheDir), exec1);
     session1.speak(line);
     exec1.runAll();
     assertEquals("first session synthesizes the line", 1, backend1.requests.size());
@@ -617,8 +583,7 @@ public class DialogueAudioServiceTest {
     FakeOutput output2 = new FakeOutput();
     DeferredExecutor exec2 = new DeferredExecutor();
     DialogueAudioService session2 =
-        new DialogueAudioService(
-            provider(backend2), output2, new DiskAudioCache(cacheDir), exec2, 8, () -> 100);
+        diskService(provider(backend2), output2, new DiskAudioCache(cacheDir), exec2);
     session2.speak(line);
     exec2.runAll();
 
@@ -628,98 +593,15 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void concurrentIdenticalSynthsIssueExactlyOneBackendCall() throws Exception {
-    // Two tasks reach the synth step for the same key at once (a real cloud call is slow). The
-    // first must be the only one billed; the second waits on and reuses its result.
-    CountDownLatch entered = new CountDownLatch(1);
-    CountDownLatch release = new CountDownLatch(1);
-    AtomicInteger calls = new AtomicInteger();
-    Pcm canned = new Pcm(new float[] {0.2f, -0.2f}, 24_000);
-    SynthesisBackend blocking =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
-          @Override
-          public Pcm synthesize(SynthesisRequest request) {
-            calls.incrementAndGet();
-            entered.countDown();
-            try {
-              release.await();
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-            }
-            return canned;
-          }
-        };
-    DialogueAudioService svc =
-        service(provider(blocking), new FakeOutput(), new DeferredExecutor(), 8, 100);
-    DialogueAudioService.CacheKey key =
-        new DialogueAudioService.CacheKey(
-            "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
-    SynthesisRequest request = req("Echo", NPCRace.HUMAN, NPCGender.MALE);
-
-    AtomicReference<Pcm> first = new AtomicReference<>();
-    AtomicReference<Pcm> second = new AtomicReference<>();
-    Thread owner = new Thread(() -> first.set(svc.synthesizeDeduped(blocking, request, key)));
-    owner.start();
-    assertTrue("owner reached the backend", entered.await(2, TimeUnit.SECONDS));
-    Thread waiter = new Thread(() -> second.set(svc.synthesizeDeduped(blocking, request, key)));
-    waiter.start();
-    // Wait until the waiter is parked inside the in-flight future's get(), so releasing the owner
-    // cannot race ahead and let the waiter register itself as a second owner.
-    while (waiter.getState() != Thread.State.WAITING) {
-      Thread.onSpinWait();
-    }
-    release.countDown();
-    owner.join(2_000);
-    waiter.join(2_000);
-
-    assertEquals(
-        "two simultaneous identical requests issue exactly one backend call", 1, calls.get());
-    assertNotNull("the owner produced audio", first.get());
-    assertSame("the waiter reuses the owner's audio", first.get(), second.get());
-  }
-
-  @Test
   public void aStreamingLineAwaitsAnInFlightSynthAndPlaysItBuffered() throws Exception {
-    // The streaming analog of the above: when a synth for this key is already in flight (e.g. a
-    // prefetch), a streaming line must await it and play it BUFFERED, issuing no second backend
-    // call
-    // and opening no stream (INV5).
+    // When a synth for this key is already in flight (e.g. a prefetch), a streaming line must await
+    // it and play it BUFFERED, issuing no second backend call and opening no stream.
     CountDownLatch entered = new CountDownLatch(1);
     CountDownLatch release = new CountDownLatch(1);
     AtomicInteger calls = new AtomicInteger();
     Pcm canned = new Pcm(new float[] {0.3f, -0.3f}, 24_000);
     SynthesisBackend blocking =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             return canned;
@@ -741,9 +623,7 @@ public class DialogueAudioServiceTest {
     FakeOutput output = new FakeOutput();
     DialogueAudioService svc =
         streamingService(provider(blocking), output, new DeferredExecutor(), 8, 100);
-    DialogueAudioService.CacheKey key =
-        new DialogueAudioService.CacheKey(
-            "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
+    CacheKey key = new CacheKey("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
     SynthesisRequest request = req("Echo", NPCRace.HUMAN, NPCGender.MALE);
 
     // Epoch is 0 on a fresh service (no speak yet), so runStreaming(0, ...) passes its epoch guard.
@@ -770,27 +650,12 @@ public class DialogueAudioServiceTest {
   public void aBlockedLineDoesNotStallTheNextLineOnTheSynthesisPool() throws Exception {
     // A slow/blocked synth (e.g. a backed-off cloud retry that is left running so its result still
     // caches) holds one pool worker; a second, different line must still synthesize and play on the
-    // free worker rather than queueing behind it (#196).
+    // free worker rather than queueing behind it.
     CountDownLatch blockerEntered = new CountDownLatch(1);
     CountDownLatch releaseBlocker = new CountDownLatch(1);
     Pcm canned = new Pcm(new float[] {0.3f, -0.3f}, 24_000);
     SynthesisBackend backend =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             if ("Blocker".equals(request.text())) {
@@ -836,22 +701,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     final DialogueAudioService[] holder = new DialogueAudioService[1];
     SynthesisBackend slow =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "cloud-openrouter";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
+        new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
             holder[0].interrupt();
@@ -957,13 +807,8 @@ public class DialogueAudioServiceTest {
     FakeBackend seedBackend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor seedExec = new DeferredExecutor();
     DialogueAudioService seeder =
-        new DialogueAudioService(
-            provider(seedBackend),
-            new FakeOutput(),
-            new DiskAudioCache(cacheDir),
-            seedExec,
-            8,
-            () -> 100);
+        diskService(
+            provider(seedBackend), new FakeOutput(), new DiskAudioCache(cacheDir), seedExec);
     seeder.speak(line);
     seedExec.runAll();
     assertEquals("seeding session wrote the line", 1, seedBackend.requests.size());
@@ -971,8 +816,7 @@ public class DialogueAudioServiceTest {
     CountingDiskCache disk = new CountingDiskCache(cacheDir);
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc =
-        new DialogueAudioService(provider(backend), new FakeOutput(), disk, executor, 8, () -> 100);
+    DialogueAudioService svc = diskService(provider(backend), new FakeOutput(), disk, executor);
 
     svc.prefetch(line);
 
@@ -992,13 +836,7 @@ public class DialogueAudioServiceTest {
     FakeBackend warm = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc =
-        new DialogueAudioService(
-            new BackendProvider(warm),
-            new FakeOutput(),
-            new DiskAudioCache(cacheDir),
-            executor,
-            8,
-            () -> 100);
+        diskService(provider(warm), new FakeOutput(), new DiskAudioCache(cacheDir), executor);
 
     svc.prefetch(req("Tell me about the quest.", NPCRace.HUMAN, NPCGender.MALE));
     executor.runAll();
@@ -1049,8 +887,8 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void crossSessionRepeatCostsTheBackendZeroAdditionalSynthCalls() {
-    // The headline cloud-cost guarantee (#37): a repeated (backendId, voiceKey, emotion, text)
-    // across sessions must never bill the backend again. A fake cloud backend counts synth calls.
+    // The headline cloud-cost guarantee: a repeated (backendId, voiceKey, emotion, text) across
+    // sessions must never bill the backend again. A fake cloud backend counts synth calls.
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     FakeBackend cloud = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
     SynthesisRequest line =
@@ -1059,13 +897,7 @@ public class DialogueAudioServiceTest {
     // Session 1 on the cloud backend: one paid synth call.
     DeferredExecutor exec1 = new DeferredExecutor();
     DialogueAudioService session1 =
-        new DialogueAudioService(
-            new BackendProvider(cloud),
-            new FakeOutput(),
-            new DiskAudioCache(cacheDir),
-            exec1,
-            8,
-            () -> 100);
+        diskService(provider(cloud), new FakeOutput(), new DiskAudioCache(cacheDir), exec1);
     session1.speak(line);
     exec1.runAll();
     int afterFirstSession = cloud.requests.size();
@@ -1074,13 +906,7 @@ public class DialogueAudioServiceTest {
     // Session 2: fresh in-memory cache, same disk dir, same line. Must cost ZERO additional calls.
     DeferredExecutor exec2 = new DeferredExecutor();
     DialogueAudioService session2 =
-        new DialogueAudioService(
-            new BackendProvider(cloud),
-            new FakeOutput(),
-            new DiskAudioCache(cacheDir),
-            exec2,
-            8,
-            () -> 100);
+        diskService(provider(cloud), new FakeOutput(), new DiskAudioCache(cacheDir), exec2);
     session2.speak(line);
     exec2.runAll();
 

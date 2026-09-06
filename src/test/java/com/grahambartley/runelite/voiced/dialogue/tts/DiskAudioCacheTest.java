@@ -8,17 +8,27 @@ import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.synthesis.Emotion;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.attribute.FileTime;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 public class DiskAudioCacheTest {
+
+  /**
+   * Stamped mtimes start in the past so a freshly written entry, which still carries its real mtime
+   * while eviction runs, always sorts as the newest.
+   */
+  private static final long MTIME_BASE = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
 
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
@@ -137,15 +147,10 @@ public class DiskAudioCacheTest {
     long cap = 600;
     DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap);
 
-    // ~120 bytes each (16 + 26*4). Write several, bumping mtime ordering by sleeping a touch.
+    // ~120 bytes each (16 + 26*4).
     float[] samples = new float[26];
-    List<String> texts = new ArrayList<>();
     for (int i = 0; i < 12; i++) {
-      String text = "line-" + i;
-      texts.add(text);
-      cache.put(
-          "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, text, new Pcm(samples, 24_000));
-      Thread.sleep(5); // ensure distinct, increasing write times for deterministic FIFO ordering
+      putStamped(cache, "npc:HUMAN:MALE", "line-" + i, new Pcm(samples, 24_000), i);
     }
 
     assertTrue("total cache size must stay under the cap", dirSize(cacheDir()) <= cap);
@@ -190,15 +195,13 @@ public class DiskAudioCacheTest {
     DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap);
     float[] samples = new float[26];
 
-    cache.put("cloud-openrouter", "v", Emotion.NEUTRAL, "first", new Pcm(samples, 24_000));
-    Thread.sleep(5);
+    putStamped(cache, "v", "first", new Pcm(samples, 24_000), 0);
     assertNotNull(
         "the oldest entry is present before the cache fills",
         cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "first"));
 
     for (int i = 0; i < 5; i++) {
-      cache.put("cloud-openrouter", "v", Emotion.NEUTRAL, "fill-" + i, new Pcm(samples, 24_000));
-      Thread.sleep(5);
+      putStamped(cache, "v", "fill-" + i, new Pcm(samples, 24_000), i + 1);
     }
 
     assertTrue("total cache size must stay under the cap", dirSize(cacheDir()) <= cap);
@@ -217,6 +220,52 @@ public class DiskAudioCacheTest {
     assertNull(cache.get("x", "y", Emotion.NEUTRAL, "z"));
     // put failures are swallowed too.
     cache.put("x", "y", Emotion.NEUTRAL, "z", new Pcm(new float[] {0f}, 24_000));
+  }
+
+  @Test
+  public void storedBytesAreLittleEndianFloat32AfterTheHeader() throws IOException {
+    // The on-disk layout is the compatibility contract between sessions, so pin the exact bytes.
+    DiskAudioCache cache = new DiskAudioCache(cacheDir());
+    cache.put(
+        "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Bytes", pcm(24_000, 0.5f, -0.25f));
+
+    byte[] stored = Files.readAllBytes(onlyEntry(cacheDir()));
+    assertEquals("header(16) + 2 float32 samples", 16 + 2 * 4, stored.length);
+    ByteBuffer buf = ByteBuffer.wrap(stored).order(ByteOrder.LITTLE_ENDIAN);
+    assertEquals("magic \"TDC1\"", 0x54_44_43_31, buf.getInt());
+    assertEquals("sample rate", 24_000, buf.getInt());
+    assertEquals("sample count", 2, buf.getInt());
+    assertEquals("reserved word", 0, buf.getInt());
+    assertEquals(0.5f, buf.getFloat(), 0f);
+    assertEquals(-0.25f, buf.getFloat(), 0f);
+  }
+
+  /**
+   * Writes one entry and stamps its mtime, so FIFO eviction ordering is exact rather than hostage
+   * to the filesystem's timestamp granularity.
+   */
+  private void putStamped(DiskAudioCache cache, String voiceKey, String text, Pcm pcm, int order)
+      throws IOException {
+    Set<Path> before = entries(cacheDir());
+    cache.put("cloud-openrouter", voiceKey, Emotion.NEUTRAL, text, pcm);
+    for (Path p : entries(cacheDir())) {
+      if (!before.contains(p)) {
+        Files.setLastModifiedTime(p, FileTime.fromMillis(MTIME_BASE + order * 1_000L));
+      }
+    }
+  }
+
+  private static Set<Path> entries(Path dir) throws IOException {
+    Set<Path> paths = new HashSet<>();
+    if (!Files.isDirectory(dir)) {
+      return paths;
+    }
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.tdc")) {
+      for (Path p : stream) {
+        paths.add(p);
+      }
+    }
+    return paths;
   }
 
   private static Path onlyEntry(Path dir) throws IOException {

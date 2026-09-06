@@ -13,7 +13,6 @@ public final class PcmAudio {
 
   private PcmAudio() {}
 
-  /** Converts mono float samples in [-1, 1] to signed 16-bit little-endian PCM bytes. */
   public static byte[] toPcm16LE(float[] samples) {
     byte[] pcm = new byte[samples.length * 2];
     for (int i = 0; i < samples.length; i++) {

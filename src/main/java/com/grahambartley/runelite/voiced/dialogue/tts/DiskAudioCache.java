@@ -20,13 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * A persistent, on-disk synthesis cache that lets repeated dialogue lines survive across sessions.
  *
- * <p>It sits behind the in-memory {@link LruCache} in {@link DialogueAudioService} as the second
+ * <p>It sits behind the in-memory {@link LruCache} in {@link TieredSynthesisCache} as the second
  * lookup tier: in-memory LRU → disk → synthesize. Its headline purpose is to keep cloud backends
  * (OpenRouter) from re-billing for lines a user has already heard; every backend also gets faster
  * replays for free.
  *
- * <p>Each entry is keyed on the full identity tuple {@code (backendId, voiceKey, emotion, text)} —
- * the same tuple {@link DialogueAudioService}'s in-memory {@code CacheKey} uses — hashed with
+ * <p>Each entry is keyed on the full identity tuple {@code (backendId, voiceKey, emotion, text)},
+ * the same tuple {@link TieredSynthesisCache}'s in-memory {@code CacheKey} uses, hashed with
  * SHA-256 to derive a fixed-length, filesystem-safe filename. Different backends, voices, emotions,
  * or texts therefore never collide on disk.
  *
@@ -74,7 +74,6 @@ public class DiskAudioCache {
 
   private final Path dir;
   private final long maxBytes;
-  private final boolean unlimited;
 
   /** Set once the directory is known unusable, so we stop retrying I/O every line. */
   private volatile boolean disabled;
@@ -85,7 +84,6 @@ public class DiskAudioCache {
 
   public DiskAudioCache(Path dir, long maxBytes) {
     this.dir = dir;
-    this.unlimited = maxBytes <= UNLIMITED;
     this.maxBytes = maxBytes;
   }
 
@@ -111,7 +109,6 @@ public class DiskAudioCache {
     try {
       Pcm pcm = decode(Files.readAllBytes(file));
       if (pcm == null) {
-        // Truncated or wrong-magic file: drop it so a fresh synth can rewrite a clean copy.
         deleteQuietly(file);
         return null;
       }
@@ -163,12 +160,6 @@ public class DiskAudioCache {
     }
   }
 
-  /** Visible for tests: the resolved cache directory. */
-  Path directory() {
-    return dir;
-  }
-
-  /** Resolves the on-disk file for a key from the SHA-256 of the full tuple. */
   private Path fileFor(String backendId, String voiceKey, Emotion emotion, String text) {
     return dir.resolve(hashKey(backendId, voiceKey, emotion, text) + ".tdc");
   }
@@ -213,15 +204,10 @@ public class DiskAudioCache {
     buf.putInt(pcm.getSampleRate());
     buf.putInt(samples.length);
     buf.putInt(0); // reserved
-    for (float s : samples) {
-      buf.putFloat(s);
-    }
+    buf.asFloatBuffer().put(samples);
     return buf.array();
   }
 
-  /**
-   * Decodes a stored entry, or returns {@code null} if the bytes are not a valid, complete entry.
-   */
   private static Pcm decode(byte[] bytes) {
     if (bytes.length < HEADER_BYTES) {
       return null;
@@ -237,13 +223,10 @@ public class DiskAudioCache {
       return null;
     }
     if (bytes.length != HEADER_BYTES + (long) sampleCount * 4) {
-      // Truncated or trailing garbage: the declared sample count does not match the payload.
       return null;
     }
     float[] samples = new float[sampleCount];
-    for (int i = 0; i < sampleCount; i++) {
-      samples[i] = buf.getFloat();
-    }
+    buf.asFloatBuffer().get(samples);
     return new Pcm(samples, sampleRate);
   }
 
@@ -257,7 +240,7 @@ public class DiskAudioCache {
     try {
       Files.deleteIfExists(file);
     } catch (IOException ignored) {
-      // Best effort.
+      // A cache that cannot delete must not break playback.
     }
   }
 
@@ -268,7 +251,7 @@ public class DiskAudioCache {
    * an {@link #UNLIMITED} cache, which never evicts.
    */
   private void enforceSizeCap() {
-    if (unlimited) {
+    if (maxBytes <= UNLIMITED) {
       return;
     }
     List<Entry> entries = new ArrayList<>();
@@ -292,7 +275,7 @@ public class DiskAudioCache {
     if (total <= maxBytes) {
       return;
     }
-    entries.sort(Comparator.comparingLong(e -> e.mtime)); // oldest first
+    entries.sort(Comparator.comparingLong(e -> e.mtime));
     for (Entry e : entries) {
       if (total <= maxBytes) {
         break;

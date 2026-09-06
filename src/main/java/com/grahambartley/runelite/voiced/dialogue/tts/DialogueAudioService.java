@@ -1,13 +1,11 @@
 package com.grahambartley.runelite.voiced.dialogue.tts;
 
 import com.grahambartley.runelite.voiced.dialogue.synthesis.BackendProvider;
-import com.grahambartley.runelite.voiced.dialogue.synthesis.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.synthesis.SynthesisRequest;
+import com.grahambartley.runelite.voiced.dialogue.tts.TieredSynthesisCache.CacheKey;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -15,11 +13,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
-import lombok.Value;
-import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -28,42 +25,19 @@ import lombok.extern.slf4j.Slf4j;
  * <p>The game thread only calls {@link #speak} / {@link #interrupt}; everything heavy runs on a
  * small background pool ({@code SYNTH_THREADS} workers) fed by a bounded queue, so a line stuck
  * retrying a slow cloud call does not stall the next line. Synthesis is delegated to the active
- * {@link SynthesisBackend} via {@link BackendProvider}, and repeated lines are served from an
- * {@link LruCache} keyed on {@code (backendId, voiceKey, emotion, text)} so a different backend,
- * voice, or emotion never serves stale audio. Behind that sits an optional persistent {@link
- * DiskAudioCache} keyed on the same tuple, so lines survive across sessions and cloud backends are
- * not re-billed for audio the user has already heard. Lookup order is: in-memory LRU → disk →
- * synthesize, writing through to both tiers on a synth and promoting disk hits into memory. An
- * epoch counter makes interruption clean: bumping it on every new line and on {@link #interrupt}
- * causes any queued or in-flight work for a now-stale line to drop instead of playing.
- *
- * <p>A small in-flight registry de-duplicates concurrent synthesis: if two tasks reach the synth
- * step for the same {@code CacheKey} at once, only the first calls the backend and the second waits
- * on its result, so a billable cloud line is never paid for twice in parallel.
+ * {@link SynthesisBackend} via {@link BackendProvider}, and repeated lines are served from a {@link
+ * TieredSynthesisCache}, which also de-duplicates concurrent synthesis of the same line. An epoch
+ * counter makes interruption clean: bumping it on every new line and on {@link #interrupt} causes
+ * any queued or in-flight work for a now-stale line to drop instead of playing.
  */
 @Slf4j
 public final class DialogueAudioService {
 
   /**
-   * Identifies a synthesized line. The active backend, the resolved voice, the (possibly
-   * downgraded) emotion, and the text are all part of the identity, so the same words spoken with a
-   * different backend, voice, or emotion are distinct cache entries.
-   */
-  @Value
-  @Accessors(fluent = true)
-  static class CacheKey {
-    String backendId;
-    String voiceKey;
-    Emotion emotion;
-    String text;
-  }
-
-  /**
    * Worker threads for the live synthesis pool. Two, sharing one queue, so a line stuck retrying a
    * slow cloud call (which is left running so its result still caches) does not block the next
    * line: the free worker picks it up. Concurrent same-key calls are still de-duped and each cloud
-   * call gets its own pooled HTTP/1.1 connection, so two workers never contend on shared state
-   * (#196).
+   * call gets its own pooled HTTP/1.1 connection, so two workers never contend on shared state.
    */
   private static final int SYNTH_THREADS = 2;
 
@@ -77,8 +51,11 @@ public final class DialogueAudioService {
    */
   private static final int PREFETCH_QUEUE_CAPACITY = 16;
 
-  /** Character budget for the abbreviated text preview in debug logs. */
-  private static final int LOG_TEXT_PREVIEW_LENGTH = 40;
+  /**
+   * How long a close waits for an in-flight synth or warm-up to unwind, so a plugin reload does not
+   * orphan it.
+   */
+  private static final int SHUTDOWN_WAIT_SECONDS = 2;
 
   private final BackendProvider backends;
   private final AudioOutput output;
@@ -90,8 +67,7 @@ public final class DialogueAudioService {
   // next likely line never delays the line the player is actually hearing. Small fixed pool so no
   // more than PREFETCH_THREADS prefetch calls are ever in flight at once.
   private final Executor prefetchExecutor;
-  private final LruCache<CacheKey, Pcm> cache;
-  private final DiskAudioCache diskCache;
+  private final TieredSynthesisCache cache;
   private final IntSupplier volume;
   // Read live so toggling "Stream Playback" takes effect on the next line. Only the live speak path
   // consults it; prefetch always buffers (it never plays), and a cave-echo line always buffers (the
@@ -102,10 +78,6 @@ public final class DialogueAudioService {
   // spending on branches the player has already left. Separate from the playback epoch: a new
   // spoken line must never cancel prefetch, and a prefetch must never cancel playback.
   private final AtomicLong prefetchEpoch = new AtomicLong();
-  // Synths currently running, keyed by CacheKey, so a second task for the same line reuses the
-  // pending result instead of issuing a duplicate (billable) backend call.
-  private final ConcurrentHashMap<CacheKey, CompletableFuture<Pcm>> inFlight =
-      new ConcurrentHashMap<>();
 
   public DialogueAudioService(
       BackendProvider backends,
@@ -118,78 +90,35 @@ public final class DialogueAudioService {
     this(
         backends,
         output,
-        diskCache,
+        new TieredSynthesisCache(cacheSize, diskCache),
         buildExecutor(queueCapacity),
         buildWarmExecutor(),
         buildPrefetchExecutor(),
-        cacheSize,
         volume,
         streamPlayback);
   }
 
-  /**
-   * Test seam: lets callers inject an inline executor and disk cache so behavior is deterministic.
-   * The same executor backs warm-up and prefetch so tests stay single-threaded and deterministic.
-   */
+  /** Test seam: every collaborator injected, so behavior is deterministic. */
   DialogueAudioService(
       BackendProvider backends,
       AudioOutput output,
-      DiskAudioCache diskCache,
-      Executor executor,
-      int cacheSize,
-      IntSupplier volume,
-      BooleanSupplier streamPlayback) {
-    this(
-        backends,
-        output,
-        diskCache,
-        executor,
-        executor,
-        executor,
-        cacheSize,
-        volume,
-        streamPlayback);
-  }
-
-  /**
-   * Test seam with streaming off, so the buffered-playback and caching tests keep their behavior.
-   */
-  DialogueAudioService(
-      BackendProvider backends,
-      AudioOutput output,
-      DiskAudioCache diskCache,
-      Executor executor,
-      int cacheSize,
-      IntSupplier volume) {
-    this(backends, output, diskCache, executor, cacheSize, volume, () -> false);
-  }
-
-  private DialogueAudioService(
-      BackendProvider backends,
-      AudioOutput output,
-      DiskAudioCache diskCache,
+      TieredSynthesisCache cache,
       Executor executor,
       Executor warmExecutor,
       Executor prefetchExecutor,
-      int cacheSize,
       IntSupplier volume,
       BooleanSupplier streamPlayback) {
     this.backends = backends;
     this.output = output;
-    this.diskCache = diskCache;
+    this.cache = cache;
     this.executor = executor;
     this.warmExecutor = warmExecutor;
     this.prefetchExecutor = prefetchExecutor;
-    this.cache = new LruCache<>(cacheSize);
     this.volume = volume;
     this.streamPlayback = streamPlayback;
   }
 
-  /**
-   * Runs a one-off backend warm-up task (the cloud connection handshake) on the dedicated warm-up
-   * thread, kept separate from the synthesis pool so it never blocks dialogue playback through an
-   * already-warm backend.
-   */
+  /** Runs a one-off backend warm-up task on the dedicated warm-up thread. */
   public void prewarm(Runnable warm) {
     warmExecutor.execute(warm);
   }
@@ -219,7 +148,7 @@ public final class DialogueAudioService {
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
-    submit(() -> run(mine, backend, effective, key, applyEcho));
+    submitQuietly(executor, () -> run(mine, backend, effective, key, applyEcho));
   }
 
   /**
@@ -243,26 +172,24 @@ public final class DialogueAudioService {
     }
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
-    // Memory tier only: prefetch is driven from the game thread, and a full lookup would read the
-    // disk tier synchronously there. A line cached only on disk is caught by the in-task re-check
-    // below, which runs on the prefetch pool.
-    if (cache.get(key) != null) {
+    if (cache.memoryHit(key) != null) {
       return;
     }
     long node = prefetchEpoch.get();
-    submitPrefetch(
+    submitQuietly(
+        prefetchExecutor,
         () -> {
-          // The player may have left this node, the backend may have hit a limit, or a real line
-          // may
-          // have warmed this key while we waited in the queue: re-check all three before spending.
-          if (prefetchEpoch.get() != node || backend.isThrottled() || lookup(key) != null) {
+          // The player may have left this node, the backend may have hit a limit, or a real
+          // line may have warmed this key while we waited in the queue: re-check all three
+          // before spending.
+          if (prefetchEpoch.get() != node || backend.isThrottled() || cache.lookup(key) != null) {
             return;
           }
           log.debug(
               "[TTS synth] prefetch ({}/{}) \"{}\"",
               key.backendId(),
               key.voiceKey(),
-              abbreviate(key.text()));
+              key.textPreview());
           synthesizeDeduped(backend, effective, key);
         });
   }
@@ -316,9 +243,7 @@ public final class DialogueAudioService {
       ExecutorService es = (ExecutorService) exec;
       es.shutdownNow();
       try {
-        // Give an in-flight synth/warm-up a brief window to unwind so a plugin reload does not
-        // orphan it.
-        es.awaitTermination(2, TimeUnit.SECONDS);
+        es.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         // Shutting down anyway; the plugin does not re-raise the thread interrupt flag (a Hub
         // constraint), so just stop waiting.
@@ -336,16 +261,15 @@ public final class DialogueAudioService {
     if (epoch.get() != mine) {
       return;
     }
-    Pcm pcm = lookup(key);
+    Pcm pcm = cache.lookup(key);
     if (pcm != null) {
       // A cache hit always plays buffered and instantly, no matter the streaming setting.
       playBuffered(mine, pcm, applyEcho);
       return;
     }
-    // Both cache tiers missed. Stream the line (start playing as it downloads) when the setting is
-    // on and there is no cave echo, since echo needs the whole clip up front; otherwise synthesize
-    // the whole buffer first. A cave-echo line and a toggled-off setting both keep the exact
-    // pre-streaming behavior.
+    // Both cache tiers missed. Stream the line (start playing as it downloads) when the setting
+    // is on and there is no cave echo, since echo needs the whole clip up front; echo and
+    // streaming-off both synthesize the full buffer first.
     if (streamPlayback.getAsBoolean() && !applyEcho) {
       runStreaming(mine, backend, request, key);
       return;
@@ -359,14 +283,13 @@ public final class DialogueAudioService {
 
   /**
    * Plays a fully-synthesized line, dropping it if the dialogue has advanced meanwhile. This
-   * re-check is what lets a slow cloud response land in the cache (in {@link #synthesizeDeduped})
-   * yet never play over the top of the line that superseded it.
+   * re-check is what lets a slow cloud response land in the cache yet never play over the top of
+   * the line that superseded it.
    */
   private void playBuffered(long mine, Pcm pcm, boolean applyEcho) {
     if (epoch.get() != mine) {
       return;
     }
-    // Echo is render-only on a fresh buffer; the dry pcm stays in both cache tiers untouched.
     Pcm toPlay = applyEcho ? CaveEcho.apply(pcm) : pcm;
     output.stream(toPlay.getSamples(), toPlay.getSampleRate(), volume.getAsInt());
   }
@@ -380,8 +303,7 @@ public final class DialogueAudioService {
    * never re-billed on a later hearing. A line the backend deems incomplete is played but returns
    * {@code null}, so nothing clipped is persisted.
    */
-  // Package-private for the same reason as synthesizeDeduped: the dedup-degrades-to-buffered branch
-  // needs a concurrency test to drive it directly.
+  // Package-private so a concurrency test can drive the dedup-degrades-to-buffered branch directly.
   void runStreaming(long mine, SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
     if (epoch.get() != mine) {
       // Superseded between run()'s check and here (e.g. a slow disk lookup): do NOT open a stream,
@@ -391,152 +313,65 @@ public final class DialogueAudioService {
       synthesizeDeduped(backend, request, key);
       return;
     }
-    CompletableFuture<Pcm> own = new CompletableFuture<>();
-    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
-    if (running != null) {
-      Pcm pcm = await(running);
-      if (pcm != null) {
-        playBuffered(mine, pcm, false);
-      }
-      return;
-    }
-    Pcm full = null;
-    AudioOutput.AudioStream stream = null;
-    try {
-      stream = output.beginStream(volume.getAsInt());
-      // Forward every chunk to the player: its generation counter drops post-skip chunks and
-      // releases the audio line at once (so a skipped line does not hold it open through the
-      // background drain), while the backend keeps draining the body so the finished line still
-      // caches.
-      AudioOutput.AudioStream playing = stream;
-      PcmSink sink = playing::write;
-      full = backends.synthesizeStreamingWith(backend, request, sink);
-      if (full != null) {
-        cache.put(key, full);
-        if (diskCache != null) {
-          diskCache.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), full);
-        }
-      }
-    } finally {
-      if (stream != null) {
-        stream.end();
-      }
-      // Publish before deregistering so a waiter that already grabbed this future is never left
-      // blocked, mirroring synthesizeDeduped.
-      own.complete(full);
-      inFlight.remove(key, own);
+    AtomicBoolean deduped = new AtomicBoolean();
+    Pcm pcm =
+        cache.withInFlight(
+            key,
+            () -> {
+              AudioOutput.AudioStream stream = output.beginStream(volume.getAsInt());
+              try {
+                PcmSink sink = stream::write;
+                return backends.synthesizeStreamingWith(backend, request, sink);
+              } finally {
+                stream.end();
+              }
+            },
+            () -> deduped.set(true));
+    if (deduped.get() && pcm != null) {
+      playBuffered(mine, pcm, false);
     }
   }
 
   /**
-   * Memory then disk lookup; a disk hit is promoted into memory. {@code null} when both miss. Every
-   * hit notes its tier (memory/disk) and the lookup cost, so a slow disk serve is visible; a miss
-   * is left to the synth trace that follows, keeping speculative prefetch misses out of the log.
+   * Synthesizes the line through the shared in-flight dedup, so a key already being synthesized is
+   * awaited rather than billed a second time. Returns {@code null} on synth failure.
    */
-  private Pcm lookup(CacheKey key) {
-    long start = System.nanoTime();
-    Pcm pcm = cache.get(key);
-    if (pcm != null) {
-      log.debug(
-          "[TTS cache] hit tier=memory lookupMs={} ({}/{}) \"{}\"",
-          elapsedMs(start),
-          key.backendId(),
-          key.voiceKey(),
-          abbreviate(key.text()));
-      return pcm;
-    }
-    // Memory miss: try the persistent on-disk cache (this runs on the pipeline thread, never the
-    // game thread). A disk hit is promoted into memory so subsequent replays skip the disk read.
-    if (diskCache != null) {
-      pcm = diskCache.get(key.backendId(), key.voiceKey(), key.emotion(), key.text());
-      if (pcm != null) {
-        cache.put(key, pcm);
-        log.debug(
-            "[TTS cache] hit tier=disk lookupMs={} ({}/{}) \"{}\"",
-            elapsedMs(start),
-            key.backendId(),
-            key.voiceKey(),
-            abbreviate(key.text()));
-      }
-    }
-    return pcm;
+  private Pcm synthesizeDeduped(SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
+    return cache.withInFlight(
+        key,
+        () -> {
+          long start = System.nanoTime();
+          Pcm pcm = backends.synthesizeWith(backend, request);
+          // Both cache tiers missed, so this is the real (billable, for cloud) synth: time it so
+          // "slow responses" can be quantified, and note the outcome so a silent line is
+          // distinguishable from a slow one.
+          log.debug(
+              "[TTS synth] backend={} ok={} synthMs={} ({}/{}) \"{}\"",
+              backend.id(),
+              pcm != null,
+              elapsedMs(start),
+              key.backendId(),
+              key.voiceKey(),
+              key.textPreview());
+          return pcm;
+        },
+        () ->
+            log.debug(
+                "[TTS synth] dedup reuse ({}/{}) \"{}\"",
+                key.backendId(),
+                key.voiceKey(),
+                key.textPreview()));
   }
 
-  /**
-   * Synthesizes the line, ensuring at most one backend call per key runs at a time. The first
-   * caller for a key registers a pending result, synthesizes, writes through to both cache tiers,
-   * and publishes it; a caller that finds a synth already in flight for the same key waits on it
-   * instead of issuing a second (billable) backend call. Returns {@code null} on synth failure.
-   */
-  Pcm synthesizeDeduped(SynthesisBackend backend, SynthesisRequest request, CacheKey key) {
-    CompletableFuture<Pcm> own = new CompletableFuture<>();
-    CompletableFuture<Pcm> running = inFlight.putIfAbsent(key, own);
-    if (running != null) {
-      log.debug(
-          "[TTS synth] dedup reuse ({}/{}) \"{}\"",
-          key.backendId(),
-          key.voiceKey(),
-          abbreviate(key.text()));
-      return await(running);
-    }
-    Pcm pcm = null;
+  private static void submitQuietly(Executor exec, Runnable task) {
     try {
-      long start = System.nanoTime();
-      pcm = backends.synthesizeWith(backend, request);
-      // Both cache tiers missed, so this is the real (billable, for cloud) synth: time it so "slow
-      // responses" can be quantified, and note the outcome so a silent line is distinguishable from
-      // a slow one.
-      log.debug(
-          "[TTS synth] backend={} ok={} synthMs={} ({}/{}) \"{}\"",
-          backend.id(),
-          pcm != null,
-          elapsedMs(start),
-          key.backendId(),
-          key.voiceKey(),
-          abbreviate(key.text()));
-      if (pcm != null) {
-        cache.put(key, pcm);
-        if (diskCache != null) {
-          diskCache.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), pcm);
-        }
-      }
-    } finally {
-      // Publish before deregistering so a waiter that already grabbed this future is never left
-      // blocked, and a fresh request right after sees a populated cache rather than re-synthing.
-      own.complete(pcm);
-      inFlight.remove(key, own);
-    }
-    return pcm;
-  }
-
-  private static Pcm await(CompletableFuture<Pcm> future) {
-    // join() rather than get() so there is no InterruptedException to catch and no need to re-raise
-    // the thread interrupt flag (a Hub constraint); a failed synth surfaces as an unchecked
-    // CompletionException, which drops the line.
-    try {
-      return future.join();
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  private void submit(Runnable task) {
-    try {
-      executor.execute(task);
+      exec.execute(task);
     } catch (RejectedExecutionException ignored) {
-      // Queue saturated or shutting down; dropping is fine since newer lines supersede older ones.
+      // Queue saturated or shutting down; dropping is fine since newer lines supersede older ones
+      // and speculative work is always safe to lose.
     }
   }
 
-  private void submitPrefetch(Runnable task) {
-    try {
-      prefetchExecutor.execute(task);
-    } catch (RejectedExecutionException ignored) {
-      // Prefetch backlog full or shutting down; dropping speculative work is always safe.
-    }
-  }
-
-  /** A factory for daemon threads with the given name, so the JVM can exit without joining them. */
   private static ThreadFactory daemonThreadFactory(String name) {
     return r -> {
       Thread t = new Thread(r, name);
@@ -562,9 +397,8 @@ public final class DialogueAudioService {
   }
 
   /**
-   * A single-thread executor dedicated to backend warm-up (the cloud connection handshake).
-   * Separate from the synthesis executor so warm-up never stalls dialogue playback; its queue is
-   * unbounded because warm-up tasks are few and must never be dropped under synthesis backpressure.
+   * The warm-up executor. Its queue is unbounded because warm-up tasks are few and must never be
+   * dropped under synthesis backpressure.
    */
   private static ExecutorService buildWarmExecutor() {
     return new ThreadPoolExecutor(
@@ -577,10 +411,9 @@ public final class DialogueAudioService {
   }
 
   /**
-   * The fixed pool that runs speculative prefetch synths, capped at {@link #PREFETCH_THREADS} so no
-   * more than that many prefetch calls are ever in flight at once. Its queue is bounded and the
-   * oldest queued prefetch is discarded under backpressure, since speculative work for a node the
-   * player may already have left is the safest thing to drop.
+   * The prefetch executor. Its queue is bounded and the oldest queued prefetch is discarded under
+   * backpressure, since speculative work for a node the player may already have left is the safest
+   * thing to drop.
    */
   private static ExecutorService buildPrefetchExecutor() {
     return new ThreadPoolExecutor(
@@ -593,13 +426,6 @@ public final class DialogueAudioService {
         new ThreadPoolExecutor.DiscardOldestPolicy());
   }
 
-  private static String abbreviate(String text) {
-    return text.length() <= LOG_TEXT_PREVIEW_LENGTH
-        ? text
-        : text.substring(0, LOG_TEXT_PREVIEW_LENGTH) + "...";
-  }
-
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
   private static long elapsedMs(long startNanos) {
     return (System.nanoTime() - startNanos) / 1_000_000L;
   }
