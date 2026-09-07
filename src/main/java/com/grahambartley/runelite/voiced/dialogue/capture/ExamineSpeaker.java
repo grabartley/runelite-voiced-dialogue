@@ -18,10 +18,7 @@ import net.runelite.api.events.ChatMessage;
  */
 public final class ExamineSpeaker {
 
-  /**
-   * The chat types the client reserves for examine text. Held as a set rather than a chain of
-   * comparisons so adding a type is a one-line data change.
-   */
+  /** The chat types the client reserves for examine text. */
   private static final Set<ChatMessageType> EXAMINE_TYPES =
       EnumSet.of(
           ChatMessageType.ITEM_EXAMINE,
@@ -36,7 +33,8 @@ public final class ExamineSpeaker {
 
   /**
    * Whether a dialogue is open, owned by {@link DialogueWatcher}. Examine yields to the
-   * conversation in front of the player rather than talking over it.
+   * conversation in front of the player rather than talking over it. A narration box counts only
+   * while narration is being voiced, since a box nobody is voicing holds no audio channel.
    */
   private final BooleanSupplier dialogueOpen;
 

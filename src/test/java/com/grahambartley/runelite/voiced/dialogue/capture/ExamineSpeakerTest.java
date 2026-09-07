@@ -142,9 +142,12 @@ public class ExamineSpeakerTest {
   }
 
   @Test
-  @Parameters({"", "   ", "<col=ffffff></col>"})
-  public void textThatCleansAwayToNothingIsNotVoiced(String text) {
-    speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, text));
+  public void textThatCleansAwayToNothingIsNotVoiced() {
+    // Not parameterized: JUnitParams trims each row, so a whitespace-only case would arrive here as
+    // the empty string and quietly re-test the case above it.
+    speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, ""));
+    speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, "   "));
+    speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, "<col=ffffff></col>"));
 
     verifyNoInteractions(dispatcher);
   }

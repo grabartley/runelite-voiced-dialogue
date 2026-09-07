@@ -228,6 +228,7 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     dialogueWatcher = null;
     publicChatSpeaker = null;
+    examineSpeaker = null;
     if (audioService != null) {
       audioService.close();
       audioService = null;

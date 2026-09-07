@@ -40,18 +40,20 @@ and untouched by the Player and NPC Speaking Styles and by the cave echo, which 
 of people standing in the room with you. The spoken language still applies. Being fixed is what
 keeps narrated lines on a stable cache key across sessions.
 
-Examine text (`ExamineSpeaker`, gated by **Voice Examine Text**, off by default) rides the same
-narrator path. The client tags examines with their own chat types (`ITEM_EXAMINE`, `NPC_EXAMINE`,
-`OBJECT_EXAMINE`), so no other game-channel message can reach it and no string matching is needed.
-It yields the audio channel whenever a dialogue is open, asking `DialogueWatcher`, the single owner
-of that state, rather than reading the dialogue widgets a second time.
-
 These are the engine's generic dialogs (`objectbox` 193, `objectbox_double` 11, `messagebox` 229),
 not content-specific ones, and the game raises `messagebox` for interface prompts as well as story
 beats: a world switch warning arrives on the same widget, through the same chat type, in the same
 game state as a quest's narration. Nothing in the widget, the chat type, or the game state
 separates them, so narration is opt-in rather than filtered by a heuristic that would have to guess
 what counts as story.
+
+Examine text (`ExamineSpeaker`, gated by **Voice Examine Text**, off by default) rides the same
+narrator path. The client tags examines with their own chat types (`ITEM_EXAMINE`, `NPC_EXAMINE`,
+`OBJECT_EXAMINE`), so no other game-channel message can reach it and no string matching is needed.
+It yields the audio channel while a dialogue is open, asking `DialogueWatcher`, the single owner of
+that state, rather than reading the dialogue widgets a second time. Like every other voiced line it
+goes through `DialogueAudioService.speak`, which stops current playback and advances the epoch, so a
+fresh examine cuts the one before it exactly as a new dialogue line cuts the line being skipped.
 
 ## The OpenRouter speech call
 

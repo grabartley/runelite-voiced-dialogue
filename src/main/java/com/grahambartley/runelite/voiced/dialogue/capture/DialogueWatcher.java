@@ -96,9 +96,11 @@ public final class DialogueWatcher {
   }
 
   /**
-   * Whether a dialogue, option list aside, was open as of the last game tick. The single owner of
-   * that question, so a feature that must yield the audio channel to dialogue consults this instead
-   * of reading the same widgets a second time and drifting from it.
+   * Whether an NPC or player dialogue, or a narration box being voiced, was open as of the last
+   * game tick. The option list is not counted, and a narration box counts only while narration is
+   * switched on, because {@link NarrationWatcher#tick()} reports closed when it is off. The single
+   * owner of that question, so a feature that must yield the audio channel to dialogue consults
+   * this instead of reading the same widgets a second time and drifting from it.
    *
    * <p>Sampled per tick, so between ticks it can lag the client by one. That is why it gates speech
    * the player has just triggered, where a tick of lag is unnoticeable, and never the interrupt,

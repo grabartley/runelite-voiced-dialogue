@@ -203,19 +203,11 @@ public class DialogueWatcherTest {
   }
 
   @Test
-  public void anOpenNarrationBoxAlsoCountsAsDialogueOpen() {
-    when(narrationWatcher.tick()).thenReturn(true);
-
-    watcher.tick();
-
-    assertTrue("narration holds the audio channel too", watcher.isDialogueOpen());
-  }
-
-  @Test
   public void anOpenNarrationBoxHoldsTheDialogueOpenSoNothingIsInterrupted() {
     when(narrationWatcher.tick()).thenReturn(true);
 
     watcher.tick();
+    assertTrue("narration holds the audio channel too", watcher.isDialogueOpen());
     watcher.tick();
 
     verify(audioService, never()).interrupt();
