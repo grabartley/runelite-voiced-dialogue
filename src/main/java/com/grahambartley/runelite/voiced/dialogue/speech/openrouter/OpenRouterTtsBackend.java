@@ -462,7 +462,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
 
     @Override
-    public String failureNotice(int httpCode) {
+    public String failureNotice(int httpCode, byte[] body) {
       return OpenRouterTtsBackend.failureNotice(httpCode);
     }
 

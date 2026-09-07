@@ -58,9 +58,12 @@ Pace** is rendered as a leading `SPEAKING PACE` prompt direction instead. The
 `streamGenerateContent` variant (`?alt=sse`) backs the streaming path below, delivering audio as
 server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
 mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
-network timeout, a rate-limit back-off on 429 (on the Gemini API that means quota, and the notice
-says so), and a `cacheVariant` built from the same fields under the distinct
-`cloud-google-ai-studio` backend id, so the two providers' cache entries never collide.
+network timeout, a rate-limit back-off on 429, and a `cacheVariant` built from the same fields under
+the distinct `cloud-google-ai-studio` backend id, so the two providers' cache entries never collide.
+
+On the Gemini API a 429 means quota, so the notice is worded from the `google.rpc.QuotaFailure`
+violation the rejection carries: a free-tier ceiling, a paid per-model cap, and a per-minute limit
+each read differently, and a body carrying no violation falls back to wording that names no cause.
 
 The translation hop has a direct counterpart too: `AiStudioTranslator` sends the same shared
 system prompt to `gemini-3.1-flash-lite` through the Gemini API, so a non-English language or a

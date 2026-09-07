@@ -33,8 +33,12 @@ public final class CloudHttp {
   /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
 
-  /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
-  private static final int BODY_SNIPPET_MAX_BYTES = 300;
+  /**
+   * Max bytes of a non-audio response body echoed into a diagnostic log line. A provider states why
+   * it rejected a call in a details block (quota id, limit, retry hint) that sits well past the
+   * first few hundred bytes, so diagnosing one from the log alone needs most of the body.
+   */
+  private static final int BODY_SNIPPET_MAX_BYTES = 2_000;
 
   private static final Pattern CONTROL_CHARS = Pattern.compile("\\p{Cntrl}+");
 
@@ -72,7 +76,10 @@ public final class CloudHttp {
     return value == null ? "" : value;
   }
 
-  /** Reads a small non-audio error body for diagnostics, tolerating a read failure. */
+  /**
+   * Reads a non-audio error body, tolerating a read failure. The bytes both feed the failure trace
+   * and word the provider's user-facing notice, so a rejection is read exactly once.
+   */
   static byte[] errorBody(Response response) {
     try {
       ResponseBody body = response.body();

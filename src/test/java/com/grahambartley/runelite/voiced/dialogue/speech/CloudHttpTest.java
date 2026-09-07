@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import okhttp3.MediaType;
 import okhttp3.Protocol;
 import okhttp3.Request;
@@ -46,10 +47,23 @@ public class CloudHttpTest {
   public void bodySnippetFlattensControlCharactersAndMarksTruncation() {
     assertEquals("line one line two", CloudHttp.bodySnippet("line one\n\nline two".getBytes()));
 
-    byte[] big = new byte[400];
-    java.util.Arrays.fill(big, (byte) 'a');
-    String snippet = CloudHttp.bodySnippet(big);
-    assertTrue("an over-long body is marked as truncated", snippet.endsWith("..."));
+    assertTrue(
+        "an over-long body is marked as truncated",
+        CloudHttp.bodySnippet(filler(4_000)).endsWith("..."));
+  }
+
+  @Test
+  public void bodySnippetKeepsAWholeQuotaFailureBody() {
+    // A Gemini quota rejection runs ~1.4KB, with the fields naming the cause at the far end.
+    assertFalse(
+        "the field naming the cause must survive the log",
+        CloudHttp.bodySnippet(filler(1_500)).endsWith("..."));
+  }
+
+  private static byte[] filler(int length) {
+    byte[] bytes = new byte[length];
+    Arrays.fill(bytes, (byte) 'a');
+    return bytes;
   }
 
   private static Response response() {

@@ -36,16 +36,19 @@ public class CloudBackendSupportTest {
   }
 
   @Test
-  public void warnOnceSurfacesOnlyTheFirstFailureNotice() {
+  public void warnOnceSurfacesEachFailureNoticeExactlyOnce() {
     CloudBackendSupport support = support(100);
     List<String> notices = new ArrayList<>();
     support.setNotice(notices::add);
 
     support.warnOnce("first failure");
+    support.warnOnce("first failure");
     support.warnOnce("second failure");
 
-    assertEquals("only the first failure reaches the user", 1, notices.size());
-    assertEquals("first failure", notices.get(0));
+    assertEquals(
+        "a repeated failure says its piece once, a different one is not silenced by it",
+        Arrays.asList("first failure", "second failure"),
+        notices);
   }
 
   @Test
