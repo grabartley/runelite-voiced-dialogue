@@ -114,16 +114,38 @@ public class RateLimitBackoffTest {
   }
 
   @Test
-  public void aLaterRejectionStatingNothingReopensTheGuessedWindow() {
+  public void aGuessLandingBehindAStatedWaitDoesNotShortenIt() {
+    // A line and a prefetch are rejected on separate threads, so the two arrive interleaved.
     backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
 
     backoff.recordRateLimited(NO_STATED_WAIT);
 
-    assertFalse("a rejection stating nothing states nothing", backoff.isRefusing());
-    elapse(1_999);
-    assertTrue("consecutive rejections count whoever stated the wait", backoff.isThrottled());
+    elapse(30_000);
+    assertTrue("the stated wait outlives a ladder rung that landed after it", backoff.isRefusing());
+    elapse(DAILY_CAP_WAIT_MILLIS - 30_001);
+    assertTrue(backoff.isRefusing());
     elapse(2);
-    assertFalse(backoff.isThrottled());
+    assertFalse(backoff.isRefusing());
+  }
+
+  @Test
+  public void aStatedWaitAfterAGuessTakesOverFromIt() {
+    backoff.recordRateLimited(NO_STATED_WAIT);
+
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+
+    assertTrue("a statement beats the guess it lands behind", backoff.isRefusing());
+  }
+
+  @Test
+  public void aGuessOnceTheStatedWaitHasPassedOpensAPlainWindowAgain() {
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    elapse(DAILY_CAP_WAIT_MILLIS + 1);
+
+    backoff.recordRateLimited(NO_STATED_WAIT);
+
+    assertFalse("a rejection stating nothing states nothing", backoff.isRefusing());
+    assertTrue(backoff.isThrottled());
   }
 
   @Test

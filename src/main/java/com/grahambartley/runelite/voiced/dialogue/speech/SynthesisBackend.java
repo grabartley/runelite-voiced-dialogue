@@ -69,19 +69,20 @@ public interface SynthesisBackend {
 
   /**
    * Whether this backend is currently backing off after being rate-limited (HTTP 429), so
-   * speculative work (prefetch) should hold off rather than pile onto the limit. User-initiated
-   * lines ignore this and always attempt synthesis. Default {@code false}: a backend with no remote
-   * rate limit is never throttled.
+   * speculative work (prefetch) should hold off rather than pile onto the limit. A user-initiated
+   * line ignores this and attempts synthesis, except while the provider itself has stated a wait
+   * that has not passed. Default {@code false}: a backend with no remote rate limit is never
+   * throttled.
    */
+  default boolean isThrottled() {
+    return false;
+  }
+
   /**
    * Drops any rate-limit back-off this backend is holding, for a credential or provider change that
    * makes the window it was opened under meaningless.
    */
   default void clearRateLimit() {}
-
-  default boolean isThrottled() {
-    return false;
-  }
 
   /**
    * Optional one-off warm-up (e.g. a connection handshake) run on the pipeline thread before first

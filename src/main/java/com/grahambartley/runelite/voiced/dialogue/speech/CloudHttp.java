@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.ConnectionPool;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -18,6 +19,7 @@ import okhttp3.ResponseBody;
  * constants, the derived keepalive client every backend runs on, and the small response-reading
  * utilities the failure traces need.
  */
+@Slf4j
 public final class CloudHttp {
 
   /** RFC 6585 Too Many Requests, absent from {@link java.net.HttpURLConnection}'s constants. */
@@ -104,6 +106,7 @@ public final class CloudHttp {
       long seconds = Long.parseLong(value.trim());
       return seconds <= 0 ? 0 : Math.multiplyExact(seconds, 1_000L);
     } catch (RuntimeException e) {
+      log.debug("[TTS cloud] Retry-After '{}' is not a usable wait", value);
       return 0;
     }
   }

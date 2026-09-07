@@ -4,8 +4,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.List;
+import okhttp3.mockwebserver.MockResponse;
 
 /** The Gemini API response documents the Google AI Studio tests serve from their mock server. */
 final class AiStudioResponses {
@@ -14,6 +17,21 @@ final class AiStudioResponses {
   static final String DAILY_CAP_RETRY_DELAY = "2917s";
 
   private AiStudioResponses() {}
+
+  /** A 200 carrying {@code body}, the shape every successful mocked call takes. */
+  static MockResponse ok(String body) {
+    return new MockResponse().setResponseCode(HttpURLConnection.HTTP_OK).setBody(body);
+  }
+
+  /** A 429 carrying {@code body}, the shape every mocked rejection takes. */
+  static MockResponse tooManyRequests(String body) {
+    return new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody(body);
+  }
+
+  /** The 429 a billed key hits once the model's daily request allowance is gone. */
+  static MockResponse quotaRejection() {
+    return tooManyRequests(dailyCapExhausted());
+  }
 
   /** A complete response carrying the samples as one base64 inlineData part. */
   static String audio(short[] samples) {

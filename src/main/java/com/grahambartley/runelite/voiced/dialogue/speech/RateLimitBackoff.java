@@ -18,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Deadlines are measured on a monotonic clock, since a wall clock stepping backwards would hold
  * a window open past the wait it was meant to enforce, and a stated window admits no call that
- * could clear it.
+ * could clear it. The trade is that time spent suspended does not count towards a window, so a
+ * machine slept mid-wait resumes still holding it; the ceiling below bounds how long that can last.
  */
 @Slf4j
 public final class RateLimitBackoff {
@@ -81,7 +82,11 @@ public final class RateLimitBackoff {
     int consecutive = consecutive429.incrementAndGet();
     boolean stated = statedWaitMillis > 0;
     long millis = stated ? clamp(statedWaitMillis) : backoffWindowMillis(consecutive);
-    window.set(new Window(clock.getAsLong() + millis * NANOS_PER_MILLI, stated));
+    long now = clock.getAsLong();
+    Window opened = new Window(now + millis * NANOS_PER_MILLI, stated);
+    // Lines and prefetch are rejected on separate threads, so a guess landing a moment after a
+    // stated wait must not shorten it back to seconds.
+    window.updateAndGet(current -> current.replacedBy(opened, now));
     if (stated) {
       log.debug(
           "[TTS cloud] rate limited (429); provider asked for {}ms, waiting {}ms",
@@ -98,10 +103,11 @@ public final class RateLimitBackoff {
   }
 
   /**
-   * Drops the back-off outright. A window is only ever evidence about the credentials and provider
-   * that earned it, so changing either makes it meaningless: the notice a stated window surfaces
-   * tells the player to enable billing or switch provider, and doing so must not leave the backend
-   * refusing to send the very line that would prove it worked.
+   * Drops the back-off outright, for a key or provider change. A window is only ever evidence about
+   * the credentials that earned it, so changing either makes it meaningless, and switching provider
+   * is one of the two fixes a stated window's notice asks for. The other fix, raising the quota at
+   * the provider, changes nothing this plugin can observe, so it waits out the window or the
+   * ceiling below, whichever comes first.
    */
   public void reset() {
     window.set(Window.CLEAR);
@@ -154,6 +160,17 @@ public final class RateLimitBackoff {
     /** Subtraction rather than {@code <}, so a wrapped monotonic clock still compares correctly. */
     boolean isOpen(long nowNanos) {
       return open && nowNanos - endNanos < 0;
+    }
+
+    /**
+     * Which of this window and a newly opened one should stand: a live stated wait is never
+     * shortened or downgraded by a guess, and otherwise the later deadline wins.
+     */
+    Window replacedBy(Window proposed, long nowNanos) {
+      if (stated && !proposed.stated && isOpen(nowNanos)) {
+        return this;
+      }
+      return isOpen(nowNanos) && proposed.endNanos - endNanos < 0 ? this : proposed;
     }
   }
 }
