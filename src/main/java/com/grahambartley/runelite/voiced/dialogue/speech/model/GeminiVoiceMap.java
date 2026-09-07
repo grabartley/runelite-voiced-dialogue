@@ -42,10 +42,11 @@ public final class GeminiVoiceMap {
 
   /**
    * The game's narration voice, deliberately held out of every character pool so narration is never
-   * mistaken for a nearby NPC. Algieba is the catalog's "Smooth" voice: even and unhurried, which
-   * carries a storyteller's measured delivery.
+   * mistaken for a nearby NPC. Picked by ear from the voices no character pool claims, on the same
+   * basis as the pools above: it holds the directed British accent and reads as a storyteller
+   * rather than as someone standing in the room with the player.
    */
-  static final String NARRATOR_VOICE = "Algieba";
+  static final String NARRATOR_VOICE = "Callirrhoe";
 
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
