@@ -4,14 +4,26 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.atomic.AtomicLong;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** The cloud 429 back-off window growth and the throttle state transitions. */
+/** The cloud 429 back-off window growth, the honoured wait, and the throttle state transitions. */
 @RunWith(JUnitParamsRunner.class)
 public class RateLimitBackoffTest {
+
+  /** A rejection that stated no wait, leaving the window to the computed ladder. */
+  private static final long NO_STATED_WAIT = 0;
+
+  /** The wait a real per-model daily cap asked for. */
+  private static final long DAILY_CAP_WAIT_MILLIS = 2_917_000;
+
+  private static final long ONE_HOUR_MILLIS = 60 * 60 * 1_000L;
+
+  private final AtomicLong now = new AtomicLong(1_600_000_000_000L);
+  private final RateLimitBackoff backoff = new RateLimitBackoff(now::get);
 
   @Test
   @Parameters({
@@ -26,15 +38,90 @@ public class RateLimitBackoffTest {
 
   @Test
   public void freshBackoffIsNotThrottled() {
-    assertFalse(new RateLimitBackoff().isThrottled());
+    assertFalse(backoff.isThrottled());
+    assertFalse(backoff.isRefusing());
   }
 
   @Test
   public void aRateLimitThrottlesAndACleanCallClears() {
-    RateLimitBackoff backoff = new RateLimitBackoff();
-    backoff.recordRateLimited();
+    backoff.recordRateLimited(NO_STATED_WAIT);
     assertTrue("a 429 opens a back-off window", backoff.isThrottled());
     backoff.recordSuccess();
     assertFalse("a clean call clears the back-off", backoff.isThrottled());
+  }
+
+  @Test
+  public void anUnstatedWaitKeepsTheLadderExactly() {
+    backoff.recordRateLimited(NO_STATED_WAIT);
+    elapse(999);
+    assertTrue("the first hit pauses for the base window", backoff.isThrottled());
+    elapse(2);
+    assertFalse(backoff.isThrottled());
+
+    backoff.recordRateLimited(NO_STATED_WAIT);
+    elapse(1_999);
+    assertTrue("the second doubles it", backoff.isThrottled());
+    elapse(2);
+    assertFalse(backoff.isThrottled());
+  }
+
+  @Test
+  public void anUnstatedWaitStandsSpeculationDownWithoutClosingTheBackend() {
+    backoff.recordRateLimited(NO_STATED_WAIT);
+
+    assertTrue("prefetch stands down on a computed window", backoff.isThrottled());
+    assertFalse(
+        "a computed window is a guess, so a real line is still worth attempting",
+        backoff.isRefusing());
+  }
+
+  @Test
+  public void aStatedWaitIsHonouredInFullRatherThanGuessedAt() {
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+
+    elapse(30_000);
+    assertTrue(
+        "the ladder's own ceiling is nowhere near what the provider asked for",
+        backoff.isRefusing());
+
+    elapse(DAILY_CAP_WAIT_MILLIS - 30_001);
+    assertTrue("still inside the stated wait", backoff.isRefusing());
+    elapse(2);
+    assertFalse("the wait passing ends the refusal", backoff.isRefusing());
+    assertFalse(backoff.isThrottled());
+  }
+
+  @Test
+  public void anAbsurdStatedWaitIsClampedToTheCeiling() {
+    backoff.recordRateLimited(Long.MAX_VALUE / 2);
+
+    elapse(ONE_HOUR_MILLIS - 1);
+    assertTrue(backoff.isRefusing());
+    elapse(2);
+    assertFalse("a nonsense wait must not mute the session outright", backoff.isRefusing());
+  }
+
+  @Test
+  public void aCleanCallClearsAStatedWaitToo() {
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+
+    backoff.recordSuccess();
+
+    assertFalse(backoff.isRefusing());
+    assertFalse(backoff.isThrottled());
+  }
+
+  @Test
+  public void aLaterRejectionStatingNothingReopensTheGuessedWindow() {
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+
+    backoff.recordRateLimited(NO_STATED_WAIT);
+
+    assertFalse("a rejection stating nothing states nothing", backoff.isRefusing());
+    assertTrue(backoff.isThrottled());
+  }
+
+  private void elapse(long millis) {
+    now.addAndGet(millis);
   }
 }

@@ -60,6 +60,32 @@ public class CloudHttpTest {
         CloudHttp.bodySnippet(filler(1_500)).endsWith("..."));
   }
 
+  @Test
+  public void retryAfterIsReadOnlyWhenItNamesAUsableWait() {
+    assertEquals(30_000, CloudHttp.retryAfterMillis(withRetryAfter("30")));
+    assertEquals(
+        "whitespace is not a malformation",
+        5_000,
+        CloudHttp.retryAfterMillis(withRetryAfter(" 5 ")));
+    assertEquals("no header means the caller decides", 0, CloudHttp.retryAfterMillis(response()));
+    assertEquals(
+        "an HTTP-date is not read against a client clock",
+        0,
+        CloudHttp.retryAfterMillis(withRetryAfter("Wed, 21 Oct 2026 07:28:00 GMT")));
+    assertEquals(0, CloudHttp.retryAfterMillis(withRetryAfter("soon")));
+    assertEquals(
+        "a wait already over is no wait", 0, CloudHttp.retryAfterMillis(withRetryAfter("0")));
+    assertEquals(0, CloudHttp.retryAfterMillis(withRetryAfter("-30")));
+    assertEquals(
+        "an unrepresentable wait is unusable",
+        0,
+        CloudHttp.retryAfterMillis(withRetryAfter(String.valueOf(Long.MAX_VALUE))));
+  }
+
+  private static Response withRetryAfter(String value) {
+    return response().newBuilder().header("Retry-After", value).build();
+  }
+
   private static byte[] filler(int length) {
     byte[] bytes = new byte[length];
     Arrays.fill(bytes, (byte) 'a');

@@ -293,6 +293,11 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     }
 
     @Override
+    public long statedWaitMillis(byte[] body) {
+      return AiStudioRetryInfo.retryDelayMillis(gson, body);
+    }
+
+    @Override
     public String emptyBodyNotice() {
       return "Google AI Studio TTS returned no audio; this line was not voiced.";
     }

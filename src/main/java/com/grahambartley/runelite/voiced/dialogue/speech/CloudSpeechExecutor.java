@@ -82,6 +82,15 @@ public final class CloudSpeechExecutor {
      */
     String failureNotice(int httpCode, byte[] body);
 
+    /**
+     * How long a 429's body says to wait, in milliseconds, or 0 when it says nothing. Read from the
+     * body because the shape is the provider's own; the {@code Retry-After} header is read for
+     * every provider alike.
+     */
+    default long statedWaitMillis(byte[] body) {
+      return 0;
+    }
+
     /** The one-time user notice for a 2xx response that carried no audio at all. */
     String emptyBodyNotice();
   }
@@ -231,6 +240,12 @@ public final class CloudSpeechExecutor {
    * failed translation.
    */
   private PreparedSpeech prepare(SynthesisRequest request) {
+    // The provider named the moment it will serve again, so a call made before then is a rejection
+    // already: it earns another 429, another log line, and another notice, and voices nothing.
+    if (backoff.isRefusing()) {
+      log.debug("[TTS cloud] {} asked to be left alone; this line was not voiced", providerName);
+      return null;
+    }
     String rawKey = ops.apiKey();
     if (!CloudHttp.isNonBlank(rawKey)) {
       support.noticeMissingKey(ops.missingKeyNotice());
@@ -323,7 +338,7 @@ public final class CloudSpeechExecutor {
 
         if (!response.isSuccessful()) {
           if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited();
+            backoff.recordRateLimited(statedWait(response, bytes));
           }
           support.warnOnce(ops.failureNotice(response.code(), bytes));
           support.logFailure(
@@ -459,11 +474,12 @@ public final class CloudSpeechExecutor {
         String contentType = CloudHttp.headerOrEmpty(response, "Content-Type");
         String generationId = ops.generationId(response);
         if (!response.isSuccessful()) {
-          if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited();
-          }
-          // Read once: the body is a one-shot stream, and both the notice and the trace need it.
+          // Read once: the body is a one-shot stream, and the wait hint, the notice, and the
+          // trace all need it.
           byte[] bytes = CloudHttp.errorBody(response);
+          if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
+            backoff.recordRateLimited(statedWait(response, bytes));
+          }
           support.warnOnce(ops.failureNotice(response.code(), bytes));
           support.logFailure(
               "non-2xx",
@@ -555,6 +571,15 @@ public final class CloudSpeechExecutor {
       }
     }
     return null;
+  }
+
+  /**
+   * The wait the rejection asked for: the {@code Retry-After} header, or the provider's own hint in
+   * the body. The longer of the two, so a response carrying both is honoured by whichever is
+   * further out rather than by whichever happened to be read first.
+   */
+  private long statedWait(Response response, byte[] body) {
+    return Math.max(CloudHttp.retryAfterMillis(response), ops.statedWaitMillis(body));
   }
 
   private String networkNotice() {

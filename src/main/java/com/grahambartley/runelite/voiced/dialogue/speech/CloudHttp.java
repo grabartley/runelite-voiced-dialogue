@@ -89,6 +89,25 @@ public final class CloudHttp {
     }
   }
 
+  /**
+   * The {@code Retry-After} wait a rejection asks for, in milliseconds, or {@code 0} when it names
+   * none. Only the delta-seconds form is read: the HTTP-date form is absent from the cloud
+   * providers' 429s, and a date read against a skewed client clock would be worse than the caller's
+   * own back-off.
+   */
+  static long retryAfterMillis(Response response) {
+    String value = response.header("Retry-After");
+    if (!isNonBlank(value)) {
+      return 0;
+    }
+    try {
+      long seconds = Long.parseLong(value.trim());
+      return seconds <= 0 ? 0 : Math.multiplyExact(seconds, 1_000L);
+    } catch (RuntimeException e) {
+      return 0;
+    }
+  }
+
   public static boolean isNonBlank(String value) {
     return value != null && !value.trim().isEmpty();
   }

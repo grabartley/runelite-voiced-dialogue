@@ -147,8 +147,12 @@ Because synthesis is billed per character, several guards keep cost bounded and 
 - **Prompt-cache stabilisation.** The per-speaker character-profile block leads each request and is
   byte-stable (profile fields are trailing-trimmed at construction), so Gemini's implicit prompt
   cache hits on repeats for the same speaker, lowering input cost and time-to-first-byte.
-- **Rate-limit back-off.** A `429` opens a geometric, capped back-off window; user lines still try,
-  but speculative prefetch holds off (`isThrottled`) so the plugin never retry-storms a limit.
+- **Rate-limit back-off.** A `429` opens a back-off window. When the rejection states its own wait,
+  through a `Retry-After` header or a `google.rpc.RetryInfo` delay in the body, that wait is the
+  window (clamped to an hour) and nothing is sent until it passes, since a call made before the
+  stated moment only earns another rejection. When it states nothing, the window is a geometric,
+  capped guess: user lines still try, but speculative prefetch holds off (`isThrottled`) so the
+  plugin never retry-storms a limit.
 
 Beyond per-line guards, two larger levers cut perceived latency and broaden reach:
 

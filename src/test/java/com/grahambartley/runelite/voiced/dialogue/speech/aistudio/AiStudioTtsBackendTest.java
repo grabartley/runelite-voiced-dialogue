@@ -299,6 +299,36 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
+  public void aStatedWaitStopsTheBackendSendingAnythingElse() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    server.enqueue(quotaRejection());
+
+    assertNull(backend.synthesize(req()));
+    assertEquals(1, server.getRequestCount());
+
+    assertNull("a line inside the stated wait is not voiced", backend.synthesize(req()));
+    assertNull(backend.synthesizeStreaming(req(), (samples, rate) -> {}));
+    assertEquals(
+        "and never reaches the provider, which said it would refuse it",
+        1,
+        server.getRequestCount());
+  }
+
+  @Test
+  public void aRejectionStatingNoWaitStillLetsTheNextLineTry() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    server.enqueue(
+        new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody("quota"));
+    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+
+    assertNull(backend.synthesize(req()));
+
+    assertNotNull(
+        "a guessed window must not silence a line that might succeed", backend.synthesize(req()));
+    assertEquals(2, server.getRequestCount());
+  }
+
+  @Test
   public void emptyAudioIsRetriedOnceThenFails() {
     server.enqueue(ok("{\"candidates\":[]}"));
     server.enqueue(ok("{\"candidates\":[]}"));

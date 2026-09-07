@@ -10,6 +10,9 @@ import java.util.List;
 /** The Gemini API response documents the Google AI Studio tests serve from their mock server. */
 final class AiStudioResponses {
 
+  /** The wait a real per-model daily cap stated, carried by every quota rejection below. */
+  static final String DAILY_CAP_RETRY_DELAY = "2917s";
+
   private AiStudioResponses() {}
 
   /** A complete response carrying the samples as one base64 inlineData part. */
@@ -85,18 +88,29 @@ final class AiStudioResponses {
     JsonObject quotaFailure = new JsonObject();
     quotaFailure.addProperty("@type", "type.googleapis.com/google.rpc.QuotaFailure");
     quotaFailure.add("violations", violations);
-    JsonObject retryInfo = new JsonObject();
-    retryInfo.addProperty("@type", "type.googleapis.com/google.rpc.RetryInfo");
-    retryInfo.addProperty("retryDelay", "2917s");
     JsonArray details = new JsonArray();
     details.add(quotaFailure);
-    details.add(retryInfo);
+    details.add(retryInfo(DAILY_CAP_RETRY_DELAY));
+    return rejection(details);
+  }
+
+  /** A 429 stating only how long to wait, as a protobuf duration such as {@code 2917s}. */
+  static String retryAfter(String retryDelay) {
+    JsonArray details = new JsonArray();
+    details.add(retryInfo(retryDelay));
     return rejection(details);
   }
 
   /** A 429 that states only that the resource is exhausted, with no quota details at all. */
   static String quotaExhausted() {
     return rejection(null);
+  }
+
+  private static JsonObject retryInfo(String retryDelay) {
+    JsonObject retryInfo = new JsonObject();
+    retryInfo.addProperty("@type", "type.googleapis.com/google.rpc.RetryInfo");
+    retryInfo.addProperty("retryDelay", retryDelay);
+    return retryInfo;
   }
 
   private static String rejection(JsonArray details) {
