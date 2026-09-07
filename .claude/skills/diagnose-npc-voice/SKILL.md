@@ -33,7 +33,7 @@ trace lines the plugin emits per line:
 | Wrong gender | wiki has no gender, a mixed-gender **switch infobox** (per-version), or a wiki error | `overrides.json` `gender`; the generator pairs gender per version, a wiki gap still needs an override |
 | Two different ids for one NPC across the two trace lines | transformed multiloc NPC: **active id** (`NPC#getId`) vs base composition id; the table is keyed by the active id | n/a (expected); use the active id when pinning |
 | Foreign accent (Italian/Egyptian/West African/Japanese) doesn't land | **Gemini model limitation**, it does British/European accents well, others inconsistently | not promptable; map to a renderable accent or accept |
-| Line is silent | cloud returned a non-PCM body (rate-limit/quota/error) | check `[TTS cloud] ... response: HTTP ... contentType=... body snippet`; it's the cloud robustness path. On Google AI Studio an HTTP 429 usually means the free tier's daily speech quota, so billing is the fix |
+| Line is silent | cloud returned a non-PCM body (rate-limit/quota/error) | check `[TTS cloud] ... response: HTTP ... contentType=... body snippet`; it's the cloud robustness path. On Google AI Studio an HTTP 429 usually means the preview speech model's per-day request cap, which billing does not lift; the notice names which quota ran out |
 
 ## Key facts to remember
 

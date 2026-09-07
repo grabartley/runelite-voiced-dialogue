@@ -38,11 +38,11 @@ public final class ChatNoticeManager {
 
   private static final String ONBOARDING_MESSAGE =
       "Voiced Dialogue is on. It needs an API key to voice dialogue. Google AI Studio starts lines"
-          + " almost instantly but starts at 100 new lines a day while its speech model is in"
-          + " preview: set Voice Provider to Google AI Studio and use a key from aistudio.google.com"
-          + " with billing enabled. OpenRouter is simpler to set up and has no daily cap, at the"
-          + " cost of much slower lines: use a key from openrouter.ai instead. Your dialogue text is"
-          + " sent to whichever provider you pick. Until a key is set, lines stay silent.";
+          + " almost instantly but begins at 100 new lines a day: set Voice Provider to Google AI"
+          + " Studio and use a key from aistudio.google.com with billing enabled. OpenRouter is"
+          + " simpler to set up and has no daily cap, at the cost of much slower lines: use a key"
+          + " from openrouter.ai instead. Your dialogue text is sent to whichever provider you"
+          + " pick. Until a key is set, lines stay silent.";
 
   private final Client client;
   private final ConfigManager configManager;

@@ -225,8 +225,8 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "ttsProvider",
       name = "Voice Provider",
       description =
-          "Cloud service that voices dialogue and bills the calls. Google AI Studio starts lines"
-              + " fastest but starts at 100 new lines a day; OpenRouter has no daily cap.",
+          "Cloud service that voices dialogue and bills the calls. Google AI Studio voices lines"
+              + " fastest but begins at 100 new lines a day; OpenRouter has no daily cap.",
       position = 0,
       section = generalSection)
   default TtsProvider ttsProvider() {

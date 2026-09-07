@@ -94,15 +94,13 @@ public class ChatNoticeManagerTest {
 
     manager.maybeShowOnboarding();
 
+    ArgumentCaptor<String> posted = ArgumentCaptor.forClass(String.class);
     verify(client)
-        .addChatMessage(
-            eq(ChatMessageType.GAMEMESSAGE),
-            eq(""),
-            contains("starts at 100 new lines a day"),
-            isNull());
-    verify(client)
-        .addChatMessage(
-            eq(ChatMessageType.GAMEMESSAGE), eq(""), contains("no daily cap"), isNull());
+        .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), posted.capture(), isNull());
+    assertTrue(
+        "a player picking a provider is told the ceiling on the fast one",
+        posted.getValue().contains("begins at 100 new lines a day"));
+    assertTrue("and that the other one has none", posted.getValue().contains("no daily cap"));
   }
 
   @Test

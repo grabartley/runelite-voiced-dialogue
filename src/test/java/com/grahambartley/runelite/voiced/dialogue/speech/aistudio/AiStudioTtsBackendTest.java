@@ -127,19 +127,15 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
-  public void missingKeyNoticeNamesTheProvider() {
+  public void missingKeyNoticeNamesTheProviderAndItsDailyCeiling() {
     assertEquals(
         AiStudioTtsBackend.NO_KEY_NOTICE, backend(new MutableTestConfig()).missingKeyNotice());
     assertTrue(AiStudioTtsBackend.NO_KEY_NOTICE.contains("Google AI Studio"));
-  }
-
-  @Test
-  public void missingKeyNoticeNamesTheDailyCapAndTheUncappedProvider() {
     assertTrue(
-        "the notice warns of the preview model's daily ceiling before a player commits to a key",
-        AiStudioTtsBackend.NO_KEY_NOTICE.contains("starts at 100 new lines a day"));
+        "the ceiling reaches a player before they commit to a key",
+        AiStudioTtsBackend.NO_KEY_NOTICE.contains("begins at 100 new lines a day"));
     assertTrue(
-        "and points at the provider without one",
+        "paired with the provider that has none",
         AiStudioTtsBackend.NO_KEY_NOTICE.contains("OpenRouter has no daily cap"));
   }
 

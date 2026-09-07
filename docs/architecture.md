@@ -73,7 +73,8 @@ raises on cumulative spend (around 10,000 requests per day once the account has 
 so in practice it stands for the whole player base. The cap attaches to the preview model rather
 than the account, and at the same moment the speech model rejects with 429 the GA
 `gemini-3.1-flash-lite` translation model on the same key still answers 200. The durable fix is the
-GA model swap.
+GA model swap, tracked in
+[#236](https://github.com/grabartley/runelite-voiced-dialogue/issues/236).
 
 Player-facing copy states the 100-a-day figure and that billing does not raise it, and describes the
 lift only as one Google grants for heavy long-term use. The spend threshold is deliberately kept out
