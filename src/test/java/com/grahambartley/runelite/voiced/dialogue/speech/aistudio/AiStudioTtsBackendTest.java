@@ -133,7 +133,7 @@ public class AiStudioTtsBackendTest {
     assertTrue(AiStudioTtsBackend.NO_KEY_NOTICE.contains("Google AI Studio"));
     assertTrue(
         "the ceiling reaches a player before they commit to a key",
-        AiStudioTtsBackend.NO_KEY_NOTICE.contains("begins at 100 new lines a day"));
+        AiStudioTtsBackend.NO_KEY_NOTICE.contains("begins at 100 fresh lines a day"));
     assertTrue(
         "paired with the provider that has none",
         AiStudioTtsBackend.NO_KEY_NOTICE.contains("OpenRouter has no daily cap"));

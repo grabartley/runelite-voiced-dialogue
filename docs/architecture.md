@@ -70,11 +70,15 @@ requests per day per project for the pinned preview speech model
 (`GenerateRequestsPerDayPerProjectPerModel`, `quotaValue: 100`), so 100 uncached lines a day.
 Enabling billing does not lift it: the allowance is a property of the usage tier, which Google
 raises on cumulative spend (around 10,000 requests per day once the account has spent roughly $100),
-so in practice it stands for the whole player base. The cap attaches to the preview model rather
-than the account, and at the same moment the speech model rejects with 429 the GA
-`gemini-3.1-flash-lite` translation model on the same key still answers 200. The durable fix is the
-GA model swap, tracked in
+so in practice it stands for the whole player base. The cap is scoped per model, which is why at the
+same moment the speech model rejects with 429 the GA `gemini-3.1-flash-lite` translation model on
+the same key still answers 200. The durable fix is the GA model swap, tracked in
 [#236](https://github.com/grabartley/runelite-voiced-dialogue/issues/236).
+
+The 100 requests are not 100 lines the player hears. **Prefetch Dialogue** defaults on, and
+`DialoguePrefetcher` speculatively synthesizes every visible dialogue option, so options that are
+never picked draw on the same allowance. Player-facing copy therefore says *up to* 100 fresh lines
+a day and names prefetch as a claim on them, rather than equating requests with heard lines.
 
 Player-facing copy states the 100-a-day figure and that billing does not raise it, and describes the
 lift only as one Google grants for heavy long-term use. The spend threshold is deliberately kept out

@@ -72,8 +72,9 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
    */
   public static final String NO_KEY_NOTICE =
       "Add your Google AI Studio API key in the Voiced Dialogue settings to hear dialogue; without"
-          + " a key, lines are not voiced. Google AI Studio begins at 100 new lines a day while"
-          + " its speech model is in preview; OpenRouter has no daily cap.";
+          + " a key, lines are not voiced. Google AI Studio begins at 100 fresh lines a day while"
+          + " its speech model is in preview, prefetched options included; OpenRouter has no daily"
+          + " cap.";
 
   /** Idle connections are kept this long so back-to-back lines reuse a pooled connection. */
   private static final Duration KEEP_ALIVE = Duration.ofMinutes(5);
