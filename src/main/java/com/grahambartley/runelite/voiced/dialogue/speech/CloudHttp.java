@@ -38,9 +38,8 @@ public final class CloudHttp {
   private static final int BODY_SNIPPET_MAX_BYTES = 300;
 
   /**
-   * The same budget for an error body. A provider states why it rejected the call in a details
-   * block (quota id, limit, retry hint) that sits well past the first few hundred bytes, so the
-   * success-path budget truncates away the one part worth logging.
+   * A provider states why it rejected a call in a details block (quota id, limit, retry hint) that
+   * sits well past the first few hundred bytes, so diagnosing one from the log needs more of it.
    */
   private static final int ERROR_BODY_SNIPPET_MAX_BYTES = 2_000;
 

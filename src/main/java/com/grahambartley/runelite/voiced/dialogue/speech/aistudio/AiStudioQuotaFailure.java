@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -14,8 +15,8 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>A free-tier ceiling and a paid per-model cap arrive in the same response shape and are told
  * apart only by the metric name, so reading the violation is the only way the notice can state what
- * actually happened. Assuming the free tier tells a billed key to enable billing it already has,
- * for a cap that billing does not lift.
+ * actually happened. A notice that assumes the free tier tells a billed key to enable billing it
+ * already has, for a cap that billing does not lift.
  */
 @Slf4j
 final class AiStudioQuotaFailure {
@@ -36,6 +37,9 @@ final class AiStudioQuotaFailure {
           + " aistudio.google.com, or switch Voice Provider to OpenRouter.";
 
   private static final String QUOTA_FAILURE_TYPE = "type.googleapis.com/google.rpc.QuotaFailure";
+
+  /** Google words the same marker as {@code free_tier}, {@code FreeTier}, and {@code -FreeTier}. */
+  private static final Pattern SEPARATORS = Pattern.compile("[^A-Za-z0-9]+");
 
   /** Free-tier metrics and quota ids both carry this once case and separators are normalised. */
   private static final String FREE_TIER_MARKER = "freetier";
@@ -112,41 +116,67 @@ final class AiStudioQuotaFailure {
     return normalised().contains(FREE_TIER_MARKER);
   }
 
-  /**
-   * How often the quota resets, worded for the notice: {@code "daily"}, {@code "per-minute"}, or
-   * empty when the reported quota names no period.
-   */
-  String period() {
+  /** How often the reported quota resets, which decides how urgently the notice reads. */
+  Period period() {
     String normalised = normalised();
     if (normalised.contains(PER_DAY_MARKER)) {
-      return "daily";
+      return Period.DAILY;
     }
     if (normalised.contains(PER_MINUTE_MARKER)) {
-      return "per-minute";
+      return Period.PER_MINUTE;
     }
-    return "";
+    return Period.UNKNOWN;
   }
 
   @Override
   public String toString() {
-    return "quotaId=" + quotaId + " quotaValue=" + quotaValue + " model=" + model;
+    return "quotaId="
+        + quotaId
+        + " quotaMetric="
+        + quotaMetric
+        + " quotaValue="
+        + quotaValue
+        + " model="
+        + model;
+  }
+
+  /** How often a quota resets, and the word the notice uses for it. */
+  enum Period {
+    DAILY("daily"),
+    PER_MINUTE("per-minute"),
+
+    /** A quota naming no period, which the notice then claims none for. */
+    UNKNOWN("");
+
+    final String label;
+
+    Period(String label) {
+      this.label = label;
+    }
   }
 
   /**
-   * The notice for a quota billing has already paid for. It must not repeat the enable-billing
-   * advice: a paid per-model cap is enforced on a billed key and stays where it is when billing is
-   * turned on again.
+   * The notice for a quota billing has already paid for. A per-minute ceiling clears on its own
+   * within the minute and the rate-limit back-off already spaces the next line, so it says so
+   * rather than sending the player to change provider. A cap that holds for the rest of the day
+   * does warrant that, and must not repeat the enable-billing advice: a paid per-model cap is
+   * enforced on a billed key and stays where it is when billing is turned on again.
    */
   private String capNotice() {
-    StringBuilder notice = new StringBuilder("Google AI Studio stopped voicing dialogue: ");
+    Period period = period();
+    StringBuilder notice = new StringBuilder("Google AI Studio ");
+    notice.append(period == Period.PER_MINUTE ? "paused dialogue: " : "stopped voicing dialogue: ");
     notice.append(model.isEmpty() ? "the speech model" : model);
     notice.append(" has reached its ");
-    if (!period().isEmpty()) {
-      notice.append(period()).append(' ');
+    if (!period.label.isEmpty()) {
+      notice.append(period.label).append(' ');
     }
     notice.append("request cap");
     if (!quotaValue.isEmpty()) {
       notice.append(" of ").append(quotaValue);
+    }
+    if (period == Period.PER_MINUTE) {
+      return notice.append(". Lines resume once the limit resets.").toString();
     }
     return notice
         .append(". Enabling billing does not lift this cap, so wait for it to reset, or switch")
@@ -165,7 +195,7 @@ final class AiStudioQuotaFailure {
 
   /** Id and metric as one lower-case separator-free string, so either spelling matches a marker. */
   private String normalised() {
-    return (quotaId + quotaMetric).toLowerCase(Locale.ROOT).replace("_", "");
+    return SEPARATORS.matcher(quotaId + quotaMetric).replaceAll("").toLowerCase(Locale.ROOT);
   }
 
   private static String asText(JsonObject object, String field) {

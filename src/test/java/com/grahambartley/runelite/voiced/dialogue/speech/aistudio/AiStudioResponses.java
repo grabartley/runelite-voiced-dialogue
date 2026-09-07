@@ -65,6 +65,59 @@ final class AiStudioResponses {
     return candidates(textPart, "STOP");
   }
 
+  /**
+   * A 429 rejection reporting one quota violation, alongside the {@code RetryInfo} detail Google
+   * sends with it. Any field may be blank, which omits it as a sparse response would.
+   */
+  static String quotaFailure(String quotaId, String quotaMetric, String quotaValue, String model) {
+    JsonObject violation = new JsonObject();
+    addIfPresent(violation, "quotaId", quotaId);
+    addIfPresent(violation, "quotaMetric", quotaMetric);
+    addIfPresent(violation, "quotaValue", quotaValue);
+    if (!model.isEmpty()) {
+      JsonObject dimensions = new JsonObject();
+      dimensions.addProperty("model", model);
+      dimensions.addProperty("location", "global");
+      violation.add("quotaDimensions", dimensions);
+    }
+    JsonArray violations = new JsonArray();
+    violations.add(violation);
+    JsonObject quotaFailure = new JsonObject();
+    quotaFailure.addProperty("@type", "type.googleapis.com/google.rpc.QuotaFailure");
+    quotaFailure.add("violations", violations);
+    JsonObject retryInfo = new JsonObject();
+    retryInfo.addProperty("@type", "type.googleapis.com/google.rpc.RetryInfo");
+    retryInfo.addProperty("retryDelay", "2917s");
+    JsonArray details = new JsonArray();
+    details.add(quotaFailure);
+    details.add(retryInfo);
+    return rejection(details);
+  }
+
+  /** A 429 that states only that the resource is exhausted, with no quota details at all. */
+  static String quotaExhausted() {
+    return rejection(null);
+  }
+
+  private static String rejection(JsonArray details) {
+    JsonObject error = new JsonObject();
+    error.addProperty("code", 429);
+    error.addProperty("message", "Resource has been exhausted.");
+    error.addProperty("status", "RESOURCE_EXHAUSTED");
+    if (details != null) {
+      error.add("details", details);
+    }
+    JsonObject body = new JsonObject();
+    body.add("error", error);
+    return body.toString();
+  }
+
+  private static void addIfPresent(JsonObject object, String field, String value) {
+    if (!value.isEmpty()) {
+      object.addProperty(field, value);
+    }
+  }
+
   /** The single-candidate, single-part envelope every response above shares. */
   private static String candidates(JsonObject part, String finishReason) {
     JsonArray parts = new JsonArray();
