@@ -3,14 +3,16 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The stateful per-backend plumbing every cloud TTS backend shares: the once-per-session user
+ * The stateful per-backend plumbing every cloud TTS backend shares: the once-per-message user
  * notice, the standardized {@link CloudSynthTrace} failure logging, the backed-off network retry
  * wait, the speaking-pace clamp, and the session spend counters. Each backend composes one instance
  * rather than inheriting, so retry budgets and provider identity stay provider-specific while the
@@ -42,8 +44,13 @@ public final class CloudBackendSupport {
   /** One-time user notice hook for cloud failures; defaults to a no-op. */
   private Consumer<String> notice = msg -> {};
 
-  /** Guards the one-time notice so a sustained outage does not spam the chat box. */
-  private boolean warned;
+  /**
+   * Notices already surfaced. Keyed on the message rather than latched once for the whole session,
+   * so a sustained outage still says its piece exactly once while a genuinely different failure (a
+   * benign per-minute pause, then the daily cap behind it) is not silenced by whichever one
+   * happened to come first. Concurrent because synthesis runs on a pool.
+   */
+  private final Set<String> warned = ConcurrentHashMap.newKeySet();
 
   public CloudBackendSupport(
       VoicedDialogueConfig config, TtsProvider provider, int maxAttempts, RetryTuning tuning) {
@@ -109,8 +116,7 @@ public final class CloudBackendSupport {
 
   void warnOnce(String message) {
     log.debug(message);
-    if (!warned) {
-      warned = true;
+    if (warned.add(message)) {
       notice.accept(message);
     }
   }

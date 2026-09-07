@@ -81,6 +81,13 @@ public class AiStudioQuotaFailureTest {
   }
 
   @Test
+  public void aMalformedDetailDoesNotHideAViolationBehindIt() {
+    String body = PAID_DAILY_CAP.replace("\"details\": [", "\"details\": [\"not an object\", ");
+
+    assertEquals("gemini-3.1-flash-tts", parse(body).model);
+  }
+
+  @Test
   public void aPaidCapNamesTheCapAndNeverAsksForBilling() {
     String notice = noticeFor(PAID_DAILY_CAP);
 
@@ -136,16 +143,27 @@ public class AiStudioQuotaFailureTest {
   public void aViolationMissingItsDimensionsStillWordsANotice() {
     assertEquals(
         "Google AI Studio stopped voicing dialogue: the speech model has reached its request cap."
-            + " Enabling billing does not lift this cap, so check your quota at aistudio.google.com,"
-            + " or switch Voice Provider to OpenRouter.",
+            + " Check your quota at aistudio.google.com, or switch Voice Provider to OpenRouter.",
         noticeFor(AiStudioResponses.quotaFailure("GenerateRequestsPerProject", "", "", "")));
   }
 
   @Test
-  public void aQuotaNamingNoPeriodNeverPromisesAReset() {
-    assertFalse(
-        "nothing in the body says how long an unnamed quota holds",
-        noticeFor(quota("GenerateRequestsPerProject", "")).contains("wait for it to reset"));
+  public void aQuotaNamingNeitherPeriodNorTierClaimsNeither() {
+    String notice = noticeFor(quota("GenerateRequestsPerProject", ""));
+
+    assertFalse("nothing says how long it holds", notice.contains("wait for it to reset"));
+    assertFalse("nor whether billing would lift it", notice.contains("billing"));
+  }
+
+  @Test
+  public void aTokenQuotaIsNotReportedAsARequestCap() {
+    String notice =
+        noticeFor(
+            quota(
+                "GenerateContentInputTokensPerModelPerMinute",
+                "generativelanguage.googleapis.com/generate_content_input_token_count"));
+
+    assertTrue("tokens are not requests: " + notice, notice.contains("per-minute token cap of 10"));
   }
 
   @Test

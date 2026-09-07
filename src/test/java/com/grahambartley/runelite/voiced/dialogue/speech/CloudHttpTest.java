@@ -54,7 +54,7 @@ public class CloudHttpTest {
 
   @Test
   public void bodySnippetKeepsAWholeQuotaFailureBody() {
-    // The rejection that started this: ~1.4KB, with the quota details at the far end of it.
+    // A Gemini quota rejection runs ~1.4KB, with the fields naming the cause at the far end.
     assertFalse(
         "the field naming the cause must survive the log",
         CloudHttp.bodySnippet(filler(1_500)).endsWith("..."));

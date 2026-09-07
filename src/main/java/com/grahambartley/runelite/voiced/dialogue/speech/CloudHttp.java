@@ -76,7 +76,10 @@ public final class CloudHttp {
     return value == null ? "" : value;
   }
 
-  /** Reads a small non-audio error body for diagnostics, tolerating a read failure. */
+  /**
+   * Reads a non-audio error body, tolerating a read failure. The bytes both feed the failure trace
+   * and word the provider's user-facing notice, so a rejection is read exactly once.
+   */
   static byte[] errorBody(Response response) {
     try {
       ResponseBody body = response.body();

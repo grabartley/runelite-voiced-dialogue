@@ -48,6 +48,9 @@ final class AiStudioQuotaFailure {
 
   private static final String PER_MINUTE_MARKER = "perminute";
 
+  /** Google meters tokens through the same violation shape it meters requests through. */
+  private static final String TOKEN_MARKER = "token";
+
   /** The quota's identifier, e.g. {@code GenerateRequestsPerDayPerProjectPerModel}. */
   final String quotaId;
 
@@ -100,6 +103,9 @@ final class AiStudioQuotaFailure {
         return null;
       }
       for (JsonElement element : details) {
+        if (!element.isJsonObject()) {
+          continue;
+        }
         JsonObject detail = element.getAsJsonObject();
         if (!QUOTA_FAILURE_TYPE.equals(asText(detail, "@type"))) {
           continue;
@@ -180,11 +186,11 @@ final class AiStudioQuotaFailure {
           .append(" Voice Provider to OpenRouter.")
           .toString();
     }
-    // A quota that named no period: how long it holds is unknown, so the notice claims nothing
-    // about waiting it out.
+    // A quota naming neither a period nor a tier: nothing in the body backs a claim about when it
+    // clears or whether billing would lift it, so the notice makes neither.
     return cap(period)
-        .append(". Enabling billing does not lift this cap, so check your quota at")
-        .append(" aistudio.google.com, or switch Voice Provider to OpenRouter.")
+        .append(". Check your quota at aistudio.google.com, or switch Voice Provider to")
+        .append(" OpenRouter.")
         .toString();
   }
 
@@ -197,7 +203,7 @@ final class AiStudioQuotaFailure {
     if (!period.label.isEmpty()) {
       notice.append(period.label).append(' ');
     }
-    notice.append("request cap");
+    notice.append(normalised.contains(TOKEN_MARKER) ? "token cap" : "request cap");
     if (!quotaValue.isEmpty()) {
       notice.append(" of ").append(quotaValue);
     }

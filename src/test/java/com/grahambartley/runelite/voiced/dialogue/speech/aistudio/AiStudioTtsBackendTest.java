@@ -283,7 +283,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void theStreamedPathWordsTheQuotaNoticeFromItsRejectionToo() {
-    // The path a live cache-missed line takes, and the one the misworded notice was reported from.
+    // The path a live cache-missed line takes.
     List<String> notices = new ArrayList<>();
     AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setNotice(notices::add);
