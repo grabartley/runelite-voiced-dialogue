@@ -33,12 +33,19 @@ rendered as a leading `AUDIO PROFILE` direction block setting accent/style/pace,
 sets the character and the emotion tag colours the moment.
 
 Narration is a speaker class of its own. The item, double-item, and message boxes (`NarrationWatcher`,
-gated by **Voice Narration**) are the game telling the story rather than a character talking, so
-they resolve to the fixed `VoiceSpec.NARRATOR` and the `narrator` profile layer: one voice held out
-of every character pool, always Neutral since a narration box carries no chat head, and untouched by
-the Player and NPC Speaking Styles and by the cave echo, which colours the voices of people standing
-in the room with you. The spoken language still applies. Being fixed is what keeps narrated lines on
-a stable cache key across sessions.
+gated by **Voice Narration**, off by default) are the game telling the story rather than a character
+talking, so they resolve to the fixed `VoiceSpec.NARRATOR` and the `narrator` profile layer: one
+voice held out of every character pool, always Neutral since a narration box carries no chat head,
+and untouched by the Player and NPC Speaking Styles and by the cave echo, which colours the voices
+of people standing in the room with you. The spoken language still applies. Being fixed is what
+keeps narrated lines on a stable cache key across sessions.
+
+These are the engine's generic dialogs (`objectbox` 193, `objectbox_double` 11, `messagebox` 229),
+not content-specific ones, and the game raises `messagebox` for interface prompts as well as story
+beats: a world switch warning arrives on the same widget, through the same chat type, in the same
+game state as a quest's narration. Nothing in the widget, the chat type, or the game state
+separates them, so narration is opt-in rather than filtered by a heuristic that would have to guess
+what counts as story.
 
 ## The OpenRouter speech call
 

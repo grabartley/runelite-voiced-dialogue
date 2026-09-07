@@ -360,11 +360,12 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "voiceNarration",
       name = "Voice Narration",
-      description = "Speak message and item boxes in a narrator voice.",
+      description =
+          "Speak message and item boxes in a narrator voice. Covers interface prompts too.",
       position = 5,
       section = voicesSection)
   default boolean voiceNarration() {
-    return true;
+    return false;
   }
 
   @ConfigItem(
