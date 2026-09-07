@@ -73,10 +73,15 @@ public class ChatNoticeManagerTest {
     assertEquals(expected, ChatNoticeManager.shouldWarnMissingCloudKey(keySet));
   }
 
+  /** Stubs the persisted onboarding flag, the one input that decides whether the guide posts. */
+  private void onboardingSeen(Boolean seen) {
+    when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
+        .thenReturn(seen);
+  }
+
   @Test
   public void onboardingPostsOnceOnFreshInstallAndPersistsTheFlag() {
-    when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
-        .thenReturn(null);
+    onboardingSeen(null);
 
     manager.maybeShowOnboarding();
     manager.maybeShowOnboarding();
@@ -88,9 +93,23 @@ public class ChatNoticeManagerTest {
   }
 
   @Test
+  public void onboardingNamesTheDailyCapAndTheUncappedProvider() {
+    onboardingSeen(null);
+
+    manager.maybeShowOnboarding();
+
+    ArgumentCaptor<String> posted = ArgumentCaptor.forClass(String.class);
+    verify(client)
+        .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), posted.capture(), isNull());
+    assertTrue(
+        "a player picking a provider is told the ceiling on the fast one",
+        posted.getValue().contains("begins at 100 fresh lines a day"));
+    assertTrue("and that the other one has none", posted.getValue().contains("no daily cap"));
+  }
+
+  @Test
   public void onboardingStaysQuietOnceSeen() {
-    when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
-        .thenReturn(true);
+    onboardingSeen(true);
 
     manager.maybeShowOnboarding();
 

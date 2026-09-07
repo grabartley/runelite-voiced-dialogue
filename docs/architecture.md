@@ -2,7 +2,7 @@
 
 Every dialogue line is voiced through a single pipeline: a cloud speech call implemented by the
 `SynthesisBackend` that `BackendProvider` supplies. Two backends exist, one per **Voice Provider**
-setting: Google AI Studio (`AiStudioTtsBackend`, the recommended provider) and OpenRouter
+setting: Google AI Studio (`AiStudioTtsBackend`, the default) and OpenRouter
 (`OpenRouterTtsBackend`). `BackendProvider` resolves the configured provider's backend live on
 every call, so switching takes effect on the next line with no restart, and also applies the
 emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutral before synthesis).
@@ -64,6 +64,31 @@ the distinct `cloud-google-ai-studio` backend id, so the two providers' cache en
 On the Gemini API a 429 means quota, so the notice is worded from the `google.rpc.QuotaFailure`
 violation the rejection carries: a free-tier ceiling, a paid per-model cap, and a per-minute limit
 each read differently, and a body carrying no violation falls back to wording that names no cause.
+
+The paid per-model cap is the one players meet. A billed key on Google's entry usage tier gets 100
+requests per day per project for the pinned preview speech model
+(`GenerateRequestsPerDayPerProjectPerModel`, `quotaValue: 100`), so 100 uncached synthesis calls
+a day.
+Enabling billing does not lift it: the allowance is a property of the usage tier, which Google
+raises on cumulative spend (around 10,000 requests per day once the account has spent roughly $100),
+so in practice it stands for the whole player base. The cap is scoped per model, which is why at the
+same moment the speech model rejects with 429 the GA `gemini-3.1-flash-lite` translation model on
+the same key still answers 200. The durable fix is the GA model swap, tracked in
+[#236](https://github.com/grabartley/runelite-voiced-dialogue/issues/236).
+
+The 100 requests are not 100 lines the player hears. **Prefetch Dialogue** defaults on, and
+`DialoguePrefetcher` speculatively synthesizes every visible dialogue option, so options that are
+never picked draw on the same allowance. Player-facing copy therefore says *up to* 100 fresh lines
+a day and names prefetch as a claim on them, rather than equating requests with heard lines.
+
+Player-facing copy states the 100-a-day figure and that billing does not raise it, and describes the
+lift only as one Google grants for heavy long-term use. The spend threshold is deliberately kept out
+of the README and the in-game notices: it reads as a paywall on a plugin that costs fractions of a
+cent per line.
+
+OpenRouter carries no equivalent ceiling. It serves the same model as a paid model, and paid models
+have no platform-level request cap: `GET /api/v1/key` on a credited key reports `is_free_tier:
+false` with no daily allowance, and speech requests succeed while an AI Studio key is exhausted.
 
 The translation hop has a direct counterpart too: `AiStudioTranslator` sends the same shared
 system prompt to `gemini-3.1-flash-lite` through the Gemini API, so a non-English language or a

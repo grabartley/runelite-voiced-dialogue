@@ -7,10 +7,30 @@ import static org.junit.Assert.assertTrue;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.SpokenLanguage;
 import java.util.HashSet;
 import java.util.Set;
+import net.runelite.client.config.ConfigItem;
 import org.junit.Test;
 
-/** Invariants of the {@link SpokenLanguage} dropdown: the single source of truth for languages. */
+/**
+ * Invariants of the {@link SpokenLanguage} dropdown, the single source of truth for languages, and
+ * of the provider tooltip that has to state Google AI Studio's daily ceiling.
+ */
 public class VoicedDialogueConfigTest {
+
+  @Test
+  public void theProviderTooltipStatesTheCeilingAndTheUncappedAlternative() throws Exception {
+    String description =
+        VoicedDialogueConfig.class
+            .getMethod("ttsProvider")
+            .getAnnotation(ConfigItem.class)
+            .description();
+
+    assertTrue(
+        "a player choosing in the panel is told the fast provider's ceiling: " + description,
+        description.contains("100 fresh lines a day"));
+    assertTrue(
+        "and that the other one has none: " + description,
+        description.contains("OpenRouter has no daily cap"));
+  }
 
   @Test
   public void englishIsTheDefaultNoTranslationLanguage() {
