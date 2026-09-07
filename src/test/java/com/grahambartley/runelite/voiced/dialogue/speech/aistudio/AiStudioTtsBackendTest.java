@@ -286,6 +286,9 @@ public class AiStudioTtsBackendTest {
     assertNull(backend.synthesize(req()));
     assertEquals(1, server.getRequestCount());
 
+    // A spare rejection means a line that wrongly escapes fails the count rather than blocking on
+    // an empty queue.
+    server.enqueue(AiStudioResponses.quotaRejection());
     assertNull("a line inside the stated wait is not voiced", backend.synthesize(req()));
     assertNull(backend.synthesizeStreaming(req(), (samples, rate) -> {}));
     assertEquals(

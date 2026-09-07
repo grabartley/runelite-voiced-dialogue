@@ -1,7 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
@@ -41,22 +39,13 @@ public final class RateLimitBackoff {
   private static final long NANOS_PER_MILLI = 1_000_000L;
 
   /**
-   * The open back-off window, held as one value: the deadline and whether the provider stated it
-   * are read together on every decision, so two overlapping 429s cannot leave one rejection's
-   * stated flag paired with the other's deadline.
+   * The whole back-off state, held as one value so every decision reads and replaces it in a single
+   * step: the deadline, whether the provider stated it, how many rejections have run consecutively,
+   * and which generation of the back-off they belong to. Split across separate fields, two
+   * overlapping rejections could pair one's stated flag with the other's deadline, and a rejection
+   * could install a window on top of a reset it had already been checked against.
    */
-  private final AtomicReference<Window> window = new AtomicReference<>(Window.CLEAR);
-
-  /** Consecutive 429s, so the window grows geometrically and resets on a clean call. */
-  private final AtomicInteger consecutive429 = new AtomicInteger();
-
-  /**
-   * Bumped whenever the back-off is dropped. A rejection and a success overlap freely, since lines
-   * and prefetch run on separate pools, and the rejection's handler can be the one to finish
-   * second: this is what tells such a rejection that it is stale, so a call already proven to work
-   * is not undone by a refusal that predates it.
-   */
-  private final AtomicLong generation = new AtomicLong();
+  private final AtomicReference<Window> window = new AtomicReference<>(Window.clear(0));
 
   private final LongSupplier clock;
 
@@ -71,7 +60,7 @@ public final class RateLimitBackoff {
 
   /** The reading a caller passes back to {@link #recordRateLimited}, taken before it calls out. */
   long generation() {
-    return generation.get();
+    return window.get().generation;
   }
 
   boolean isThrottled() {
@@ -91,22 +80,23 @@ public final class RateLimitBackoff {
    * Opens (or widens) the back-off window after a 429. {@code statedWaitMillis} is what the
    * rejection itself asked for, or 0 when it asked for nothing, in which case the window grows
    * geometrically per repeat hit. {@code observedGeneration} is the {@link #generation()} read
-   * before the call went out; a rejection carrying a stale one is dropped.
+   * before the call went out; a rejection carrying a stale one is dropped. That also drops a
+   * rejection the provider genuinely issued after the success, which costs a ladder rung of
+   * speculation and corrects itself on the next rejection, where holding a stale window would not
+   * correct itself at all.
    */
   void recordRateLimited(long statedWaitMillis, long observedGeneration) {
-    if (generation.get() != observedGeneration) {
+    long now = clock.getAsLong();
+    // Lines and prefetch are rejected on separate threads, so the rejection that lands second does
+    // not automatically own the window, and one that predates a reset does not own it at all.
+    Window standing =
+        window.updateAndGet(
+            current -> current.rateLimited(now, statedWaitMillis, observedGeneration));
+    if (standing.generation != observedGeneration) {
       log.debug("[TTS cloud] 429 predates a call that succeeded; leaving the back-off clear");
       return;
     }
-    int consecutive = consecutive429.incrementAndGet();
-    boolean stated = statedWaitMillis > 0;
-    long millis = stated ? clamp(statedWaitMillis) : backoffWindowMillis(consecutive);
-    long now = clock.getAsLong();
-    Window opened = new Window(now + millis * NANOS_PER_MILLI, stated);
-    // Lines and prefetch are rejected on separate threads, so the rejection that lands second does
-    // not automatically own the window.
-    Window standing = window.updateAndGet(current -> current.replacedBy(opened, now));
-    if (stated) {
+    if (statedWaitMillis > 0) {
       log.debug(
           "[TTS cloud] rate limited (429); provider asked for {}ms, waiting {}ms",
           statedWaitMillis,
@@ -131,9 +121,7 @@ public final class RateLimitBackoff {
    * ceiling below, whichever comes first.
    */
   void reset() {
-    generation.incrementAndGet();
-    window.set(Window.CLEAR);
-    consecutive429.set(0);
+    window.updateAndGet(current -> Window.clear(current.generation + 1));
   }
 
   /**
@@ -159,24 +147,48 @@ public final class RateLimitBackoff {
     return HINT_MAX_MILLIS;
   }
 
-  /** One back-off window: when it ends, and whether the provider named that moment itself. */
+  /**
+   * One back-off state: when the window ends, whether the provider named that moment itself, how
+   * many rejections have run without a clean call, and the generation those rejections belong to.
+   */
   private static final class Window {
-
-    /** No window at all, which no deadline can be mistaken for. */
-    static final Window CLEAR = new Window(0, false, false);
 
     private final long endNanos;
     private final boolean stated;
     private final boolean open;
+    private final long generation;
+    private final int consecutive;
 
-    Window(long endNanos, boolean stated) {
-      this(endNanos, stated, true);
+    /** No window at all, which no deadline can be mistaken for. */
+    static Window clear(long generation) {
+      return new Window(0, false, false, generation, 0);
     }
 
-    private Window(long endNanos, boolean stated, boolean open) {
+    private Window(long endNanos, boolean stated, boolean open, long generation, int consecutive) {
       this.endNanos = endNanos;
       this.stated = stated;
       this.open = open;
+      this.generation = generation;
+      this.consecutive = consecutive;
+    }
+
+    /**
+     * This state after a 429, or this state untouched when the rejection belongs to a generation
+     * the back-off has since left behind, which means a call succeeded (or the credentials changed)
+     * while it was in flight.
+     */
+    Window rateLimited(long nowNanos, long statedWaitMillis, long observedGeneration) {
+      if (generation != observedGeneration) {
+        return this;
+      }
+      int rejections = consecutive + 1;
+      boolean nowStated = statedWaitMillis > 0;
+      long millis = nowStated ? clamp(statedWaitMillis) : backoffWindowMillis(rejections);
+      Window opened =
+          new Window(nowNanos + millis * NANOS_PER_MILLI, nowStated, true, generation, rejections);
+      return outranks(opened, nowNanos)
+          ? new Window(endNanos, stated, open, generation, rejections)
+          : opened;
     }
 
     /** Subtraction rather than {@code <}, so a wrapped monotonic clock still compares correctly. */
@@ -190,19 +202,19 @@ public final class RateLimitBackoff {
     }
 
     /**
-     * Which of this window and a newly opened one should stand. A statement outranks a guess in
-     * either direction, however the two deadlines compare: a shorter stated wait is still the
+     * Whether this window should stand rather than a newly opened one. A statement outranks a guess
+     * in either direction, however the two deadlines compare: a shorter stated wait is still the
      * provider naming the moment it will serve again, and a longer guess is still a guess. Only two
      * windows of the same kind are compared by deadline, where the later one wins.
      */
-    Window replacedBy(Window proposed, long nowNanos) {
+    private boolean outranks(Window proposed, long nowNanos) {
       if (!isOpen(nowNanos)) {
-        return proposed;
+        return false;
       }
       if (stated != proposed.stated) {
-        return stated ? this : proposed;
+        return stated;
       }
-      return proposed.endNanos - endNanos < 0 ? this : proposed;
+      return proposed.endNanos - endNanos < 0;
     }
   }
 }

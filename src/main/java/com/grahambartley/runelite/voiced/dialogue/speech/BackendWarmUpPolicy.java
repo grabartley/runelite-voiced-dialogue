@@ -4,16 +4,19 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import java.util.Set;
 
 /**
- * Pure decision for the runtime warm-up trigger: whether a {@link
- * net.runelite.client.events.ConfigChanged} should re-run the active backend's off-thread warm-up.
- * Factored out of the plugin so it is testable without RuneLite injection.
+ * Pure decision for the runtime credentials trigger: whether a {@link
+ * net.runelite.client.events.ConfigChanged} changed which backend is active or what it
+ * authenticates with. Two things hang off the answer, the off-thread warm-up and dropping a
+ * rate-limit window the old credentials earned, so narrowing the key set for one narrows it for the
+ * other. Factored out of the plugin so it is testable without RuneLite injection.
  */
 public final class BackendWarmUpPolicy {
 
   /**
    * Config keys that change which backend is active or whether it can become available: entering
    * either provider's API key can make a previously-unavailable backend available, and switching
-   * provider makes a different (possibly cold) backend the active one.
+   * provider makes a different (possibly cold) backend the active one. Either also invalidates a
+   * rate-limit window, which the old key or provider earned and the new one has not.
    */
   private static final Set<String> WARM_TRIGGER_KEYS =
       Set.of(
