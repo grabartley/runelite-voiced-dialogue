@@ -51,6 +51,7 @@ public class AiStudioTtsBackendTest {
   private OkHttpClient client;
   private final Gson gson = new Gson();
   private final SpendTracker spend = new SpendTracker();
+  private final List<String> notices = new ArrayList<>();
 
   @Before
   public void setUp() throws Exception {
@@ -89,16 +90,21 @@ public class AiStudioTtsBackendTest {
     return new MockResponse().setResponseCode(HTTP_OK).setBody(body);
   }
 
+  /** A 429 carrying {@code body}, the shape every mocked rejection takes. */
+  private static MockResponse tooManyRequests(String body) {
+    return new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody(body);
+  }
+
   /** The 429 a billed key hits once the model's daily request allowance is gone. */
   private static MockResponse quotaRejection() {
-    return new MockResponse()
-        .setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS)
-        .setBody(
-            AiStudioResponses.quotaFailure(
-                "GenerateRequestsPerDayPerProjectPerModel",
-                "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
-                "100",
-                "gemini-3.1-flash-tts"));
+    return tooManyRequests(AiStudioResponses.dailyCapExhausted());
+  }
+
+  /** A keyed backend whose one-time notices land in {@link #notices}. */
+  private AiStudioTtsBackend noticedBackend() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    backend.setNotice(notices::add);
+    return backend;
   }
 
   /** A backend whose billable calls land in {@link #spend}. */
@@ -245,9 +251,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void non2xxFailsTheLineGracefully() {
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
+    AiStudioTtsBackend backend = noticedBackend();
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
 
     assertNull(backend.synthesize(req()));
@@ -257,11 +261,8 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void rateLimitOpensTheThrottleWindowAndNamesTheQuota() {
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
-    server.enqueue(
-        new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody("quota"));
+    AiStudioTtsBackend backend = noticedBackend();
+    server.enqueue(tooManyRequests("quota"));
 
     assertNull(backend.synthesize(req()));
     assertTrue("a 429 opens the prefetch back-off window", backend.isThrottled());
@@ -270,9 +271,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void theQuotaNoticeIsWordedFromTheRejectionBody() {
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
+    AiStudioTtsBackend backend = noticedBackend();
     server.enqueue(quotaRejection());
 
     assertNull(backend.synthesize(req()));
@@ -284,9 +283,7 @@ public class AiStudioTtsBackendTest {
   @Test
   public void theStreamedPathWordsTheQuotaNoticeFromItsRejectionToo() {
     // The path a live cache-missed line takes.
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
+    AiStudioTtsBackend backend = noticedBackend();
     server.enqueue(quotaRejection());
 
     assertNull(backend.synthesizeStreaming(req(), (samples, rate) -> {}));
@@ -315,10 +312,22 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
+  public void changedCredentialsClearTheStatedWaitSoTheNextLineIsSent() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    server.enqueue(quotaRejection());
+    assertNull(backend.synthesize(req()));
+
+    backend.clearRateLimit();
+    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+
+    assertNotNull(
+        "the change the notice asked for must not be punished", backend.synthesize(req()));
+  }
+
+  @Test
   public void aRejectionStatingNoWaitStillLetsTheNextLineTry() {
     AiStudioTtsBackend backend = backend(keyedConfig());
-    server.enqueue(
-        new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody("quota"));
+    server.enqueue(tooManyRequests("quota"));
     server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
 
     assertNull(backend.synthesize(req()));

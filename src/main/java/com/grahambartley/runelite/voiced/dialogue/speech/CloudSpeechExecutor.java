@@ -205,6 +205,11 @@ public final class CloudSpeechExecutor {
     return backoff.isThrottled();
   }
 
+  /** Drops a rate-limit window earned under credentials or a provider that have since changed. */
+  public void clearRateLimit() {
+    backoff.reset();
+  }
+
   public String cacheVariant(SynthesisRequest request) {
     return CloudCacheKeyBuilder.build(
         cacheModelId,
@@ -235,9 +240,10 @@ public final class CloudSpeechExecutor {
 
   /**
    * Builds the speech call shared by the buffered and streaming paths: availability check, optional
-   * translation hop, emotion styling, character-profile block, and pace. Returns {@code null}
-   * (after surfacing the one-time notice) when the line cannot be voiced at all: no API key, or a
-   * failed translation.
+   * translation hop, emotion styling, character-profile block, and pace. Returns {@code null} when
+   * the line cannot be voiced at all: the provider is inside a wait it stated, there is no API key,
+   * or the translation failed. The first of those is silent, since the notice that opened the
+   * window already said what happened; the other two surface their one-time notice.
    */
   private PreparedSpeech prepare(SynthesisRequest request) {
     // The provider named the moment it will serve again, so a call made before then is a rejection

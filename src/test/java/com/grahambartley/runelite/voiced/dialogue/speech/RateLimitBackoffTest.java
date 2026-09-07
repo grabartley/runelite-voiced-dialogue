@@ -22,8 +22,10 @@ public class RateLimitBackoffTest {
 
   private static final long ONE_HOUR_MILLIS = 60 * 60 * 1_000L;
 
-  private final AtomicLong now = new AtomicLong(1_600_000_000_000L);
-  private final RateLimitBackoff backoff = new RateLimitBackoff(now::get);
+  /** The injected monotonic clock reads nanoseconds, as {@link System#nanoTime} does. */
+  private final AtomicLong nanos = new AtomicLong(-4_000_000_000L);
+
+  private final RateLimitBackoff backoff = new RateLimitBackoff(nanos::get);
 
   @Test
   @Parameters({
@@ -118,10 +120,40 @@ public class RateLimitBackoffTest {
     backoff.recordRateLimited(NO_STATED_WAIT);
 
     assertFalse("a rejection stating nothing states nothing", backoff.isRefusing());
-    assertTrue(backoff.isThrottled());
+    elapse(1_999);
+    assertTrue("consecutive rejections count whoever stated the wait", backoff.isThrottled());
+    elapse(2);
+    assertFalse(backoff.isThrottled());
+  }
+
+  @Test
+  public void changedCredentialsDropTheWindowAndTheLadderWithIt() {
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+
+    backoff.reset();
+
+    assertFalse("the notice asked for this change, so it cannot be punished", backoff.isRefusing());
+    assertFalse(backoff.isThrottled());
+
+    backoff.recordRateLimited(NO_STATED_WAIT);
+    elapse(999);
+    assertTrue("and the ladder starts again from its base rung", backoff.isThrottled());
+    elapse(2);
+    assertFalse(backoff.isThrottled());
+  }
+
+  @Test
+  public void aWindowOpenedBeforeAClockWrapStillCloses() {
+    nanos.set(Long.MAX_VALUE - 1_000_000L);
+
+    backoff.recordRateLimited(10);
+
+    assertTrue("the deadline wrapped past the clock's own ceiling", backoff.isRefusing());
+    elapse(11);
+    assertFalse("a wrapped deadline is still reached, not held forever", backoff.isRefusing());
   }
 
   private void elapse(long millis) {
-    now.addAndGet(millis);
+    nanos.addAndGet(millis * 1_000_000L);
   }
 }

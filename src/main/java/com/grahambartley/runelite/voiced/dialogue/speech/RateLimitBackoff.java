@@ -1,8 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,6 +15,10 @@ import lombok.extern.slf4j.Slf4j;
  * down for, while a stated one is the provider naming the moment it will serve again, so nothing is
  * sent until it passes. Against a wait of minutes, a guess measured in seconds only buys another
  * rejection.
+ *
+ * <p>Deadlines are measured on a monotonic clock, since a wall clock stepping backwards would hold
+ * a window open past the wait it was meant to enforce, and a stated window admits no call that
+ * could clear it.
  */
 @Slf4j
 public final class RateLimitBackoff {
@@ -33,11 +36,14 @@ public final class RateLimitBackoff {
    */
   private static final long HINT_MAX_MILLIS = 60 * 60 * 1_000L;
 
-  /** Epoch-millis until which the backend is backing off; 0 means not throttled. */
-  private final AtomicLong backoffUntil = new AtomicLong();
+  private static final long NANOS_PER_MILLI = 1_000_000L;
 
-  /** Whether the open window is the provider's own stated wait rather than a computed guess. */
-  private final AtomicBoolean stated = new AtomicBoolean();
+  /**
+   * The open back-off window, held as one value: the deadline and whether the provider stated it
+   * are read together on every decision, so two overlapping 429s cannot leave one rejection's
+   * stated flag paired with the other's deadline.
+   */
+  private final AtomicReference<Window> window = new AtomicReference<>(Window.CLEAR);
 
   /** Consecutive 429s, so the window grows geometrically and resets on a clean call. */
   private final AtomicInteger consecutive429 = new AtomicInteger();
@@ -45,16 +51,16 @@ public final class RateLimitBackoff {
   private final LongSupplier clock;
 
   public RateLimitBackoff() {
-    this(System::currentTimeMillis);
+    this(System::nanoTime);
   }
 
-  /** Test seam: drives the window off a supplied clock, so a wait can be watched passing. */
-  RateLimitBackoff(LongSupplier clock) {
-    this.clock = clock;
+  /** Test seam: drives the window off a supplied monotonic clock, in nanoseconds. */
+  RateLimitBackoff(LongSupplier nanoClock) {
+    this.clock = nanoClock;
   }
 
   boolean isThrottled() {
-    return clock.getAsLong() < backoffUntil.get();
+    return window.get().isOpen(clock.getAsLong());
   }
 
   /**
@@ -62,37 +68,44 @@ public final class RateLimitBackoff {
    * call is known to fail before it is made.
    */
   boolean isRefusing() {
-    return stated.get() && isThrottled();
+    Window open = window.get();
+    return open.stated && open.isOpen(clock.getAsLong());
   }
 
   /**
    * Opens (or widens) the back-off window after a 429. {@code statedWaitMillis} is what the
    * rejection itself asked for, or 0 when it asked for nothing, in which case the window grows
-   * geometrically per repeat hit as before.
+   * geometrically per repeat hit.
    */
   void recordRateLimited(long statedWaitMillis) {
     int consecutive = consecutive429.incrementAndGet();
-    boolean honoured = statedWaitMillis > 0;
-    long window = honoured ? clamp(statedWaitMillis) : backoffWindowMillis(consecutive);
-    stated.set(honoured);
-    backoffUntil.set(clock.getAsLong() + window);
-    if (honoured) {
+    boolean stated = statedWaitMillis > 0;
+    long millis = stated ? clamp(statedWaitMillis) : backoffWindowMillis(consecutive);
+    window.set(new Window(clock.getAsLong() + millis * NANOS_PER_MILLI, stated));
+    if (stated) {
       log.debug(
           "[TTS cloud] rate limited (429); provider asked for {}ms, waiting {}ms",
           statedWaitMillis,
-          window);
+          millis);
       return;
     }
-    log.debug("[TTS cloud] rate limited (429); backing off prefetch for {}ms", window);
+    log.debug("[TTS cloud] rate limited (429); backing off prefetch for {}ms", millis);
   }
 
   /** Clears the back-off after any clean call so prefetch resumes immediately. */
   void recordSuccess() {
-    if (backoffUntil.get() != 0) {
-      consecutive429.set(0);
-      stated.set(false);
-      backoffUntil.set(0);
-    }
+    reset();
+  }
+
+  /**
+   * Drops the back-off outright. A window is only ever evidence about the credentials and provider
+   * that earned it, so changing either makes it meaningless: the notice a stated window surfaces
+   * tells the player to enable billing or switch provider, and doing so must not leave the backend
+   * refusing to send the very line that would prove it worked.
+   */
+  public void reset() {
+    window.set(Window.CLEAR);
+    consecutive429.set(0);
   }
 
   /**
@@ -116,5 +129,31 @@ public final class RateLimitBackoff {
         statedWaitMillis,
         HINT_MAX_MILLIS);
     return HINT_MAX_MILLIS;
+  }
+
+  /** One back-off window: when it ends, and whether the provider named that moment itself. */
+  private static final class Window {
+
+    /** No window at all, which no deadline can be mistaken for. */
+    static final Window CLEAR = new Window(0, false, false);
+
+    private final long endNanos;
+    private final boolean stated;
+    private final boolean open;
+
+    Window(long endNanos, boolean stated) {
+      this(endNanos, stated, true);
+    }
+
+    private Window(long endNanos, boolean stated, boolean open) {
+      this.endNanos = endNanos;
+      this.stated = stated;
+      this.open = open;
+    }
+
+    /** Subtraction rather than {@code <}, so a wrapped monotonic clock still compares correctly. */
+    boolean isOpen(long nowNanos) {
+      return open && nowNanos - endNanos < 0;
+    }
   }
 }

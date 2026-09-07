@@ -17,12 +17,7 @@ import org.junit.Test;
 public class AiStudioQuotaFailureTest {
 
   /** A billed key that ran out of the model's per-day request allowance. */
-  private static final String PAID_DAILY_CAP =
-      AiStudioResponses.quotaFailure(
-          "GenerateRequestsPerDayPerProjectPerModel",
-          "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
-          "100",
-          "gemini-3.1-flash-tts");
+  private static final String PAID_DAILY_CAP = AiStudioResponses.dailyCapExhausted();
 
   /** The same rejection on a key that has never had billing enabled. */
   private static final String FREE_TIER_CAP =

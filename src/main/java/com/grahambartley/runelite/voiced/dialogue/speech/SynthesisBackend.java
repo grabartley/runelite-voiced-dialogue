@@ -73,6 +73,12 @@ public interface SynthesisBackend {
    * lines ignore this and always attempt synthesis. Default {@code false}: a backend with no remote
    * rate limit is never throttled.
    */
+  /**
+   * Drops any rate-limit back-off this backend is holding, for a credential or provider change that
+   * makes the window it was opened under meaningless.
+   */
+  default void clearRateLimit() {}
+
   default boolean isThrottled() {
     return false;
   }

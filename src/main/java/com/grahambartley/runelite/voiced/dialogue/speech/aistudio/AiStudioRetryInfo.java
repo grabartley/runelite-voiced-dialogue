@@ -43,6 +43,9 @@ final class AiStudioRetryInfo {
 
   /** {@code "2917s"} as 2917000, {@code "0.5s"} as 500, anything unrecognised as 0. */
   static long durationMillis(String duration) {
+    if (duration == null) {
+      return 0;
+    }
     Matcher matched = DURATION.matcher(duration.trim());
     if (!matched.matches()) {
       return 0;

@@ -8,12 +8,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * The {@code error.details} array a Gemini API rejection carries, read by {@code @type}. One 429
  * states both which quota ran out and how long to wait, as two entries of this one array, so each
  * reader asks for the type it understands and ignores the rest.
  */
+@Slf4j
 final class AiStudioErrorDetails {
 
   private AiStudioErrorDetails() {}
@@ -47,6 +49,7 @@ final class AiStudioErrorDetails {
       }
       return matches;
     } catch (RuntimeException e) {
+      log.debug("[TTS cloud] AI Studio quota failure parse error: {}", e.getMessage());
       return Collections.emptyList();
     }
   }

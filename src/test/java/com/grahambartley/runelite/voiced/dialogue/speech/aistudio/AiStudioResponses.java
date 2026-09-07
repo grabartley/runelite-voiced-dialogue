@@ -94,6 +94,15 @@ final class AiStudioResponses {
     return rejection(details);
   }
 
+  /** The rejection a billed key gets once the model's daily request allowance is gone. */
+  static String dailyCapExhausted() {
+    return quotaFailure(
+        "GenerateRequestsPerDayPerProjectPerModel",
+        "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
+        "100",
+        "gemini-3.1-flash-tts");
+  }
+
   /** A 429 stating only how long to wait, as a protobuf duration such as {@code 2917s}. */
   static String retryAfter(String retryDelay) {
     JsonArray details = new JsonArray();
