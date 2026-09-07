@@ -88,6 +88,24 @@ public class ChatNoticeManagerTest {
   }
 
   @Test
+  public void onboardingNamesTheDailyCapAndTheUncappedProvider() {
+    when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
+        .thenReturn(null);
+
+    manager.maybeShowOnboarding();
+
+    verify(client)
+        .addChatMessage(
+            eq(ChatMessageType.GAMEMESSAGE),
+            eq(""),
+            contains("starts at 100 new lines a day"),
+            isNull());
+    verify(client)
+        .addChatMessage(
+            eq(ChatMessageType.GAMEMESSAGE), eq(""), contains("no daily cap"), isNull());
+  }
+
+  @Test
   public void onboardingStaysQuietOnceSeen() {
     when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
         .thenReturn(true);

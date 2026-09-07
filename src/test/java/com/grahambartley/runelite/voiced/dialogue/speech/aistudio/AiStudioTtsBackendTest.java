@@ -134,6 +134,16 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
+  public void missingKeyNoticeNamesTheDailyCapAndTheUncappedProvider() {
+    assertTrue(
+        "the notice warns of the preview model's daily ceiling before a player commits to a key",
+        AiStudioTtsBackend.NO_KEY_NOTICE.contains("starts at 100 new lines a day"));
+    assertTrue(
+        "and points at the provider without one",
+        AiStudioTtsBackend.NO_KEY_NOTICE.contains("OpenRouter has no daily cap"));
+  }
+
+  @Test
   public void missingKeyFailsWithoutARequest() {
     Pcm pcm = backend(new MutableTestConfig()).synthesize(req());
 

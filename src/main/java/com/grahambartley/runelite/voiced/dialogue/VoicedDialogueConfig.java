@@ -50,12 +50,14 @@ public interface VoicedDialogueConfig extends Config {
   /**
    * The cloud service dialogue is synthesized through. Both providers voice through the same Gemini
    * TTS model, so voices, emotion, and character profiles sound the same; they differ in who bills
-   * the call, which API key is used, and how quickly audio starts. {@link #GOOGLE_AI_STUDIO} is the
-   * recommended one: it sends requests directly to Google with a Gemini API key and streams audio
-   * back as it is generated, so a line starts speaking in about a second whatever its length.
-   * {@link #OPENROUTER} uses the OpenRouter key and has no streaming support, returning nothing
-   * until the whole clip exists, so a long line waits out its full generation before it can be
-   * heard.
+   * the call, which API key is used, how quickly audio starts, and how much can be voiced in a day.
+   * {@link #GOOGLE_AI_STUDIO} is the default: it sends requests directly to Google with a Gemini
+   * API key and streams audio back as it is generated, so a line starts speaking in about a second
+   * whatever its length, but an entry-tier key gets only 100 requests per day per project for the
+   * pinned preview speech model, and enabling billing does not lift that. {@link #OPENROUTER} uses
+   * the OpenRouter key and has no such daily ceiling, but also no streaming support, returning
+   * nothing until the whole clip exists, so a long line waits out its full generation before it can
+   * be heard.
    */
   enum TtsProvider {
     OPENROUTER("OpenRouter"),
@@ -222,7 +224,9 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "ttsProvider",
       name = "Voice Provider",
-      description = "Cloud service that voices dialogue and bills the calls.",
+      description =
+          "Cloud service that voices dialogue and bills the calls. Google AI Studio starts lines"
+              + " fastest but starts at 100 new lines a day; OpenRouter has no daily cap.",
       position = 0,
       section = generalSection)
   default TtsProvider ttsProvider() {

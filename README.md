@@ -7,7 +7,7 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-> Voiced Dialogue leverages a cloud service ([Google AI Studio](https://aistudio.google.com), recommended, or [OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. On the recommended provider, dialogue starts speaking in well under a second. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
+> Voiced Dialogue leverages a cloud service ([Google AI Studio](https://aistudio.google.com) or [OpenRouter](https://openrouter.ai)) to deliver high quality TTS with advanced features like emotion, accents, and per-NPC personalities. On Google AI Studio, dialogue starts speaking in well under a second. It requires usage credits: you pay only for the audio you generate, and a line of dialogue costs roughly $0.0025 (~€0.0023) on average to voice. See [Get started](#get-started) for setup.
 
 ## Gielinor, out loud
 
@@ -36,12 +36,12 @@ Voiced Dialogue voices dialogue through the cloud, so it needs an API key from o
 
 ### Choosing your provider
 
-Voiced Dialogue voices dialogue through one of two cloud services. Both use the same Gemini TTS model, so **the voices, accents, emotion, and personalities are identical**. They differ in how quickly a line starts speaking, and in how much setup they ask of you.
+Voiced Dialogue voices dialogue through one of two cloud services. Both use the same Gemini TTS model, so **the voices, accents, emotion, and personalities are identical**. They differ in how quickly a line starts speaking, how many fresh lines you get in a day, and how much setup they ask of you.
 
-|  | Google AI Studio (recommended) | OpenRouter |
+|  | Google AI Studio | OpenRouter |
 |---|---|---|
-| **Pros** | Dialogue starts speaking in well under a second, however long the line is, because audio streams as it is generated. NPCs answer you almost immediately, which is the difference between the plugin feeling alive and feeling like it is buffering. | The simplest setup: make an account, add a few euro of credit, paste the key. |
-| **Cons** | Slightly longer setup, since you have to enable billing on the Google project behind your key. | Noticeably higher latency on every line, and it grows with the length of the line, because OpenRouter has no streaming support and sends nothing until the whole clip is generated. A long quest speech can leave you waiting a long time before it starts. |
+| **Pros** | Dialogue starts speaking in well under a second, however long the line is, because audio streams as it is generated. NPCs answer you almost immediately, which is the difference between the plugin feeling alive and feeling like it is buffering. | No daily ceiling, so you can voice as much fresh dialogue as you like in a sitting. The simplest setup too: make an account, add a few euro of credit, paste the key. |
+| **Cons** | Slightly longer setup, since you have to enable billing on the Google project behind your key. While the plugin's speech model is in preview, Google starts a key at **100 requests per day**, which is 100 brand-new lines a day. Enabling billing does not raise it, though Google does lift it for accounts with heavy long-term use. | Noticeably higher latency on every line, and it grows with the length of the line, because OpenRouter has no streaming support and sends nothing until the whole clip is generated. A long quest speech can leave you waiting a long time before it starts. |
 
 Measured time until a line starts speaking, same dialogue through both:
 
@@ -52,14 +52,16 @@ Measured time until a line starts speaking, same dialogue through both:
 | Long (400 chars) | **0.8s** | 19.5s |
 | Very long (500+ chars) | **0.8s** | 37.2s |
 
-**Google AI Studio is the recommended way to use the plugin.** The extra setup step is worth it: in real questing, dialogue keeps pace with you instead of making you wait on every line.
+**Pick Google AI Studio for speed.** The extra setup step is worth it: in real questing, dialogue keeps pace with you instead of making you wait on every line. The catch is the starting daily ceiling above, which lands at roughly a couple of sessions of meeting new characters.
 
-You can switch at any time with the **Voice Provider** setting, and lines you have already heard replay instantly from your local cache either way.
+**Pick OpenRouter for volume.** Nothing caps how much fresh dialogue you voice in a day, so a long questing binge keeps talking. You pay for it in waiting: the longer the line, the longer before it starts.
 
-### Setting up Google AI Studio (recommended)
+You can switch at any time with the **Voice Provider** setting, and lines you have already heard replay instantly and free from your local cache either way, so neither the cap nor the wait applies twice to the same line.
+
+### Setting up Google AI Studio
 
 1. **Create an API key.** Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), sign in with your Google account, create an API key, and copy it.
-2. **Enable billing on the key's project.** From the same page, open the project behind your key and turn billing on. **Do not skip this:** the free tier allows only a handful of speech requests per day, so without billing the plugin voices a few lines and then goes quiet. Costs are per character and are listed on Google's [Gemini API pricing page](https://ai.google.dev/pricing).
+2. **Enable billing on the key's project.** From the same page, open the project behind your key and turn billing on. **Do not skip this:** the free tier allows only a handful of speech requests per day, so without billing the plugin voices a few lines and then goes quiet. Costs are per character and are listed on Google's [Gemini API pricing page](https://ai.google.dev/pricing). Billing lifts the free-tier limit, not the 100-a-day starting ceiling on the preview speech model.
 3. **Select the provider and paste the key.** In RuneLite, open the Voiced Dialogue settings, set **Voice Provider** to **Google AI Studio**, and paste the key into the **Google AI Studio API Key** field under **General**.
 4. **Talk to someone.** Walk up to any NPC and start a conversation. Lines should start speaking about a second after the text box appears, however long they are.
 
@@ -132,7 +134,7 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Voice Provider** | `Google AI Studio` | The cloud service that voices dialogue and bills the calls. The voices sound the same on both; Google AI Studio is recommended because dialogue starts speaking far sooner. See [Choosing your provider](#choosing-your-provider). |
+| **Voice Provider** | `Google AI Studio` | The cloud service that voices dialogue and bills the calls. The voices sound the same on both: Google AI Studio starts speaking far sooner, OpenRouter voices any number of new lines a day. See [Choosing your provider](#choosing-your-provider). |
 | **OpenRouter API Key** | empty | Your OpenRouter API key, used by the OpenRouter provider; stored locally, never bundled with the plugin. |
 | **Google AI Studio API Key** | empty | Your Gemini API key, used by the Google AI Studio provider; stored locally, never bundled with the plugin. |
 | **Dialogue Volume** | `20` | Loudness of the spoken dialogue, from `0` (muted) to `100`. |
