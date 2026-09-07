@@ -45,8 +45,8 @@ public final class VoiceTraceFormatter {
   public static String buildResolvedLine(
       String backendId,
       VoiceSpec voice,
-      String emotion,
       String npcName,
+      String emotion,
       String profileName,
       String accent) {
     boolean character = !voice.narrator();

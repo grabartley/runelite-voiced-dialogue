@@ -87,8 +87,8 @@ public final class SynthesisDispatcher {
    * Speaks a narration box (item, double-item, or plain message) in the game's own narrator voice.
    * Always neutral, since a narration box carries no chat head, and voiced from one fixed spec and
    * profile so the narrator sounds the same in every session. Translation applies as it does to
-   * dialogue; the Player and NPC speaking styles do not, because narration is the game speaking
-   * rather than a character.
+   * dialogue; the Player and NPC speaking styles and the cave echo do not, because narration is the
+   * game speaking rather than a character standing in the room with the player.
    */
   public void speakNarration(String text) {
     ResolvedSpeaker resolved = voiceManager.resolveNarrator();
@@ -123,13 +123,11 @@ public final class SynthesisDispatcher {
           VoiceTraceFormatter.buildResolvedLine(
               backend.id(),
               request.voice(),
-              effective.name(),
               npcName,
+              effective.name(),
               profile == null ? null : profile.name(),
               profile == null ? null : profile.accent()));
     }
-    // The narrator is the game telling the story, not someone standing in the cave with you, so
-    // the room never colours it.
     audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
   }
 }

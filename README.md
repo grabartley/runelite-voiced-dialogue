@@ -171,7 +171,7 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 | **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). |
 | **NPC Speaking Style** | `None` | The same set of styles, applied to NPC lines instead; composes with any Spoken Language. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
-| **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). |
+| **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). The narrator is not in the room with you, so narration stays dry. |
 
 </details>
 

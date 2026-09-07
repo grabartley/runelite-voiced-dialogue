@@ -245,7 +245,8 @@ ever re-bill a line.
 ## Cave echo
 
 **Cave Echo** (off by default) adds a decaying echo to lines spoken while the player is
-underground, so dialogue in a cave, dungeon, sewer or basement sounds enclosed. Underground is a pure
+underground, so dialogue in a cave, dungeon, sewer or basement sounds enclosed. Narration is
+excluded: the echo is the room colouring a voice inside it, and the narrator is not in the room. Underground is a pure
 coordinate test: the player's mirror-corrected world `Y` at or above `Constants.OVERWORLD_MAX_Y`,
 since every cave and dungeon is displaced north of the overworld. The echo is local DSP (a damped
 feedback comb) applied to a fresh buffer at playback, after both cache tiers. Both tiers still store

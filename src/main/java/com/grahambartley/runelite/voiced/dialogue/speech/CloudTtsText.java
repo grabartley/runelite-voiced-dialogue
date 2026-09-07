@@ -62,7 +62,7 @@ public final class CloudTtsText {
    */
   private static VoicedDialogueConfig.SpeakingStyle styleFor(
       VoicedDialogueConfig config, SynthesisRequest request) {
-    if (request.voice() != null && request.voice().narrator()) {
+    if (request.voice().narrator()) {
       return VoicedDialogueConfig.SpeakingStyle.NONE;
     }
     return request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();

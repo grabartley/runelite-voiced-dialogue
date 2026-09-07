@@ -38,8 +38,8 @@ public class VoiceTraceFormatterTest {
         VoiceTraceFormatter.buildResolvedLine(
             "cloud-openrouter",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 26),
-            "HAPPY",
             "Hans",
+            "HAPPY",
             "Hans",
             "British");
     assertTrue(line, line.startsWith("[TTS line]"));
@@ -59,7 +59,7 @@ public class VoiceTraceFormatterTest {
   public void buildResolvedLineCollapsesAbsentSeedAndProfileToDash() {
     String line =
         VoiceTraceFormatter.buildResolvedLine(
-            "cloud-openrouter", VoiceSpec.player(NpcGender.FEMALE), "NEUTRAL", null, null, null);
+            "cloud-openrouter", VoiceSpec.player(NpcGender.FEMALE), null, "NEUTRAL", null, null);
     assertTrue(line, line.contains("kind=player"));
     assertTrue(line, line.contains("name=-"));
     assertTrue(line, line.contains("seed=-"));
@@ -81,8 +81,8 @@ public class VoiceTraceFormatterTest {
         VoiceTraceFormatter.buildResolvedLine(
             "cloud-openrouter",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 12, true),
-            "HAPPY",
             "Shilop",
+            "HAPPY",
             "Shilop",
             "British");
     assertTrue(line, line.contains("lifeStage=child"));
@@ -92,7 +92,7 @@ public class VoiceTraceFormatterTest {
   public void buildResolvedLineMarksNarrationAsItsOwnKindWithNoCharacterFields() {
     String line =
         VoiceTraceFormatter.buildResolvedLine(
-            "cloud-openrouter", VoiceSpec.NARRATOR, "NEUTRAL", null, "Narrator", "British");
+            "cloud-openrouter", VoiceSpec.NARRATOR, null, "NEUTRAL", "Narrator", "British");
     assertTrue(line, line.contains("kind=narrator"));
     assertTrue("narration must never log a literal null name: " + line, line.contains("name=-"));
     assertTrue(line, line.contains("race=-"));
