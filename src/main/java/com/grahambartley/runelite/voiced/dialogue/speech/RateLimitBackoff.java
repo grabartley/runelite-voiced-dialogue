@@ -79,24 +79,26 @@ public final class RateLimitBackoff {
   /**
    * Opens (or widens) the back-off window after a 429. {@code statedWaitMillis} is what the
    * rejection itself asked for, or 0 when it asked for nothing, in which case the window grows
-   * geometrically per repeat hit. {@code observedGeneration} is the {@link #generation()} read
-   * before the call went out; a rejection carrying a stale one is dropped. That also drops a
-   * rejection the provider genuinely issued after the success, which costs a ladder rung of
-   * speculation and corrects itself on the next rejection, where holding a stale window would not
-   * correct itself at all.
+   * geometrically per repeat hit, clamped to the ceiling. {@code observedGeneration} is the {@link
+   * #generation()} read before the call went out; a rejection carrying a stale one is dropped. That
+   * also drops a rejection the provider genuinely issued after the success, which costs a ladder
+   * rung of speculation and corrects itself on the next rejection, where holding a stale window
+   * would not correct itself at all.
    */
   void recordRateLimited(long statedWaitMillis, long observedGeneration) {
     long now = clock.getAsLong();
+    // Clamped out here because it logs, and a contended compare-and-swap retries its lambda.
+    long statedWait = statedWaitMillis > 0 ? clamp(statedWaitMillis) : 0;
     // Lines and prefetch are rejected on separate threads, so the rejection that lands second does
     // not automatically own the window, and one that predates a reset does not own it at all.
     Window standing =
-        window.updateAndGet(
-            current -> current.rateLimited(now, statedWaitMillis, observedGeneration));
+        window.updateAndGet(current -> current.rateLimited(now, statedWait, observedGeneration));
     if (standing.generation != observedGeneration) {
       log.debug("[TTS cloud] 429 predates a call that succeeded; leaving the back-off clear");
       return;
     }
-    if (statedWaitMillis > 0) {
+    // Reported off the window that stands, which is not always the one this rejection proposed.
+    if (standing.stated) {
       log.debug(
           "[TTS cloud] rate limited (429); provider asked for {}ms, waiting {}ms",
           statedWaitMillis,
@@ -183,7 +185,7 @@ public final class RateLimitBackoff {
       }
       int rejections = consecutive + 1;
       boolean nowStated = statedWaitMillis > 0;
-      long millis = nowStated ? clamp(statedWaitMillis) : backoffWindowMillis(rejections);
+      long millis = nowStated ? statedWaitMillis : backoffWindowMillis(rejections);
       Window opened =
           new Window(nowNanos + millis * NANOS_PER_MILLI, nowStated, true, generation, rejections);
       return outranks(opened, nowNanos)

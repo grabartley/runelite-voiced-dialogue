@@ -45,8 +45,9 @@ public class AiStudioErrorDetailsTest {
   @Test
   public void aMalformedEntryDoesNotHideTheOnesAroundIt() {
     byte[] body =
-        AiStudioResponses.retryAfter("30s")
-            .replace("\"details\": [", "\"details\": [7, ")
+        ("{\"error\": {\"details\": [7, {\"@type\": \""
+                + RETRY_INFO
+                + "\", \"retryDelay\": \"30s\"}]}}")
             .getBytes(UTF_8);
 
     assertEquals("30s", AiStudioErrorDetails.text(ofType(body, RETRY_INFO).get(0), "retryDelay"));

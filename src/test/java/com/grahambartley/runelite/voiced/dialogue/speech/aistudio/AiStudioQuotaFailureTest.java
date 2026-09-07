@@ -77,7 +77,10 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void aMalformedDetailDoesNotHideAViolationBehindIt() {
-    String body = PAID_DAILY_CAP.replace("\"details\": [", "\"details\": [\"not an object\", ");
+    String body =
+        "{\"error\": {\"details\": [\"not an object\", {\"@type\":"
+            + " \"type.googleapis.com/google.rpc.QuotaFailure\", \"violations\":"
+            + " [{\"quotaDimensions\": {\"model\": \"gemini-3.1-flash-tts\"}}]}]}}";
 
     assertEquals("gemini-3.1-flash-tts", parse(body).model);
   }
@@ -127,7 +130,7 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void aMalformedViolationDoesNotHideAWellFormedOneBehindIt() {
-    String body = PAID_DAILY_CAP.replace("\"violations\": [", "\"violations\": [7, ");
+    String body = violations("[7, {\"quotaDimensions\": {\"model\": \"gemini-3.1-flash-tts\"}}]");
 
     assertEquals("gemini-3.1-flash-tts", parse(body).model);
   }

@@ -100,6 +100,21 @@ public class CloudSpeechExecutorTest {
   }
 
   @Test
+  public void aStatedWaitReadOffTheStreamedPathClosesTheBackendToo() {
+    // The streaming path reads the rejection body itself, so the hint has to survive that read.
+    bodyStatedWaitMillis = 60_000;
+    CloudSpeechExecutor executor = executor();
+    server.enqueue(rejection());
+
+    assertNull(executor.synthesizeStreaming(request(), (samples, rate) -> {}));
+
+    server.enqueue(rejection());
+    assertNull(
+        "a wait stated to the stream still closes the backend", executor.synthesize(request()));
+    assertEquals(1, server.getRequestCount());
+  }
+
+  @Test
   public void aClearedRateLimitLetsTheBackendSendAgain() {
     CloudSpeechExecutor executor = executor();
     server.enqueue(rejection().setHeader("Retry-After", "60"));
