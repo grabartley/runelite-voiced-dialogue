@@ -67,7 +67,8 @@ each read differently, and a body carrying no violation falls back to wording th
 
 The paid per-model cap is the one players meet. A billed key on Google's entry usage tier gets 100
 requests per day per project for the pinned preview speech model
-(`GenerateRequestsPerDayPerProjectPerModel`, `quotaValue: 100`), so 100 uncached lines a day.
+(`GenerateRequestsPerDayPerProjectPerModel`, `quotaValue: 100`), so 100 uncached synthesis calls
+a day.
 Enabling billing does not lift it: the allowance is a property of the usage tier, which Google
 raises on cumulative spend (around 10,000 requests per day once the account has spent roughly $100),
 so in practice it stands for the whole player base. The cap is scoped per model, which is why at the
