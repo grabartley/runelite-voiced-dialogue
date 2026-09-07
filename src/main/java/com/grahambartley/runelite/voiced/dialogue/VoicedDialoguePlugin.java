@@ -11,6 +11,7 @@ import com.grahambartley.runelite.voiced.dialogue.capture.DialoguePrefetcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueTextCleaner;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader;
+import com.grahambartley.runelite.voiced.dialogue.capture.ExamineSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.capture.NarrationWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.PublicChatSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.EmotionResolver;
@@ -92,6 +93,7 @@ public class VoicedDialoguePlugin extends Plugin {
   private ChatNoticeManager noticeManager;
 
   private DialogueWatcher dialogueWatcher;
+  private ExamineSpeaker examineSpeaker;
 
   private PublicChatSpeaker publicChatSpeaker;
 
@@ -204,6 +206,12 @@ public class VoicedDialoguePlugin extends Plugin {
             new NarrationWatcher(client, textCleaner, synthesisDispatcher, config::voiceNarration));
     publicChatSpeaker =
         new PublicChatSpeaker(client, textCleaner, synthesisDispatcher, config::voicePublicChat);
+    examineSpeaker =
+        new ExamineSpeaker(
+            textCleaner,
+            synthesisDispatcher,
+            config::voiceExamineText,
+            dialogueWatcher::isDialogueOpen);
 
     log.info("VoicedDialogue started");
   }
@@ -247,10 +255,12 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onChatMessage(ChatMessage event) {
-    if (publicChatSpeaker == null) {
-      return;
+    if (publicChatSpeaker != null) {
+      publicChatSpeaker.onChatMessage(event);
     }
-    publicChatSpeaker.onChatMessage(event);
+    if (examineSpeaker != null) {
+      examineSpeaker.onChatMessage(event);
+    }
   }
 
   /**

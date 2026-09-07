@@ -1,6 +1,8 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -186,6 +188,27 @@ public class DialogueWatcherTest {
     watcher.tick();
 
     verify(prefetchCoordinator, times(1)).reset();
+  }
+
+  @Test
+  public void dialogueOpenStateIsReportedForTheFeaturesThatMustYieldToIt() {
+    Widget npc = visibleWidget("Greetings!");
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
+
+    assertFalse("nothing has been scanned yet", watcher.isDialogueOpen());
+    watcher.tick();
+    assertTrue("a visible dialogue reports open", watcher.isDialogueOpen());
+    watcher.tick();
+    assertFalse("a closed dialogue reports closed", watcher.isDialogueOpen());
+  }
+
+  @Test
+  public void anOpenNarrationBoxAlsoCountsAsDialogueOpen() {
+    when(narrationWatcher.tick()).thenReturn(true);
+
+    watcher.tick();
+
+    assertTrue("narration holds the audio channel too", watcher.isDialogueOpen());
   }
 
   @Test
