@@ -89,6 +89,18 @@ public class AiStudioTtsBackendTest {
     return new MockResponse().setResponseCode(HTTP_OK).setBody(body);
   }
 
+  /** The 429 a billed key hits once the model's daily request allowance is gone. */
+  private static MockResponse quotaRejection() {
+    return new MockResponse()
+        .setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS)
+        .setBody(
+            AiStudioResponses.quotaFailure(
+                "GenerateRequestsPerDayPerProjectPerModel",
+                "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
+                "100",
+                "gemini-3.1-flash-tts"));
+  }
+
   /** A backend whose billable calls land in {@link #spend}. */
   private AiStudioTtsBackend costedBackend(MutableTestConfig config) {
     AiStudioTtsBackend backend = backend(config);
@@ -284,18 +296,6 @@ public class AiStudioTtsBackendTest {
     assertTrue(
         "the reported cap reaches the player, not a guess at one",
         notices.get(0).contains("daily request cap of 100"));
-  }
-
-  /** The 429 a billed key hits once the model's daily request allowance is gone. */
-  private static MockResponse quotaRejection() {
-    return new MockResponse()
-        .setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS)
-        .setBody(
-            AiStudioResponses.quotaFailure(
-                "GenerateRequestsPerDayPerProjectPerModel",
-                "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
-                "100",
-                "gemini-3.1-flash-tts"));
   }
 
   @Test

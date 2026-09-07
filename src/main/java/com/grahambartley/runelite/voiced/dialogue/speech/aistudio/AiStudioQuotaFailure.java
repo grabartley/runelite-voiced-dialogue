@@ -38,10 +38,10 @@ final class AiStudioQuotaFailure {
 
   private static final String QUOTA_FAILURE_TYPE = "type.googleapis.com/google.rpc.QuotaFailure";
 
-  /** Google words the same marker as {@code free_tier}, {@code FreeTier}, and {@code -FreeTier}. */
+  /** Strips the separators an id and a metric spell differently, so one marker matches both. */
   private static final Pattern SEPARATORS = Pattern.compile("[^A-Za-z0-9]+");
 
-  /** Free-tier metrics and quota ids both carry this once case and separators are normalised. */
+  /** Google words this marker as {@code free_tier}, {@code FreeTier}, and {@code -FreeTier}. */
   private static final String FREE_TIER_MARKER = "freetier";
 
   private static final String PER_DAY_MARKER = "perday";
@@ -60,12 +60,17 @@ final class AiStudioQuotaFailure {
   /** The {@code model} dimension the quota applies to; empty when the response omits it. */
   final String model;
 
+  /** Id and metric as one lower-case separator-free string, so either spelling matches a marker. */
+  private final String normalised;
+
   private AiStudioQuotaFailure(
       String quotaId, String quotaMetric, String quotaValue, String model) {
     this.quotaId = quotaId;
     this.quotaMetric = quotaMetric;
     this.quotaValue = quotaValue;
     this.model = model;
+    this.normalised =
+        SEPARATORS.matcher(quotaId + quotaMetric).replaceAll("").toLowerCase(Locale.ROOT);
   }
 
   /** The one-time user notice for a 429, worded from whatever quota the body reports. */
@@ -75,7 +80,7 @@ final class AiStudioQuotaFailure {
       return QUOTA_NOTICE;
     }
     log.debug("[TTS cloud] AI Studio quota exhausted: {}", quota);
-    return quota.isFreeTier() ? FREE_TIER_QUOTA_NOTICE : quota.capNotice();
+    return quota.notice();
   }
 
   /**
@@ -107,18 +112,18 @@ final class AiStudioQuotaFailure {
       }
       return null;
     } catch (RuntimeException e) {
+      log.debug("[TTS cloud] AI Studio quota failure parse error: {}", e.getMessage());
       return null;
     }
   }
 
   /** Whether the exhausted quota is a free-tier one, which enabling billing does lift. */
   boolean isFreeTier() {
-    return normalised().contains(FREE_TIER_MARKER);
+    return normalised.contains(FREE_TIER_MARKER);
   }
 
   /** How often the reported quota resets, which decides how urgently the notice reads. */
   Period period() {
-    String normalised = normalised();
     if (normalised.contains(PER_DAY_MARKER)) {
       return Period.DAILY;
     }
@@ -156,14 +161,35 @@ final class AiStudioQuotaFailure {
   }
 
   /**
-   * The notice for a quota billing has already paid for. A per-minute ceiling clears on its own
-   * within the minute and the rate-limit back-off already spaces the next line, so it says so
-   * rather than sending the player to change provider. A cap that holds for the rest of the day
-   * does warrant that, and must not repeat the enable-billing advice: a paid per-model cap is
-   * enforced on a billed key and stays where it is when billing is turned on again.
+   * The notice this violation reads as. The period is decided before the tier, because a per-minute
+   * ceiling clears within the minute on any tier and the rate-limit back-off already spaces the
+   * next line: telling a free-tier player to enable billing for that is the same misdirection as
+   * telling a billed one to enable billing they already have.
    */
-  private String capNotice() {
+  private String notice() {
     Period period = period();
+    if (period == Period.PER_MINUTE) {
+      return cap(period).append(". Lines resume once the limit resets.").toString();
+    }
+    if (isFreeTier()) {
+      return FREE_TIER_QUOTA_NOTICE;
+    }
+    if (period == Period.DAILY) {
+      return cap(period)
+          .append(". Enabling billing does not lift this cap, so wait for it to reset, or switch")
+          .append(" Voice Provider to OpenRouter.")
+          .toString();
+    }
+    // A quota that named no period: how long it holds is unknown, so the notice claims nothing
+    // about waiting it out.
+    return cap(period)
+        .append(". Enabling billing does not lift this cap, so check your quota at")
+        .append(" aistudio.google.com, or switch Voice Provider to OpenRouter.")
+        .toString();
+  }
+
+  /** The opening clause naming what ran out, which every worded cap notice shares. */
+  private StringBuilder cap(Period period) {
     StringBuilder notice = new StringBuilder("Google AI Studio ");
     notice.append(period == Period.PER_MINUTE ? "paused dialogue: " : "stopped voicing dialogue: ");
     notice.append(model.isEmpty() ? "the speech model" : model);
@@ -175,13 +201,7 @@ final class AiStudioQuotaFailure {
     if (!quotaValue.isEmpty()) {
       notice.append(" of ").append(quotaValue);
     }
-    if (period == Period.PER_MINUTE) {
-      return notice.append(". Lines resume once the limit resets.").toString();
-    }
-    return notice
-        .append(". Enabling billing does not lift this cap, so wait for it to reset, or switch")
-        .append(" Voice Provider to OpenRouter.")
-        .toString();
+    return notice;
   }
 
   private static AiStudioQuotaFailure of(JsonObject violation) {
@@ -191,11 +211,6 @@ final class AiStudioQuotaFailure {
         asText(violation, "quotaMetric"),
         asText(violation, "quotaValue"),
         asText(dimensions, "model"));
-  }
-
-  /** Id and metric as one lower-case separator-free string, so either spelling matches a marker. */
-  private String normalised() {
-    return SEPARATORS.matcher(quotaId + quotaMetric).replaceAll("").toLowerCase(Locale.ROOT);
   }
 
   private static String asText(JsonObject object, String field) {

@@ -1,7 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
@@ -34,14 +33,12 @@ public final class CloudHttp {
   /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
 
-  /** Max bytes of a non-audio response body echoed into a diagnostic log line. */
-  private static final int BODY_SNIPPET_MAX_BYTES = 300;
-
   /**
-   * A provider states why it rejected a call in a details block (quota id, limit, retry hint) that
-   * sits well past the first few hundred bytes, so diagnosing one from the log needs more of it.
+   * Max bytes of a non-audio response body echoed into a diagnostic log line. A provider states why
+   * it rejected a call in a details block (quota id, limit, retry hint) that sits well past the
+   * first few hundred bytes, so diagnosing one from the log alone needs most of the body.
    */
-  private static final int ERROR_BODY_SNIPPET_MAX_BYTES = 2_000;
+  private static final int BODY_SNIPPET_MAX_BYTES = 2_000;
 
   private static final Pattern CONTROL_CHARS = Pattern.compile("\\p{Cntrl}+");
 
@@ -93,16 +90,9 @@ public final class CloudHttp {
     return value != null && !value.trim().isEmpty();
   }
 
-  /**
-   * First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. An
-   * error status keeps more of it, since that body is the diagnosis rather than a hint towards one.
-   */
-  static String bodySnippet(byte[] bytes, int code) {
-    int budget =
-        code >= HttpURLConnection.HTTP_BAD_REQUEST
-            ? ERROR_BODY_SNIPPET_MAX_BYTES
-            : BODY_SNIPPET_MAX_BYTES;
-    int n = Math.min(bytes.length, budget);
+  /** First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. */
+  static String bodySnippet(byte[] bytes) {
+    int n = Math.min(bytes.length, BODY_SNIPPET_MAX_BYTES);
     String text =
         CONTROL_CHARS
             .matcher(new String(bytes, 0, n, StandardCharsets.UTF_8))

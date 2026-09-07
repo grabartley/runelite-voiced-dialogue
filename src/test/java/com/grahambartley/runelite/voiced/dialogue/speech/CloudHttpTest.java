@@ -1,7 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
-import static com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp.HTTP_TOO_MANY_REQUESTS;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -47,24 +45,19 @@ public class CloudHttpTest {
 
   @Test
   public void bodySnippetFlattensControlCharactersAndMarksTruncation() {
-    assertEquals(
-        "line one line two", CloudHttp.bodySnippet("line one\n\nline two".getBytes(), HTTP_OK));
+    assertEquals("line one line two", CloudHttp.bodySnippet("line one\n\nline two".getBytes()));
 
-    String snippet = CloudHttp.bodySnippet(filler(400), HTTP_OK);
-    assertTrue("an over-long body is marked as truncated", snippet.endsWith("..."));
+    assertTrue(
+        "an over-long body is marked as truncated",
+        CloudHttp.bodySnippet(filler(4_000)).endsWith("..."));
   }
 
   @Test
-  public void bodySnippetKeepsMoreOfAnErrorBodyThanASuccessfulOne() {
-    byte[] body = filler(1_500);
-
-    assertTrue(
-        "a quota failure states its cause past the success-path budget",
-        CloudHttp.bodySnippet(body, HTTP_TOO_MANY_REQUESTS).length()
-            > CloudHttp.bodySnippet(body, HTTP_OK).length());
+  public void bodySnippetKeepsAWholeQuotaFailureBody() {
+    // The rejection that started this: ~1.4KB, with the quota details at the far end of it.
     assertFalse(
-        "an error body within the larger budget is kept whole",
-        CloudHttp.bodySnippet(filler(1_500), HTTP_TOO_MANY_REQUESTS).endsWith("..."));
+        "the field naming the cause must survive the log",
+        CloudHttp.bodySnippet(filler(1_500)).endsWith("..."));
   }
 
   private static byte[] filler(int length) {

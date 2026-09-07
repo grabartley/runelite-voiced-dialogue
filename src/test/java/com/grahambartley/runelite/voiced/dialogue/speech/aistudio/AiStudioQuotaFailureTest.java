@@ -109,6 +109,20 @@ public class AiStudioQuotaFailureTest {
   }
 
   @Test
+  public void aFreeTierPerMinuteLimitIsStillAPauseRatherThanAnAccountProblem() {
+    // The most common free-tier 429: a per-minute ceiling, not the daily allowance.
+    String notice =
+        noticeFor(
+            quota(
+                "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+                "generativelanguage.googleapis.com/generate_content_free_tier_requests"));
+
+    assertTrue("a limit that clears itself says so", notice.contains("Lines resume"));
+    assertFalse(
+        "60 seconds of waiting is not an account to go and fix", notice.contains("enable billing"));
+  }
+
+  @Test
   public void anUnreadableBodyFallsBackToTheGenericNotice() {
     assertEquals(AiStudioQuotaFailure.QUOTA_NOTICE, noticeFor(AiStudioResponses.quotaExhausted()));
     assertEquals(
@@ -122,9 +136,16 @@ public class AiStudioQuotaFailureTest {
   public void aViolationMissingItsDimensionsStillWordsANotice() {
     assertEquals(
         "Google AI Studio stopped voicing dialogue: the speech model has reached its request cap."
-            + " Enabling billing does not lift this cap, so wait for it to reset, or switch Voice"
-            + " Provider to OpenRouter.",
+            + " Enabling billing does not lift this cap, so check your quota at aistudio.google.com,"
+            + " or switch Voice Provider to OpenRouter.",
         noticeFor(AiStudioResponses.quotaFailure("GenerateRequestsPerProject", "", "", "")));
+  }
+
+  @Test
+  public void aQuotaNamingNoPeriodNeverPromisesAReset() {
+    assertFalse(
+        "nothing in the body says how long an unnamed quota holds",
+        noticeFor(quota("GenerateRequestsPerProject", "")).contains("wait for it to reset"));
   }
 
   @Test
