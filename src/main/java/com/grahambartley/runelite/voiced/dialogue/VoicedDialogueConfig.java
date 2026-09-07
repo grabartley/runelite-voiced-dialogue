@@ -30,7 +30,7 @@ public interface VoicedDialogueConfig extends Config {
 
   @ConfigSection(
       name = "Voices",
-      description = "Who speaks and how they sound: you and nearby NPCs.",
+      description = "Who speaks and how they sound: you, nearby NPCs, and the narrator.",
       position = 1)
   String voicesSection = "voices";
 
@@ -358,10 +358,21 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "voiceNarration",
+      name = "Voice Narration",
+      description =
+          "Speak message and item boxes in a narrator voice. Covers interface prompts too.",
+      position = 5,
+      section = voicesSection)
+  default boolean voiceNarration() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "autoLearnNewNpcs",
       name = "Auto-learn New NPCs",
       description = "Look up unknown NPCs on the wiki once, then cache.",
-      position = 5,
+      position = 6,
       section = voicesSection)
   default boolean autoLearnNewNpcs() {
     return false;

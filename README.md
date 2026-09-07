@@ -22,6 +22,7 @@ Walk up, talk, and listen. That is the whole setup.
 - **Accents and personalities with real craft.** 14 races and 14 regional origins each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **over 6,400 NPCs** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
 - **Real emotion.** The plugin reads each speaker's chat-head expression and delivers the line happy, sad, angry, scared, or neutral, so a furious dwarf actually sounds furious.
 - **You star in it too.** Set your own hero's accent, persona, and pace and play the dashing knight, the gruff mercenary, or the chaos goblin of your dreams.
+- **A narrator for the story.** Switch on **Voice Narration** and the message and item boxes quests lean on ("You find a key.", the cutscene beats between conversations) are read aloud by a dedicated narrator voice, so a quest keeps its voice at the moments it is actually about.
 - **Your chat, out loud.** Turn on **Voice My Public Chat** and everything you type in public chat is spoken in your character's voice.
 - **Speak any language, any vibe.** Pipe dialogue through another language, or drop a delivery style over it: be a roadman in Gen Z slang among posh nobles, or run the whole realm as a pirate crew.
 - **Atmosphere on tap.** Lines spoken underground pick up a cave echo, so dungeons and sewers feel enclosed.
@@ -155,6 +156,7 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 | **Your Persona** | friendly and plucky | Persona and delivery style for your character's voice. |
 | **Your Pace** | Normal | Speaking pace for your character's voice. |
 | **Character Voices** | `On` | Gives each speaker a distinct accent, style, and pace instead of one shared voice. Off gives the plainest, cheapest delivery. |
+| **Voice Narration** | `Off` | Reads message and item boxes aloud in a narrator voice. This is the game telling the story rather than a character speaking, so it keeps its own voice and ignores the speaking styles. The game shows these boxes for interface prompts as well as story beats, so a world switch warning is narrated too. |
 | **Auto-learn New NPCs** | `Off` | For an NPC the plugin does not recognise, looks its race, gender, and origin up on the OSRS Wiki once and remembers it. The first line still uses the default voice while the lookup runs. |
 
 </details>
@@ -169,7 +171,7 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 | **Player Speaking Style** | `None` | A delivery register layered onto your own lines (Gen Z slang, pirate speak, formal, and so on). |
 | **NPC Speaking Style** | `None` | The same set of styles, applied to NPC lines instead; composes with any Spoken Language. |
 | **Speaking Pace** | `100` | How fast dialogue is spoken, as a percent of normal. |
-| **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). |
+| **Cave Echo** | `Off` | Adds a decaying echo to dialogue spoken below the overworld (cave, dungeon, sewer, or basement). The narrator is not in the room with you, so narration stays dry. |
 
 </details>
 

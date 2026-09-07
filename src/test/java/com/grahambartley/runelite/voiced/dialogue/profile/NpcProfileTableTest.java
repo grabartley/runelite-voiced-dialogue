@@ -17,6 +17,7 @@ public class NpcProfileTableTest {
       "{"
           + "\"default\":{\"name\":\"Default\",\"accent\":\"British RP.\",\"style\":\"Plain.\",\"pace\":\"Steady.\"},"
           + "\"player\":{\"name\":\"Adventurer\",\"style\":\"Brave hero.\"},"
+          + "\"narrator\":{\"name\":\"Narrator\",\"style\":\"Measured storyteller.\"},"
           + "\"byRace\":{"
           + "\"Human\":{\"name\":\"Human\",\"accent\":\"British.\",\"style\":\"Ordinary.\"},"
           + "\"Troll\":{\"name\":\"Troll\",\"accent\":\"Brixton.\",\"style\":\"Big and dim.\"}},"
@@ -167,6 +168,40 @@ public class NpcProfileTableTest {
     assertEquals("a non-blank accent overrides", "Pirate drawl.", overridden.accent());
     assertEquals("a blank style inherits", "Brave hero.", overridden.style());
     assertEquals("a blank pace inherits", "Steady.", overridden.pace());
+  }
+
+  @Test
+  public void narratorProfileLayersOverDefaultAndTakesNoConfiguredFields() {
+    CharacterProfile narrator = table().resolveNarrator();
+
+    assertEquals("Narrator", narrator.name());
+    assertEquals(
+        "the narrator style comes from the narrator layer",
+        "Measured storyteller.",
+        narrator.style());
+    assertEquals("accent inherits from the default", "British RP.", narrator.accent());
+    assertEquals("pace inherits from the default", "Steady.", narrator.pace());
+  }
+
+  @Test
+  public void narratorProfileIsIdenticalEveryCallSoItsCacheKeyHolds() {
+    NpcProfileTable t = table();
+    assertEquals(t.resolveNarrator().cacheKey(), t.resolveNarrator().cacheKey());
+  }
+
+  @Test
+  public void aTableWithNoNarratorLayerStillResolvesTheDefault() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"Default\",\"accent\":\"British RP.\","
+                    + "\"style\":\"Plain.\",\"pace\":\"Steady.\"}}")
+            .getAsJsonObject();
+
+    CharacterProfile narrator = NpcProfileTable.fromProfilesJson(profiles).resolveNarrator();
+
+    assertEquals("Default", narrator.name());
+    assertEquals("Plain.", narrator.style());
   }
 
   @Test

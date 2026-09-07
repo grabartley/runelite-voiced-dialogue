@@ -62,6 +62,12 @@
       "style": "A seasoned medieval fantasy adventurer: brave and resolute, carrying the quiet confidence of someone who has seen the whole of Gielinor.",
       "pace": "Even and assured, unhurried but purposeful."
     },
+    "narrator": {
+      "name": "Narrator",
+      "accent": "Received Pronunciation British English, the clear, cultured voice of a storyteller reading a tale aloud.",
+      "style": "Gielinor's own narrator, describing what happens rather than playing a part. Calm, measured and quietly authoritative, never acting the line out.",
+      "pace": "Unhurried and even, letting each sentence land, with a clear beat at every full stop."
+    },
     "byRace": {
       "Human": {
         "name": "Gielinor Townsfolk",

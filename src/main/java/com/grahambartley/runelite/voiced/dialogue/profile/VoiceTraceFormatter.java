@@ -10,6 +10,9 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
  */
 public final class VoiceTraceFormatter {
 
+  /** Rendered wherever a field does not apply to the speaker class, or is simply absent. */
+  private static final String NOT_APPLICABLE = "-";
+
   private VoiceTraceFormatter() {}
 
   static String buildNpcTrace(
@@ -36,32 +39,37 @@ public final class VoiceTraceFormatter {
    * {@code [TTS line]} gives the emotion and the full voice metadata (race, gender, seed, profile,
    * accent) actually used for synthesis. The detected npc id and ethnicity stay on the adjacent
    * {@code [TTS profile]}/{@code [TTS voice]} traces, which this complements rather than replaces.
-   * A null profile (profiles off) renders {@code -}.
+   * A null profile (profiles off) renders {@code -}, as does any field that does not apply to the
+   * speaker class: the narrator carries no name, race, gender, life stage, or seed.
    */
   public static String buildResolvedLine(
       String backendId,
-      boolean player,
+      VoiceSpec voice,
       String npcName,
       String emotion,
-      NpcRace race,
-      NpcGender gender,
-      boolean child,
-      int seed,
       String profileName,
       String accent) {
+    boolean character = !voice.narrator();
     return String.format(
         "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s lifeStage=%s seed=%s"
             + " profile=%s accent=%s",
         backendId,
-        player ? "player" : "npc",
-        player ? "-" : "'" + npcName + "'",
+        kindOf(voice),
+        voice.player() || voice.narrator() ? "-" : "'" + npcName + "'",
         emotion,
-        race,
-        gender,
-        child ? "child" : "adult",
-        seed < 0 ? "-" : Integer.toString(seed),
-        profileName == null ? "-" : "'" + profileName + "'",
-        accent == null ? "-" : "'" + accent + "'");
+        character ? voice.race() : NOT_APPLICABLE,
+        character ? voice.gender() : NOT_APPLICABLE,
+        character ? (voice.child() ? "child" : "adult") : NOT_APPLICABLE,
+        voice.hasVoiceSeed() ? Integer.toString(voice.voiceSeed()) : NOT_APPLICABLE,
+        profileName == null ? NOT_APPLICABLE : "'" + profileName + "'",
+        accent == null ? NOT_APPLICABLE : "'" + accent + "'");
+  }
+
+  private static String kindOf(VoiceSpec voice) {
+    if (voice.narrator()) {
+      return "narrator";
+    }
+    return voice.player() ? "player" : "npc";
   }
 
   static String buildPlayerTrace(NpcGender gender) {

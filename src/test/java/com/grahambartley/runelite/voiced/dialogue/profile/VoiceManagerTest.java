@@ -18,9 +18,9 @@ import net.runelite.api.Client;
 import org.junit.Test;
 
 /**
- * The {@link VoiceManager} facade: player resolution, the NPC default-voice path, and the character
- * profile gate. Trace formatting, name normalisation, demographic parsing, NPC lookup, identity
- * resolution, and NPC voice resolution have their own tests.
+ * The {@link VoiceManager} facade: player resolution, the NPC default-voice path, narrator
+ * resolution, and the character profile gate. Trace formatting, name normalisation, demographic
+ * parsing, NPC lookup, identity resolution, and NPC voice resolution have their own tests.
  */
 public class VoiceManagerTest {
 
@@ -92,6 +92,21 @@ public class VoiceManagerTest {
     assertEquals("npc:HUMAN:MALE", spec.key());
   }
 
+  // ---- Narrator resolution ----
+
+  @Test
+  public void narratorResolvesToTheFixedNarratorSpec() {
+    VoiceManager manager = newManager(PlayerVoice.TYPE_B, true);
+
+    VoiceSpec spec = manager.resolveNarrator().voice();
+    assertTrue("the narrator is its own speaker class", spec.narrator());
+    assertEquals("narrator", spec.key());
+    assertEquals(
+        "the player voice setting must not move the narrator",
+        spec,
+        newManager(PlayerVoice.TYPE_A, true).resolveNarrator().voice());
+  }
+
   // ---- Character profile gate ----
 
   @Test
@@ -99,6 +114,7 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A, true);
     assertNotNull(manager.resolve(Speaker.PLAYER, null).profile());
     assertNotNull(manager.resolve(Speaker.NPC, "Hans").profile());
+    assertNotNull(manager.resolveNarrator().profile());
   }
 
   @Test
@@ -106,6 +122,8 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A, false);
     assertNull(manager.resolve(Speaker.PLAYER, null).profile());
     assertNull(manager.resolve(Speaker.NPC, "Hans").profile());
+    assertNull(manager.resolveNarrator().profile());
     assertNotNull("the voice is still resolved", manager.resolve(Speaker.NPC, "Hans").voice());
+    assertNotNull("the narrator voice is still resolved", manager.resolveNarrator().voice());
   }
 }

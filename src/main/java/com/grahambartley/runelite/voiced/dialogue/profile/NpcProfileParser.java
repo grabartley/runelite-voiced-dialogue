@@ -65,6 +65,7 @@ final class NpcProfileParser {
     return new NpcProfileLayers(
         parsedDefault,
         parseLayer(optObject(profiles, "player")),
+        parseLayer(optObject(profiles, "narrator")),
         parseLayerMap(optObject(profiles, "byRace")),
         parseLayerMap(optObject(profiles, "byEthnicity")),
         parseCategories(profiles),

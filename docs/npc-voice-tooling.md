@@ -180,3 +180,7 @@ the most specific layer that sets each one wins.
 
 Player lines use the `player` layer over the default; the three player fields in
 the plugin config (accent/style/pace) override it at runtime when non-blank.
+
+Narration boxes use the `narrator` layer over the default, with no config fields
+over it, so the narrator sounds the same in every session and its lines keep a
+stable cache key.

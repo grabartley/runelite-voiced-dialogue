@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,9 +27,9 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 /**
- * The single place a dialogue or public-chat line becomes a {@link SynthesisRequest}: the resolved
- * speaker, emotion, player flag, and the cave-echo gate are all assembled here, behind one
- * availability guard, and handed to the off-thread audio service.
+ * The single place a dialogue, narration, or public-chat line becomes a {@link SynthesisRequest}:
+ * the resolved speaker, emotion, player flag, and the cave-echo gate are all assembled here, behind
+ * one availability guard, and handed to the off-thread audio service.
  */
 public class SynthesisDispatcherTest {
 
@@ -91,14 +92,65 @@ public class SynthesisDispatcherTest {
   }
 
   @Test
+  public void narrationIsNeutralNonPlayerAndStillTranslated() {
+    when(backend.isAvailable()).thenReturn(true);
+    VoiceSpec spec = mock(VoiceSpec.class);
+    CharacterProfile profile = mock(CharacterProfile.class);
+    when(voiceManager.resolveNarrator()).thenReturn(new ResolvedSpeaker(spec, profile));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(false);
+
+    dispatcher.speakNarration("You find a key.");
+
+    ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
+    verify(audioService).speak(req.capture(), eq(false));
+    SynthesisRequest r = req.getValue();
+    assertEquals("You find a key.", r.text());
+    assertSame(spec, r.voice());
+    assertSame(profile, r.profile());
+    assertEquals("a narration box carries no chat head", Emotion.NEUTRAL, r.emotion());
+    assertFalse("narration is not the player speaking", r.player());
+    assertFalse("narration is translated like dialogue", r.skipTranslation());
+  }
+
+  @Test
+  public void narrationIsNotColouredByTheRoomThePlayerIsStandingIn() {
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolveNarrator()).thenReturn(new ResolvedSpeaker(VoiceSpec.NARRATOR, null));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(true);
+
+    dispatcher.speakNarration("You find a key.");
+
+    verify(audioService).speak(any(SynthesisRequest.class), eq(false));
+  }
+
+  @Test
+  public void narrationResolvesTheNarratorEveryTimeSoItsCacheKeyIsStable() {
+    when(backend.isAvailable()).thenReturn(true);
+    ResolvedSpeaker narrator = new ResolvedSpeaker(VoiceSpec.NARRATOR, null);
+    when(voiceManager.resolveNarrator()).thenReturn(narrator);
+
+    dispatcher.speakNarration("You find a key.");
+    dispatcher.speakNarration("You find a key.");
+
+    ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
+    verify(audioService, times(2)).speak(req.capture(), anyBoolean());
+    assertEquals(
+        "both narrated lines resolve to the same voice key",
+        req.getAllValues().get(0).voice().key(),
+        req.getAllValues().get(1).voice().key());
+  }
+
+  @Test
   public void nothingIsSpokenWhenTheBackendIsUnavailable() {
     when(backend.isAvailable()).thenReturn(false);
     ResolvedSpeaker resolved = new ResolvedSpeaker(mock(VoiceSpec.class), null);
     when(voiceManager.resolve(Speaker.NPC, "Bob")).thenReturn(resolved);
     when(voiceManager.resolve(Speaker.PLAYER, null)).thenReturn(resolved);
+    when(voiceManager.resolveNarrator()).thenReturn(resolved);
 
     dispatcher.speakDialogue("Grr!", Speaker.NPC, "Bob", 614);
     dispatcher.speakPublicChat("hello");
+    dispatcher.speakNarration("You find a key.");
 
     verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
   }

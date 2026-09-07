@@ -11,10 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 
 /**
- * Resolves an NPC (or the player) to a backend-neutral {@link VoiceSpec} and the per-speaker {@link
- * CharacterProfile}. A thin facade over focused collaborators: NPC identity ({@link
- * NpcIdentityResolver}), voice resolution ({@link NpcVoiceResolver}), profile layering ({@link
- * NpcProfileTable}), and trace formatting ({@link VoiceTraceFormatter}).
+ * Resolves an NPC, the player, or the narrator to a backend-neutral {@link VoiceSpec} and the
+ * per-speaker {@link CharacterProfile}. A thin facade over focused collaborators: NPC identity
+ * ({@link NpcIdentityResolver}), voice resolution ({@link NpcVoiceResolver}), profile layering
+ * ({@link NpcProfileTable}), and trace formatting ({@link VoiceTraceFormatter}).
  *
  * <p>The spec carries the detected race and gender so the cloud backend can map them to its own
  * voice bank, plus a stable per-NPC variety seed so same-race/gender NPCs are spread across a
@@ -109,6 +109,16 @@ public class VoiceManager {
     NpcIdentity identity = identityResolver.resolve(npcName);
     VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
     return new ResolvedSpeaker(voice, withProfile ? npcProfile(npcName, identity) : null);
+  }
+
+  /**
+   * Resolves the game's own narration voice: one fixed spec and the narrator profile, identical
+   * every call, so narrated lines keep a stable cache key across sessions.
+   */
+  public ResolvedSpeaker resolveNarrator() {
+    CharacterProfile profile =
+        config.cloudCharacterProfiles() ? profileTable.resolveNarrator() : null;
+    return new ResolvedSpeaker(VoiceSpec.NARRATOR, profile);
   }
 
   private VoiceSpec playerVoice() {
