@@ -72,8 +72,8 @@ public final class RateLimitBackoff {
    * call is known to fail before it is made.
    */
   boolean isRefusing() {
-    Window open = window.get();
-    return open.stated && open.isOpen(clock.getAsLong());
+    Window standing = window.get();
+    return standing.stated && standing.isOpen(clock.getAsLong());
   }
 
   /**
@@ -87,8 +87,7 @@ public final class RateLimitBackoff {
    */
   void recordRateLimited(long statedWaitMillis, long observedGeneration) {
     long now = clock.getAsLong();
-    // Clamped out here because it logs, and a contended compare-and-swap retries its lambda.
-    long statedWait = statedWaitMillis > 0 ? clamp(statedWaitMillis) : 0;
+    long statedWait = Math.min(Math.max(statedWaitMillis, 0), HINT_MAX_MILLIS);
     // Lines and prefetch are rejected on separate threads, so the rejection that lands second does
     // not automatically own the window, and one that predates a reset does not own it at all.
     Window standing =
@@ -97,16 +96,16 @@ public final class RateLimitBackoff {
       log.debug("[TTS cloud] 429 predates a call that succeeded; leaving the back-off clear");
       return;
     }
-    // Reported off the window that stands, which is not always the one this rejection proposed.
-    if (standing.stated) {
-      log.debug(
-          "[TTS cloud] rate limited (429); provider asked for {}ms, waiting {}ms",
+    if (statedWaitMillis > HINT_MAX_MILLIS) {
+      log.warn(
+          "[TTS cloud] 429 asked for a {}ms wait; clamped to {}ms",
           statedWaitMillis,
-          standing.remainingMillis(now));
-      return;
+          HINT_MAX_MILLIS);
     }
+    // Reported off the window that stands, which is not always the one this rejection proposed.
     log.debug(
-        "[TTS cloud] rate limited (429); backing off prefetch for {}ms",
+        "[TTS cloud] rate limited (429); {} for {}ms",
+        standing.stated ? "the provider asked to be left alone" : "backing off prefetch",
         standing.remainingMillis(now));
   }
 
@@ -135,18 +134,6 @@ public final class RateLimitBackoff {
     int shift = Math.min(Math.max(consecutive, 1) - 1, 16);
     long window = BACKOFF_BASE_MILLIS << shift;
     return Math.min(window, BACKOFF_MAX_MILLIS);
-  }
-
-  /** A stated wait held to the ceiling, logging when the provider asked for more than that. */
-  private static long clamp(long statedWaitMillis) {
-    if (statedWaitMillis <= HINT_MAX_MILLIS) {
-      return statedWaitMillis;
-    }
-    log.warn(
-        "[TTS cloud] 429 asked for a {}ms wait; clamped to {}ms",
-        statedWaitMillis,
-        HINT_MAX_MILLIS);
-    return HINT_MAX_MILLIS;
   }
 
   /**

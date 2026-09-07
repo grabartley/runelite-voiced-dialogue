@@ -121,8 +121,10 @@ final class AiStudioResponses {
         "gemini-3.1-flash-tts");
   }
 
-  /** A 429 stating only how long to wait, as a protobuf duration such as {@code 2917s}. */
-  static String retryAfter(String retryDelay) {
+  /**
+   * A 429 whose only detail is the wait it states, as a protobuf duration such as {@code 2917s}.
+   */
+  static String statedRetryDelay(String retryDelay) {
     JsonArray details = new JsonArray();
     details.add(retryInfo(retryDelay));
     return rejection(details);

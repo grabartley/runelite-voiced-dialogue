@@ -150,7 +150,8 @@ Because synthesis is billed per character, several guards keep cost bounded and 
 - **Rate-limit back-off.** A `429` opens a back-off window. When the rejection states its own wait,
   through a `Retry-After` header or a `google.rpc.RetryInfo` delay in the body, that wait is the
   window (clamped to an hour) and nothing is sent until it passes, since a call made before the
-  stated moment only earns another rejection. When it states nothing, the window is a geometric,
+  stated moment only earns another rejection. Changing an API key or the provider drops the window,
+  which is one of the fixes the notice asks for. When it states nothing, the window is a geometric,
   capped guess: user lines still try, but speculative prefetch holds off (`isThrottled`) so the
   plugin never retry-storms a limit.
 

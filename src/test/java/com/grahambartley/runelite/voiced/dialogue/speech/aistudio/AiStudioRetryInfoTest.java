@@ -16,7 +16,7 @@ public class AiStudioRetryInfoTest {
     assertEquals(
         2_917_000,
         AiStudioRetryInfo.retryDelayMillis(
-            gson, AiStudioResponses.retryAfter("2917s").getBytes(UTF_8)));
+            gson, AiStudioResponses.statedRetryDelay("2917s").getBytes(UTF_8)));
   }
 
   @Test
