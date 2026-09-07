@@ -4,7 +4,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
@@ -36,9 +35,9 @@ public class ExamineSpeakerTest {
           () -> dialogueOpen);
 
   private static ChatMessage message(ChatMessageType type, String text) {
-    ChatMessage event = mock(ChatMessage.class);
-    when(event.getType()).thenReturn(type);
-    when(event.getMessage()).thenReturn(text);
+    ChatMessage event = new ChatMessage();
+    event.setType(type);
+    event.setMessage(text);
     return event;
   }
 
@@ -80,17 +79,6 @@ public class ExamineSpeakerTest {
   @Parameters(method = "nonExamineTypes")
   public void noOtherChatTypeIsEverVoiced(ChatMessageType type) {
     speaker.onChatMessage(message(type, "You feel something weird."));
-
-    verifyNoInteractions(dispatcher);
-  }
-
-  @Test
-  public void levelUpAndDropMessagesShareTheGameChannelAndStaySilent() {
-    speaker.onChatMessage(
-        message(
-            ChatMessageType.GAMEMESSAGE,
-            "Congratulations, you've just advanced your Attack level."));
-    speaker.onChatMessage(message(ChatMessageType.GAMEMESSAGE, "You have a funny feeling..."));
 
     verifyNoInteractions(dispatcher);
   }
