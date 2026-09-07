@@ -101,8 +101,30 @@ public class AiStudioQuotaFailureTest {
   }
 
   @Test
-  public void aFreeTierCapKeepsTheEnableBillingAdvice() {
-    assertEquals(AiStudioQuotaFailure.FREE_TIER_QUOTA_NOTICE, noticeFor(FREE_TIER_CAP));
+  public void aFreeTierCapKeepsTheEnableBillingAdviceAndNamesTheCeiling() {
+    String notice = noticeFor(FREE_TIER_CAP);
+
+    assertTrue("the ceiling is named: " + notice, notice.contains("daily request cap of 15"));
+    assertTrue(
+        "the free tier is the one case billing lifts",
+        notice.contains("Enable billing at aistudio.google.com to lift it"));
+  }
+
+  @Test
+  public void markupInAReportedValueCannotBreakTheChatLine() {
+    // The notice is wrapped in a colour tag, so an angle bracket would run past the message.
+    String notice =
+        noticeFor(AiStudioResponses.quotaFailure("GenerateRequestsPerDay", "", "1<0>0", "<b>"));
+
+    assertFalse("no markup survives from the response: " + notice, notice.contains("<"));
+    assertFalse(notice.contains(">"));
+  }
+
+  @Test
+  public void aMalformedViolationDoesNotHideAWellFormedOneBehindIt() {
+    String body = PAID_DAILY_CAP.replace("\"violations\": [", "\"violations\": [7, ");
+
+    assertEquals("gemini-3.1-flash-tts", parse(body).model);
   }
 
   @Test

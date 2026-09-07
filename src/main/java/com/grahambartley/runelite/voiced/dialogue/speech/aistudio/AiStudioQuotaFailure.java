@@ -13,10 +13,10 @@ import lombok.extern.slf4j.Slf4j;
  * The {@code google.rpc.QuotaFailure} violation a Gemini API 429 carries, and the one-time notice a
  * player is shown for it: which quota ran out, the limit it enforces, and the model it applies to.
  *
- * <p>A free-tier ceiling and a paid per-model cap arrive in the same response shape and are told
- * apart only by the metric name, so reading the violation is the only way the notice can state what
- * actually happened. A notice that assumes the free tier tells a billed key to enable billing it
- * already has, for a cap that billing does not lift.
+ * <p>A free-tier ceiling, a paid per-model cap, and a per-minute rate limit arrive in the same
+ * response shape and are told apart only by the metric name, so reading the violation is the only
+ * way the notice can state what actually happened. A notice that assumes the free tier tells a
+ * billed key to enable billing it already has, for a cap that billing does not lift.
  */
 @Slf4j
 final class AiStudioQuotaFailure {
@@ -29,12 +29,6 @@ final class AiStudioQuotaFailure {
   static final String QUOTA_NOTICE =
       "Your Google AI Studio quota was hit, so dialogue cannot be voiced right now. Check your"
           + " quota at aistudio.google.com, or switch Voice Provider to OpenRouter.";
-
-  /** The notice for a reported free-tier quota, the one case enabling billing does lift. */
-  static final String FREE_TIER_QUOTA_NOTICE =
-      "Your Google AI Studio free-tier quota was hit, so dialogue cannot be voiced right now. The"
-          + " free tier allows only a handful of speech requests per day, so enable billing at"
-          + " aistudio.google.com, or switch Voice Provider to OpenRouter.";
 
   private static final String QUOTA_FAILURE_TYPE = "type.googleapis.com/google.rpc.QuotaFailure";
 
@@ -50,6 +44,8 @@ final class AiStudioQuotaFailure {
 
   /** Google meters tokens through the same violation shape it meters requests through. */
   private static final String TOKEN_MARKER = "token";
+
+  private static final Pattern MARKUP = Pattern.compile("[<>]");
 
   /** The quota's identifier, e.g. {@code GenerateRequestsPerDayPerProjectPerModel}. */
   final String quotaId;
@@ -111,10 +107,14 @@ final class AiStudioQuotaFailure {
           continue;
         }
         JsonArray violations = detail.getAsJsonArray("violations");
-        if (violations == null || violations.size() == 0) {
+        if (violations == null) {
           continue;
         }
-        return of(violations.get(0).getAsJsonObject());
+        for (JsonElement violation : violations) {
+          if (violation.isJsonObject()) {
+            return of(violation.getAsJsonObject());
+          }
+        }
       }
       return null;
     } catch (RuntimeException e) {
@@ -126,6 +126,11 @@ final class AiStudioQuotaFailure {
   /** Whether the exhausted quota is a free-tier one, which enabling billing does lift. */
   boolean isFreeTier() {
     return normalised.contains(FREE_TIER_MARKER);
+  }
+
+  /** Whether the quota meters tokens rather than requests, which the notice must not confuse. */
+  boolean metersTokens() {
+    return normalised.contains(TOKEN_MARKER);
   }
 
   /** How often the reported quota resets, which decides how urgently the notice reads. */
@@ -178,7 +183,10 @@ final class AiStudioQuotaFailure {
       return cap(period).append(". Lines resume once the limit resets.").toString();
     }
     if (isFreeTier()) {
-      return FREE_TIER_QUOTA_NOTICE;
+      return cap(period)
+          .append(". Enable billing at aistudio.google.com to lift it, or switch Voice Provider")
+          .append(" to OpenRouter.")
+          .toString();
     }
     if (period == Period.DAILY) {
       return cap(period)
@@ -203,7 +211,7 @@ final class AiStudioQuotaFailure {
     if (!period.label.isEmpty()) {
       notice.append(period.label).append(' ');
     }
-    notice.append(normalised.contains(TOKEN_MARKER) ? "token cap" : "request cap");
+    notice.append(metersTokens() ? "token cap" : "request cap");
     if (!quotaValue.isEmpty()) {
       notice.append(" of ").append(quotaValue);
     }
@@ -212,11 +220,13 @@ final class AiStudioQuotaFailure {
 
   private static AiStudioQuotaFailure of(JsonObject violation) {
     JsonObject dimensions = violation.getAsJsonObject("quotaDimensions");
+    // The two fields the notice echoes reach a chat line wrapped in a colour tag, so a stray angle
+    // bracket in a response would break the markup around the whole message.
     return new AiStudioQuotaFailure(
         asText(violation, "quotaId"),
         asText(violation, "quotaMetric"),
-        asText(violation, "quotaValue"),
-        asText(dimensions, "model"));
+        MARKUP.matcher(asText(violation, "quotaValue")).replaceAll(""),
+        MARKUP.matcher(asText(dimensions, "model")).replaceAll(""));
   }
 
   private static String asText(JsonObject object, String field) {
