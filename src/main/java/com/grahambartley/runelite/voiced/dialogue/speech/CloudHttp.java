@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.ConnectionPool;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -18,6 +19,7 @@ import okhttp3.ResponseBody;
  * constants, the derived keepalive client every backend runs on, and the small response-reading
  * utilities the failure traces need.
  */
+@Slf4j
 public final class CloudHttp {
 
   /** RFC 6585 Too Many Requests, absent from {@link java.net.HttpURLConnection}'s constants. */
@@ -86,6 +88,26 @@ public final class CloudHttp {
       return body == null ? EMPTY_BODY : body.bytes();
     } catch (IOException e) {
       return EMPTY_BODY;
+    }
+  }
+
+  /**
+   * The {@code Retry-After} wait a rejection asks for, in milliseconds, or {@code 0} when it names
+   * none. Only the delta-seconds form is read: the HTTP-date form is absent from the cloud
+   * providers' 429s, and a date read against a skewed client clock would be worse than the caller's
+   * own back-off.
+   */
+  static long retryAfterMillis(Response response) {
+    String value = response.header("Retry-After");
+    if (!isNonBlank(value)) {
+      return 0;
+    }
+    try {
+      long seconds = Long.parseLong(value.trim());
+      return seconds <= 0 ? 0 : Math.multiplyExact(seconds, 1_000L);
+    } catch (RuntimeException e) {
+      log.debug("[TTS cloud] Retry-After '{}' is not a usable wait", value);
+      return 0;
     }
   }
 

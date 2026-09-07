@@ -352,12 +352,12 @@ public class VoicedDialoguePlugin extends Plugin {
   }
 
   /**
-   * Reacts to a backend-affecting config key changing at runtime: warms up the backend off the game
-   * thread, so entering an OpenRouter key does the cloud connection handshake immediately rather
-   * than starting cold on the next line, and re-baselines the spend meter on an OpenRouter key
-   * change. The warm-up decision lives in {@link BackendWarmUpPolicy}; the work runs on the
-   * pipeline thread via {@link DialogueAudioService#prewarm}. No-ops safely when the plugin is
-   * disabled or mid-shutdown.
+   * Reacts to a backend-affecting config key changing at runtime: drops any rate-limit back-off the
+   * old credentials earned, warms up the backend off the game thread, so entering an OpenRouter key
+   * does the cloud connection handshake immediately rather than starting cold on the next line, and
+   * re-baselines the spend meter on an OpenRouter key change. The warm-up decision lives in {@link
+   * BackendWarmUpPolicy}; the work runs on the pipeline thread via {@link
+   * DialogueAudioService#prewarm}. No-ops safely when the plugin is disabled or mid-shutdown.
    */
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {
@@ -376,6 +376,9 @@ public class VoicedDialoguePlugin extends Plugin {
     if (audioService == null || backendProvider == null) {
       return;
     }
+    // A 429 window opened under the old key or provider says nothing about the new one, and the
+    // notice that opened it asked for exactly this change.
+    backendProvider.clearRateLimits();
     audioService.prewarm(backendProvider::warmUpActive);
   }
 

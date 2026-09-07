@@ -23,6 +23,7 @@ public class BackendProviderTest {
     int synthCalls;
     int warmCalls;
     int closeCalls;
+    int rateLimitClears;
 
     StubBackend(String id, boolean available, EnumSet<Emotion> emotions) {
       this.id = id;
@@ -33,6 +34,11 @@ public class BackendProviderTest {
     @Override
     public String id() {
       return id;
+    }
+
+    @Override
+    public void clearRateLimit() {
+      rateLimitClears++;
     }
 
     @Override
@@ -169,5 +175,20 @@ public class BackendProviderTest {
     provider.close();
 
     assertEquals(1, cloud.closeCalls);
+  }
+
+  @Test
+  public void clearingRateLimitsReachesBothBackends() {
+    StubBackend openRouter = new StubBackend("or", true, EnumSet.allOf(Emotion.class));
+    StubBackend aiStudio = new StubBackend("ai", true, EnumSet.allOf(Emotion.class));
+    BackendProvider provider =
+        new BackendProvider(
+            openRouter, aiStudio, () -> VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO);
+
+    provider.clearRateLimits();
+
+    assertEquals(
+        "a changed key invalidates the idle backend's window too", 1, aiStudio.rateLimitClears);
+    assertEquals(1, openRouter.rateLimitClears);
   }
 }

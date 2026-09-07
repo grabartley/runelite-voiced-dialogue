@@ -267,6 +267,11 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     return executor.isThrottled();
   }
 
+  @Override
+  public void clearRateLimit() {
+    executor.clearRateLimit();
+  }
+
   /**
    * Opens {@link #WARM_UP_CONNECTIONS} pooled connections against the key endpoint, so a spoken
    * line does not pay the TCP/TLS handshake itself. A no-op while the pool already holds a

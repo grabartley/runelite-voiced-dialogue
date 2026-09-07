@@ -4,13 +4,34 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.List;
+import okhttp3.mockwebserver.MockResponse;
 
 /** The Gemini API response documents the Google AI Studio tests serve from their mock server. */
 final class AiStudioResponses {
 
+  /** The wait a real per-model daily cap stated, carried by every quota rejection below. */
+  static final String DAILY_CAP_RETRY_DELAY = "2917s";
+
   private AiStudioResponses() {}
+
+  /** A 200 carrying {@code body}, the shape every successful mocked call takes. */
+  static MockResponse ok(String body) {
+    return new MockResponse().setResponseCode(HttpURLConnection.HTTP_OK).setBody(body);
+  }
+
+  /** A 429 carrying {@code body}, the shape every mocked rejection takes. */
+  static MockResponse tooManyRequests(String body) {
+    return new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody(body);
+  }
+
+  /** The 429 a billed key hits once the model's daily request allowance is gone. */
+  static MockResponse quotaRejection() {
+    return tooManyRequests(dailyCapExhausted());
+  }
 
   /** A complete response carrying the samples as one base64 inlineData part. */
   static String audio(short[] samples) {
@@ -85,18 +106,40 @@ final class AiStudioResponses {
     JsonObject quotaFailure = new JsonObject();
     quotaFailure.addProperty("@type", "type.googleapis.com/google.rpc.QuotaFailure");
     quotaFailure.add("violations", violations);
-    JsonObject retryInfo = new JsonObject();
-    retryInfo.addProperty("@type", "type.googleapis.com/google.rpc.RetryInfo");
-    retryInfo.addProperty("retryDelay", "2917s");
     JsonArray details = new JsonArray();
     details.add(quotaFailure);
-    details.add(retryInfo);
+    details.add(retryInfo(DAILY_CAP_RETRY_DELAY));
+    return rejection(details);
+  }
+
+  /** The rejection a billed key gets once the model's daily request allowance is gone. */
+  static String dailyCapExhausted() {
+    return quotaFailure(
+        "GenerateRequestsPerDayPerProjectPerModel",
+        "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
+        "100",
+        "gemini-3.1-flash-tts");
+  }
+
+  /**
+   * A 429 whose only detail is the wait it states, as a protobuf duration such as {@code 2917s}.
+   */
+  static String statedRetryDelay(String retryDelay) {
+    JsonArray details = new JsonArray();
+    details.add(retryInfo(retryDelay));
     return rejection(details);
   }
 
   /** A 429 that states only that the resource is exhausted, with no quota details at all. */
   static String quotaExhausted() {
     return rejection(null);
+  }
+
+  private static JsonObject retryInfo(String retryDelay) {
+    JsonObject retryInfo = new JsonObject();
+    retryInfo.addProperty("@type", "type.googleapis.com/google.rpc.RetryInfo");
+    retryInfo.addProperty("retryDelay", retryDelay);
+    return retryInfo;
   }
 
   private static String rejection(JsonArray details) {

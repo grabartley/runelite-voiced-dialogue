@@ -17,12 +17,7 @@ import org.junit.Test;
 public class AiStudioQuotaFailureTest {
 
   /** A billed key that ran out of the model's per-day request allowance. */
-  private static final String PAID_DAILY_CAP =
-      AiStudioResponses.quotaFailure(
-          "GenerateRequestsPerDayPerProjectPerModel",
-          "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
-          "100",
-          "gemini-3.1-flash-tts");
+  private static final String PAID_DAILY_CAP = AiStudioResponses.dailyCapExhausted();
 
   /** The same rejection on a key that has never had billing enabled. */
   private static final String FREE_TIER_CAP =
@@ -82,9 +77,22 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void aMalformedDetailDoesNotHideAViolationBehindIt() {
-    String body = PAID_DAILY_CAP.replace("\"details\": [", "\"details\": [\"not an object\", ");
+    String body =
+        "{\"error\": {\"details\": [\"not an object\", {\"@type\":"
+            + " \"type.googleapis.com/google.rpc.QuotaFailure\", \"violations\":"
+            + " [{\"quotaDimensions\": {\"model\": \"gemini-3.1-flash-tts\"}}]}]}}";
 
     assertEquals("gemini-3.1-flash-tts", parse(body).model);
+  }
+
+  @Test
+  public void violationsOfTheWrongShapeFallBackRatherThanThrow() {
+    assertNull("an object where an array belongs is not a violation", parse(violations("{}")));
+    assertNull(parse(violations("7")));
+    assertEquals(
+        "and the player still gets a quota notice rather than an unexplained failure",
+        AiStudioQuotaFailure.QUOTA_NOTICE,
+        noticeFor(violations("7")));
   }
 
   @Test
@@ -122,7 +130,7 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void aMalformedViolationDoesNotHideAWellFormedOneBehindIt() {
-    String body = PAID_DAILY_CAP.replace("\"violations\": [", "\"violations\": [7, ");
+    String body = violations("[7, {\"quotaDimensions\": {\"model\": \"gemini-3.1-flash-tts\"}}]");
 
     assertEquals("gemini-3.1-flash-tts", parse(body).model);
   }
@@ -196,6 +204,14 @@ public class AiStudioQuotaFailureTest {
     assertTrue("the metric decides the free-tier verdict", logged.contains("generate_requests"));
     assertTrue(logged.contains("quotaValue=100"));
     assertTrue(logged.contains("model=gemini-3.1-flash-tts"));
+  }
+
+  /** A quota failure whose {@code violations} field carries {@code value}, whatever shape it is. */
+  private static String violations(String value) {
+    return "{\"error\": {\"code\": 429, \"details\": [{\"@type\":"
+        + " \"type.googleapis.com/google.rpc.QuotaFailure\", \"violations\": "
+        + value
+        + "}]}}";
   }
 
   /** A rejection whose violation carries only an id and a metric, with a nominal cap of 10. */

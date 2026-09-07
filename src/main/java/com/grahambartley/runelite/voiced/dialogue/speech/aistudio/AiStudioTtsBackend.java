@@ -51,8 +51,8 @@ import okio.BufferedSource;
  *
  * <p>Failure handling mirrors OpenRouter: every failure path (missing key, non-2xx, network error,
  * empty/undecodable audio) returns {@code null} and surfaces a one-time notice rather than
- * throwing, a 429 opens the shared {@link RateLimitBackoff} window so prefetch backs off, and a
- * truncated line is never cached.
+ * throwing, a 429 opens this backend's {@link RateLimitBackoff} window (the wait it states, or a
+ * computed one that stands prefetch down), and a truncated line is never cached.
  */
 @Slf4j
 public final class AiStudioTtsBackend implements SynthesisBackend {
@@ -162,6 +162,11 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
   @Override
   public boolean isThrottled() {
     return executor.isThrottled();
+  }
+
+  @Override
+  public void clearRateLimit() {
+    executor.clearRateLimit();
   }
 
   /**
@@ -290,6 +295,11 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     @Override
     public String failureNotice(int httpCode, byte[] body) {
       return AiStudioTtsBackend.failureNotice(gson, httpCode, body);
+    }
+
+    @Override
+    public long statedWaitMillis(byte[] body) {
+      return AiStudioRetryInfo.retryDelayMillis(gson, body);
     }
 
     @Override

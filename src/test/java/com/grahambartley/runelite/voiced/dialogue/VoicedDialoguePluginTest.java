@@ -50,6 +50,20 @@ public class VoicedDialoguePluginTest {
     assertEquals(1, warmCalls.get());
   }
 
+  /**
+   * A rate-limit window is evidence about the credentials that earned it, so the same key change
+   * drops it: the notice a stated window surfaces asks for exactly this change.
+   */
+  @Test
+  public void backendKeyChangeDropsTheRateLimitWindow() throws Exception {
+    Harness harness = harness(new AtomicInteger());
+
+    harness.plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
+
+    // The harness folds both provider slots onto one stub, so the fan-out reaches it twice.
+    assertEquals(2, harness.backend.rateLimitClears.get());
+  }
+
   /** Unrelated keys and groups never reach the warm-up path. */
   @Test
   public void unrelatedKeyOrGroupDoesNotWarm() throws Exception {
@@ -60,6 +74,7 @@ public class VoicedDialoguePluginTest {
     harness.plugin.onConfigChanged(configChanged("otherPlugin", KEY_TRIGGER));
 
     assertEquals(0, warmCalls.get());
+    assertEquals("nor the rate-limit clear", 0, harness.backend.rateLimitClears.get());
   }
 
   /**
@@ -143,7 +158,7 @@ public class VoicedDialoguePluginTest {
 
   /** Plugin wired with a real DialogueAudioService and BackendProvider over a counting stub. */
   private static Harness harness(AtomicInteger warmCalls) throws Exception {
-    SynthesisBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
+    StubBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
     BackendProvider provider = new BackendProvider(cloud);
     DialogueAudioService audioService =
         new DialogueAudioService(provider, null, null, 1, 1, () -> 100, () -> true);
@@ -151,7 +166,7 @@ public class VoicedDialoguePluginTest {
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     setField(plugin, "audioService", audioService);
     setField(plugin, "backendProvider", provider);
-    return new Harness(plugin, audioService);
+    return new Harness(plugin, audioService, cloud);
   }
 
   private static void setField(Object target, String name, Object value) throws Exception {
@@ -164,10 +179,12 @@ public class VoicedDialoguePluginTest {
   private static final class Harness {
     final VoicedDialoguePlugin plugin;
     final AwaitableAudioService audioService;
+    final StubBackend backend;
 
-    Harness(VoicedDialoguePlugin plugin, DialogueAudioService audioService) {
+    Harness(VoicedDialoguePlugin plugin, DialogueAudioService audioService, StubBackend backend) {
       this.plugin = plugin;
       this.audioService = new AwaitableAudioService(audioService);
+      this.backend = backend;
     }
   }
 
@@ -191,14 +208,20 @@ public class VoicedDialoguePluginTest {
     }
   }
 
-  /** Counts {@code warmUp} calls so the test can assert the backend was warmed once. */
+  /** Counts {@code warmUp} and rate-limit clears so a test can assert what a key change drove. */
   private static final class StubBackend implements SynthesisBackend {
     private final String id;
     private final AtomicInteger warmCalls;
+    final AtomicInteger rateLimitClears = new AtomicInteger();
 
     StubBackend(String id, AtomicInteger warmCalls) {
       this.id = id;
       this.warmCalls = warmCalls;
+    }
+
+    @Override
+    public void clearRateLimit() {
+      rateLimitClears.incrementAndGet();
     }
 
     @Override

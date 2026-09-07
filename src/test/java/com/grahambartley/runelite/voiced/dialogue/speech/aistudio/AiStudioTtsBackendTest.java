@@ -1,7 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -22,7 +21,6 @@ import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
-import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
 import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
 import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
@@ -51,6 +49,7 @@ public class AiStudioTtsBackendTest {
   private OkHttpClient client;
   private final Gson gson = new Gson();
   private final SpendTracker spend = new SpendTracker();
+  private final List<String> notices = new ArrayList<>();
 
   @Before
   public void setUp() throws Exception {
@@ -84,21 +83,11 @@ public class AiStudioTtsBackendTest {
             Duration.ofMillis(500), Duration.ofMillis(500), Duration.ofSeconds(1), 10, 0));
   }
 
-  /** A 200 carrying {@code body}, the shape every successful mocked call takes. */
-  private static MockResponse ok(String body) {
-    return new MockResponse().setResponseCode(HTTP_OK).setBody(body);
-  }
-
-  /** The 429 a billed key hits once the model's daily request allowance is gone. */
-  private static MockResponse quotaRejection() {
-    return new MockResponse()
-        .setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS)
-        .setBody(
-            AiStudioResponses.quotaFailure(
-                "GenerateRequestsPerDayPerProjectPerModel",
-                "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
-                "100",
-                "gemini-3.1-flash-tts"));
+  /** A keyed backend whose one-time notices land in {@link #notices}. */
+  private AiStudioTtsBackend noticedBackend() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    backend.setNotice(notices::add);
+    return backend;
   }
 
   /** A backend whose billable calls land in {@link #spend}. */
@@ -156,7 +145,7 @@ public class AiStudioTtsBackendTest {
   public void sendsApiKeyHeaderAndGeminiBody() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.googleAiStudioKey = "AIza-secret";
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     backend(config).synthesize(req());
 
@@ -194,7 +183,7 @@ public class AiStudioTtsBackendTest {
   @Test
   public void successfulResponseDecodesBase64PcmAt24k() {
     short[] samples = {0, 16384, -16384, 32767};
-    server.enqueue(ok(AiStudioResponses.audio(samples)));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(samples)));
 
     Pcm pcm = backend(keyedConfig()).synthesize(req());
 
@@ -205,7 +194,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void emotionTagAndProfileBlockLeadTheSpokenText() throws Exception {
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     backend(keyedConfig())
         .synthesize(
@@ -232,7 +221,7 @@ public class AiStudioTtsBackendTest {
   public void nonDefaultPaceBecomesAPromptDirection() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.speedPercent = 150;
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     backend(config).synthesize(req());
 
@@ -245,9 +234,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void non2xxFailsTheLineGracefully() {
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
+    AiStudioTtsBackend backend = noticedBackend();
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
 
     assertNull(backend.synthesize(req()));
@@ -257,11 +244,8 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void rateLimitOpensTheThrottleWindowAndNamesTheQuota() {
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
-    server.enqueue(
-        new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody("quota"));
+    AiStudioTtsBackend backend = noticedBackend();
+    server.enqueue(AiStudioResponses.tooManyRequests("quota"));
 
     assertNull(backend.synthesize(req()));
     assertTrue("a 429 opens the prefetch back-off window", backend.isThrottled());
@@ -270,10 +254,8 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void theQuotaNoticeIsWordedFromTheRejectionBody() {
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
-    server.enqueue(quotaRejection());
+    AiStudioTtsBackend backend = noticedBackend();
+    server.enqueue(AiStudioResponses.quotaRejection());
 
     assertNull(backend.synthesize(req()));
     assertTrue(
@@ -284,10 +266,8 @@ public class AiStudioTtsBackendTest {
   @Test
   public void theStreamedPathWordsTheQuotaNoticeFromItsRejectionToo() {
     // The path a live cache-missed line takes.
-    List<String> notices = new ArrayList<>();
-    AiStudioTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(notices::add);
-    server.enqueue(quotaRejection());
+    AiStudioTtsBackend backend = noticedBackend();
+    server.enqueue(AiStudioResponses.quotaRejection());
 
     assertNull(backend.synthesizeStreaming(req(), (samples, rate) -> {}));
     assertTrue("a 429 opens the prefetch back-off window", backend.isThrottled());
@@ -299,9 +279,54 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
+  public void aStatedWaitStopsTheBackendSendingAnythingElse() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    server.enqueue(AiStudioResponses.quotaRejection());
+
+    assertNull(backend.synthesize(req()));
+    assertEquals(1, server.getRequestCount());
+
+    // A spare rejection means a line that wrongly escapes fails the count rather than blocking on
+    // an empty queue.
+    server.enqueue(AiStudioResponses.quotaRejection());
+    assertNull("a line inside the stated wait is not voiced", backend.synthesize(req()));
+    assertNull(backend.synthesizeStreaming(req(), (samples, rate) -> {}));
+    assertEquals(
+        "and never reaches the provider, which said it would refuse it",
+        1,
+        server.getRequestCount());
+  }
+
+  @Test
+  public void changedCredentialsClearTheStatedWaitSoTheNextLineIsSent() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    server.enqueue(AiStudioResponses.quotaRejection());
+    assertNull(backend.synthesize(req()));
+
+    backend.clearRateLimit();
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
+
+    assertNotNull(
+        "the change the notice asked for must not be punished", backend.synthesize(req()));
+  }
+
+  @Test
+  public void aRejectionStatingNoWaitStillLetsTheNextLineTry() {
+    AiStudioTtsBackend backend = backend(keyedConfig());
+    server.enqueue(AiStudioResponses.tooManyRequests("quota"));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
+
+    assertNull(backend.synthesize(req()));
+
+    assertNotNull(
+        "a guessed window must not silence a line that might succeed", backend.synthesize(req()));
+    assertEquals(2, server.getRequestCount());
+  }
+
+  @Test
   public void emptyAudioIsRetriedOnceThenFails() {
-    server.enqueue(ok("{\"candidates\":[]}"));
-    server.enqueue(ok("{\"candidates\":[]}"));
+    server.enqueue(AiStudioResponses.ok("{\"candidates\":[]}"));
+    server.enqueue(AiStudioResponses.ok("{\"candidates\":[]}"));
 
     assertNull(backend(keyedConfig()).synthesize(req()));
     assertEquals("one retry for a transient empty response", 2, server.getRequestCount());
@@ -309,8 +334,8 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void emptyAudioRecoversOnTheRetry() {
-    server.enqueue(ok("{\"candidates\":[]}"));
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+    server.enqueue(AiStudioResponses.ok("{\"candidates\":[]}"));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
 
     Pcm pcm = backend(keyedConfig()).synthesize(req());
 
@@ -325,7 +350,7 @@ public class AiStudioTtsBackendTest {
     List<byte[]> chunks = new ArrayList<>();
     chunks.add(TestPcm.raw(first));
     chunks.add(TestPcm.raw(second));
-    server.enqueue(ok(AiStudioResponses.sse(chunks, "STOP")));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.sse(chunks, "STOP")));
 
     List<float[]> sunk = new ArrayList<>();
     Pcm pcm =
@@ -356,7 +381,7 @@ public class AiStudioTtsBackendTest {
     List<byte[]> chunks = new ArrayList<>();
     chunks.add(head);
     chunks.add(tail);
-    server.enqueue(ok(AiStudioResponses.sse(chunks, "STOP")));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.sse(chunks, "STOP")));
 
     List<Float> sunk = new ArrayList<>();
     Pcm pcm =
@@ -379,7 +404,7 @@ public class AiStudioTtsBackendTest {
     List<byte[]> chunks = new ArrayList<>();
     chunks.add(TestPcm.raw(new short[] {1, 2, 3}));
     // No STOP finish reason: the stream was cut before the model finished the line.
-    server.enqueue(ok(AiStudioResponses.sse(chunks, null)));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.sse(chunks, null)));
 
     List<float[]> sunk = new ArrayList<>();
     Pcm pcm =
@@ -391,8 +416,8 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void emptyStreamIsRetriedOnceThenFails() {
-    server.enqueue(ok(""));
-    server.enqueue(ok(""));
+    server.enqueue(AiStudioResponses.ok(""));
+    server.enqueue(AiStudioResponses.ok(""));
 
     List<float[]> sunk = new ArrayList<>();
     Pcm pcm =
@@ -428,8 +453,8 @@ public class AiStudioTtsBackendTest {
   public void nonEnglishLanguageRoutesThroughTheGeminiTranslationHop() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    server.enqueue(ok(AiStudioResponses.translation("Bonjour")));
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.translation("Bonjour")));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     Pcm pcm = backend(config).synthesize(req());
     assertNotNull(pcm);
@@ -496,7 +521,7 @@ public class AiStudioTtsBackendTest {
     short[] samples = {100, -200, 300, -400, 500};
     List<byte[]> chunks = new ArrayList<>();
     chunks.add(TestPcm.raw(samples));
-    server.enqueue(ok(AiStudioResponses.sse(chunks, "STOP")));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.sse(chunks, "STOP")));
 
     Pcm streamed = backend(keyedConfig()).synthesizeStreaming(req(), (chunk, rate) -> {});
 
@@ -510,7 +535,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void aVoicedLineCountsOnceAgainstTheCharactersActuallySent() throws Exception {
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
     AiStudioTtsBackend backend = costedBackend(keyedConfig());
 
     assertNotNull(backend.synthesize(req()));
@@ -531,7 +556,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void aPrefetchedLineCountsAsWarmingRatherThanAsAVoicedLine() {
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
     AiStudioTtsBackend backend = costedBackend(keyedConfig());
 
     backend.synthesize(req().asPrefetch());
@@ -546,7 +571,7 @@ public class AiStudioTtsBackendTest {
   public void aStreamedLineCountsOnceWhenTheFirstAudioArrives() {
     List<byte[]> chunks =
         Arrays.asList(TestPcm.raw(new short[] {1, 2}), TestPcm.raw(new short[] {3, 4}));
-    server.enqueue(ok(AiStudioResponses.sse(chunks, "STOP")));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.sse(chunks, "STOP")));
     AiStudioTtsBackend backend = costedBackend(keyedConfig());
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
@@ -578,8 +603,8 @@ public class AiStudioTtsBackendTest {
   public void theTranslationHopIsCountedInItsOwnBucket() {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    server.enqueue(ok(AiStudioResponses.translation("Bonjour")));
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.translation("Bonjour")));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
     AiStudioTtsBackend backend = costedBackend(config);
 
     assertNotNull(backend.synthesize(req()));
@@ -595,7 +620,8 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void aVoicedLineBanksTheTokenCountsTheApiActuallyReported() {
-    server.enqueue(ok(AiStudioResponses.audioWithUsage(new short[] {1, 2}, 1_700, 42)));
+    server.enqueue(
+        AiStudioResponses.ok(AiStudioResponses.audioWithUsage(new short[] {1, 2}, 1_700, 42)));
     AiStudioTtsBackend backend = costedBackend(keyedConfig());
 
     assertNotNull(backend.synthesize(req()));
@@ -614,7 +640,7 @@ public class AiStudioTtsBackendTest {
     String last =
         AiStudioResponses.withUsage(
             AiStudioResponses.audioDocument(TestPcm.raw(new short[] {3, 4}), "STOP"), 1_700, 42);
-    server.enqueue(ok("data: " + first + "\n\ndata: " + last + "\n\n"));
+    server.enqueue(AiStudioResponses.ok("data: " + first + "\n\ndata: " + last + "\n\n"));
     AiStudioTtsBackend backend = costedBackend(keyedConfig());
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
@@ -627,7 +653,7 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void aResponseWithoutUsageMetadataStillCountsTheLineButReportsNoTokens() {
-    server.enqueue(ok(AiStudioResponses.audio(new short[] {1, 2})));
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1, 2})));
     AiStudioTtsBackend backend = costedBackend(keyedConfig());
 
     assertNotNull(backend.synthesize(req()));
@@ -643,8 +669,10 @@ public class AiStudioTtsBackendTest {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     server.enqueue(
-        ok(AiStudioResponses.withUsage(AiStudioResponses.translation("Bonjour"), 75, 90)));
-    server.enqueue(ok(AiStudioResponses.audioWithUsage(new short[] {1, 2}, 1_700, 42)));
+        AiStudioResponses.ok(
+            AiStudioResponses.withUsage(AiStudioResponses.translation("Bonjour"), 75, 90)));
+    server.enqueue(
+        AiStudioResponses.ok(AiStudioResponses.audioWithUsage(new short[] {1, 2}, 1_700, 42)));
     AiStudioTtsBackend backend = costedBackend(config);
 
     assertNotNull(backend.synthesize(req()));

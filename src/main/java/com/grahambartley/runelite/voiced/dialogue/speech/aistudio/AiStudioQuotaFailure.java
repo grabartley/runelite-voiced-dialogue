@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -87,40 +86,19 @@ final class AiStudioQuotaFailure {
    * or cannot be read, so a response shape change degrades to the generic notice.
    */
   static AiStudioQuotaFailure parse(Gson gson, byte[] body) {
-    if (body == null || body.length == 0) {
-      return null;
-    }
-    try {
-      JsonObject document =
-          gson.fromJson(new String(body, StandardCharsets.UTF_8), JsonObject.class);
-      JsonObject error = document == null ? null : document.getAsJsonObject("error");
-      JsonArray details = error == null ? null : error.getAsJsonArray("details");
-      if (details == null) {
-        return null;
+    for (JsonObject detail : AiStudioErrorDetails.ofType(gson, body, QUOTA_FAILURE_TYPE)) {
+      JsonArray violations = AiStudioErrorDetails.array(detail, "violations");
+      if (violations == null) {
+        continue;
       }
-      for (JsonElement element : details) {
-        if (!element.isJsonObject()) {
-          continue;
-        }
-        JsonObject detail = element.getAsJsonObject();
-        if (!QUOTA_FAILURE_TYPE.equals(asText(detail, "@type"))) {
-          continue;
-        }
-        JsonArray violations = detail.getAsJsonArray("violations");
-        if (violations == null) {
-          continue;
-        }
-        for (JsonElement violation : violations) {
-          if (violation.isJsonObject()) {
-            return of(violation.getAsJsonObject());
-          }
+      // One malformed violation must not hide a well-formed one listed behind it.
+      for (JsonElement violation : violations) {
+        if (violation.isJsonObject()) {
+          return of(violation.getAsJsonObject());
         }
       }
-      return null;
-    } catch (RuntimeException e) {
-      log.debug("[TTS cloud] AI Studio quota failure parse error: {}", e.getMessage());
-      return null;
     }
+    return null;
   }
 
   /** Whether the exhausted quota is a free-tier one, which enabling billing does lift. */
@@ -223,20 +201,9 @@ final class AiStudioQuotaFailure {
     // The two fields the notice echoes reach a chat line wrapped in a colour tag, so a stray angle
     // bracket in a response would break the markup around the whole message.
     return new AiStudioQuotaFailure(
-        asText(violation, "quotaId"),
-        asText(violation, "quotaMetric"),
-        MARKUP.matcher(asText(violation, "quotaValue")).replaceAll(""),
-        MARKUP.matcher(asText(dimensions, "model")).replaceAll(""));
-  }
-
-  private static String asText(JsonObject object, String field) {
-    if (object == null || !object.has(field) || object.get(field).isJsonNull()) {
-      return "";
-    }
-    try {
-      return object.get(field).getAsString();
-    } catch (RuntimeException e) {
-      return "";
-    }
+        AiStudioErrorDetails.text(violation, "quotaId"),
+        AiStudioErrorDetails.text(violation, "quotaMetric"),
+        MARKUP.matcher(AiStudioErrorDetails.text(violation, "quotaValue")).replaceAll(""),
+        MARKUP.matcher(AiStudioErrorDetails.text(dimensions, "model")).replaceAll(""));
   }
 }

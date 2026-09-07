@@ -42,6 +42,16 @@ public final class BackendProvider {
     this.selectedProvider = selectedProvider;
   }
 
+  /**
+   * Drops every backend's rate-limit back-off. Called when a key or the provider changes: a window
+   * says the provider refused the credentials it was holding at the time, so it is evidence about
+   * nothing once they change, on either backend.
+   */
+  public void clearRateLimits() {
+    openRouter.clearRateLimit();
+    googleAiStudio.clearRateLimit();
+  }
+
   /** The configured provider's backend, resolved live so a provider switch needs no restart. */
   public SynthesisBackend active() {
     return selectedProvider.get() == VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO
