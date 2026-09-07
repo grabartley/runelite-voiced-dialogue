@@ -27,7 +27,8 @@ import lombok.extern.slf4j.Slf4j;
  * bespoke entry.
  *
  * <p>The player is resolved separately: the {@code player} layer over the default, with the three
- * configured player fields (accent/style/pace) overriding when non-blank.
+ * configured player fields (accent/style/pace) overriding when non-blank. The narrator is resolved
+ * the same way from the {@code narrator} layer, but takes no configured fields.
  */
 @Slf4j
 public final class NpcProfileTable {
@@ -234,6 +235,15 @@ public final class NpcProfileTable {
         sanitizedOr(accent, base.accent()),
         sanitizedOr(style, base.style()),
         sanitizedOr(pace, base.pace()));
+  }
+
+  /**
+   * Resolves the narrator's profile: the {@code narrator} layer over the default. It takes no
+   * configured fields, so the narrator sounds the same in every session and its lines keep a stable
+   * cache key.
+   */
+  public CharacterProfile resolveNarrator() {
+    return apply(layers.defaultProfile(), layers.narratorLayer());
   }
 
   private String sanitizedOr(String configured, String fallback) {

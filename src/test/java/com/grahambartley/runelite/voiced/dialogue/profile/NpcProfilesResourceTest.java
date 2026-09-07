@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
@@ -174,6 +175,18 @@ public class NpcProfilesResourceTest {
     CharacterProfile p = table.resolvePlayer(null, null, null);
     assertTrue("the player has a name label", p.name() != null && !p.name().isEmpty());
     assertTrue("the player accent is British by default", p.accent().contains("British"));
+  }
+
+  @Test
+  public void theNarratorProfileResolvesFromTheBundledTable() {
+    CharacterProfile narrator = table.resolveNarrator();
+    assertTrue(
+        "the narrator has a name label", narrator.name() != null && !narrator.name().isEmpty());
+    assertTrue("the narrator accent is British by default", narrator.accent().contains("British"));
+    assertNotEquals(
+        "the narrator is not just the player wearing a different label",
+        table.resolvePlayer(null, null, null).cacheKey(),
+        narrator.cacheKey());
   }
 
   @Test

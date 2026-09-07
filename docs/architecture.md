@@ -32,6 +32,13 @@ A per-speaker **character profile** (`CharacterProfile`, resolved by `NpcProfile
 rendered as a leading `AUDIO PROFILE` direction block setting accent/style/pace, so the profile
 sets the character and the emotion tag colours the moment.
 
+Narration is a speaker class of its own. The item, double-item, and message boxes (`NarrationWatcher`,
+gated by **Voice Narration**) are the game telling the story rather than a character talking, so
+they resolve to the fixed `VoiceSpec.NARRATOR` and the `narrator` profile layer: one voice held out
+of every character pool, always Neutral since a narration box carries no chat head, and untouched by
+the Player and NPC Speaking Styles. The spoken language still applies. Being fixed is what keeps
+narrated lines on a stable cache key across sessions.
+
 ## The OpenRouter speech call
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It

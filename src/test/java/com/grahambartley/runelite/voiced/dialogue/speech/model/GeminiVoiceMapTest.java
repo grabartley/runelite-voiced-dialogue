@@ -153,11 +153,25 @@ public class GeminiVoiceMapTest {
   }
 
   @Test
+  public void theNarratorVoiceIsHeldOutOfEveryCharacterPool() {
+    String narrator = map.voiceFor(VoiceSpec.NARRATOR);
+
+    assertEquals(GeminiVoiceMap.NARRATOR_VOICE, narrator);
+    assertFalse(
+        "no character can ever voice as the narrator",
+        voicesFor(NpcGender.MALE).contains(narrator));
+    assertFalse(
+        "no character can ever voice as the narrator",
+        voicesFor(NpcGender.FEMALE).contains(narrator));
+  }
+
+  @Test
   public void everyEmittableVoiceIsARealGeminiVoice() {
     Set<String> emitted = new HashSet<>();
     emitted.addAll(voicesFor(NpcGender.MALE));
     emitted.addAll(voicesFor(NpcGender.FEMALE));
     emitted.add(GeminiVoiceMap.DEFAULT_VOICE);
+    emitted.add(map.voiceFor(VoiceSpec.NARRATOR));
     Set<String> bogus = new HashSet<>(emitted);
     bogus.removeAll(GEMINI_VOICE_CATALOG);
     assertTrue(

@@ -113,6 +113,37 @@ public class VoiceSpecTest {
   }
 
   @Test
+  public void narratorIsItsOwnSpeakerClassWithAStableKey() {
+    VoiceSpec narrator = VoiceSpec.NARRATOR;
+
+    assertTrue(narrator.narrator());
+    assertEquals("narrator", narrator.key());
+    assertEquals(
+        "the narrator is identical every call, so its cached lines never re-key",
+        VoiceSpec.NARRATOR,
+        narrator);
+  }
+
+  @Test
+  public void narratorKeyCollidesWithNoCharacterKey() {
+    String narrator = VoiceSpec.NARRATOR.key();
+    for (NpcRace race : NpcRace.values()) {
+      for (NpcGender gender : NpcGender.values()) {
+        assertNotEquals(narrator, VoiceSpec.npc(race, gender).key());
+      }
+    }
+    assertNotEquals(narrator, VoiceSpec.player(NpcGender.MALE).key());
+    assertNotEquals(narrator, VoiceSpec.player(NpcGender.FEMALE).key());
+  }
+
+  @Test
+  public void charactersAreNeverTheNarrator() {
+    assertFalse(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE).narrator());
+    assertFalse(VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE, 7, true).narrator());
+    assertFalse(VoiceSpec.player(NpcGender.FEMALE).narrator());
+  }
+
+  @Test
   public void childFlagIsCarriedButNotFoldedIntoKey() {
     VoiceSpec child = VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE, 7, true);
     assertTrue(child.child());

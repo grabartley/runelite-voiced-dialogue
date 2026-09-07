@@ -16,6 +16,9 @@ import net.runelite.api.widgets.Widget;
  * the visible options, and edge-triggers the close interrupt so audio is cut only on the
  * open-&gt;closed transition (not on every idle tick, which would truncate public-chat clips played
  * while walking around). Reads the client only on the game thread.
+ *
+ * <p>The narration boxes are scanned by the {@link NarrationWatcher} this owns, so they share that
+ * one interrupt edge with the chat widgets rather than racing it from a second subscriber.
  */
 public final class DialogueWatcher {
 
@@ -25,6 +28,7 @@ public final class DialogueWatcher {
   private final SynthesisDispatcher dispatcher;
   private final DialoguePrefetchCoordinator prefetchCoordinator;
   private final DialogueAudioService audioService;
+  private final NarrationWatcher narrationWatcher;
 
   private final Map<Speaker, String> lastSpokenBySpeaker = new EnumMap<>(Speaker.class);
 
@@ -37,13 +41,15 @@ public final class DialogueWatcher {
       DialogueWidgetReader widgetReader,
       SynthesisDispatcher dispatcher,
       DialoguePrefetchCoordinator prefetchCoordinator,
-      DialogueAudioService audioService) {
+      DialogueAudioService audioService,
+      NarrationWatcher narrationWatcher) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.widgetReader = widgetReader;
     this.dispatcher = dispatcher;
     this.prefetchCoordinator = prefetchCoordinator;
     this.audioService = audioService;
+    this.narrationWatcher = narrationWatcher;
   }
 
   public void tick() {
@@ -59,16 +65,19 @@ public final class DialogueWatcher {
       speakIfNew(playerDialogue, InterfaceID.ChatRight.HEAD, Speaker.PLAYER, () -> null);
     }
 
+    boolean narrationVisible = narrationWatcher.tick();
+
     Widget options = client.getWidget(InterfaceID.Chatmenu.OPTIONS);
     boolean optionsVisible = options != null && !options.isHidden();
     if (optionsVisible) {
       prefetchCoordinator.prefetchOptions(options);
     }
 
-    boolean dialogueOpen = npcVisible || playerVisible;
+    boolean dialogueOpen = npcVisible || playerVisible || narrationVisible;
     if (shouldInterruptOnClose(dialogueOpen, wasDialogueOpen)) {
       audioService.interrupt();
       lastSpokenBySpeaker.clear();
+      narrationWatcher.reset();
     }
     wasDialogueOpen = dialogueOpen;
 

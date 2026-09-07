@@ -11,6 +11,7 @@ import com.grahambartley.runelite.voiced.dialogue.capture.DialoguePrefetcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueTextCleaner;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader;
+import com.grahambartley.runelite.voiced.dialogue.capture.NarrationWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.PublicChatSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
@@ -199,7 +200,8 @@ public class VoicedDialoguePlugin extends Plugin {
             new DialogueWidgetReader(client),
             synthesisDispatcher,
             prefetchCoordinator,
-            audioService);
+            audioService,
+            new NarrationWatcher(client, textCleaner, synthesisDispatcher, config::voiceNarration));
     publicChatSpeaker =
         new PublicChatSpeaker(client, textCleaner, synthesisDispatcher, config::voicePublicChat);
 

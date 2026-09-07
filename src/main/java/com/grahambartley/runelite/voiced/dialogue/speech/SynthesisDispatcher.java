@@ -12,8 +12,8 @@ import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Builds {@link SynthesisRequest}s for dialogue and public-chat lines and hands them to the
- * off-thread synth + playback pipeline. Every speak path shares the same availability guard,
+ * Builds {@link SynthesisRequest}s for dialogue, narration, and public-chat lines and hands them to
+ * the off-thread synth + playback pipeline. Every speak path shares the same availability guard,
  * speaker resolution, emotion resolution, and cave-echo gate, so this is the single place a line
  * becomes a request. Never blocks the game thread.
  */
@@ -80,6 +80,26 @@ public final class SynthesisDispatcher {
             resolved.profile(),
             /* skipTranslation= */ true,
             /* player= */ true),
+        null);
+  }
+
+  /**
+   * Speaks a narration box (item, double-item, or plain message) in the game's own narrator voice.
+   * Always neutral, since a narration box carries no chat head, and voiced from one fixed spec and
+   * profile so the narrator sounds the same in every session. Translation applies as it does to
+   * dialogue; the Player and NPC speaking styles do not, because narration is the game speaking
+   * rather than a character.
+   */
+  public void speakNarration(String text) {
+    ResolvedSpeaker resolved = voiceManager.resolveNarrator();
+    dispatch(
+        new SynthesisRequest(
+            text,
+            resolved.voice(),
+            Emotion.NEUTRAL,
+            resolved.profile(),
+            /* skipTranslation= */ false,
+            /* player= */ false),
         null);
   }
 

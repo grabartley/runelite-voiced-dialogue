@@ -53,9 +53,20 @@ public final class CloudTtsText {
    * skips the hop while the other class can still be styled.
    */
   static String effectiveSpokenLanguage(VoicedDialogueConfig config, SynthesisRequest request) {
-    VoicedDialogueConfig.SpeakingStyle style =
-        request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
-    return combineLanguage(config.cloudLanguage().label(), style);
+    return combineLanguage(config.cloudLanguage().label(), styleFor(config, request));
+  }
+
+  /**
+   * The Speaking Style a line is rewritten in: the Player style for the player's own lines, the NPC
+   * style for a character's, and none at all for narration, which is the game's own voice rather
+   * than someone in the world putting on a register.
+   */
+  private static VoicedDialogueConfig.SpeakingStyle styleFor(
+      VoicedDialogueConfig config, SynthesisRequest request) {
+    if (request.voice() != null && request.voice().narrator()) {
+      return VoicedDialogueConfig.SpeakingStyle.NONE;
+    }
+    return request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
   }
 
   /**

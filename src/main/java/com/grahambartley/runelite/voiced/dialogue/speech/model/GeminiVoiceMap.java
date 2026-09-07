@@ -23,6 +23,10 @@ import java.util.Map;
  * The player respects the configured player-voice gender. {@link #UNKNOWN} race and unknown gender
  * fall back to the neutral human-male anchor so every spec resolves to a real voice.
  *
+ * <p>The narrator is a speaker class of its own rather than a character: it resolves to {@link
+ * #NARRATOR_VOICE}, a voice held out of every race, player and child pool above, so the game's own
+ * narration never sounds like an NPC standing next to you.
+ *
  * <p>Life stage is a third axis: a child spec (any race, any ethnicity) resolves to a dedicated
  * youthful sub-pool of its gender instead of the adult race anchor, still spread by the per-NPC
  * seed. Every child voice is drawn from the gender it already belongs to above, so the gender
@@ -35,6 +39,13 @@ public final class GeminiVoiceMap {
 
   /** Default for a child spec whose pool is somehow empty (the upbeat child-male anchor). */
   static final String DEFAULT_CHILD_VOICE = "Puck";
+
+  /**
+   * The game's narration voice, deliberately held out of every character pool so narration is never
+   * mistaken for a nearby NPC. Algieba is the catalog's "Smooth" voice: even and unhurried, which
+   * carries a storyteller's measured delivery.
+   */
+  static final String NARRATOR_VOICE = "Algieba";
 
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
@@ -115,6 +126,9 @@ public final class GeminiVoiceMap {
   public String voiceFor(VoiceSpec spec) {
     if (spec == null) {
       return DEFAULT_VOICE;
+    }
+    if (spec.narrator()) {
+      return NARRATOR_VOICE;
     }
     NpcGender gender = normalizeGender(spec.gender());
     if (spec.player()) {

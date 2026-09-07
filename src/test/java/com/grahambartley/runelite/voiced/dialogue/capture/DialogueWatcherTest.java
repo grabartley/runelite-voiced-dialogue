@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +38,7 @@ public class DialogueWatcherTest {
   private final DialoguePrefetchCoordinator prefetchCoordinator =
       mock(DialoguePrefetchCoordinator.class);
   private final DialogueAudioService audioService = mock(DialogueAudioService.class);
+  private final NarrationWatcher narrationWatcher = mock(NarrationWatcher.class);
 
   private final DialogueWatcher watcher =
       new DialogueWatcher(
@@ -45,7 +47,8 @@ public class DialogueWatcherTest {
           widgetReader,
           dispatcher,
           prefetchCoordinator,
-          audioService);
+          audioService,
+          narrationWatcher);
 
   @Before
   public void setUp() {
@@ -183,5 +186,38 @@ public class DialogueWatcherTest {
     watcher.tick();
 
     verify(prefetchCoordinator, times(1)).reset();
+  }
+
+  @Test
+  public void anOpenNarrationBoxHoldsTheDialogueOpenSoNothingIsInterrupted() {
+    when(narrationWatcher.tick()).thenReturn(true);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(audioService, never()).interrupt();
+    verify(prefetchCoordinator, never()).reset();
+  }
+
+  @Test
+  public void aClosingNarrationBoxCutsItsAudioAndForgetsWhatItNarrated() {
+    when(narrationWatcher.tick()).thenReturn(true, false);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(audioService, times(1)).interrupt();
+    verify(narrationWatcher, times(1)).reset();
+  }
+
+  @Test
+  public void aClosingDialogueForgetsWhatTheNarrationBoxesSaid() {
+    Widget npc = visibleWidget("Greetings!");
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
+
+    watcher.tick();
+    watcher.tick();
+
+    verify(narrationWatcher, times(1)).reset();
   }
 }
