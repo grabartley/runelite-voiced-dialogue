@@ -191,13 +191,4 @@ public class BackendProviderTest {
         "a changed key invalidates the idle backend's window too", 1, aiStudio.rateLimitClears);
     assertEquals(1, openRouter.rateLimitClears);
   }
-
-  @Test
-  public void aSingleBackendProviderClearsItOnlyOnce() {
-    StubBackend only = new StubBackend("or", true, EnumSet.allOf(Emotion.class));
-
-    new BackendProvider(only).clearRateLimits();
-
-    assertEquals(1, only.rateLimitClears);
-  }
 }

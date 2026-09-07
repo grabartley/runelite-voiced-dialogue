@@ -84,17 +84,19 @@ public final class RateLimitBackoff {
     long millis = stated ? clamp(statedWaitMillis) : backoffWindowMillis(consecutive);
     long now = clock.getAsLong();
     Window opened = new Window(now + millis * NANOS_PER_MILLI, stated);
-    // Lines and prefetch are rejected on separate threads, so a guess landing a moment after a
-    // stated wait must not shorten it back to seconds.
-    window.updateAndGet(current -> current.replacedBy(opened, now));
+    // Lines and prefetch are rejected on separate threads, so the rejection that lands second does
+    // not automatically own the window.
+    Window standing = window.updateAndGet(current -> current.replacedBy(opened, now));
     if (stated) {
       log.debug(
           "[TTS cloud] rate limited (429); provider asked for {}ms, waiting {}ms",
           statedWaitMillis,
-          millis);
+          standing.remainingMillis(now));
       return;
     }
-    log.debug("[TTS cloud] rate limited (429); backing off prefetch for {}ms", millis);
+    log.debug(
+        "[TTS cloud] rate limited (429); backing off prefetch for {}ms",
+        standing.remainingMillis(now));
   }
 
   /** Clears the back-off after any clean call so prefetch resumes immediately. */
@@ -109,7 +111,7 @@ public final class RateLimitBackoff {
    * the provider, changes nothing this plugin can observe, so it waits out the window or the
    * ceiling below, whichever comes first.
    */
-  public void reset() {
+  void reset() {
     window.set(Window.CLEAR);
     consecutive429.set(0);
   }
@@ -162,15 +164,25 @@ public final class RateLimitBackoff {
       return open && nowNanos - endNanos < 0;
     }
 
+    /** How much of this window is left, for a log line that reports what actually stands. */
+    long remainingMillis(long nowNanos) {
+      return isOpen(nowNanos) ? (endNanos - nowNanos) / NANOS_PER_MILLI : 0;
+    }
+
     /**
-     * Which of this window and a newly opened one should stand: a live stated wait is never
-     * shortened or downgraded by a guess, and otherwise the later deadline wins.
+     * Which of this window and a newly opened one should stand. A statement outranks a guess in
+     * either direction, however the two deadlines compare: a shorter stated wait is still the
+     * provider naming the moment it will serve again, and a longer guess is still a guess. Only two
+     * windows of the same kind are compared by deadline, where the later one wins.
      */
     Window replacedBy(Window proposed, long nowNanos) {
-      if (stated && !proposed.stated && isOpen(nowNanos)) {
-        return this;
+      if (!isOpen(nowNanos)) {
+        return proposed;
       }
-      return isOpen(nowNanos) && proposed.endNanos - endNanos < 0 ? this : proposed;
+      if (stated != proposed.stated) {
+        return stated ? this : proposed;
+      }
+      return proposed.endNanos - endNanos < 0 ? this : proposed;
     }
   }
 }

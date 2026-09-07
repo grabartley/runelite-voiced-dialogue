@@ -15,8 +15,8 @@ import lombok.extern.slf4j.Slf4j;
  * states both which quota ran out and how long to wait, as two entries of this one array, so each
  * reader asks for the type it understands and ignores the rest.
  *
- * <p>The parse-failure log line names the quota failure alone because that message text predates
- * the retry reader and players' logs are matched against it.
+ * <p>The parse-failure log line names the quota failure alone, since players' logs are matched
+ * against that text.
  */
 @Slf4j
 final class AiStudioErrorDetails {

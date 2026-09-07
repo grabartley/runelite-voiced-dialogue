@@ -138,6 +138,23 @@ public class RateLimitBackoffTest {
   }
 
   @Test
+  public void aStatedWaitShorterThanTheLiveGuessStillTakesOver() {
+    // Five rejections put the ladder at 16s, then the provider names five.
+    for (int i = 0; i < 5; i++) {
+      backoff.recordRateLimited(NO_STATED_WAIT);
+    }
+
+    backoff.recordRateLimited(5_000);
+
+    assertTrue("a shorter statement is still a statement", backoff.isRefusing());
+    elapse(4_999);
+    assertTrue(backoff.isRefusing());
+    elapse(2);
+    assertFalse("and it ends when the provider said it would", backoff.isRefusing());
+    assertFalse("without the guess it displaced outliving it", backoff.isThrottled());
+  }
+
+  @Test
   public void aGuessOnceTheStatedWaitHasPassedOpensAPlainWindowAgain() {
     backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
     elapse(DAILY_CAP_WAIT_MILLIS + 1);

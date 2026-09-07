@@ -49,9 +49,7 @@ public final class BackendProvider {
    */
   public void clearRateLimits() {
     openRouter.clearRateLimit();
-    if (googleAiStudio != openRouter) {
-      googleAiStudio.clearRateLimit();
-    }
+    googleAiStudio.clearRateLimit();
   }
 
   /** The configured provider's backend, resolved live so a provider switch needs no restart. */
