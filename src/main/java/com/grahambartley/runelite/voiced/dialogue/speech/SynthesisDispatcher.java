@@ -122,16 +122,14 @@ public final class SynthesisDispatcher {
       log.info(
           VoiceTraceFormatter.buildResolvedLine(
               backend.id(),
-              request.player(),
-              npcName,
+              request.voice(),
               effective.name(),
-              request.voice().race(),
-              request.voice().gender(),
-              request.voice().child(),
-              request.voice().voiceSeed(),
+              npcName,
               profile == null ? null : profile.name(),
               profile == null ? null : profile.accent()));
     }
-    audioService.speak(request, caveEchoPolicy.shouldEcho());
+    // The narrator is the game telling the story, not someone standing in the cave with you, so
+    // the room never colours it.
+    audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
   }
 }

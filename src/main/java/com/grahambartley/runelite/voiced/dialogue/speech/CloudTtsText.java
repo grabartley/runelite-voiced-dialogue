@@ -46,11 +46,10 @@ public final class CloudTtsText {
 
   /**
    * The spoken language actually requested of the model for a line: the configured language with
-   * the speaker-class Speaking Style appended (Player style for the player's own lines, NPC style
-   * for everything else), so "English" plus a Gen Z style becomes an "English Gen Z slang" target
-   * that routes through the translation hop and is rewritten in that style. A blank language
-   * defaults to English; the no-op style leaves the language untouched, so a class set to None
-   * skips the hop while the other class can still be styled.
+   * the speaker-class Speaking Style appended, so "English" plus a Gen Z style becomes an "English
+   * Gen Z slang" target that routes through the translation hop and is rewritten in that style. A
+   * blank language defaults to English; the no-op style leaves the language untouched, so a class
+   * set to None skips the hop while the other class can still be styled.
    */
   static String effectiveSpokenLanguage(VoicedDialogueConfig config, SynthesisRequest request) {
     return combineLanguage(config.cloudLanguage().label(), styleFor(config, request));

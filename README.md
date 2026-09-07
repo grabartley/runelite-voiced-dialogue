@@ -155,8 +155,8 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 | **Your Accent** | British (Cambridge) | Accent for your character's voice. |
 | **Your Persona** | friendly and plucky | Persona and delivery style for your character's voice. |
 | **Your Pace** | Normal | Speaking pace for your character's voice. |
-| **Voice Narration** | `On` | Reads message and item boxes aloud in a narrator voice. This is the game telling the story rather than a character speaking, so it keeps its own voice and ignores the speaking styles. |
 | **Character Voices** | `On` | Gives each speaker a distinct accent, style, and pace instead of one shared voice. Off gives the plainest, cheapest delivery. |
+| **Voice Narration** | `On` | Reads message and item boxes aloud in a narrator voice. This is the game telling the story rather than a character speaking, so it keeps its own voice and ignores the speaking styles. |
 | **Auto-learn New NPCs** | `Off` | For an NPC the plugin does not recognise, looks its race, gender, and origin up on the OSRS Wiki once and remembers it. The first line still uses the default voice while the lookup runs. |
 
 </details>

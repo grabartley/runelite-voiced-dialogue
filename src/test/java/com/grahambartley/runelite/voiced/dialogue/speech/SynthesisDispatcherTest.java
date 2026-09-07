@@ -113,6 +113,17 @@ public class SynthesisDispatcherTest {
   }
 
   @Test
+  public void narrationIsNotColouredByTheRoomThePlayerIsStandingIn() {
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolveNarrator()).thenReturn(new ResolvedSpeaker(VoiceSpec.NARRATOR, null));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(true);
+
+    dispatcher.speakNarration("You find a key.");
+
+    verify(audioService).speak(any(SynthesisRequest.class), eq(false));
+  }
+
+  @Test
   public void narrationResolvesTheNarratorEveryTimeSoItsCacheKeyIsStable() {
     when(backend.isAvailable()).thenReturn(true);
     ResolvedSpeaker narrator = new ResolvedSpeaker(VoiceSpec.NARRATOR, null);

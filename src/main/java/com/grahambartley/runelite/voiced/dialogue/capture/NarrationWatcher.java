@@ -1,8 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 import java.util.function.BooleanSupplier;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
@@ -15,13 +14,11 @@ import net.runelite.api.widgets.Widget;
  * than a character talking.
  *
  * <p>Owned by {@link DialogueWatcher}, which folds the returned open state into the same
- * open-&gt;closed edge the chat widgets use, so a narration box cuts its audio when it closes and
- * advancing through a run of boxes interrupts the previous one. Reads the client only on the game
- * thread.
+ * open-&gt;closed edge the chat widgets use, so a narration box cuts its audio when it closes
+ * rather than racing that edge from a second subscriber. Reads the client only on the game thread.
  */
 public final class NarrationWatcher {
 
-  /** The narration text widgets, scanned in the order the client stacks them. */
   private static final int[] TEXT_WIDGETS = {
     InterfaceID.Objectbox.TEXT, InterfaceID.ObjectboxDouble.TEXT, InterfaceID.Messagebox.TEXT
   };
@@ -31,7 +28,8 @@ public final class NarrationWatcher {
   private final SynthesisDispatcher dispatcher;
   private final BooleanSupplier enabled;
 
-  private final Map<Integer, String> lastSpokenByWidget = new HashMap<>();
+  /** Indexed by position in {@link #TEXT_WIDGETS}: no boxing on the per-tick scan. */
+  private final String[] lastSpokenByWidget = new String[TEXT_WIDGETS.length];
 
   public NarrationWatcher(
       Client client,
@@ -54,28 +52,28 @@ public final class NarrationWatcher {
       return false;
     }
     boolean open = false;
-    for (int widgetId : TEXT_WIDGETS) {
-      Widget box = client.getWidget(widgetId);
+    for (int i = 0; i < TEXT_WIDGETS.length; i++) {
+      Widget box = client.getWidget(TEXT_WIDGETS[i]);
       if (box == null || box.isHidden()) {
         continue;
       }
       open = true;
-      speakIfNew(widgetId, box);
+      speakIfNew(i, box);
     }
     return open;
   }
 
   /** Forgets what each box last said, so reopening one narrates it again. */
   public void reset() {
-    lastSpokenByWidget.clear();
+    Arrays.fill(lastSpokenByWidget, null);
   }
 
-  private void speakIfNew(int widgetId, Widget box) {
+  private void speakIfNew(int index, Widget box) {
     String text = box.getText();
-    if (text == null || text.isEmpty() || text.equals(lastSpokenByWidget.get(widgetId))) {
+    if (text == null || text.isEmpty() || text.equals(lastSpokenByWidget[index])) {
       return;
     }
-    lastSpokenByWidget.put(widgetId, text);
+    lastSpokenByWidget[index] = text;
     dispatcher.speakNarration(textCleaner.clean(text));
   }
 }
