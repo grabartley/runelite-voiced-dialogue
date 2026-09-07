@@ -332,6 +332,7 @@ public final class CloudSpeechExecutor {
   private Pcm runBuffered(PreparedSpeech prepared) {
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
       long attemptStart = System.nanoTime();
+      long backoffGeneration = backoff.generation();
       try (Response response = ops.newCall(prepared.buffered, prepared.inputLen).execute()) {
         ResponseBody body = response.body();
         // Read the bytes once; on any failure they are the diagnostic payload (a provider error is
@@ -344,7 +345,7 @@ public final class CloudSpeechExecutor {
 
         if (!response.isSuccessful()) {
           if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited(statedWait(response, bytes));
+            backoff.recordRateLimited(statedWait(response, bytes), backoffGeneration);
           }
           support.warnOnce(ops.failureNotice(response.code(), bytes));
           support.logFailure(
@@ -476,6 +477,7 @@ public final class CloudSpeechExecutor {
       long attemptStart = System.nanoTime();
       StreamDrain drain = ops.newStreamDrain();
       Accumulator acc = new Accumulator(prepared, sink, rate, attemptStart);
+      long backoffGeneration = backoff.generation();
       try (Response response = ops.newCall(prepared.streaming, prepared.inputLen).execute()) {
         String contentType = CloudHttp.headerOrEmpty(response, "Content-Type");
         String generationId = ops.generationId(response);
@@ -484,7 +486,7 @@ public final class CloudSpeechExecutor {
           // trace all need it.
           byte[] bytes = CloudHttp.errorBody(response);
           if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
-            backoff.recordRateLimited(statedWait(response, bytes));
+            backoff.recordRateLimited(statedWait(response, bytes), backoffGeneration);
           }
           support.warnOnce(ops.failureNotice(response.code(), bytes));
           support.logFailure(

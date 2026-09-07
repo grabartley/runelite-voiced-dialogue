@@ -57,6 +57,15 @@ final class AiStudioErrorDetails {
     }
   }
 
+  /** One array field of a detail, or {@code null} when it is absent or not an array. */
+  static JsonArray array(JsonObject object, String field) {
+    if (object == null) {
+      return null;
+    }
+    JsonElement value = object.get(field);
+    return value != null && value.isJsonArray() ? value.getAsJsonArray() : null;
+  }
+
   /** One string field of a detail, or {@code ""} when it is absent, null, or not a string. */
   static String text(JsonObject object, String field) {
     if (object == null || !object.has(field) || object.get(field).isJsonNull()) {

@@ -46,7 +46,7 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aRateLimitThrottlesAndACleanCallClears() {
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
     assertTrue("a 429 opens a back-off window", backoff.isThrottled());
     backoff.recordSuccess();
     assertFalse("a clean call clears the back-off", backoff.isThrottled());
@@ -54,13 +54,13 @@ public class RateLimitBackoffTest {
 
   @Test
   public void anUnstatedWaitKeepsTheLadderExactly() {
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
     elapse(999);
     assertTrue("the first hit pauses for the base window", backoff.isThrottled());
     elapse(2);
     assertFalse(backoff.isThrottled());
 
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
     elapse(1_999);
     assertTrue("the second doubles it", backoff.isThrottled());
     elapse(2);
@@ -69,7 +69,7 @@ public class RateLimitBackoffTest {
 
   @Test
   public void anUnstatedWaitStandsSpeculationDownWithoutClosingTheBackend() {
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
 
     assertTrue("prefetch stands down on a computed window", backoff.isThrottled());
     assertFalse(
@@ -79,7 +79,7 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aStatedWaitIsHonouredInFullRatherThanGuessedAt() {
-    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
 
     elapse(30_000);
     assertTrue(
@@ -95,7 +95,7 @@ public class RateLimitBackoffTest {
 
   @Test
   public void anAbsurdStatedWaitIsClampedToTheCeiling() {
-    backoff.recordRateLimited(Long.MAX_VALUE / 2);
+    rateLimited(Long.MAX_VALUE / 2);
 
     elapse(ONE_HOUR_MILLIS - 1);
     assertTrue(backoff.isRefusing());
@@ -105,7 +105,7 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aCleanCallClearsAStatedWaitToo() {
-    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
 
     backoff.recordSuccess();
 
@@ -116,9 +116,9 @@ public class RateLimitBackoffTest {
   @Test
   public void aGuessLandingBehindAStatedWaitDoesNotShortenIt() {
     // A line and a prefetch are rejected on separate threads, so the two arrive interleaved.
-    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
 
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
 
     elapse(30_000);
     assertTrue("the stated wait outlives a ladder rung that landed after it", backoff.isRefusing());
@@ -130,9 +130,9 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aStatedWaitAfterAGuessTakesOverFromIt() {
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
 
-    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
 
     assertTrue("a statement beats the guess it lands behind", backoff.isRefusing());
   }
@@ -141,10 +141,10 @@ public class RateLimitBackoffTest {
   public void aStatedWaitShorterThanTheLiveGuessStillTakesOver() {
     // Five rejections put the ladder at 16s, then the provider names five.
     for (int i = 0; i < 5; i++) {
-      backoff.recordRateLimited(NO_STATED_WAIT);
+      rateLimited(NO_STATED_WAIT);
     }
 
-    backoff.recordRateLimited(5_000);
+    rateLimited(5_000);
 
     assertTrue("a shorter statement is still a statement", backoff.isRefusing());
     elapse(4_999);
@@ -155,11 +155,37 @@ public class RateLimitBackoffTest {
   }
 
   @Test
+  public void aRejectionThatPredatesASuccessIsDropped() {
+    // A line and a prefetch overlap, the prefetch is refused, the line succeeds, and the refusal's
+    // handler is the one to finish second.
+    long observed = backoff.generation();
+    backoff.recordSuccess();
+
+    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS, observed);
+
+    assertFalse("a call already proven to work is not undone", backoff.isRefusing());
+    assertFalse(backoff.isThrottled());
+  }
+
+  @Test
+  public void aShorterStatedWaitDoesNotShortenALongerOneAlreadyStanding() {
+    // Two rejections state different waits; the nearer one is the second to commit.
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
+
+    rateLimited(5_000);
+
+    elapse(5_001);
+    assertTrue("the further of two stated waits stands", backoff.isRefusing());
+    elapse(DAILY_CAP_WAIT_MILLIS);
+    assertFalse(backoff.isRefusing());
+  }
+
+  @Test
   public void aGuessOnceTheStatedWaitHasPassedOpensAPlainWindowAgain() {
-    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
     elapse(DAILY_CAP_WAIT_MILLIS + 1);
 
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
 
     assertFalse("a rejection stating nothing states nothing", backoff.isRefusing());
     assertTrue(backoff.isThrottled());
@@ -167,14 +193,14 @@ public class RateLimitBackoffTest {
 
   @Test
   public void changedCredentialsDropTheWindowAndTheLadderWithIt() {
-    backoff.recordRateLimited(DAILY_CAP_WAIT_MILLIS);
+    rateLimited(DAILY_CAP_WAIT_MILLIS);
 
     backoff.reset();
 
     assertFalse("the notice asked for this change, so it cannot be punished", backoff.isRefusing());
     assertFalse(backoff.isThrottled());
 
-    backoff.recordRateLimited(NO_STATED_WAIT);
+    rateLimited(NO_STATED_WAIT);
     elapse(999);
     assertTrue("and the ladder starts again from its base rung", backoff.isThrottled());
     elapse(2);
@@ -185,11 +211,16 @@ public class RateLimitBackoffTest {
   public void aWindowOpenedBeforeAClockWrapStillCloses() {
     nanos.set(Long.MAX_VALUE - 1_000_000L);
 
-    backoff.recordRateLimited(10);
+    rateLimited(10);
 
     assertTrue("the deadline wrapped past the clock's own ceiling", backoff.isRefusing());
     elapse(11);
     assertFalse("a wrapped deadline is still reached, not held forever", backoff.isRefusing());
+  }
+
+  /** Records a rejection observed at the current generation, as a live caller does. */
+  private void rateLimited(long statedWaitMillis) {
+    backoff.recordRateLimited(statedWaitMillis, backoff.generation());
   }
 
   private void elapse(long millis) {

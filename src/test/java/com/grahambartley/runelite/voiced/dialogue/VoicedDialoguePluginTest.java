@@ -1,7 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -62,7 +61,7 @@ public class VoicedDialoguePluginTest {
     harness.plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
 
     // The harness folds both provider slots onto one stub, so the fan-out reaches it twice.
-    assertTrue("the key change drops the window", harness.backend.rateLimitClears.get() > 0);
+    assertEquals(2, harness.backend.rateLimitClears.get());
   }
 
   /** Unrelated keys and groups never reach the warm-up path. */

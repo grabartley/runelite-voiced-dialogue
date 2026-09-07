@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,14 @@ public final class RateLimitBackoff {
   /** Consecutive 429s, so the window grows geometrically and resets on a clean call. */
   private final AtomicInteger consecutive429 = new AtomicInteger();
 
+  /**
+   * Bumped whenever the back-off is dropped. A rejection and a success overlap freely, since lines
+   * and prefetch run on separate pools, and the rejection's handler can be the one to finish
+   * second: this is what tells such a rejection that it is stale, so a call already proven to work
+   * is not undone by a refusal that predates it.
+   */
+  private final AtomicLong generation = new AtomicLong();
+
   private final LongSupplier clock;
 
   public RateLimitBackoff() {
@@ -58,6 +67,11 @@ public final class RateLimitBackoff {
   /** Test seam: drives the window off a supplied monotonic clock, in nanoseconds. */
   RateLimitBackoff(LongSupplier nanoClock) {
     this.clock = nanoClock;
+  }
+
+  /** The reading a caller passes back to {@link #recordRateLimited}, taken before it calls out. */
+  long generation() {
+    return generation.get();
   }
 
   boolean isThrottled() {
@@ -76,9 +90,14 @@ public final class RateLimitBackoff {
   /**
    * Opens (or widens) the back-off window after a 429. {@code statedWaitMillis} is what the
    * rejection itself asked for, or 0 when it asked for nothing, in which case the window grows
-   * geometrically per repeat hit.
+   * geometrically per repeat hit. {@code observedGeneration} is the {@link #generation()} read
+   * before the call went out; a rejection carrying a stale one is dropped.
    */
-  void recordRateLimited(long statedWaitMillis) {
+  void recordRateLimited(long statedWaitMillis, long observedGeneration) {
+    if (generation.get() != observedGeneration) {
+      log.debug("[TTS cloud] 429 predates a call that succeeded; leaving the back-off clear");
+      return;
+    }
     int consecutive = consecutive429.incrementAndGet();
     boolean stated = statedWaitMillis > 0;
     long millis = stated ? clamp(statedWaitMillis) : backoffWindowMillis(consecutive);
@@ -112,6 +131,7 @@ public final class RateLimitBackoff {
    * ceiling below, whichever comes first.
    */
   void reset() {
+    generation.incrementAndGet();
     window.set(Window.CLEAR);
     consecutive429.set(0);
   }

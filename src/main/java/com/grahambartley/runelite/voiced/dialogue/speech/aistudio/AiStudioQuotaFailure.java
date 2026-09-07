@@ -87,7 +87,7 @@ final class AiStudioQuotaFailure {
    */
   static AiStudioQuotaFailure parse(Gson gson, byte[] body) {
     for (JsonObject detail : AiStudioErrorDetails.ofType(gson, body, QUOTA_FAILURE_TYPE)) {
-      JsonArray violations = detail.getAsJsonArray("violations");
+      JsonArray violations = AiStudioErrorDetails.array(detail, "violations");
       if (violations == null) {
         continue;
       }

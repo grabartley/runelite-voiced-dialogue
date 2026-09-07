@@ -83,6 +83,16 @@ public class AiStudioQuotaFailureTest {
   }
 
   @Test
+  public void violationsOfTheWrongShapeFallBackRatherThanThrow() {
+    assertNull("an object where an array belongs is not a violation", parse(violations("{}")));
+    assertNull(parse(violations("7")));
+    assertEquals(
+        "and the player still gets a quota notice rather than an unexplained failure",
+        AiStudioQuotaFailure.QUOTA_NOTICE,
+        noticeFor(violations("7")));
+  }
+
+  @Test
   public void aPaidCapNamesTheCapAndNeverAsksForBilling() {
     String notice = noticeFor(PAID_DAILY_CAP);
 
@@ -191,6 +201,14 @@ public class AiStudioQuotaFailureTest {
     assertTrue("the metric decides the free-tier verdict", logged.contains("generate_requests"));
     assertTrue(logged.contains("quotaValue=100"));
     assertTrue(logged.contains("model=gemini-3.1-flash-tts"));
+  }
+
+  /** A quota failure whose {@code violations} field carries {@code value}, whatever shape it is. */
+  private static String violations(String value) {
+    return "{\"error\": {\"code\": 429, \"details\": [{\"@type\":"
+        + " \"type.googleapis.com/google.rpc.QuotaFailure\", \"violations\": "
+        + value
+        + "}]}}";
   }
 
   /** A rejection whose violation carries only an id and a metric, with a nominal cap of 10. */

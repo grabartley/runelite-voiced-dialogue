@@ -54,6 +54,7 @@ public class CloudSpeechExecutorTest {
     assertNull(executor.synthesize(request()));
 
     assertTrue(executor.isThrottled());
+    server.enqueue(rejection());
     assertNull("the header alone states a wait", executor.synthesize(request()));
     assertEquals("nothing follows a wait the provider stated", 1, server.getRequestCount());
   }
@@ -66,6 +67,7 @@ public class CloudSpeechExecutorTest {
 
     assertNull(executor.synthesize(request()));
 
+    server.enqueue(rejection());
     assertNull(executor.synthesize(request()));
     assertEquals(1, server.getRequestCount());
   }
@@ -92,6 +94,7 @@ public class CloudSpeechExecutorTest {
 
     assertNull(executor.synthesize(request()));
 
+    server.enqueue(rejection());
     assertNull("the header outreaches the body hint here", executor.synthesize(request()));
     assertEquals(1, server.getRequestCount());
   }
@@ -112,7 +115,6 @@ public class CloudSpeechExecutorTest {
 
   private CloudSpeechExecutor executor() {
     MutableTestConfig config = new MutableTestConfig();
-    config.openRouterKey = "key";
     CloudBackendSupport support =
         new CloudBackendSupport(
             config,
