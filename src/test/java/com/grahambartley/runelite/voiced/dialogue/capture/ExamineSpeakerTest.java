@@ -6,6 +6,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
@@ -69,7 +70,7 @@ public class ExamineSpeakerTest {
   private void stampAfterPublishing(ChatMessageType type, String text) {
     ChatMessage event = message(type, text);
     speaker.onChatMessage(event);
-    org.mockito.Mockito.when(event.getMessageNode().getRuneLiteFormatMessage()).thenReturn(text);
+    when(event.getMessageNode().getRuneLiteFormatMessage()).thenReturn(text);
   }
 
   private Object[] examineTypes() {
@@ -140,14 +141,23 @@ public class ExamineSpeakerTest {
 
   @Test
   public void decidingBeforeTheTickWouldVoiceAPluginsLine() {
-    // Pins the reason for the delay: at the moment the event arrives the node is still unmarked,
-    // so an undeferred check would let a plugin's line through.
-    ChatMessage event = message(ChatMessageType.ITEM_EXAMINE, "Price of something: 1 coin");
-    speaker.onChatMessage(event);
+    // Pins the reason for the delay by showing what happens without it: an otherwise identical
+    // speaker that decides on arrival, before the client has marked the line, speaks it.
+    SynthesisDispatcher undeferredDispatcher = mock(SynthesisDispatcher.class);
+    ExamineSpeaker undeferred =
+        new ExamineSpeaker(
+            new DialogueTextCleaner(new ProfanityFilter()),
+            undeferredDispatcher,
+            () -> true,
+            () -> false,
+            Runnable::run);
 
-    assertTrue(
-        "the mark is absent on arrival, which is why the decision waits a tick",
-        event.getMessageNode().getRuneLiteFormatMessage() == null);
+    ChatMessage event = message(ChatMessageType.ITEM_EXAMINE, "Price of something: 1 coin");
+    undeferred.onChatMessage(event);
+    when(event.getMessageNode().getRuneLiteFormatMessage())
+        .thenReturn("Price of something: 1 coin");
+
+    verify(undeferredDispatcher).speakNarration("Price of something: 1 coin");
   }
 
   @Test
