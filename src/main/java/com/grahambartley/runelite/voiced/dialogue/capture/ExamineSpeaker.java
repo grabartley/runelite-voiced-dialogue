@@ -4,6 +4,7 @@ import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.MessageNode;
 import net.runelite.api.events.ChatMessage;
@@ -15,9 +16,9 @@ import net.runelite.api.events.ChatMessage;
  * namespace rather than introducing a second narration concept.
  *
  * <p>The client tags examines with their own chat types, so no other game-channel message can reach
- * this path and no string matching is involved. The types alone are not enough, though: other
- * plugins publish their own lines on them, so only messages the game itself authored are voiced
- * (see {@link #gameAuthored}). Reads the client only on the game thread.
+ * this path and no wording is ever inspected. The types alone are not enough, though: other plugins
+ * publish their own lines on them, and only the ones the game itself wrote are voiced. See {@link
+ * #onChatMessage} for why that decision has to wait a tick.
  */
 public final class ExamineSpeaker {
 
@@ -41,29 +42,59 @@ public final class ExamineSpeaker {
    */
   private final BooleanSupplier dialogueOpen;
 
+  /** Runs a task on the client thread one tick later. */
+  private final Consumer<Runnable> defer;
+
   public ExamineSpeaker(
       DialogueTextCleaner textCleaner,
       SynthesisDispatcher dispatcher,
       BooleanSupplier enabled,
-      BooleanSupplier dialogueOpen) {
+      BooleanSupplier dialogueOpen,
+      Consumer<Runnable> defer) {
     this.textCleaner = textCleaner;
     this.dispatcher = dispatcher;
     this.enabled = enabled;
     this.dialogueOpen = dialogueOpen;
+    this.defer = defer;
   }
 
+  /**
+   * Takes an examine line and decides whether to voice it one tick later.
+   *
+   * <p>The delay is what makes the game-authored test work at all. The client marks a plugin's line
+   * by stamping a RuneLite format message onto its node, but it does that <em>after</em> publishing
+   * the message, so every subscriber first sees the node unmarked. Deciding on arrival would
+   * therefore voice a plugin's line as though the game had written it. One client tick is roughly
+   * 20ms, long enough for the stamp to have landed and short enough that nobody hears the wait.
+   *
+   * <p>What that buys: RuneLite's own Examine plugin appends an item price on {@code ITEM_EXAMINE}
+   * moments after the real examine text, and because every new line stops the one playing, voicing
+   * the price would cut off the flavour line the player actually asked for.
+   */
   public void onChatMessage(ChatMessage event) {
-    if (!enabled.getAsBoolean() || !EXAMINE_TYPES.contains(event.getType())) {
-      return;
-    }
-    if (dialogueOpen.getAsBoolean()) {
-      return;
-    }
-    if (!gameAuthored(event.getMessageNode())) {
+    if (!EXAMINE_TYPES.contains(event.getType()) || !enabled.getAsBoolean()) {
       return;
     }
     String message = event.getMessage();
     if (message == null) {
+      return;
+    }
+    MessageNode node = event.getMessageNode();
+    defer.accept(() -> speakIfGameAuthored(node, message));
+  }
+
+  /**
+   * Voices the line unless a plugin authored it. The dialogue gate is checked here rather than on
+   * arrival because this is the moment the audio channel would actually be taken.
+   *
+   * <p>A null node is treated as game-authored: the mark is absent rather than present, and the
+   * game's own text is what must never be dropped.
+   */
+  private void speakIfGameAuthored(MessageNode node, String message) {
+    if (node != null && node.getRuneLiteFormatMessage() != null) {
+      return;
+    }
+    if (dialogueOpen.getAsBoolean()) {
       return;
     }
     String cleaned = textCleaner.clean(message);
@@ -71,23 +102,5 @@ public final class ExamineSpeaker {
       return;
     }
     dispatcher.speakNarration(cleaned);
-  }
-
-  /**
-   * Whether the game wrote this line, rather than a plugin publishing on the same chat type. The
-   * client stamps a RuneLite format message onto any node a plugin authored or reformatted, and
-   * leaves it null on the game's own text, so this separates the two without inspecting a single
-   * word.
-   *
-   * <p>It is what keeps the item-price lookups that RuneLite's own Examine plugin appends off the
-   * narrator. Those arrive on {@code ITEM_EXAMINE} in the same tick as the real examine text, and
-   * because each new line stops the one playing, voicing them would talk over the flavour line the
-   * player actually asked for.
-   *
-   * <p>A null node is treated as game-authored: the field is absent rather than stamped, and the
-   * game's own messages are the ones that must never be dropped.
-   */
-  private static boolean gameAuthored(MessageNode node) {
-    return node == null || node.getRuneLiteFormatMessage() == null;
   }
 }

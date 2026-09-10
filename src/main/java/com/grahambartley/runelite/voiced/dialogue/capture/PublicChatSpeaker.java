@@ -34,7 +34,7 @@ public final class PublicChatSpeaker {
   }
 
   public void onChatMessage(ChatMessage event) {
-    if (!enabled.getAsBoolean() || event.getType() != ChatMessageType.PUBLICCHAT) {
+    if (event.getType() != ChatMessageType.PUBLICCHAT || !enabled.getAsBoolean()) {
       return;
     }
     Player local = client.getLocalPlayer();
