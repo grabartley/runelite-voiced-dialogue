@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.MessageNode;
 import net.runelite.api.events.ChatMessage;
 
 /**
@@ -14,7 +15,9 @@ import net.runelite.api.events.ChatMessage;
  * namespace rather than introducing a second narration concept.
  *
  * <p>The client tags examines with their own chat types, so no other game-channel message can reach
- * this path and no string matching is involved. Reads the client only on the game thread.
+ * this path and no string matching is involved. The types alone are not enough, though: other
+ * plugins publish their own lines on them, so only messages the game itself authored are voiced
+ * (see {@link #gameAuthored}). Reads the client only on the game thread.
  */
 public final class ExamineSpeaker {
 
@@ -56,6 +59,9 @@ public final class ExamineSpeaker {
     if (dialogueOpen.getAsBoolean()) {
       return;
     }
+    if (!gameAuthored(event.getMessageNode())) {
+      return;
+    }
     String message = event.getMessage();
     if (message == null) {
       return;
@@ -65,5 +71,23 @@ public final class ExamineSpeaker {
       return;
     }
     dispatcher.speakNarration(cleaned);
+  }
+
+  /**
+   * Whether the game wrote this line, rather than a plugin publishing on the same chat type. The
+   * client stamps a RuneLite format message onto any node a plugin authored or reformatted, and
+   * leaves it null on the game's own text, so this separates the two without inspecting a single
+   * word.
+   *
+   * <p>It is what keeps the item-price lookups that RuneLite's own Examine plugin appends off the
+   * narrator. Those arrive on {@code ITEM_EXAMINE} in the same tick as the real examine text, and
+   * because each new line stops the one playing, voicing them would talk over the flavour line the
+   * player actually asked for.
+   *
+   * <p>A null node is treated as game-authored: the field is absent rather than stamped, and the
+   * game's own messages are the ones that must never be dropped.
+   */
+  private static boolean gameAuthored(MessageNode node) {
+    return node == null || node.getRuneLiteFormatMessage() == null;
   }
 }

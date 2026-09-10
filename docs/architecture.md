@@ -50,6 +50,11 @@ what counts as story.
 Examine text (`ExamineSpeaker`, gated by **Voice Examine Text**, off by default) rides the same
 narrator path. The client tags examines with their own chat types (`ITEM_EXAMINE`, `NPC_EXAMINE`,
 `OBJECT_EXAMINE`), so no other game-channel message can reach it and no string matching is needed.
+The types alone are not sufficient, though, because other plugins publish their own lines on them:
+RuneLite's Examine plugin appends an item price on `ITEM_EXAMINE` in the same tick as the real
+examine text, and since every new line stops the one playing, voicing it would talk over the flavour
+line the player asked for. Only lines the game authored are voiced, told apart by the RuneLite
+format message the client stamps onto any node a plugin wrote or reformatted.
 It yields the audio channel while a dialogue is open, asking `DialogueWatcher`, the single owner of
 that state, rather than reading the dialogue widgets a second time. Like every other voiced line it
 goes through `DialogueAudioService.speak`, which stops current playback and advances the epoch, so a

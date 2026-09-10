@@ -4,12 +4,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.MessageNode;
 import net.runelite.api.events.ChatMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,9 +38,20 @@ public class ExamineSpeakerTest {
           () -> dialogueOpen);
 
   private static ChatMessage message(ChatMessageType type, String text) {
+    return message(type, text, null);
+  }
+
+  /**
+   * {@code runeLiteFormat} non-null marks the node as authored or reformatted by a plugin, which is
+   * how the client distinguishes those from the game's own text.
+   */
+  private static ChatMessage message(ChatMessageType type, String text, String runeLiteFormat) {
+    MessageNode node = mock(MessageNode.class);
+    when(node.getRuneLiteFormatMessage()).thenReturn(runeLiteFormat);
     ChatMessage event = new ChatMessage();
     event.setType(type);
     event.setMessage(text);
+    event.setMessageNode(node);
     return event;
   }
 
@@ -145,6 +159,45 @@ public class ExamineSpeakerTest {
     speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, null));
 
     verifyNoInteractions(dispatcher);
+  }
+
+  @Test
+  public void aPluginsOwnLineOnAnExamineTypeIsNotVoiced() {
+    speaker.onChatMessage(
+        message(
+            ChatMessageType.ITEM_EXAMINE,
+            "Price of Prayer potion(4): 9,500 coins",
+            "Price of <col=ff0000>Prayer potion(4)</col>: 9,500 coins"));
+
+    verifyNoInteractions(dispatcher);
+  }
+
+  @Test
+  public void aPluginsPriceLookupCannotTalkOverTheExamineTextItFollows() {
+    // RuneLite's own Examine plugin appends a price on ITEM_EXAMINE in the same tick as the real
+    // examine text. Every new line stops the one playing, so voicing the price would cut off the
+    // flavour line the player actually asked for.
+    speaker.onChatMessage(
+        message(ChatMessageType.ITEM_EXAMINE, "4 doses of Prayer restore potion."));
+    speaker.onChatMessage(
+        message(
+            ChatMessageType.ITEM_EXAMINE,
+            "Price of Prayer potion(4): 9,500 coins",
+            "Price of ..."));
+
+    verify(dispatcher, times(1)).speakNarration("4 doses of Prayer restore potion.");
+    verifyNoMoreInteractions(dispatcher);
+  }
+
+  @Test
+  public void aNodelessEventIsTreatedAsGameAuthored() {
+    ChatMessage event = new ChatMessage();
+    event.setType(ChatMessageType.OBJECT_EXAMINE);
+    event.setMessage("A beautiful old oak.");
+
+    speaker.onChatMessage(event);
+
+    verify(dispatcher).speakNarration("A beautiful old oak.");
   }
 
   @Test
