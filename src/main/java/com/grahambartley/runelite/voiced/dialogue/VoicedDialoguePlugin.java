@@ -136,7 +136,8 @@ public class VoicedDialoguePlugin extends Plugin {
     aiStudioBackend.setSpendTracker(spendTracker);
     backendProvider = new BackendProvider(openRouterBackend, aiStudioBackend, config::ttsProvider);
     DiskAudioCache diskCache =
-        new DiskAudioCache(ttsDir.resolve("cache"), config.cacheSizeLimitMiB() * 1024L * 1024);
+        new DiskAudioCache(
+            ttsDir.resolve("cache"), () -> config.cacheSizeLimitMiB() * 1024L * 1024);
     audioService =
         new DialogueAudioService(
             backendProvider,

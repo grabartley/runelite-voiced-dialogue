@@ -19,6 +19,8 @@ import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -219,6 +221,141 @@ public class DiskAudioCacheTest {
     assertEquals("reserved word", 0, buf.getInt());
     assertEquals(0.5f, buf.getFloat(), 0f);
     assertEquals(-0.25f, buf.getFloat(), 0f);
+  }
+
+  @Test
+  public void loweringTheCapEvictsDownToItOnTheNextWrite() throws Exception {
+    AtomicLong cap = new AtomicLong(DiskAudioCache.UNLIMITED);
+    DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap::get);
+    float[] samples = new float[26];
+
+    for (int i = 0; i < 6; i++) {
+      putStamped(cache, "v", "line-" + i, new Pcm(samples, 24_000), i);
+    }
+    long grownTo = dirSize(cacheDir());
+    assertTrue("the uncapped cache should hold every line", grownTo > 600);
+
+    cap.set(600);
+    putStamped(cache, "v", "after-the-change", new Pcm(samples, 24_000), 6);
+
+    assertTrue("the lowered cap is enforced by the next write", dirSize(cacheDir()) <= 600);
+    assertNull(
+        "the oldest line goes first under the lowered cap",
+        cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "line-0"));
+    assertNotNull(
+        "the line that triggered the eviction survives it",
+        cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "after-the-change"));
+  }
+
+  @Test
+  public void raisingTheCapEvictsNothing() throws Exception {
+    AtomicLong cap = new AtomicLong(600);
+    DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap::get);
+    float[] samples = new float[26];
+
+    for (int i = 0; i < 4; i++) {
+      putStamped(cache, "v", "line-" + i, new Pcm(samples, 24_000), i);
+    }
+
+    cap.set(64L * 1024 * 1024);
+    for (int i = 4; i < 10; i++) {
+      putStamped(cache, "v", "line-" + i, new Pcm(samples, 24_000), i);
+    }
+
+    assertTrue(
+        "the directory should now sit well past the cap it started with",
+        dirSize(cacheDir()) > 600);
+    for (int i = 0; i < 10; i++) {
+      assertNotNull(
+          "every line survives once the cap is raised above the directory size",
+          cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "line-" + i));
+    }
+  }
+
+  @Test
+  public void switchingTheCapToUnlimitedStopsEviction() throws Exception {
+    AtomicLong cap = new AtomicLong(600);
+    DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap::get);
+    float[] samples = new float[26];
+
+    for (int i = 0; i < 8; i++) {
+      putStamped(cache, "v", "capped-" + i, new Pcm(samples, 24_000), i);
+    }
+    assertTrue("the finite cap is enforced while it is set", dirSize(cacheDir()) <= 600);
+
+    cap.set(DiskAudioCache.UNLIMITED);
+    for (int i = 0; i < 8; i++) {
+      putStamped(cache, "v", "uncapped-" + i, new Pcm(samples, 24_000), 8 + i);
+    }
+
+    assertTrue("nothing is evicted once the cap is lifted", dirSize(cacheDir()) > 600);
+    for (int i = 0; i < 8; i++) {
+      assertNotNull(
+          "every line written after the cap is lifted survives",
+          cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "uncapped-" + i));
+    }
+  }
+
+  @Test
+  public void aClipLargerThanTheCapIsNotKeptByTheWriteThatStoredIt() throws Exception {
+    DiskAudioCache cache = new DiskAudioCache(cacheDir(), () -> 64L);
+
+    cache.put(
+        "cloud-openrouter", "v", Emotion.NEUTRAL, "oversized", new Pcm(new float[64], 24_000));
+
+    assertNull(
+        "a clip that alone exceeds the cap is evicted by its own write",
+        cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "oversized"));
+  }
+
+  @Test
+  public void anUnlimitedSupplierNeverEvicts() throws Exception {
+    DiskAudioCache cache = new DiskAudioCache(cacheDir(), () -> DiskAudioCache.UNLIMITED);
+    float[] samples = new float[26];
+
+    for (int i = 0; i < 12; i++) {
+      putStamped(cache, "v", "line-" + i, new Pcm(samples, 24_000), i);
+    }
+
+    assertNotNull(
+        "the oldest line survives an unlimited supplier",
+        cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "line-0"));
+    assertNotNull(
+        "the newest line survives too",
+        cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "line-11"));
+  }
+
+  @Test
+  public void theCapIsReadOncePerWriteSoOnePassEnforcesOneLimit() {
+    AtomicInteger reads = new AtomicInteger();
+    DiskAudioCache cache =
+        new DiskAudioCache(
+            cacheDir(),
+            () -> {
+              reads.incrementAndGet();
+              return 600L;
+            });
+
+    cache.put("cloud-openrouter", "v", Emotion.NEUTRAL, "first", pcm(24_000, new float[26]));
+    assertEquals("one write reads the cap once", 1, reads.get());
+
+    cache.put("cloud-openrouter", "v", Emotion.NEUTRAL, "second", pcm(24_000, new float[26]));
+    assertEquals("a second write reads it once more", 2, reads.get());
+  }
+
+  @Test
+  public void aReadNeverConsultsTheCap() {
+    AtomicInteger reads = new AtomicInteger();
+    DiskAudioCache cache =
+        new DiskAudioCache(
+            cacheDir(),
+            () -> {
+              reads.incrementAndGet();
+              return 600L;
+            });
+
+    assertNull(cache.get("cloud-openrouter", "v", Emotion.NEUTRAL, "absent"));
+    assertEquals("a lookup has nothing to evict, so it never reads the cap", 0, reads.get());
   }
 
   private void putStamped(DiskAudioCache cache, String voiceKey, String text, Pcm pcm, int order)
