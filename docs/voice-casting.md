@@ -77,9 +77,9 @@ Depth comes from the catalog's character adjectives, confirmed by ear. The male 
 the spine of the axis rather than the full roster, since they are where the adjectives divide most
 cleanly: gravelly (Algenib), firm (Alnilam, Orus), even (Schedar) and breathy (Enceladus) are the
 deep end; upbeat (Puck) and casual (Zubenelgenubi) are the bright end; informative (Charon,
-Rasalgethi) and knowledgeable (Sadaltager) sit between them, reading measured rather than low and
-carrying weight through delivery rather than pitch, which is why Charon can anchor the plain human
-pool and still sit in the wizard one. The female pools follow the same ordering by ear.
+Rasalgethi, Sadaltager) sits between them, reading measured rather than low and carrying weight
+through delivery rather than pitch, which is why Charon can anchor the plain human pool and still
+sit in the wizard one. The female pools follow the same ordering by ear.
 
 Big, imposing races take the deep end so they sound large rather than high-pitched. Small ones
 stay bright, so a scuttling crab never reads as something standing over you. The undead male
@@ -101,8 +101,8 @@ exists instead, and the reference is itself the casting decision:
 - **Aranei** keep one undead voice per gender, Enceladus and Achernar, and pair each with a clear
   one. Enceladus is the breathy voice and Achernar the soft one, which is what carries their
   hushed, telepathic delivery; the clear half keeps them sounding like a living species.
-- **Dogs** anchor on the monkey pool's excitable and forward voices and pair each with one from
-  the deep end, so a bark lands as a sound with an animal behind it rather than as a word read
+- **Dogs** anchor on the monkey pool's excitable, bright voices and pair each with one from the
+  deep end, so a bark lands as a sound with an animal behind it rather than as a word read
   aloud.
 - **Crabs** take one goblin voice and one monkey voice in each gender, which keeps them small and
   quick without making them sound like goblins outright.
