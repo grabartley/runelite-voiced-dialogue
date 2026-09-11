@@ -81,6 +81,11 @@ name still resolves to a documented NPC is covered too.
   race buckets pick a voice rather than a species. A hellhound is a `Demon`, and a
   skeletal, revenant or reanimated one is `Undead`, because the grave outranks the
   abyss in both scans.
+  Crabs and penguins are their own `Crab` and `Penguin` races, matched in the same
+  slot behind the undead and demon rules. The crabs carry a bright seaside lilt and
+  the penguins the clipped speech of the Motherland, so the Crab Quest cast and the
+  Cold War penguins keep their own voice wherever they turn up. The penguins in
+  costume are pinned to `Penguin` rather than to whatever they are dressed as.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default

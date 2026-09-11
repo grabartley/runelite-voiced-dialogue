@@ -49,6 +49,13 @@ public class RaceBucketTest {
       new Object[] {"Human/Elf hybrid", "Elf", NpcRace.ELF},
       new Object[] {"[[Aranei]]", "Aranei", NpcRace.ARANEI},
       new Object[] {"[[Dog]]", "Dog", NpcRace.DOG},
+      new Object[] {"Crab", "Crab", NpcRace.CRAB},
+      new Object[] {"Crabs", "Crab", NpcRace.CRAB},
+      // The Crab Quest pages spell the race as a piped disambiguation link.
+      new Object[] {"[[Crab (disambiguation)|Crab]]", "Crab", NpcRace.CRAB},
+      new Object[] {"Penguin", "Penguin", NpcRace.PENGUIN},
+      new Object[] {"Penguins", "Penguin", NpcRace.PENGUIN},
+      new Object[] {"[[Penguin]]", "Penguin", NpcRace.PENGUIN},
     };
   }
 
@@ -67,6 +74,9 @@ public class RaceBucketTest {
       new Object[] {"Demonic dog", NpcRace.DEMON},
       new Object[] {"Hellhound", NpcRace.DEMON},
       new Object[] {"Revenant hellhound", NpcRace.UNDEAD},
+      new Object[] {"Undead crab", NpcRace.UNDEAD},
+      new Object[] {"Demonic penguin", NpcRace.DEMON},
+      new Object[] {"Sand crab", NpcRace.CRAB},
     };
   }
 
@@ -79,7 +89,7 @@ public class RaceBucketTest {
 
   @Test
   public void raceTextTheWikiTableDoesNotKnowMatchesNoBucket() {
-    assertNull(RaceBucket.forWikiText("Penguin"));
+    assertNull(RaceBucket.forWikiText("Merfolk"));
   }
 
   private Object[] storedOnlyBucketCases() {

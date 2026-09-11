@@ -20,5 +20,7 @@ public enum NpcRace {
   ARCEUUS,
   ARANEI,
   DOG,
+  CRAB,
+  PENGUIN,
   UNKNOWN
 }

@@ -69,6 +69,9 @@ CATEGORY_RACE_RULES = [
     ("troll", "Troll"), ("ogre", "Troll"), ("cyclop", "Troll"), ("giant", "Troll"),
     ("wizard", "Wizard"), ("sorcerer", "Wizard"),
     ("tortugan", "Tortugan"), ("tortuga", "Tortugan"),
+    # Penguin has a species category; crab deliberately has none, because the only wiki categories
+    # whose names contain "crab" are a quest and a cave that also hold a human and a snake.
+    ("penguin", "Penguin"),
     ("icyene", "Icyene"),
     ("human", "Human"),
 ]
@@ -83,7 +86,8 @@ DEFAULT_SUMMARY_URL = (
 )
 
 VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
-               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei", "Dog"}
+               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei", "Dog", "Crab",
+               "Penguin"}
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
@@ -103,6 +107,8 @@ RACE_BUCKET_RULES = [
     (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal|hellhound", "Demon"),
     # After the undead and demon rules, so a skeletal hound or a hellhound keeps its own bucket.
     (r"\bdogs?\b", "Dog"),
+    (r"\bcrabs?\b", "Crab"),
+    (r"\bpenguins?\b", "Penguin"),
     (r"gnome", "Gnome"),
     (r"goblin|hobgoblin", "Goblin"),
     (r"dwarf|dwarven", "Dwarf"),

@@ -169,6 +169,19 @@ class RaceBucketTest(unittest.TestCase):
         for race in ("Skeleton Hellhound", "Revenant hellhound", "Reanimated hellhound"):
             self.assertEqual(gen.bucket_for_race(race), "Undead")
 
+    def test_crabs_and_penguins_bucket_to_their_own_races(self):
+        for race in ("Crab", "Crabs", "[[Crab]]", "[[Crab (disambiguation)|Crab]]"):
+            self.assertEqual(gen.bucket_for_race(race), "Crab")
+        for race in ("Penguin", "Penguins", "[[Penguin]]", "[[Penguin (race)|Penguin]]"):
+            self.assertEqual(gen.bucket_for_race(race), "Penguin")
+
+    def test_crabs_and_penguins_are_valid_override_races(self):
+        self.assertIn("Crab", gen.VALID_RACES)
+        self.assertIn("Penguin", gen.VALID_RACES)
+
+    def test_a_penguin_page_with_no_race_field_buckets_from_its_category(self):
+        self.assertEqual(gen.bucket_from_categories(["Category:Penguins"]), "Penguin")
+
 
 if __name__ == "__main__":
     unittest.main()

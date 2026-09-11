@@ -64,12 +64,12 @@ public class NpcVoiceResolverTest {
 
     VoiceSpec spec =
         resolver.resolve(
-            "Penguin",
-            identity(202, attributes("Penguin", "Female", AttributeSource.LEARNED), false));
+            "Merfolk",
+            identity(202, attributes("Merfolk", "Female", AttributeSource.LEARNED), false));
 
     assertEquals("an unrecognised race voices as human", NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.FEMALE, spec.gender());
-    verify(learning).considerLearning(202, "Penguin");
+    verify(learning).considerLearning(202, "Merfolk");
   }
 
   @Test
