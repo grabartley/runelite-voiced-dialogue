@@ -28,16 +28,16 @@ to it. A voice does not enter a pool on the strength of its catalog entry.
   their sub-pool, and the same NPC lands on the same voice in every session. Adult pools hold two
   voices, so the spread is variety rather than a guarantee that any two NPCs differ. A spec
   carrying no seed anchors to index 0.
-- **Every spec resolves.** An unknown gender is voiced as male. Three further fallbacks exist and
-  none is reachable today, so they are defence in depth rather than live behaviour: an unmapped
-  race goes to the player pool, though the resolver rewrites an unknown race to human before the
-  map is consulted; and an empty adult or child pool falls back to Charon or Puck respectively,
-  regardless of the spec's gender, though no pool is empty.
+- **Every spec resolves.** An unknown gender is voiced as male. Four further fallbacks exist and
+  none is reachable today, so they are defence in depth rather than live behaviour: a null spec
+  and an empty adult pool both resolve to Charon, an empty child pool to Puck, both regardless of
+  the spec's gender; and an unmapped race goes to the player pool, though the resolver rewrites an
+  unknown race to human before the map is consulted.
 
 ## The pools
 
-Voices are shared heavily: 22 of the 30 appear in more than one pool, and two pairs of races draw
-identical pools. The table is the casting, and rows that share a pool share a line rather than
+Voices are shared heavily: 22 of the 30 appear in more than one race pool, and two pairs of races
+draw identical pools. The table is the casting, and rows that share a pool share a line rather than
 being described twice.
 
 | Race | Male | Female |
@@ -73,28 +73,34 @@ bucketing.
 
 ## Depth is the organising axis
 
-Depth comes from the catalog's character adjectives, confirmed by ear. Gravelly (Algenib), firm
-(Alnilam, Orus), even (Schedar) and breathy (Enceladus) are the deep end. Upbeat (Puck) and casual
-(Zubenelgenubi) are the bright end. Informative (Charon, Rasalgethi) and knowledgeable
-(Sadaltager) sit between them: they read measured rather than low, and carry weight through
-delivery rather than pitch, which is why Charon anchors both the human pool and the wizards.
+Depth comes from the catalog's character adjectives, confirmed by ear. Naming the male voices,
+since they are where the adjectives divide most cleanly: gravelly (Algenib), firm (Alnilam,
+Orus), even (Schedar) and breathy (Enceladus) are the deep end; upbeat (Puck) and casual
+(Zubenelgenubi) are the bright end; informative (Charon, Rasalgethi) and knowledgeable
+(Sadaltager) sit between them, reading measured rather than low and carrying weight through
+delivery rather than pitch, which is why Charon can anchor the plain human pool and still sit in
+the wizard one. The female pools follow the same ordering by ear.
 
 Big, imposing races take the deep end so they sound large rather than high-pitched. Small ones
-stay bright, so a scuttling crab never reads as something standing over you. The undead anchor on
-the breathy voice, which reads hollow rather than merely low.
+stay bright, so a scuttling crab never reads as something standing over you. The undead male
+anchor is the breathy voice, which reads hollow rather than merely low.
 
 ## Where a pool is borrowed
 
-Most races have a pool assembled for them. These take another race's instead, and the borrowing is
-the casting decision:
+Most races have a pool assembled for them. These draw theirs from elsewhere in the map instead,
+and the borrowing is itself the casting decision:
 
+- **Tortugans** take the player male pool unchanged and the wizard female pool unchanged. Both
+  read relaxed and mid-depth rather than characterful, which suits warm island folk who are
+  otherwise plain people.
 - **Citizens of Arceuus** take the elf pool unchanged. Its refined, clear timbres carry an
   incorporeal delivery better than the earthier human voices.
 - **Aranei** keep one undead voice per gender, Enceladus and Achernar, and pair each with a clear
   one. The breathiness carries their hushed, telepathic delivery; the clear half keeps them
   sounding like a living species.
-- **Dogs** pair the monkey pool's forward, excitable voices with the deepest anchors, so a bark
-  lands as a sound with an animal behind it rather than as a word read aloud.
+- **Dogs** anchor on the monkey pool's excitable and forward voices and pair each with one from
+  the deep end, so a bark lands as a sound with an animal behind it rather than as a word read
+  aloud.
 - **Crabs** take one goblin voice and one monkey voice in each gender, which keeps them small and
   quick without making them sound like goblins outright.
 - **Penguins** take the goblin male pool unchanged, where the upbeat anchor carries the waddling
