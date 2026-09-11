@@ -6,7 +6,6 @@ import static org.junit.Assert.assertEquals;
 import com.google.gson.Gson;
 import org.junit.Test;
 
-/** Reading the {@code google.rpc.RetryInfo} wait a Gemini API 429 states. */
 public class AiStudioRetryInfoTest {
 
   private final Gson gson = new Gson();
@@ -32,7 +31,6 @@ public class AiStudioRetryInfoTest {
 
   @Test
   public void aQuotaFailureAheadOfTheHintDoesNotHideIt() {
-    // The shape Google really sends: the quota violation first, the retry hint behind it.
     byte[] body =
         AiStudioResponses.quotaFailure(
                 "GenerateRequestsPerDayPerProjectPerModel", "", "100", "gemini-3.1-flash-tts")

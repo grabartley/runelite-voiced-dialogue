@@ -11,12 +11,6 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import org.junit.Test;
 
-/**
- * The short-constructor defaults and the routing flags carried alongside the spoken line: a bare
- * request must produce a translating, non-speculative NPC line, and {@code withEmotion} must carry
- * every flag through so a re-emotioned copy is not silently re-translated, re-classed, or
- * re-counted as a line the player heard.
- */
 public class SynthesisRequestTest {
 
   private static final VoiceSpec VOICE = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);

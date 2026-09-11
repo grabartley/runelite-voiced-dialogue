@@ -4,12 +4,6 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import net.runelite.api.NPC;
 
-/**
- * Resolves a dialogue name to the NPC behind it once per line: the world entity, its detected
- * attributes, and the keyword categories its name matches. The voice and the character profile then
- * read that one result, so a line costs a single world scan and a single table lookup no matter how
- * many decisions ride on it.
- */
 final class NpcIdentityResolver {
 
   private final NpcFinder npcFinder;

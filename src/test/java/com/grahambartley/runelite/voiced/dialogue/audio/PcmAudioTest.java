@@ -22,7 +22,6 @@ public class PcmAudioTest {
 
   @Test
   public void usesLittleEndianByteOrder() {
-    // +1.0 maps to 32767 = 0x7FFF -> low byte 0xFF, high byte 0x7F
     byte[] pcm = PcmAudio.toPcm16LE(new float[] {1f});
     assertEquals((byte) 0xFF, pcm[0]);
     assertEquals((byte) 0x7F, pcm[1]);
@@ -37,7 +36,6 @@ public class PcmAudioTest {
 
   @Test
   public void clampsValuesBelowNegativeOne() {
-    // -1.0 maps to -32767 = 0x8001 -> low byte 0x01, high byte 0x80
     byte[] pcm = PcmAudio.toPcm16LE(new float[] {-5f});
     assertEquals((byte) 0x01, pcm[0]);
     assertEquals((byte) 0x80, pcm[1]);

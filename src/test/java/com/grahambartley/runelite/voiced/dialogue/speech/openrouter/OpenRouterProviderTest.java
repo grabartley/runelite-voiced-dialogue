@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import com.google.gson.JsonObject;
 import org.junit.Test;
 
-/** The shared provider preferences block pins throughput routing on every call. */
 public class OpenRouterProviderTest {
 
   @Test

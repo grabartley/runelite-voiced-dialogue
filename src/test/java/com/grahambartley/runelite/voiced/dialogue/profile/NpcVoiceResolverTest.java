@@ -17,10 +17,6 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import org.junit.Test;
 
-/**
- * A resolved NPC identity to a {@link VoiceSpec}, including detection-failure fallbacks and
- * learning.
- */
 public class NpcVoiceResolverTest {
 
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);

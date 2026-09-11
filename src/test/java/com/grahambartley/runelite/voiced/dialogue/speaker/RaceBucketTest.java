@@ -8,10 +8,6 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * Pins the whole race pipeline both stages share: raw wiki race text to the bucket name stored in
- * the tables, and that bucket name on to the race that picks the voice.
- */
 @RunWith(JUnitParamsRunner.class)
 public class RaceBucketTest {
 
@@ -44,14 +40,12 @@ public class RaceBucketTest {
       new Object[] {"Imp", "Demon", NpcRace.DEMON},
       new Object[] {"Hellhound", "Demon", NpcRace.DEMON},
       new Object[] {"Skeleton Hellhound", "Undead", NpcRace.UNDEAD},
-      // Case and surrounding words do not matter, and the distinctive race wins over "human".
       new Object[] {"GHOST", "Undead", NpcRace.UNDEAD},
       new Object[] {"Human/Elf hybrid", "Elf", NpcRace.ELF},
       new Object[] {"[[Aranei]]", "Aranei", NpcRace.ARANEI},
       new Object[] {"[[Dog]]", "Dog", NpcRace.DOG},
       new Object[] {"Crab", "Crab", NpcRace.CRAB},
       new Object[] {"Crabs", "Crab", NpcRace.CRAB},
-      // The Crab Quest pages spell the race as a piped disambiguation link.
       new Object[] {"[[Crab (disambiguation)|Crab]]", "Crab", NpcRace.CRAB},
       new Object[] {"Penguin", "Penguin", NpcRace.PENGUIN},
       new Object[] {"Penguins", "Penguin", NpcRace.PENGUIN},
@@ -69,7 +63,6 @@ public class RaceBucketTest {
 
   private Object[] storedRaceKeywordCases() {
     return new Object[] {
-      // A hound dragged back from the grave or out of the abyss is that before it is a dog.
       new Object[] {"Undead dog", NpcRace.UNDEAD},
       new Object[] {"Demonic dog", NpcRace.DEMON},
       new Object[] {"Hellhound", NpcRace.DEMON},

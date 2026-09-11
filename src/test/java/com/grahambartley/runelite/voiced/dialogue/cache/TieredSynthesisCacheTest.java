@@ -28,7 +28,6 @@ public class TieredSynthesisCacheTest {
   private static final CacheKey KEY =
       new CacheKey("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
 
-  /** Counts disk-tier reads so tier promotion is observable. */
   private static final class CountingDiskCache extends DiskAudioCache {
     final AtomicInteger gets = new AtomicInteger();
 
@@ -68,8 +67,6 @@ public class TieredSynthesisCacheTest {
     Pcm synthed = pcm(0.5f);
     synthOnce(new TieredSynthesisCache(8, disk), KEY, synthed);
 
-    // A brand new cache over the same directory has an empty memory tier, so a hit here can only
-    // have come from disk.
     TieredSynthesisCache nextSession = new TieredSynthesisCache(8, new DiskAudioCache(cacheDir()));
     Pcm read = nextSession.lookup(KEY);
     assertNotNull("the line survives into a fresh session", read);
@@ -119,8 +116,6 @@ public class TieredSynthesisCacheTest {
 
   @Test
   public void concurrentIdenticalSynthsIssueExactlyOneBackendCall() throws Exception {
-    // Two callers reach the synth step for the same key at once (a real cloud call is slow). The
-    // first must be the only one billed; the second waits on and reuses its result.
     TieredSynthesisCache cache = new TieredSynthesisCache(8, null);
     CountDownLatch entered = new CountDownLatch(1);
     CountDownLatch release = new CountDownLatch(1);
@@ -153,8 +148,6 @@ public class TieredSynthesisCacheTest {
         new Thread(
             () -> second.set(cache.withInFlight(KEY, slowSynth, () -> waiterWasDeduped.set(true))));
     waiter.start();
-    // Wait until the waiter is parked inside the in-flight future, so releasing the owner cannot
-    // race ahead and let the waiter register itself as a second owner.
     while (waiter.getState() != Thread.State.WAITING) {
       Thread.onSpinWait();
     }
@@ -171,8 +164,6 @@ public class TieredSynthesisCacheTest {
 
   @Test
   public void aKeyIsSynthesizableAgainOnceTheFirstSynthFinishes() {
-    // The in-flight registration must be cleared in a finally, or a failed synth would wedge the
-    // key forever.
     TieredSynthesisCache cache = new TieredSynthesisCache(8, null);
 
     try {
@@ -183,7 +174,6 @@ public class TieredSynthesisCacheTest {
           },
           () -> {});
     } catch (IllegalStateException expected) {
-      // The caller sees the failure; the registry must not keep the key.
     }
 
     Pcm retry = pcm(0.9f);

@@ -10,16 +10,10 @@ import com.google.gson.Gson;
 import com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioQuotaFailure.Period;
 import org.junit.Test;
 
-/**
- * Reading the {@code google.rpc.QuotaFailure} violation out of a Gemini API 429 and wording the
- * player's notice from it.
- */
 public class AiStudioQuotaFailureTest {
 
-  /** A billed key that ran out of the model's per-day request allowance. */
   private static final String PAID_DAILY_CAP = AiStudioResponses.dailyCapExhausted();
 
-  /** The same rejection on a key that has never had billing enabled. */
   private static final String FREE_TIER_CAP =
       AiStudioResponses.quotaFailure(
           "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
@@ -120,7 +114,6 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void markupInAReportedValueCannotBreakTheChatLine() {
-    // The notice is wrapped in a colour tag, so an angle bracket would run past the message.
     String notice =
         noticeFor(AiStudioResponses.quotaFailure("GenerateRequestsPerDay", "", "1<0>0", "<b>"));
 
@@ -147,7 +140,6 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void aFreeTierPerMinuteLimitIsStillAPauseRatherThanAnAccountProblem() {
-    // The most common free-tier 429: a per-minute ceiling, not the daily allowance.
     String notice =
         noticeFor(
             quota(
@@ -206,7 +198,6 @@ public class AiStudioQuotaFailureTest {
     assertTrue(logged.contains("model=gemini-3.1-flash-tts"));
   }
 
-  /** A quota failure whose {@code violations} field carries {@code value}, whatever shape it is. */
   private static String violations(String value) {
     return "{\"error\": {\"code\": 429, \"details\": [{\"@type\":"
         + " \"type.googleapis.com/google.rpc.QuotaFailure\", \"violations\": "
@@ -214,7 +205,6 @@ public class AiStudioQuotaFailureTest {
         + "}]}}";
   }
 
-  /** A rejection whose violation carries only an id and a metric, with a nominal cap of 10. */
   private static String quota(String quotaId, String quotaMetric) {
     return AiStudioResponses.quotaFailure(quotaId, quotaMetric, "10", "");
   }

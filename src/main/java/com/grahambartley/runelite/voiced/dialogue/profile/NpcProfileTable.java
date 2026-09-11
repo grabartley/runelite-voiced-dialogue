@@ -11,31 +11,11 @@ import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Resolves the character voice profiles bundled in {@code /npc-voices.json} under the top-level
- * {@code profiles} key (produced offline by {@code tools/generate_npc_voices.py} from {@code
- * tools/profiles.json}), which {@link NpcProfileParser} loads.
- *
- * <p>Resolution <em>combines</em> every matching layer: {@code default} (always complete), {@code
- * byRace[race]}, {@code byEthnicity[ethnicity]}, <em>every</em> {@code byCategory} entry whose
- * keyword word-matches the display name, and {@code byId[npcId]}. An NPC can be several things at
- * once (a Fremennik human, a ghost pirate), so all matches contribute: {@code style} accumulates
- * across the layers, while {@code name}, {@code accent}, and {@code pace} take the most specific
- * layer that sets them. A bespoke per-NPC entry therefore need only carry what is unique (usually a
- * {@code name} and a {@code style}); the rest falls through to the category, race, or British
- * default. Every NPC resolves to a complete {@link CharacterProfile}, whether or not it has a
- * bespoke entry.
- *
- * <p>The player is resolved separately: the {@code player} layer over the default, with the three
- * configured player fields (accent/style/pace) overriding when non-blank. The narrator is resolved
- * the same way from the {@code narrator} layer, but takes no configured fields.
- */
 @Slf4j
 public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
 
-  /** The resolved profile plus the layer that won, for debug logging. */
   @Value
   @Accessors(fluent = true)
   public static class Resolution {
@@ -43,10 +23,6 @@ public final class NpcProfileTable {
     String source;
   }
 
-  /**
-   * The keyword categories one display name matches, resolved once per line and read by both the
-   * voice (life stage) and the profile (layers).
-   */
   public static final class NameMatch {
 
     static final NameMatch NONE = new NameMatch(Collections.emptyList());
@@ -57,11 +33,6 @@ public final class NpcProfileTable {
       this.rules = rules;
     }
 
-    /**
-     * Whether the name matches a child keyword category ({@code "lifeStage": "child"}), so
-     * generically named children (Child, Schoolboy, Street urchin, ...) voice from the youthful
-     * sub-pool without a per-id table entry.
-     */
     public boolean child() {
       for (CategoryRule rule : rules) {
         if (rule.child()) {
@@ -72,7 +43,6 @@ public final class NpcProfileTable {
     }
   }
 
-  /** One contributing layer and the label naming it in the debug trace. */
   private static final class MatchedLayer {
     private final Layer layer;
     private final String source;
@@ -83,10 +53,6 @@ public final class NpcProfileTable {
     }
   }
 
-  /**
-   * Neutralizes the three free-text player direction fields (injection break-out + profanity)
-   * before they are baked into the player {@link CharacterProfile}. Unconditional, no toggle.
-   */
   private final DirectionSanitizer directionSanitizer;
 
   private NpcProfileLayers layers = NpcProfileLayers.EMPTY;
@@ -100,7 +66,6 @@ public final class NpcProfileTable {
     this.directionSanitizer = directionSanitizer;
   }
 
-  /** Loads the {@code profiles} section from the bundled resource. */
   public void initialize() {
     NpcProfileLayers parsed = NpcProfileParser.loadResource(TABLE_RESOURCE);
     if (parsed == null) {
@@ -117,7 +82,6 @@ public final class NpcProfileTable {
         layers.byId().size());
   }
 
-  /** Test seam: build a table directly from a parsed {@code profiles} object. */
   static NpcProfileTable fromProfilesJson(JsonObject profiles) {
     NpcProfileTable table = new NpcProfileTable();
     table.layers = NpcProfileParser.parse(profiles);
@@ -125,7 +89,6 @@ public final class NpcProfileTable {
     return table;
   }
 
-  /** Every category whose keyword is in the display name, in declaration order (may be empty). */
   public NameMatch matchName(String npcName) {
     if (npcName == null || npcName.isEmpty()) {
       return NameMatch.NONE;
@@ -143,26 +106,10 @@ public final class NpcProfileTable {
     return new NameMatch(matches);
   }
 
-  /**
-   * Resolves the complete profile for an NPC by <em>combining</em> every matching layer: the race
-   * bucket, the ethnicity accent, every keyword category the display name matched, and the per-NPC
-   * override. An NPC can be more than one thing at once (a Fremennik human, a ghost pirate), so all
-   * matches contribute. {@code style} accumulates across every contributing layer so the persona
-   * blends; {@code name}, {@code accent}, and {@code pace} are single-valued, so the most specific
-   * layer that sets each one wins (per-NPC override, then the last matching category, then race,
-   * then the default), which keeps a coherent accent and pace rather than stacking contradictory
-   * directions. Never returns {@code null}.
-   *
-   * @param npcId the live NPC id, or {@code null} when unknown (no bespoke override is applied)
-   * @param nameMatch the categories the display name matched, from {@link #matchName(String)}
-   * @param race the resolved race bucket (e.g. {@code "Troll"}), may be {@code null}
-   * @param ethnicity the NPC's ethnicity accent key (e.g. {@code "kharidian"}), may be {@code null}
-   */
   public Resolution resolveNpc(Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
     return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity));
   }
 
-  /** The contributing layers, least specific first, so a later layer wins single-valued fields. */
   private List<MatchedLayer> collectLayers(
       Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
     List<MatchedLayer> matched = new ArrayList<>();
@@ -171,8 +118,6 @@ public final class NpcProfileTable {
     if (raceLayer != null) {
       matched.add(new MatchedLayer(raceLayer, "race:" + race));
     }
-    // Ethnicity tints only the plain folk (Human / unknown race); a distinctive race keeps its own
-    // accent wherever it is found, so a dwarf stays gruff and Scottish even in the desert.
     boolean plainRace =
         race == null || race.equalsIgnoreCase("Human") || race.equalsIgnoreCase("Unknown");
     Layer ethnicityLayer =
@@ -221,13 +166,6 @@ public final class NpcProfileTable {
     return new Resolution(new CharacterProfile(name, accent, style, pace), source);
   }
 
-  /**
-   * Resolves the player's profile: the {@code player} layer over the default, then the three
-   * configured fields overriding when non-blank. Each configured field is run through {@link
-   * DirectionSanitizer} first, so newline/marker injection and profanity can never reach the
-   * prompt; a field that sanitizes down to blank falls back to the layer default rather than
-   * emitting an empty direction. The player's name label is never overridden by config.
-   */
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {
     CharacterProfile base = apply(layers.defaultProfile(), layers.playerLayer());
     return new CharacterProfile(
@@ -237,11 +175,6 @@ public final class NpcProfileTable {
         sanitizedOr(pace, base.pace()));
   }
 
-  /**
-   * Resolves the narrator's profile: the {@code narrator} layer over the default. It takes no
-   * configured fields, so the narrator sounds the same in every session and its lines keep a stable
-   * cache key.
-   */
   public CharacterProfile resolveNarrator() {
     return apply(layers.defaultProfile(), layers.narratorLayer());
   }
@@ -254,16 +187,10 @@ public final class NpcProfileTable {
     return isBlank(sanitized) ? fallback : sanitized;
   }
 
-  /** Whether the bundled {@code profiles} section loaded successfully. */
   public boolean isLoaded() {
     return loaded;
   }
 
-  /**
-   * Whether {@code haystack} contains {@code needle} bounded by non-letters on both sides, so
-   * {@code "imp"} matches "Imp" and "Imp Catcher" but not "important", and a hyphen counts as a
-   * boundary. Both arguments are expected already lower-cased.
-   */
   static boolean wordContains(String haystack, String needle) {
     if (needle.isEmpty()) {
       return false;

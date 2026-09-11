@@ -26,11 +26,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-/**
- * The single place a dialogue, narration, or public-chat line becomes a {@link SynthesisRequest}:
- * the resolved speaker, emotion, player flag, and the cave-echo gate are all assembled here, behind
- * one availability guard, and handed to the off-thread audio service.
- */
 public class SynthesisDispatcherTest {
 
   private final VoiceManager voiceManager = mock(VoiceManager.class);

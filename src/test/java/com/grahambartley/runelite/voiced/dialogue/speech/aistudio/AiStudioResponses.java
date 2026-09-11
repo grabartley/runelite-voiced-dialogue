@@ -10,40 +10,32 @@ import java.util.Base64;
 import java.util.List;
 import okhttp3.mockwebserver.MockResponse;
 
-/** The Gemini API response documents the Google AI Studio tests serve from their mock server. */
 final class AiStudioResponses {
 
-  /** The wait a real per-model daily cap stated, carried by every quota rejection below. */
   static final String DAILY_CAP_RETRY_DELAY = "2917s";
 
   private AiStudioResponses() {}
 
-  /** A 200 carrying {@code body}, the shape every successful mocked call takes. */
   static MockResponse ok(String body) {
     return new MockResponse().setResponseCode(HttpURLConnection.HTTP_OK).setBody(body);
   }
 
-  /** A 429 carrying {@code body}, the shape every mocked rejection takes. */
   static MockResponse tooManyRequests(String body) {
     return new MockResponse().setResponseCode(CloudHttp.HTTP_TOO_MANY_REQUESTS).setBody(body);
   }
 
-  /** The 429 a billed key hits once the model's daily request allowance is gone. */
   static MockResponse quotaRejection() {
     return tooManyRequests(dailyCapExhausted());
   }
 
-  /** A complete response carrying the samples as one base64 inlineData part. */
   static String audio(short[] samples) {
     return audioDocument(TestPcm.raw(samples), "STOP");
   }
 
-  /** A complete response whose usageMetadata reports what the API metered for the call. */
   static String audioWithUsage(short[] samples, long audioTokens, long textTokens) {
     return withUsage(audio(samples), audioTokens, textTokens);
   }
 
-  /** Folds a usageMetadata block into an existing response document. */
   static String withUsage(String document, long audioTokens, long textTokens) {
     JsonObject detail = new JsonObject();
     detail.addProperty("modality", "AUDIO");
@@ -59,7 +51,6 @@ final class AiStudioResponses {
     return body.toString();
   }
 
-  /** One response document carrying the raw audio bytes, and a finish reason when it ends. */
   static String audioDocument(byte[] audioBytes, String finishReason) {
     JsonObject inlineData = new JsonObject();
     inlineData.addProperty("mimeType", "audio/L16;codec=pcm;rate=24000");
@@ -69,7 +60,6 @@ final class AiStudioResponses {
     return candidates(part, finishReason);
   }
 
-  /** One SSE event per audio chunk, the last carrying the finish reason. */
   static String sse(List<byte[]> chunks, String finishReason) {
     StringBuilder sse = new StringBuilder();
     for (int i = 0; i < chunks.size(); i++) {
@@ -79,17 +69,12 @@ final class AiStudioResponses {
     return sse.toString();
   }
 
-  /** A complete response from the translation model, whose single part is text. */
   static String translation(String content) {
     JsonObject textPart = new JsonObject();
     textPart.addProperty("text", content);
     return candidates(textPart, "STOP");
   }
 
-  /**
-   * A 429 rejection reporting one quota violation, alongside the {@code RetryInfo} detail Google
-   * sends with it. Any field may be blank, which omits it as a sparse response would.
-   */
   static String quotaFailure(String quotaId, String quotaMetric, String quotaValue, String model) {
     JsonObject violation = new JsonObject();
     addIfPresent(violation, "quotaId", quotaId);
@@ -112,7 +97,6 @@ final class AiStudioResponses {
     return rejection(details);
   }
 
-  /** The rejection a billed key gets once the model's daily request allowance is gone. */
   static String dailyCapExhausted() {
     return quotaFailure(
         "GenerateRequestsPerDayPerProjectPerModel",
@@ -121,16 +105,12 @@ final class AiStudioResponses {
         "gemini-3.1-flash-tts");
   }
 
-  /**
-   * A 429 whose only detail is the wait it states, as a protobuf duration such as {@code 2917s}.
-   */
   static String statedRetryDelay(String retryDelay) {
     JsonArray details = new JsonArray();
     details.add(retryInfo(retryDelay));
     return rejection(details);
   }
 
-  /** A 429 that states only that the resource is exhausted, with no quota details at all. */
   static String quotaExhausted() {
     return rejection(null);
   }
@@ -161,7 +141,6 @@ final class AiStudioResponses {
     }
   }
 
-  /** The single-candidate, single-part envelope every response above shares. */
   private static String candidates(JsonObject part, String finishReason) {
     JsonArray parts = new JsonArray();
     parts.add(part);

@@ -16,11 +16,6 @@ import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * Covers the cave-echo seams: {@link CaveEchoPolicy#isUndergroundPoint(WorldPoint)}, the coordinate
- * predicate behind underground detection; {@link CaveEchoPolicy#isUnderground()}, the client read
- * that feeds the gate; and {@link CaveEchoPolicy#shouldEcho()}, the gate itself.
- */
 @RunWith(JUnitParamsRunner.class)
 public class CaveEchoPolicyTest {
 

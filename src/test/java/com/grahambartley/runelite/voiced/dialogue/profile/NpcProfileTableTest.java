@@ -8,9 +8,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.Test;
 
-/**
- * Combining resolution: default + race + ethnicity + every matching keyword category + per-NPC id.
- */
 public class NpcProfileTableTest {
 
   private static final String JSON =
@@ -66,7 +63,6 @@ public class NpcProfileTableTest {
 
   @Test
   public void ethnicityAccentTintsPlainFolkOverTheRaceAccent() {
-    // A desert human: ethnicity tints the accent over the human default, persona unchanged.
     NpcProfileTable.Resolution r = resolve(table(), null, "Desert Trader", "Human", "kharidian");
     assertEquals("race:Human+ethnicity:kharidian", r.source());
     assertEquals(
@@ -77,7 +73,6 @@ public class NpcProfileTableTest {
 
   @Test
   public void ethnicityIsSkippedForDistinctiveRaces() {
-    // A dwarf-equivalent (Troll here) in the desert keeps its racial accent, not the ethnicity's.
     NpcProfileTable.Resolution r = resolve(table(), null, "Desert Troll", "Troll", "kharidian");
     assertEquals("ethnicity is not applied to a distinctive race", "race:Troll", r.source());
     assertEquals("Brixton.", r.profile().accent());
@@ -85,7 +80,6 @@ public class NpcProfileTableTest {
 
   @Test
   public void aKeywordCategoryStillBeatsTheEthnicityAccent() {
-    // A vampyre in the desert: the distinctive category accent beats the ethnicity one.
     NpcProfileTable.Resolution r = resolve(table(), null, "Feral Vampyre", "Human", "kharidian");
     assertEquals("race:Human+ethnicity:kharidian+keyword:vampyre", r.source());
     assertEquals("Transylvanian.", r.profile().accent());

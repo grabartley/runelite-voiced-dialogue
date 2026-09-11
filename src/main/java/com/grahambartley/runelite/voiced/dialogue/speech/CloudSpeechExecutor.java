@@ -18,107 +18,59 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-/**
- * The provider-neutral control flow of a cloud speech call, shared by every cloud TTS backend: the
- * availability check and optional translation hop that prepare the spoken input, the buffered and
- * streaming retry loops with their one-time notices and {@link CloudSynthTrace} logging, the
- * rate-limit back-off, the completeness gate that keeps a clipped line out of the cache, and the
- * cache-variant key. A backend supplies one {@link Ops} implementation carrying only its provider
- * quirks: payload shape, transport, body decoding, and notice wording.
- */
 @Slf4j
 public final class CloudSpeechExecutor {
 
-  /**
-   * One speech call plus a single retry, for a transient empty, truncated, or timed-out line (the
-   * retry after a timeout is spaced by a backoff, the others are immediate).
-   */
   public static final int MAX_SPEECH_ATTEMPTS = 2;
 
-  /** The provider-specific half of a speech call. */
   public interface Ops {
 
-    /** The provider's configured API key, untrimmed; blank means the backend is unavailable. */
     public String apiKey();
 
-    /** The user-facing notice surfaced on every line attempted without an API key. */
     String missingKeyNotice();
 
-    /**
-     * Translates the capped line into the target language, recording the hop's spend on success.
-     * Returns {@code null} on failure, which fails the whole line.
-     */
     String translate(String text, String language, String apiKey);
 
-    /** Called when a profile block leads the input, before the debug trace is emitted. */
     default void profileApplied(CharacterProfile profile) {}
 
-    /** Builds the provider's request payload and HTTP request(s) for the prepared spoken line. */
     PreparedSpeech buildRequests(SpokenLine line, SynthesisRequest request);
 
-    /** Issues one HTTP attempt (e.g. under a per-line call budget). */
     Call newCall(Request httpRequest, int inputLen);
 
-    /** The response's generation id, or {@code ""} for a provider whose responses carry none. */
     default String generationId(Response response) {
       return "";
     }
 
-    /** Decodes a whole buffered response body into audio. */
     DecodedSpeech decodeBuffered(byte[] bytes, PreparedSpeech prepared);
 
-    /** A fresh per-attempt reader of the provider's streaming response body. */
     StreamDrain newStreamDrain();
 
-    /**
-     * Records a streamed line's spend as its first audio reaches the sink, for a provider billed
-     * per call rather than per metered token.
-     */
     default void recordSpendOnFirstChunk(PreparedSpeech prepared) {}
 
-    /**
-     * The one-time user notice for a non-2xx speech response. {@code body} is the rejection's own
-     * bytes, which is where a provider states the cause it should be worded from.
-     */
     String failureNotice(int httpCode, byte[] body);
 
-    /**
-     * How long a 429's body says to wait, in milliseconds, or 0 when it says nothing. Read from the
-     * body because the shape is the provider's own; the {@code Retry-After} header is read for
-     * every provider alike.
-     */
     default long statedWaitMillis(byte[] body) {
       return 0;
     }
 
-    /** The one-time user notice for a 2xx response that carried no audio at all. */
     String emptyBodyNotice();
   }
 
-  /** Reads one provider's streaming body, handing raw audio chunks to the shared accumulator. */
   public interface StreamDrain {
 
-    /** Reads the whole response body, passing each raw audio chunk to {@code chunk}. */
     void drain(ResponseBody body, ChunkSink chunk) throws IOException;
 
-    /** Whether the provider's own end-of-stream signal marked the line complete. */
     default boolean finishedCleanly() {
       return true;
     }
 
-    /**
-     * Records the drained line's spend, for a provider whose token totals only complete as the
-     * stream drains.
-     */
     default void bankSpend(PreparedSpeech prepared) {}
   }
 
-  /** One raw audio chunk read off a streaming body. */
   public interface ChunkSink {
     void accept(byte[] bytes, int len);
   }
 
-  /** The shared preparation of a line: trimmed key, final spoken input, and pace. */
   public static final class SpokenLine {
     public final String apiKey;
     public final String input;
@@ -136,7 +88,6 @@ public final class CloudSpeechExecutor {
     }
   }
 
-  /** The built speech request(s) plus the values both response loops need. */
   public static final class PreparedSpeech {
     final Request buffered;
     final Request streaming;
@@ -153,22 +104,18 @@ public final class CloudSpeechExecutor {
       this.prefetch = prefetch;
     }
 
-    /** For a provider whose buffered and streaming paths POST the same request. */
     public PreparedSpeech(Request request, double speedRatio, int inputLen, boolean prefetch) {
       this(request, request, speedRatio, inputLen, prefetch);
     }
   }
 
-  /** A buffered body decoded: how much audio it carried, and the PCM if it was decodable. */
   public static final class DecodedSpeech {
 
-    /** A response that carried no audio at all (retried once, like an empty body). */
     public static final DecodedSpeech EMPTY = new DecodedSpeech(null, 0, () -> {});
 
     final Pcm pcm;
     final int audioBytes;
 
-    /** Records this call's spend; run only once the line is confirmed complete. */
     final Runnable bankSpend;
 
     public DecodedSpeech(Pcm pcm, int audioBytes, Runnable bankSpend) {
@@ -205,7 +152,6 @@ public final class CloudSpeechExecutor {
     return backoff.isThrottled();
   }
 
-  /** Drops a rate-limit window earned under credentials or a provider that have since changed. */
   public void clearRateLimit() {
     backoff.reset();
   }
@@ -236,16 +182,7 @@ public final class CloudSpeechExecutor {
     return runStreaming(prepared, sink);
   }
 
-  /**
-   * Builds the speech call shared by the buffered and streaming paths: availability check, optional
-   * translation hop, emotion styling, character-profile block, and pace. Returns {@code null} when
-   * the line cannot be voiced at all: the provider is inside a wait it stated, there is no API key,
-   * or the translation failed. The first of those is silent, since the notice that opened the
-   * window already said what happened; the other two surface their one-time notice.
-   */
   private PreparedSpeech prepare(SynthesisRequest request) {
-    // The provider named the moment it will serve again, so a call made before then is a rejection
-    // already: it earns another 429, another log line, and another notice, and voices nothing.
     if (backoff.isRefusing()) {
       log.debug("[TTS cloud] {} asked to be left alone; this line was not voiced", providerName);
       return null;
@@ -257,11 +194,6 @@ public final class CloudSpeechExecutor {
     }
     String apiKey = rawKey.trim();
     String text = request.text();
-    // A non-English target language (or a global quirk) routes the line through the translation
-    // model before it is voiced, so the spoken transcript is the transformed text. A failed
-    // translation fails the line rather than voicing the wrong language or caching a
-    // mistranslation under the language key. A skip-translation request (public chat) is voiced
-    // exactly as typed, so it bypasses the hop.
     String language = CloudTtsText.effectiveSpokenLanguage(config, request);
     boolean translating =
         CloudTtsText.needsTranslation(language) && !request.skipTranslation() && !text.isEmpty();
@@ -279,8 +211,6 @@ public final class CloudSpeechExecutor {
       spokenText = translated;
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
-    // The profile block sets the tone (accent/style/pace) and the emotion tag colours the moment;
-    // they compose, so the block leads and the emotion-tagged transcript follows the divider.
     CharacterProfile profile = request.profile();
     String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
     if (profile != null) {
@@ -313,20 +243,12 @@ public final class CloudSpeechExecutor {
         new SpokenLine(apiKey, input, translating, speedRatio, speed), request);
   }
 
-  /**
-   * The buffered path: one speech call, the whole body read and decoded at once. A transient empty
-   * or truncated line gets one immediate retry, a network timeout gets one backed-off retry, and
-   * every failure returns {@code null} after surfacing the one-time notice.
-   */
   private Pcm runBuffered(PreparedSpeech prepared) {
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
       long attemptStart = System.nanoTime();
       long backoffGeneration = backoff.generation();
       try (Response response = ops.newCall(prepared.buffered, prepared.inputLen).execute()) {
         ResponseBody body = response.body();
-        // Read the bytes once; on any failure they are the diagnostic payload (a provider error is
-        // usually returned as a JSON/text body, sometimes even with HTTP 200), so capturing them is
-        // the only way to see why a line was rejected rather than guessing.
         byte[] bytes = body == null ? CloudHttp.EMPTY_BODY : body.bytes();
         String contentType = CloudHttp.headerOrEmpty(response, "Content-Type");
         String generationId = ops.generationId(response);
@@ -385,10 +307,6 @@ public final class CloudSpeechExecutor {
               bytes);
           return null;
         }
-        // The response is transport-complete, but the model occasionally returns a line whose
-        // audio stops mid-utterance. A complete line releases into trailing silence; one that does
-        // not is rejected so a clipped clip is never cached or voiced. One retry recovers the
-        // common transient case.
         if (PcmCompleteness.isTruncated(decoded.pcm, prepared.speedRatio)) {
           if (attempt < MAX_SPEECH_ATTEMPTS) {
             log.debug(CloudSynthTrace.retry("truncated", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
@@ -421,17 +339,11 @@ public final class CloudSpeechExecutor {
         decoded.bankSpend.run();
         return decoded.pcm;
       } catch (ConnectException e) {
-        // The host is unreachable (connection refused / no route), almost certainly an offline
-        // client. Retrying only delays the failure, so the line fails fast.
         support.warnOnce(networkNotice());
         support.logNetworkFailure(
             "connect", attempt, CloudHttp.elapsedMs(attemptStart), prepared.inputLen, e);
         return null;
       } catch (IOException e) {
-        // A read/call timeout or a transient blip: a slow generation deserves a backed-off retry
-        // rather than being dropped on the first failure. The backoff waits on a synthesis-pool
-        // worker, never the game thread, and a second worker keeps serving the next line while
-        // this one waits.
         long elapsedMs = CloudHttp.elapsedMs(attemptStart);
         if (attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
@@ -452,14 +364,6 @@ public final class CloudSpeechExecutor {
     return null;
   }
 
-  /**
-   * The streaming path: the provider's drain reads the body incrementally, decoded chunks reach
-   * {@code sink} for immediate playback, and the whole line accumulates for caching. An empty body
-   * (nothing handed over yet) is retried like the buffered path; once any chunk has reached the
-   * sink the line is committed, so a mid-stream failure plays what arrived and is not retried. A
-   * line whose accumulated audio is incomplete still played but returns {@code null} so it is not
-   * cached, and re-fetches next time.
-   */
   private Pcm runStreaming(PreparedSpeech prepared, PcmSink sink) {
     int rate = model.sampleRate();
     for (int attempt = 1; attempt <= MAX_SPEECH_ATTEMPTS; attempt++) {
@@ -471,8 +375,6 @@ public final class CloudSpeechExecutor {
         String contentType = CloudHttp.headerOrEmpty(response, "Content-Type");
         String generationId = ops.generationId(response);
         if (!response.isSuccessful()) {
-          // Read once: the body is a one-shot stream, and the wait hint, the notice, and the
-          // trace all need it.
           byte[] bytes = CloudHttp.errorBody(response);
           if (response.code() == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
             backoff.recordRateLimited(statedWait(response, bytes), backoffGeneration);
@@ -516,9 +418,6 @@ public final class CloudSpeechExecutor {
         }
         drain.bankSpend(prepared);
         if (config.debugMode()) {
-          // firstChunkMs is the streamed line's real time-to-first-sound; elapsedMs is the full
-          // body. A first chunk that lands nearly at elapsedMs means the provider sent the audio
-          // in one burst and streaming playback could not start any earlier.
           log.info(
               "{} firstChunkMs={}",
               CloudSynthTrace.success(
@@ -531,10 +430,6 @@ public final class CloudSpeechExecutor {
               acc.firstChunkMs);
         }
         Pcm pcm = new Pcm(flatten(acc.chunks, acc.sampleCount), rate);
-        // The audio already played through the sink; only return it for caching when it is a
-        // whole, complete line: the provider signalled a clean finish, no half sample is pending,
-        // and the tail releases into silence. There is no retry here since replaying would double
-        // it.
         if (!drain.finishedCleanly()
             || acc.decoder.hasPendingByte()
             || PcmCompleteness.isTruncated(pcm, prepared.speedRatio)) {
@@ -549,8 +444,6 @@ public final class CloudSpeechExecutor {
         return null;
       } catch (IOException e) {
         long elapsedMs = CloudHttp.elapsedMs(attemptStart);
-        // Retry only while no audio has played; once a chunk reached the sink, replaying the line
-        // would double it, so a mid-stream cut plays what arrived and fails without a retry.
         if (!acc.fedSink && attempt < MAX_SPEECH_ATTEMPTS) {
           log.debug(CloudSynthTrace.retry("network", attempt, MAX_SPEECH_ATTEMPTS, elapsedMs));
           support.backoffBeforeNetworkRetry(attempt);
@@ -570,11 +463,6 @@ public final class CloudSpeechExecutor {
     return null;
   }
 
-  /**
-   * The wait the rejection asked for: the {@code Retry-After} header, or the provider's own hint in
-   * the body. The longer of the two, so a response carrying both is honoured by whichever is
-   * further out rather than by whichever happened to be read first.
-   */
   private long statedWait(Response response, byte[] body) {
     return Math.max(CloudHttp.retryAfterMillis(response), ops.statedWaitMillis(body));
   }
@@ -583,7 +471,6 @@ public final class CloudSpeechExecutor {
     return providerName + " TTS request could not reach the network; this line was not voiced.";
   }
 
-  /** Decodes, plays, and accumulates one streaming attempt's raw audio chunks. */
   private final class Accumulator implements ChunkSink {
     final StreamingPcmDecoder decoder = new StreamingPcmDecoder();
     final List<float[]> chunks = new ArrayList<>();
@@ -609,10 +496,6 @@ public final class CloudSpeechExecutor {
       totalBytes += len;
       float[] chunk = decoder.decode(bytes, len);
       if (chunk.length > 0) {
-        // Feed playback first so it starts on the earliest samples, then keep the chunk for the
-        // cache. After a skip the sink drops the chunk cheaply, so the loop keeps draining the
-        // body to completion and the finished line is still cached, never re-billed on a later
-        // hearing.
         sink.accept(chunk, rate);
         if (!fedSink) {
           firstChunkMs = CloudHttp.elapsedMs(attemptStart);
@@ -625,7 +508,6 @@ public final class CloudSpeechExecutor {
     }
   }
 
-  /** Concatenates the decoded stream chunks into one sample buffer for caching. */
   private static float[] flatten(List<float[]> chunks, int totalSamples) {
     float[] out = new float[totalSamples];
     int pos = 0;

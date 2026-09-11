@@ -16,11 +16,6 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import org.junit.Test;
 
-/**
- * The per-tick narration scan: speaks each narration box once in the narrator voice, deduped per
- * box against the last text that box showed, reports whether one is open so the owner can drive its
- * interrupt edge, and goes fully silent when the toggle is off.
- */
 public class NarrationWatcherTest {
 
   private final Client client = mock(Client.class);

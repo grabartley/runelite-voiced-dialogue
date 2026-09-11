@@ -10,19 +10,6 @@ import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 
-/**
- * Scans the dialogue widgets each game tick and drives the speak/prefetch/interrupt flow: speaks a
- * new NPC or player line once (deduped per speaker against the last text that speaker said), warms
- * the visible options, and edge-triggers the close interrupt so audio is cut only on the
- * open-&gt;closed transition (not on every idle tick, which would truncate public-chat clips played
- * while walking around). Reads the client only on the game thread.
- *
- * <p>The narration boxes are scanned by the {@link NarrationWatcher} this owns, so they share that
- * one interrupt edge with the chat widgets rather than racing it from a second subscriber.
- *
- * <p>Also the single owner of whether a dialogue is open ({@link #isDialogueOpen()}), which the
- * chat-driven speakers read to keep the audio channel for the conversation in front of the player.
- */
 public final class DialogueWatcher {
 
   private final Client client;
@@ -84,10 +71,6 @@ public final class DialogueWatcher {
     }
     dialogueOpen = open;
 
-    // Reset prefetch only once the dialogue is fully gone (no text and no option list), so the
-    // session cap and queued warming survive the option-select screen. Edge-triggered like the
-    // interrupt above, because "fully closed" is also the state of every idle tick spent walking
-    // around, and re-cancelling on each of those would churn for nothing.
     boolean fullyClosed = !open && !optionsVisible;
     if (fullyClosed && !wasFullyClosed) {
       prefetchCoordinator.reset();
@@ -95,17 +78,6 @@ public final class DialogueWatcher {
     wasFullyClosed = fullyClosed;
   }
 
-  /**
-   * Whether an NPC or player dialogue, or a narration box being voiced, was open as of the last
-   * game tick. The option list is not counted, and a narration box counts only while narration is
-   * switched on, because {@link NarrationWatcher#tick()} reports closed when it is off. The single
-   * owner of that question, so a feature that must yield the audio channel to dialogue consults
-   * this instead of reading the same widgets a second time and drifting from it.
-   *
-   * <p>Sampled per tick, so between ticks it can lag the client by one. That is why it gates speech
-   * the player has just triggered, where a tick of lag is unnoticeable, and never the interrupt,
-   * which is edge-triggered from the live scan above.
-   */
   public boolean isDialogueOpen() {
     return dialogueOpen;
   }
@@ -124,11 +96,6 @@ public final class DialogueWatcher {
         widgetReader.headAnimationId(headWidgetId));
   }
 
-  /**
-   * Pure decision for the close interrupt: cut audio only on the open-&gt;closed transition, so the
-   * idle ticks while the player walks around (no dialogue open) never interrupt a playing
-   * public-chat clip. Factored out so it is unit-testable without a live client.
-   */
   static boolean shouldInterruptOnClose(boolean dialogueOpen, boolean wasDialogueOpen) {
     return wasDialogueOpen && !dialogueOpen;
   }

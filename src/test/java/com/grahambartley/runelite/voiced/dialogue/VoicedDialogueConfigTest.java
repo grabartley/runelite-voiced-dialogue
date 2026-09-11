@@ -13,20 +13,10 @@ import java.util.Set;
 import net.runelite.client.config.ConfigItem;
 import org.junit.Test;
 
-/**
- * Invariants of the {@link SpokenLanguage} dropdown, the single source of truth for languages, of
- * the provider tooltip that has to state Google AI Studio's daily ceiling, and of the config panel
- * itself: how long a description may run, and which stored keys may never move.
- */
 public class VoicedDialogueConfigTest {
 
   private static final int MAX_DESCRIPTION_CHARS = 120;
 
-  /**
-   * Voice Provider is the one tooltip allowed to run long: it carries the daily-ceiling disclosure
-   * {@code docs/architecture.md} requires of player-facing copy, and the billing disclosure {@code
-   * docs/hub-compliance-checklist.md} records as verified.
-   */
   private static final int DISCLOSURE_CHARS = 200;
 
   @Test
@@ -134,11 +124,6 @@ public class VoicedDialogueConfigTest {
     }
   }
 
-  /**
-   * A stored key is live user state on every existing install: renaming one silently resets that
-   * setting, and for a key folded into a character profile it also re-keys cached audio, which
-   * re-bills the player for lines they have already paid to synthesize.
-   */
   @Test
   public void profileSteeringKeysKeepTheirStoredNames() throws Exception {
     assertEquals(

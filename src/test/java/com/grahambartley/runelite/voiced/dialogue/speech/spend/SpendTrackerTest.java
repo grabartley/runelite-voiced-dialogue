@@ -13,7 +13,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
-/** The session counting rules behind {@code ::voicedspend}. */
 public class SpendTrackerTest {
 
   @Test

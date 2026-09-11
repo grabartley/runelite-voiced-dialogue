@@ -2,10 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 
-/**
- * Mutable {@link VoicedDialogueConfig} for synthesis tests: settable API keys, char cap, pace,
- * language, and speaking styles. Everything not overridden keeps the interface default.
- */
 public final class MutableTestConfig implements VoicedDialogueConfig {
 
   public String openRouterKey = "";

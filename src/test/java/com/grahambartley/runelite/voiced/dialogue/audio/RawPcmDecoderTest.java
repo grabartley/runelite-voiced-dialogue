@@ -9,7 +9,6 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** Decoding OpenRouter's headerless 16-bit LE mono PCM into Pcm at a known sample rate. */
 @RunWith(JUnitParamsRunner.class)
 public class RawPcmDecoderTest {
 
@@ -51,7 +50,6 @@ public class RawPcmDecoderTest {
     return new Object[] {
       new Object[] {null, 24_000},
       new Object[] {new byte[] {1}, 24_000},
-      // a non-positive rate is rejected
       new Object[] {TestPcm.raw(new short[] {1}), 0},
     };
   }

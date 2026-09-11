@@ -11,7 +11,6 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import org.junit.Test;
 
-/** The client-reading widget accessors behind dialogue detection. */
 public class DialogueWidgetReaderTest {
 
   private final Client client = mock(Client.class);

@@ -5,30 +5,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-/**
- * The token counts Google AI Studio reports for a call, read out of the {@code usageMetadata} block
- * of a {@code GenerateContentResponse}.
- *
- * <p>These are the quantities the Gemini API actually metered, so costing a session from them
- * leaves the published rate as the only modelled input.
- *
- * <p>Output is split by kind because the two are billed nowhere near alike: audio output costs
- * roughly twenty times text output, so a speech call's tokens must never be read as a translation
- * call's or the estimate is wrong by more than an order of magnitude. {@link #forSpeech} therefore
- * treats output as audio and {@link #forText} treats it as text, rather than one parser guessing
- * from the response shape.
- */
 final class AiStudioTokenUsage {
 
   static final AiStudioTokenUsage NONE = new AiStudioTokenUsage(0, 0, 0);
 
-  /** Input tokens the call consumed. */
   final long promptTokens;
 
-  /** Audio output tokens, for a speech call. */
   final long audioTokens;
 
-  /** Text output tokens, for a translation call. */
   final long textTokens;
 
   AiStudioTokenUsage(long promptTokens, long audioTokens, long textTokens) {
@@ -37,11 +21,6 @@ final class AiStudioTokenUsage {
     this.textTokens = textTokens;
   }
 
-  /**
-   * The larger of two readings, field by field. A streamed call reports {@code usageMetadata} on
-   * its events as a running total, so the last one carries the whole call; taking the maximum gets
-   * that without assuming the events arrive in order, and cannot double-count a cumulative figure.
-   */
   AiStudioTokenUsage max(AiStudioTokenUsage other) {
     if (other == null) {
       return this;
@@ -52,19 +31,10 @@ final class AiStudioTokenUsage {
         Math.max(textTokens, other.textTokens));
   }
 
-  /**
-   * Usage for a speech call, whose output is audio: taken from the {@code AUDIO} entry of {@code
-   * candidatesTokensDetails}, falling back to {@code candidatesTokenCount} when the response omits
-   * the per-modality breakdown, since a speech call's candidates are audio in their entirety.
-   */
   static AiStudioTokenUsage forSpeech(Gson gson, String raw) {
     return forSpeech(parse(gson, raw));
   }
 
-  /**
-   * The {@link #forSpeech(Gson, String)} variant for a caller that already parsed the response
-   * document (to extract its audio), so a multi-megabyte body is never parsed twice.
-   */
   static AiStudioTokenUsage forSpeech(JsonObject response) {
     JsonObject usage = usageMetadata(response);
     if (usage == null) {
@@ -77,7 +47,6 @@ final class AiStudioTokenUsage {
     return of(asLong(usage, "promptTokenCount"), audio, 0);
   }
 
-  /** Usage for a text call (the translation hop), whose output bills at the text rate. */
   static AiStudioTokenUsage forText(Gson gson, String raw) {
     JsonObject usage = usageMetadata(parse(gson, raw));
     if (usage == null) {
@@ -92,7 +61,6 @@ final class AiStudioTokenUsage {
         : new AiStudioTokenUsage(prompt, audio, text);
   }
 
-  /** A response document parsed, or {@code null} when it is unreadable. */
   private static JsonObject parse(Gson gson, String raw) {
     if (raw == null || raw.isEmpty()) {
       return null;
@@ -104,7 +72,6 @@ final class AiStudioTokenUsage {
     }
   }
 
-  /** The {@code usageMetadata} block of a response document, or {@code null} when unreadable. */
   private static JsonObject usageMetadata(JsonObject response) {
     if (response == null) {
       return null;
@@ -116,7 +83,6 @@ final class AiStudioTokenUsage {
     }
   }
 
-  /** Tokens under one modality of {@code candidatesTokensDetails}, or 0. */
   private static long modalityTokens(JsonObject usage, String modality) {
     try {
       JsonArray details = usage.getAsJsonArray("candidatesTokensDetails");

@@ -13,18 +13,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * A small, writable on-disk cache of NPC race/gender/ethnicity the plugin has <em>learned</em> at
- * runtime (via the wiki fallback) for NPCs missing from the bundled table, e.g. NPCs added to the
- * game since the last plugin update. It is a peer of the bundled table: {@link
- * NpcDemographicAnalyzer} consults it after the baked-in resource and before the default, so a
- * once-learned NPC voices correctly for the rest of that session and every future one.
- *
- * <p>It lives outside the jar (the bundled resource is read-only) under the plugin's RuneLite
- * directory and is written through a temp file, moved atomically where the filesystem supports it,
- * so a crash mid-write cannot corrupt it. Reads and writes are thread-safe: lookups happen on the
- * dialogue pipeline thread while a wiki lookup may be writing on a background thread.
- */
 @Slf4j
 public final class LearnedNpcStore {
 
@@ -38,12 +26,10 @@ public final class LearnedNpcStore {
     load();
   }
 
-  /** Whether an id has already been learned. */
   public boolean contains(int npcId) {
     return learned.containsKey(npcId);
   }
 
-  /** A learned entry for an id, or {@code null}. The returned attributes are a fresh copy. */
   public NpcAttributes get(int npcId) {
     NpcAttributes stored = learned.get(npcId);
     if (stored == null) {
@@ -52,13 +38,11 @@ public final class LearnedNpcStore {
     return learnedAttributes(npcId, stored.getRace(), stored.getGender(), stored.getEthnicity());
   }
 
-  /** Records race/gender/ethnicity for an id and persists the whole store. */
   public synchronized void learn(int npcId, String race, String gender, String ethnicity) {
     learned.put(npcId, learnedAttributes(npcId, race, gender, ethnicity));
     persist();
   }
 
-  /** Number of learned entries (for logging and tests). */
   public int size() {
     return learned.size();
   }
@@ -116,8 +100,6 @@ public final class LearnedNpcStore {
       try {
         Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
       } catch (IOException atomicUnsupported) {
-        // Some filesystems reject ATOMIC_MOVE; fall back to a plain replace, which is still far
-        // better than writing the destination in place. Mirrors DiskAudioCache.
         Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
       }
     } catch (IOException e) {

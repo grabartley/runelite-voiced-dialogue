@@ -9,7 +9,6 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** The rendered AUDIO PROFILE block format and the content-derived cache key. */
 @RunWith(JUnitParamsRunner.class)
 public class CharacterProfileTest {
 
@@ -45,7 +44,6 @@ public class CharacterProfileTest {
   public void renderPromptBlockEndsAtTheDividerSoTheTranscriptAppendsCleanly() {
     String block = WIZARD.renderPromptBlock();
     assertTrue("block ends with the divider and a newline", block.endsWith("#### TRANSCRIPT\n"));
-    // The caller appends the styled transcript directly after the block.
     assertTrue(
         "appending the transcript yields a single composed input",
         (block + "[happy] Greetings.").endsWith("#### TRANSCRIPT\n[happy] Greetings."));
@@ -61,8 +59,6 @@ public class CharacterProfileTest {
 
   @Test
   public void trailingWhitespaceIsStrippedSoThePrefixIsByteIdenticalAndCacheStable() {
-    // A stray trailing space (from the bundled table or a config field) would otherwise re-key the
-    // cacheable prefix and defeat Gemini's prompt cache; it is normalised away at construction.
     CharacterProfile padded =
         new CharacterProfile(
             "Wizard  ",

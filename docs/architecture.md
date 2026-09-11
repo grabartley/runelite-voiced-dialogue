@@ -17,11 +17,12 @@ transport.
 ## Voice resolution and prompt construction (shared by both providers)
 
 Each NPC gets a gender-correct Gemini voice by race (`GeminiVoiceMap`), and two NPCs of the same
-race and gender are spread across a sub-pool by a stable per-NPC seed so they sound distinct but
-stable. Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the
-bundled table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to a
-dedicated youthful sub-pool of its gender instead of its adult race anchor, for every race and
-ethnicity alike.
+race and gender are spread across a sub-pool by a per-NPC seed that is stable across sessions.
+Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the bundled
+table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to a dedicated
+youthful sub-pool of its gender instead of its adult race anchor, for every race and ethnicity
+alike. Which voices sit in each pool, and why those ones, is
+[voice-casting.md](voice-casting.md).
 
 Emotion is detected from each speaker's chat-head animation and rides in every request as one of
 Happy, Sad, Angry, Scared, or Neutral. It is prepended to the spoken text as an inline Gemini

@@ -84,8 +84,6 @@ public class VoiceSpecTest {
     VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 17);
     assertTrue(spec.hasVoiceSeed());
     assertEquals(17, spec.voiceSeed());
-    // The seed drives per-NPC voice variety but is not part of the key: the cloud backend already
-    // folds the concrete resolved voice into its own cache variant.
     assertEquals("npc:HUMAN:MALE", spec.key());
   }
 
@@ -147,8 +145,6 @@ public class VoiceSpecTest {
   public void childFlagIsCarriedButNotFoldedIntoKey() {
     VoiceSpec child = VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE, 7, true);
     assertTrue(child.child());
-    // Like the seed, the child flag drives the concrete voice, which the cloud backend already
-    // folds into its own cache variant.
     assertEquals("npc:TROLL:MALE", child.key());
     assertNotEquals(child, VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE, 7));
   }

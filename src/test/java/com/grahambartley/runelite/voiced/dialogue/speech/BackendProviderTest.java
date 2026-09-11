@@ -14,7 +14,6 @@ import org.junit.Test;
 
 public class BackendProviderTest {
 
-  /** A backend with a configurable id, availability, and supported-emotion set. */
   private static final class StubBackend implements SynthesisBackend {
     private final String id;
     private final boolean available;

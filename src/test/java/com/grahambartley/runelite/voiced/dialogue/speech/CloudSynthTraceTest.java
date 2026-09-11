@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-/** The standardized one-line cloud synth trace shape (success, retry, failure). */
 public class CloudSynthTraceTest {
 
   @Test
@@ -57,7 +56,6 @@ public class CloudSynthTraceTest {
 
   @Test
   public void traceNeverLeaksDialogueText() {
-    // Only the length is carried, never the words, so the lines are safe to emit ungated.
     String dialogue = "Greetings adventurer, the king needs your help.";
     String success = CloudSynthTrace.success(1, 2, 10, dialogue.length(), 100, "g");
     String failure =

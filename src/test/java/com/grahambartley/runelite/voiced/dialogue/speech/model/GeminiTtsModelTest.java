@@ -11,7 +11,6 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import java.util.EnumSet;
 import org.junit.Test;
 
-/** The Gemini model strategy: id, format, emotion set, and delegation to voice/style/decode. */
 public class GeminiTtsModelTest {
 
   private final GeminiTtsModel model = new GeminiTtsModel();

@@ -1,6 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.audio;
 
-/** Mono PCM: float samples in [-1, 1] at the given sample rate (24 kHz for the cloud backend). */
 public final class Pcm {
   private final float[] samples;
   private final int sampleRate;

@@ -23,7 +23,6 @@ import org.mockito.ArgumentCaptor;
 
 public class StreamingAudioPlayerTest {
 
-  /** Makes a mock line whose write() reports it accepted everything it was handed. */
   private static SourceDataLine lineThatAcceptsEverything() {
     SourceDataLine line = mock(SourceDataLine.class);
     when(line.write(any(byte[].class), anyInt(), anyInt())).thenAnswer(inv -> inv.getArgument(2));
@@ -35,10 +34,8 @@ public class StreamingAudioPlayerTest {
     SourceDataLine line = lineThatAcceptsEverything();
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
 
-    // 3 mono samples -> 6 bytes of 16-bit PCM, a single chunk.
     player.stream(new float[] {0f, 0f, 0f}, 24_000, 100);
 
-    // AudioFormat has no value equality, so capture and assert its fields.
     ArgumentCaptor<AudioFormat> format = ArgumentCaptor.forClass(AudioFormat.class);
     verify(line).open(format.capture());
     assertEquals(24_000f, format.getValue().getSampleRate(), 0f);
@@ -54,7 +51,6 @@ public class StreamingAudioPlayerTest {
   public void stopMidStreamHaltsFurtherWritesAndSkipsDrain() {
     SourceDataLine line = mock(SourceDataLine.class);
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
-    // Interrupt as soon as the first chunk is written: the loop should bail before the next one.
     when(line.write(any(byte[].class), anyInt(), anyInt()))
         .thenAnswer(
             inv -> {
@@ -62,7 +58,6 @@ public class StreamingAudioPlayerTest {
               return inv.getArgument(2);
             });
 
-    // ~10000 bytes spans multiple 4096-byte chunks, so an uninterrupted run would write 3 times.
     player.stream(new float[5_000], 24_000, 100);
 
     verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
@@ -75,12 +70,10 @@ public class StreamingAudioPlayerTest {
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
 
     AudioOutput.AudioStream stream = player.beginStream(100);
-    stream.write(new float[] {0f, 0f, 0f}, 24_000); // enqueues; the player thread opens + plays it
-    stream.write(new float[] {0f, 0f}, 24_000); // second chunk
+    stream.write(new float[] {0f, 0f, 0f}, 24_000);
+    stream.write(new float[] {0f, 0f}, 24_000);
     stream.end();
 
-    // Playback runs on a dedicated thread, so wait for it to open, play both chunks, drain and
-    // close.
     ArgumentCaptor<AudioFormat> format = ArgumentCaptor.forClass(AudioFormat.class);
     verify(line, timeout(2_000)).open(format.capture());
     assertEquals(24_000f, format.getValue().getSampleRate(), 0f);
@@ -102,9 +95,6 @@ public class StreamingAudioPlayerTest {
     verifyNoInteractions(factory);
   }
 
-  /**
-   * A mock line whose write() signals it was reached, so a test can interrupt deterministically.
-   */
   private static SourceDataLine lineSignalingWrites(CountDownLatch wrote) {
     SourceDataLine line = mock(SourceDataLine.class);
     when(line.write(any(byte[].class), anyInt(), anyInt()))
@@ -123,15 +113,15 @@ public class StreamingAudioPlayerTest {
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
 
     AudioOutput.AudioStream stream = player.beginStream(100);
-    stream.write(new float[] {0f, 0f}, 24_000); // the player thread opens the line and plays this
+    stream.write(new float[] {0f, 0f}, 24_000);
     assertTrue("the first chunk reached the line", wrote.await(2, TimeUnit.SECONDS));
-    player.stop(); // supersede mid-stream
-    stream.write(new float[] {0f, 0f}, 24_000); // dropped: the stream is superseded
+    player.stop();
+    stream.write(new float[] {0f, 0f}, 24_000);
     stream.end();
 
-    verify(line, timeout(2_000)).close(); // the line is still released
-    verify(line, never()).drain(); // but never drained (it was interrupted)
-    verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt()); // only the pre-skip chunk
+    verify(line, timeout(2_000)).close();
+    verify(line, never()).drain();
+    verify(line, times(1)).write(any(byte[].class), anyInt(), anyInt());
   }
 
   @Test
@@ -143,8 +133,8 @@ public class StreamingAudioPlayerTest {
     AudioOutput.AudioStream first = player.beginStream(100);
     first.write(new float[] {0f, 0f}, 24_000);
     assertTrue(wrote.await(2, TimeUnit.SECONDS));
-    player.beginStream(100); // a newer stream bumps the shared generation
-    first.write(new float[] {0f, 0f}, 24_000); // dropped by the old stream
+    player.beginStream(100);
+    first.write(new float[] {0f, 0f}, 24_000);
     first.end();
 
     verify(line, timeout(2_000)).close();
@@ -177,7 +167,6 @@ public class StreamingAudioPlayerTest {
 
     ArgumentCaptor<Float> applied = ArgumentCaptor.forClass(Float.class);
     verify(gain).setValue(applied.capture());
-    // 50% volume is 20*log10(0.5) ~= -6.02 dB, and must stay inside the control's range.
     assertTrue(applied.getValue() <= 0f && applied.getValue() >= -80f);
   }
 
@@ -203,7 +192,6 @@ public class StreamingAudioPlayerTest {
 
     player.stream(new float[] {0f}, 24_000, 100);
 
-    // Playback still completes without ever asking for the (absent) gain control.
     verify(line).write(any(byte[].class), anyInt(), anyInt());
     verify(line).drain();
   }

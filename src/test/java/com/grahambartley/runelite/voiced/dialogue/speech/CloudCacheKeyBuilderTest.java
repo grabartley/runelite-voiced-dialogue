@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import org.junit.Test;
 
-/** The cloud cache-key variant string: which fragments are appended, and in what order. */
 public class CloudCacheKeyBuilderTest {
 
   private static String build(

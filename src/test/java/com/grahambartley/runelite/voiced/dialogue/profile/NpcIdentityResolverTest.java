@@ -18,10 +18,8 @@ import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import org.junit.Test;
 
-/** One world scan and one table lookup per line, shared by the voice and the profile. */
 public class NpcIdentityResolverTest {
 
-  /** The bundled profile table, loaded once: its child keyword category is the seam under test. */
   private static final NpcProfileTable PROFILE_TABLE = loadProfileTable();
 
   private final NpcFinder finder = mock(NpcFinder.class);

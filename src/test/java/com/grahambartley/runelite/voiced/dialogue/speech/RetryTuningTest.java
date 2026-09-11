@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import java.time.Duration;
 import org.junit.Test;
 
-/** Each provider's ceiling reflects how it delivers audio, rather than one shared worst case. */
 public class RetryTuningTest {
 
   @Test

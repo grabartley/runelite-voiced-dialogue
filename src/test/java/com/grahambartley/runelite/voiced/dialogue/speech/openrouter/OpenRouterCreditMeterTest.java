@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-/** Turning two readings of an OpenRouter key's all-time usage into this session's real spend. */
 public class OpenRouterCreditMeterTest {
 
   private static final double TOLERANCE = 1e-9;

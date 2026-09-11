@@ -13,11 +13,6 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * The shared stateful backend plumbing: notice guarding, the speaking-pace clamp, and the retry
- * backoff wait. The retry loops and failure logging that use it are pinned by each backend's own
- * tests.
- */
 @RunWith(JUnitParamsRunner.class)
 public class CloudBackendSupportTest {
 

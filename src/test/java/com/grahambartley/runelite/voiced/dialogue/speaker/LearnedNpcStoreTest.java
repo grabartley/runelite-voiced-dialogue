@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.Test;
 
-/** The runtime learned-NPC cache: in-memory lookup plus atomic persistence across instances. */
 public class LearnedNpcStoreTest {
 
   private final Gson gson = new Gson();
