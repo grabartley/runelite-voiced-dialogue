@@ -13,23 +13,23 @@ Bring your own API key. You pay only for the audio you generate, about **$0.0025
 
 ## What it does
 
-- **14,103 NPCs already voiced**, matched by race and gender. Meet someone from a new game update and **Auto-learn** works them out from the wiki.
+- **14,103 NPCs already voiced**, matched by race and gender. For anyone a game update adds later, turn on **Auto-learn** and the plugin works them out from the wiki.
 - **Accents with lore behind them.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
-- **6,448 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
+- **6,447 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
-- **A narrator for the quest beats.** Message boxes, item boxes, and examine text read aloud in their own voice.
+- **A narrator for the quest beats.** Turn on **Voice Narration** for the message and item boxes quests lean on, and **Voice Examine Text** to hear anything you examine.
 - **Any language, any register.** Speak the whole game in Spanish, or run Gielinor as a pirate crew, Gen Z roadmen, or Shakespearean nobles.
 - **Cave echo underground**, so dungeons and sewers sound enclosed.
-- **Fast and quiet.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
+- **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
 
-Offline profanity filtering is always on. Only the dialogue text being spoken leaves your client, over HTTPS, and cached lines never leave at all.
+Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere.
 
 ## Install
 
 Open RuneLite, click the wrench (Configuration), open the **Plugin Hub**, search **Voiced Dialogue**, install.
 
-Then pick a provider and paste in a key. Until you do, dialogue stays silent and a one-time chat notice points you here.
+Then pick a provider and paste in a key. Until you do, dialogue stays silent and a one-time chat notice tells you how to set one up.
 
 ## Pick a provider
 
@@ -42,9 +42,9 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 | Long (400 chars) | **0.8s** | 19.5s |
 | Very long (500+ chars) | **0.8s** | 37.2s |
 
-**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. Google caps a key at **100 new lines a day** while the speech model is in preview, which is a couple of sessions of meeting new characters.
+**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. While the speech model is in preview, a key begins at **up to 100 fresh lines a day**, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use.
 
-**OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A quest speech can leave you waiting half a minute.
+**OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A quest speech can leave you waiting the better part of a minute.
 
 Switch any time with **Voice Provider**. Cached lines are instant and free on both.
 
@@ -93,10 +93,10 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | British (Cambridge) | Accent for your character's voice. |
-| **Your Persona** | friendly and plucky | Persona and delivery style for your character. |
-| **Your Pace** | Normal | Speaking pace for your character. |
-| **Character Voices** | `On` | Gives each speaker their own accent, persona, and pace. Off gives one plain shared delivery. |
+| **Your Accent** | British (Cambridge) | Accent for your character's voice. Needs **Character Voices** on. |
+| **Your Persona** | friendly and plucky | Persona and delivery style for your character. Needs **Character Voices** on. |
+| **Your Pace** | Normal | Speaking pace for your character. Needs **Character Voices** on. |
+| **Character Voices** | `On` | Gives each speaker their own accent, persona, and pace. Off gives one plain shared delivery, the cheapest option. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Their first line still uses the default voice. |
