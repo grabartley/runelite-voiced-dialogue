@@ -73,13 +73,13 @@ bucketing.
 
 ## Depth is the organising axis
 
-Depth comes from the catalog's character adjectives, confirmed by ear. Naming the male voices,
-since they are where the adjectives divide most cleanly: gravelly (Algenib), firm (Alnilam,
-Orus), even (Schedar) and breathy (Enceladus) are the deep end; upbeat (Puck) and casual
-(Zubenelgenubi) are the bright end; informative (Charon, Rasalgethi) and knowledgeable
-(Sadaltager) sit between them, reading measured rather than low and carrying weight through
-delivery rather than pitch, which is why Charon can anchor the plain human pool and still sit in
-the wizard one. The female pools follow the same ordering by ear.
+Depth comes from the catalog's character adjectives, confirmed by ear. The male voices below are
+the spine of the axis rather than the full roster, since they are where the adjectives divide most
+cleanly: gravelly (Algenib), firm (Alnilam, Orus), even (Schedar) and breathy (Enceladus) are the
+deep end; upbeat (Puck) and casual (Zubenelgenubi) are the bright end; informative (Charon,
+Rasalgethi) and knowledgeable (Sadaltager) sit between them, reading measured rather than low and
+carrying weight through delivery rather than pitch, which is why Charon can anchor the plain human
+pool and still sit in the wizard one. The female pools follow the same ordering by ear.
 
 Big, imposing races take the deep end so they sound large rather than high-pitched. Small ones
 stay bright, so a scuttling crab never reads as something standing over you. The undead male
@@ -87,17 +87,18 @@ anchor is the breathy voice, which reads hollow rather than merely low.
 
 ## Where a pool is borrowed
 
-Most races have a pool assembled for them. These draw theirs from elsewhere in the map instead,
-and the borrowing is itself the casting decision:
+Most races have a pool assembled for them. These are cast by reference to a pool that already
+exists instead, and the reference is itself the casting decision:
 
 - **Tortugans** take the player male pool unchanged and the wizard female pool unchanged. Both
   read relaxed and mid-depth rather than characterful, which suits warm island folk who are
   otherwise plain people.
-- **Citizens of Arceuus** take the elf pool unchanged. Its refined, clear timbres carry an
-  incorporeal delivery better than the earthier human voices.
+- **Citizens of Arceuus** take the elf pool unchanged, and the elf pool is itself cast off the
+  human one: it keeps Iapetus and Erinome, drops the human anchors Charon and Despina, and adds
+  Rasalgethi and Vindemiatrix, which read more refined and carry an incorporeal delivery better.
 - **Aranei** keep one undead voice per gender, Enceladus and Achernar, and pair each with a clear
-  one. The breathiness carries their hushed, telepathic delivery; the clear half keeps them
-  sounding like a living species.
+  one. Enceladus is the breathy voice and Achernar the soft one, which is what carries their
+  hushed, telepathic delivery; the clear half keeps them sounding like a living species.
 - **Dogs** anchor on the monkey pool's excitable and forward voices and pair each with one from
   the deep end, so a bark lands as a sound with an animal behind it rather than as a word read
   aloud.
