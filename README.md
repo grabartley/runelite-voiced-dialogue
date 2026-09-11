@@ -13,7 +13,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.0025
 
 ## What it does
 
-- **14,103 NPCs already voiced**, matched by race and gender. For anyone a game update adds later, turn on **Auto-learn** and the plugin works them out from the wiki.
+- **14,103 NPCs already voiced**, matched by race and gender. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
 - **Accents with lore behind them.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
 - **6,447 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
@@ -23,7 +23,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.0025
 - **Cave echo underground**, so dungeons and sewers sound enclosed.
 - **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
 
-Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere.
+Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere. **Auto-learn New NPCs**, off unless you turn it on, also looks up an unrecognised NPC's name on the OSRS Wiki.
 
 ## Install
 
@@ -42,7 +42,7 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 | Long (400 chars) | **0.8s** | 19.5s |
 | Very long (500+ chars) | **0.8s** | 37.2s |
 
-**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. While the speech model is in preview, a key begins at **up to 100 fresh lines a day**, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use.
+**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. While the speech model is in preview, a billed key begins at **up to 100 fresh lines a day**, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use.
 
 **OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A quest speech can leave you waiting the better part of a minute.
 
