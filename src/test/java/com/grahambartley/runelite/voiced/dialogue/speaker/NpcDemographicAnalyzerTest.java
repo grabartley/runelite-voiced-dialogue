@@ -72,6 +72,14 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void bothMortimerFormsResolveAsTheSameUndeadSkeleton() {
+    assertAttributes(16175, "Undead", "Male");
+    assertAttributes(16294, "Undead", "Male");
+    assertNull("Mortimer carries no ethnicity tint", analyze(16175, null).getEthnicity());
+    assertNull("Mortimer carries no ethnicity tint", analyze(16294, null).getEthnicity());
+  }
+
+  @Test
   public void femaleNamedTownsfolkResolveFemale() {
     // Gender comes straight from the wiki, so townsfolk with no gendered title
     // (Gertrude, Cassie) still resolve Female instead of defaulting to male.

@@ -171,6 +171,27 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void bothMortimerFormsShareOneBespokeUndeadProfile() {
+    NpcProfileTable.Resolution first = resolve(16175, "Mortimer", "Undead", null);
+    NpcProfileTable.Resolution second = resolve(16294, "Mortimer", "Undead", null);
+    assertTrue("the bespoke layer contributes", first.source().contains("id:16175"));
+    assertTrue("the bespoke layer contributes", second.source().contains("id:16294"));
+    assertTrue("the Undead race layer contributes", first.source().contains("race:Undead"));
+    assertTrue("the Undead race layer contributes", second.source().contains("race:Undead"));
+    assertTrue(
+        "his bespoke Irish accent survives the Undead race layer",
+        first.profile().accent().contains("Irish"));
+    assertTrue("his skeletal persona reads undead", first.profile().style().contains("skeletal"));
+    assertTrue(
+        "he keeps a brisk Slayer-master delivery over the drawling Undead pace",
+        first.profile().pace().contains("Brisk"));
+    assertEquals(
+        "both forms resolve the same profile directive",
+        first.profile().cacheKey(),
+        second.profile().cacheKey());
+  }
+
+  @Test
   public void thePlayerProfileResolvesFromTheBundledTable() {
     CharacterProfile p = table.resolvePlayer(null, null, null);
     assertTrue("the player has a name label", p.name() != null && !p.name().isEmpty());

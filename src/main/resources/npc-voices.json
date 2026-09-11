@@ -4,9 +4,9 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 5917,
-    "count": 13734,
+    "count": 13735,
     "name_matched_ids": 713,
-    "overrides_applied": 1611,
+    "overrides_applied": 1612,
     "race_counts": {
       "Arceuus": 58,
       "Demon": 776,
@@ -15,17 +15,17 @@
       "Gnome": 261,
       "Goblin": 368,
       "Gorilla": 11,
-      "Human": 9931,
+      "Human": 9930,
       "Icyene": 9,
       "Monkey": 64,
       "Tortugan": 66,
       "Troll": 451,
-      "Undead": 844,
+      "Undead": 846,
       "Wizard": 24
     },
     "gender_counts": {
       "Female": 1932,
-      "Male": 11802
+      "Male": 11803
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -41,12 +41,12 @@
       "tirannwn": 317,
       "varlamore": 999,
       "wilderness": 115,
-      "wyrmscraig": 12
+      "wyrmscraig": 11
     },
     "life_stage_counts": {
       "child": 45
     },
-    "profiles_bespoke": 6424
+    "profiles_bespoke": 6425
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -26522,10 +26522,17 @@
         "name": "Sarius Guile",
         "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."
       },
+      "16175": {
+        "name": "Mortimer",
+        "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.",
+        "accent": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.",
+        "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."
+      },
       "16294": {
         "name": "Mortimer",
-        "style": "A grizzled, no-nonsense Slayer master dealing only in superior monsters; dry, gruff, hard-bitten.",
-        "accent": "A country Irish accent, the warm rural lilt of the Irish countryside."
+        "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.",
+        "accent": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.",
+        "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."
       },
       "16314": {
         "name": "Mad Angel",
@@ -87476,6 +87483,10 @@
       "race": "Human",
       "gender": "Female"
     },
+    "16175": {
+      "race": "Undead",
+      "gender": "Male"
+    },
     "16204": {
       "race": "Undead",
       "gender": "Male",
@@ -87507,9 +87518,8 @@
       "ethnicity": "morytania"
     },
     "16294": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "wyrmscraig"
+      "race": "Undead",
+      "gender": "Male"
     },
     "16295": {
       "race": "Human",
