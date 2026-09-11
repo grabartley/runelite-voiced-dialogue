@@ -70,7 +70,9 @@ name still resolves to a documented NPC is covered too.
   the mortals who declined immortality stay `Human`.
   The aranei (the hooded, telepathic servants bound to House Shadum) are their own
   `Aranei` race, carrying a soft, breathy delivery wherever they are found,
-  including the Mysterious Stranger in every place she appears.
+  including Sarei, the Mysterious Stranger, wherever she appears. The aranei who
+  takes her post at the Theatre of Blood after she is killed is a different
+  person, and is pinned separately.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default

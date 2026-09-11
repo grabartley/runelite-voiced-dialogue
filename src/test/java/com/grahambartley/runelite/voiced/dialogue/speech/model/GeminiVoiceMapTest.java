@@ -285,4 +285,25 @@ public class GeminiVoiceMapTest {
     overlap.retainAll(female);
     assertTrue("no Arceuus voice serves both genders: " + overlap, overlap.isEmpty());
   }
+
+  @Test
+  public void araneiBlendTheUndeadAndHumanAnchorsWithoutIntroducingANewVoice() {
+    Set<String> male = new HashSet<>();
+    Set<String> female = new HashSet<>();
+    for (int seed = 0; seed < 64; seed++) {
+      male.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARANEI, NpcGender.MALE, seed)));
+      female.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARANEI, NpcGender.FEMALE, seed)));
+    }
+    assertEquals(
+        "aranei males pair the undead breathy anchor with the human clear one",
+        new HashSet<>(java.util.Arrays.asList("Enceladus", "Iapetus")),
+        male);
+    assertEquals(
+        "aranei females pair the undead breathy anchor with the human clear one",
+        new HashSet<>(java.util.Arrays.asList("Achernar", "Erinome")),
+        female);
+    Set<String> overlap = new HashSet<>(male);
+    overlap.retainAll(female);
+    assertTrue("no aranei voice serves both genders: " + overlap, overlap.isEmpty());
+  }
 }

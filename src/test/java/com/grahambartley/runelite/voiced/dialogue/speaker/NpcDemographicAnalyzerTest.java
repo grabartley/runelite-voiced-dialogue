@@ -81,6 +81,8 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void everyAraneiFormResolvesToItsOwnRaceRatherThanHuman() {
+    // Sarei is the Mysterious Stranger in every form but the replacement, which is the separate
+    // aranei who takes her post at the Theatre of Blood after Drakan kills her.
     for (int npcId :
         new int[] {
           15749, 15750, 15752, 15754, 15737, 15738, 15762, 16269, 16270, 9639, 9640, 16360
@@ -125,7 +127,7 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void aDistinctiveRaceCarriesNoRegionalTint() {
+  public void theBloodMoonDistinctiveRacesCarryNoRegionalTint() {
     for (int npcId : new int[] {16268, 16005, 8208, 11181, 16212}) {
       assertNull("no origin for id " + npcId, analyze(npcId, null).getEthnicity());
     }
