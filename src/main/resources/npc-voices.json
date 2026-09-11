@@ -4,30 +4,30 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14104,
+    "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1732,
+    "overrides_applied": 1731,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
-      "Demon": 788,
-      "Dog": 327,
+      "Demon": 787,
+      "Dog": 321,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9858,
+      "Human": 9863,
       "Icyene": 11,
       "Monkey": 64,
       "Tortugan": 65,
       "Troll": 469,
-      "Undead": 894,
+      "Undead": 895,
       "Wizard": 24
     },
     "gender_counts": {
       "Female": 1976,
-      "Male": 12128
+      "Male": 12127
     },
     "ethnicity_counts": {
       "asgarnia": 688,
@@ -38,7 +38,7 @@
       "kharidian": 547,
       "kourend": 785,
       "menaphite": 132,
-      "misthalin": 1057,
+      "misthalin": 1056,
       "morytania": 1032,
       "tirannwn": 331,
       "varlamore": 1016,
@@ -79413,7 +79413,7 @@
       "ethnicity": "varlamore"
     },
     "13247": {
-      "race": "Demon",
+      "race": "Human",
       "gender": "Male",
       "ethnicity": "asgarnia"
     },
@@ -79929,7 +79929,7 @@
       "gender": "Male"
     },
     "13367": {
-      "race": "Dog",
+      "race": "Human",
       "gender": "Male"
     },
     "13368": {
@@ -82835,11 +82835,11 @@
       "ethnicity": "asgarnia"
     },
     "14154": {
-      "race": "Dog",
+      "race": "Human",
       "gender": "Male"
     },
     "14156": {
-      "race": "Dog",
+      "race": "Human",
       "gender": "Male"
     },
     "14157": {
@@ -82848,9 +82848,8 @@
       "ethnicity": "kourend"
     },
     "14158": {
-      "race": "Dog",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "race": "Undead",
+      "gender": "Male"
     },
     "14162": {
       "race": "Dog",
@@ -84716,13 +84715,9 @@
       "gender": "Male"
     },
     "14810": {
-      "race": "Dog",
+      "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin"
-    },
-    "14811": {
-      "race": "Dog",
-      "gender": "Male"
     },
     "14815": {
       "race": "Human",

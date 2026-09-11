@@ -179,7 +179,7 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void theWholeHellhoundFamilyResolvesToOneRaceRatherThanToWhicheverPageClaimedIt() {
-    for (int npcId : new int[] {104, 105, 135, 964, 1224, 3099, 3133, 7256, 7877, 12374, 13247}) {
+    for (int npcId : new int[] {104, 105, 135, 964, 1224, 3099, 3133, 7256, 7877, 12374}) {
       assertAttributes(npcId, "Demon", "Male");
     }
   }
