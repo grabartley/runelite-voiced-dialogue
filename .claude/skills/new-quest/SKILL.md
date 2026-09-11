@@ -5,12 +5,11 @@ description: Find every OSRS quest the plugin does not yet voice correctly and f
 
 # Add voice support for new quests
 
-Three stages: enumerate every quest in the game, probe which of them the plugin actually
-covers, then file one research-complete issue per gap quest through `create-issue`. Stage 3
-carries the value; stages 1 and 2 exist so the issues land on the right quests and on nothing
-else.
+Three stages: enumerate every quest in the game, probe which of them the plugin already covers,
+then file one research-complete issue per gap quest through `create-issue`. Stage 3 carries the
+value; stages 1 and 2 exist so the issues land on the right quests and on nothing else.
 
-Stop at the filed issue. Implementation belongs to [[add-race]], [[add-npc-profile]] and
+Stop at the filed issue. Implementation belongs to [[add-npc-profile]], [[add-race]] and
 [[regenerate-npc-voices]], invoked from the issue.
 
 ## What "supported" means
@@ -19,19 +18,19 @@ Quest support is four things, and only the first arrives for free:
 
 1. **Race and gender**, for any NPC whose wiki page carries an Infobox `id`. The generator's
    wiki sweep picks these up with no help.
-2. **A race bucket that exists.** `bucket_for_race` in `tools/generate_npc_voices.py` ends in
-   `return "Human"`, so a wiki race the plugin has never heard of voices as a British commoner
-   and nothing reports it. This is the single highest-value thing this skill finds.
-3. **An ethnicity** for Human NPCs, which the generator derives from the page's `leagueRegion`
-   field. Recent quest pages routinely omit that field, so the origin needs pinning by hand.
+2. **A race the generator can bucket.** `bucket_for_race` in `tools/generate_npc_voices.py` ends
+   in `return "Human"`, so a wiki race no rule matches voices as a British commoner and nothing
+   reports it. This is the highest-value thing this skill finds.
+3. **An origin** for Human NPCs, which the generator derives from the page's `leagueRegion`.
+   Recent quest pages routinely omit that field, so the origin needs pinning by hand.
 4. **A bespoke `byId` profile** for the characters who carry the quest.
 
 A quest counts as supported only when all four hold for its **speaking** cast.
 
-**An issue-title grep is not a coverage test.** Troubled Tortugans has no issue with its name
-in the title and is nonetheless fully covered, by the Tortugan race work; the Crab Quest cast
-was absent from the bundled table altogether. Treat the backlog as a hint about who already
-thought about a quest, and treat the probe in stage 2 as the answer.
+**An issue-title grep is not a coverage test.** Troubled Tortugans has no issue carrying its name
+and is nonetheless covered, by the Tortugan race work; the Crab Quest cast was absent from the
+bundled table altogether. Treat the backlog as a hint about who already thought about a quest,
+and treat the stage 2 probe as the answer.
 
 ## Stage 1: enumerate every quest
 
@@ -49,9 +48,14 @@ holds all of them and runs to roughly 137KB. Each quest is one row shaped like:
   ... <td><a href="/w/8_September">8 September</a> <a href="/w/2026">2026</a> </td></tr>
 ```
 
-The quest name is the `data-rowid` attribute, the number is the first cell and the release date
-is the last. To keep the full table out of the conversation, fetch and extract in one command
-instead:
+The quest name is the `data-rowid` attribute. The cell layout differs by row type, which is the
+one trap here: a quest row carries 7 cells with the number first and the release date last, while
+a miniquest row carries 6 with no number column and the date one in from the end. Reading
+`cells[-1]` for every row silently turns all 19 miniquests into undated rows that sort to the
+bottom of a list meant to be worked top-down. A quick-guide row also slips into the table with
+empty cells and has to be dropped.
+
+To keep the full table out of the conversation, fetch and extract in one command:
 
 ```bash
 python3 - <<'PY'
@@ -59,49 +63,60 @@ import urllib.request, urllib.parse, json, re, html, datetime
 UA = {"User-Agent": "runelite-voiced-dialogue quest coverage (contact: grabartley@gmail.com)"}
 url = "https://oldschool.runescape.wiki/api.php?" + urllib.parse.urlencode(
     {"action": "parse", "page": "Quests/List", "prop": "text", "format": "json"})
-page = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))
-body = page["parse"]["text"]["*"]
+body = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))["parse"]["text"]["*"]
 quests = []
 for rowid, row in re.findall(r'<tr data-rowid="(.*?)">(.*?)</tr>', body, re.S):
-    cells = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
-    if len(cells) < 3:
+    cells = [" ".join(re.sub(r"<[^>]+>", " ", c).split())
+             for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+    if len(cells) == 7:
+        number, released = cells[0], cells[-1]
+    elif len(cells) == 6:
+        number, released = "miniquest", cells[-2]
+    else:
         continue
-    strip = lambda c: " ".join(re.sub(r"<[^>]+>", " ", c).split())
-    quests.append((html.unescape(rowid), strip(cells[0]), strip(cells[-1])))
-def released(quest):
+    if number:
+        quests.append((html.unescape(rowid), number, released))
+def when(quest):
     try:
         return datetime.datetime.strptime(quest[2], "%d %B %Y")
     except ValueError:
         return datetime.datetime(1970, 1, 1)
-for quest in sorted(quests, key=released, reverse=True):
+undated = [q for q in quests if when(q).year == 1970]
+print("quests=%d undated=%d" % (len(quests), len(undated)))
+if undated:
+    print("UNPARSED DATES, fix the parse before trusting the order:", undated)
+for quest in sorted(quests, key=when, reverse=True):
     print("\t".join(quest))
 PY
 ```
 
-Expect a little over 200 rows. Work newest first: coverage gaps cluster hard at the recent end,
-because everything older has already been swept by a region profile batch.
+Expect 213 rows and `undated=0`. A non-zero `undated` means the table layout moved and the row
+parse needs revisiting, not that those quests are old. Work newest first: gaps cluster hard at
+the recent end, because everything older has already been swept by a region profile batch.
 
 ## Stage 2: probe coverage
 
 ### Discover the cast
 
-Take the **union** of two queries per quest:
+Take the **union** of two wiki queries per quest:
 
-- `list=embeddedin` on `Template:<Quest>`, the quest navbox. This is the superset, and it is the
-  only one of the two that finds Infobox **Monster** pages, whose infoboxes usually carry no
-  `quest` field at all. The two Outlaws of A Ruff Situation appear here and nowhere else.
-- `list=search` for `insource:/\|quest *= *\[\[<Quest>/`. This finds cast members the navbox
-  missed.
+- `list=embeddedin` on `Template:<Quest>`, the quest navbox. This is usually the superset, and it
+  is the only one of the two that finds Infobox **Monster** pages, whose infoboxes carry no
+  `quest` field. The two Outlaws of A Ruff Situation appear here and nowhere else.
+- `list=search` for `insource:/\|quest *= *\[\[<Quest>/`. This finds cast the navbox omits.
 
-Neither alone is enough. The navbox for Fallen From Grace lists the quest cast but not the
-island locals who also gained dialogue, and the `insource` search for that quest returns mostly
-items.
+Neither alone is enough, and the navbox is not guaranteed to exist at all: Learning the Ropes has
+no `Template:` page, which collapses discovery onto the one query this skill calls insufficient.
+Print both hit counts so a zero is visible rather than silent.
 
 ### Run the probe
 
+Run it from the repo root. It imports the generator rather than re-deriving its rules, and reads
+the committed table and overrides as the truth for any id they already know.
+
 ```bash
 python3 - <<'PY' "Crab Quest" "A Ruff Situation"
-import urllib.request, urllib.parse, json, re, sys
+import importlib.util, json, re, sys, urllib.parse, urllib.request
 UA = {"User-Agent": "runelite-voiced-dialogue quest coverage (contact: grabartley@gmail.com)"}
 
 def api(**params):
@@ -109,15 +124,32 @@ def api(**params):
     url = "https://oldschool.runescape.wiki/api.php?" + urllib.parse.urlencode(params)
     return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))
 
+spec = importlib.util.spec_from_file_location("gen", "tools/generate_npc_voices.py")
+gen = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gen)
+table = json.load(open("src/main/resources/npc-voices.json"))
+shipped, bespoke = table["npcs"], table["profiles"].get("byId", {})
+pinned = json.load(open("tools/overrides.json"))["npcs"]
+
+def bucket(race):
+    """The bucket the generator's own rules give a wiki race, or None when no rule matches."""
+    for pattern, name in gen.RACE_BUCKET_RULES:
+        if pattern.search(race):
+            return name
+    return None
+
 def cast(quest):
-    titles = set()
     navbox = api(action="query", list="embeddedin", eititle="Template:" + quest,
                  eilimit=500, einamespace=0)
-    titles |= {p["title"] for p in navbox.get("query", {}).get("embeddedin", [])}
+    navbox = {p["title"] for p in navbox.get("query", {}).get("embeddedin", [])}
     tagged = api(action="query", list="search", srlimit=100, srnamespace=0,
-                 srsearch=r"insource:/\|quest *= *\[\[%s/" % quest)
-    titles |= {p["title"] for p in tagged.get("query", {}).get("search", [])}
-    return sorted(t for t in titles if not t.startswith(quest))
+                 srsearch="insource:/\\|quest *= *\\[\\[%s/"
+                 % re.escape(quest).replace("/", "\\/"))
+    tagged = {p["title"] for p in tagged.get("query", {}).get("search", [])}
+    print("  cast discovery: navbox=%d tagged=%d" % (len(navbox), len(tagged)))
+    if not navbox:
+        print("  WARNING: no Template:%s, discovery rests on the insource query alone" % quest)
+    return sorted(t for t in navbox | tagged if not t.startswith(quest))
 
 def wikitext(titles):
     pages = {}
@@ -133,57 +165,65 @@ def field(text, name):
     match = re.search(r"\|\s*%s\d*\s*=\s*(.*)" % name, text)
     return match.group(1).strip() if match else None
 
-def display(value):
-    """The shown text of a possibly piped wiki link, so [[Crab (disambiguation)|Crab]] reads Crab."""
+def shown(value):
+    """The display text of a possibly piped link, so [[Crab (disambiguation)|Crab]] reads Crab."""
     if not value:
         return None
     return re.sub(r"\s+", " ", re.sub(r"\[\[([^\]|]*\|)?([^\]]*)\]\]", r"\2", value)).strip(" |")
 
-table = json.load(open("src/main/resources/npc-voices.json"))
-known, bespoke = table["npcs"], table["profiles"].get("byId", {})
-generator = open("tools/generate_npc_voices.py").read()
-valid = set(re.findall(r'"([A-Z][A-Za-z]+)"',
-                       re.search(r"VALID_RACES = \{(.*?)\}", generator, re.S).group(1)))
-rules = [(re.compile(p, re.I), b) for p, b in re.findall(
-    r'\(r"([^"]+)",\s*"(\w+)"\)',
-    re.search(r"RACE_BUCKET_RULES = \[(.*?)\n\]", generator, re.S).group(1))]
-
-def bucket(race):
-    for pattern, name in rules:
-        if pattern.search(race):
-            return name
-    return None
+def npc_ids(text):
+    """NPC ids only. A Multi Infobox page also carries item ids, which must never be voiced."""
+    block = text.split("|text2", 1)[0]
+    return sorted({int(i) for i in re.findall(
+        r"\b\d{3,6}\b", " ".join(re.findall(r"\|\s*id\d*\s*=\s*([\d,\s]+)", block)))})
 
 for quest in sys.argv[1:]:
     print("=" * 78, "\n" + quest)
     for title, text in sorted(wikitext(cast(quest)).items()):
         if "Infobox NPC" not in text and "Infobox Monster" not in text:
             continue
-        ids = sorted({int(i) for i in re.findall(
-            r"\b\d{3,6}\b", " ".join(re.findall(r"\|\s*id\d*\s*=\s*([\d,\s]+)", text)))})
-        race, gender = display(field(text, "race")), field(text, "gender")
+        ids = npc_ids(text)
+        if not ids:
+            continue
+        race, gender = shown(field(text, "race")), field(text, "gender")
         voiced = bucket(race) if race else None
+        origin = gen.ethnicity_key(field(text, "leagueRegion"), field(text, "location"))
+        absent = [i for i in ids if str(i) not in shipped]
+        races = {shipped[str(i)]["race"] for i in ids if str(i) in shipped}
+        plain = not races or races <= {"Human", "Unknown"}
+        hand_gender = any("gender" in pinned.get(str(i), {}) for i in ids)
+        has_origin = (any("ethnicity" in pinned.get(str(i), {}) for i in ids)
+                      or any(shipped.get(str(i), {}).get("ethnicity") for i in ids))
         gaps = []
-        if race and voiced is None:
-            gaps.append("RACE-UNMAPPED:" + race)
-        elif voiced and voiced != "Human":
-            gaps.append("race=" + voiced)
-        absent = [i for i in ids if str(i) not in known]
         if absent:
             gaps.append("NOT-IN-TABLE:" + ",".join(map(str, absent)))
-        if not gender:
-            gaps.append("no-gender")
-        if voiced == "Human" and not field(text, "leagueRegion"):
+        if plain and race and voiced is None:
+            gaps.append("RACE-UNMAPPED:" + race)
+        if plain and not race:
+            gaps.append("no-race")
+        if plain and voiced == "Human" and not origin and not has_origin:
             gaps.append("no-origin")
-        if ids and not any(str(i) in bespoke for i in ids):
+        if not gender and not hand_gender:
+            gaps.append("gender-unverified")
+        if not any(str(i) in bespoke for i in ids):
             gaps.append("no-byId")
-        print("  %-46s ids=%-34s %s" % (title[:44], str(ids)[:32], "; ".join(gaps) or "ok"))
+        settled = sorted(races - {"Human", "Unknown"})
+        if settled:
+            gaps.append("race=" + ",".join(settled))
+        print("  %-44s ids=%-30s %s" % (title[:42], str(ids)[:28], "; ".join(gaps) or "ok"))
 PY
 ```
 
-Run it from the repo root, so it reads the committed table and generator rather than guessing at
-them. `valid` is read but not asserted on; it is there to confirm a bucket name the rules emit is
-one the generator will accept in an override.
+Import the generator; do not re-derive its tables by regex. One `RACE_BUCKET_RULES` entry is
+written as an implicit two-line string concatenation, so a line-wise scrape silently drops the
+Undead rule and then reports every vampyre, zombie, skeleton, ghost, ghoul, mummy, banshee,
+ankou, wight, shade, revenant, spectre, wraith and lich as an unmapped race. That turns any
+Morytania quest into a fabricated request for a race the plugin already ships.
+
+Read the committed table and `tools/overrides.json` as the truth for ids they know. The wiki is
+the input the generator consumed, not the current state: the Troubled Tortugans elders carry no
+wiki gender field and are nonetheless pinned Male in overrides, so judging them from the wiki
+alone reports a settled NPC as a gap.
 
 ### Triage the flags
 
@@ -191,34 +231,51 @@ one the generator will accept in an override.
 
 | Flag | Means |
 |---|---|
-| `RACE-UNMAPPED:<race>` | The wiki race hits no bucket, so every NPC of it voices as a British commoner. A new first-class race is wanted; see [[add-race]]. |
 | `NOT-IN-TABLE:<ids>` | The bundled table does not know the id, so the NPC resolves to the unknown-race default. |
-| `no-gender` on a speaker | No wiki gender field, so the generator defaults Male. Fine for a male NPC, wrong for a female one, and only reading the transcript settles it. |
-| `no-origin` | A Human NPC whose page carries no `leagueRegion`, so they keep the British default instead of their region's accent. |
+| `RACE-UNMAPPED:<race>` | The wiki names a race no rule matches, so the NPC voices as a British commoner. |
+| `no-race` | The page carries no race field at all, so the NPC falls to the default. Common on Infobox Monster pages, where the generator falls back to page categories. |
+| `no-origin` | A Human NPC with no usable `leagueRegion`, so they keep the British default instead of their region's accent. |
 
-**Soft gaps. Note them, do not let them carry an issue on their own:**
+**Check, not a gap on its own:**
+
+- `gender-unverified` means no wiki gender field and no pinned gender, so the generator defaults
+  Male. That is correct for a male NPC and for a non-speaker, and wrong only for a female
+  speaker. Settle it from the transcript before it reaches an issue.
+
+**Soft. Never carries an issue alone:**
 
 - `no-byId` on a minor NPC. A walk-on part does not need a bespoke personality, and the bespoke
-  backlog has its own umbrella.
-- `race=<bucket>` is not a gap at all. It records that the NPC resolves to a distinctive race
-  already, which is the outcome wanted.
+  profile backlog has its own umbrella.
 
-A quest whose every row reads `ok`, `race=...` or `no-byId` is covered. Skip it and say so rather
-than filing an issue to prove it.
+**Not a gap at all:**
+
+- `race=<bucket>` records that the NPC already resolves to a distinctive race, which is the
+  outcome wanted.
+
+A quest is covered when no row carries a hard gap and every `gender-unverified` row turns out to
+be a non-speaker or genuinely male. Troubled Tortugans and The Ides of Milk both read that way.
+Say a quest is covered and move on rather than filing an issue to prove it.
+
+### RACE-UNMAPPED does not always mean a new race
+
+Most unmapped races map onto an existing bucket in `tools/overrides.json`, the way Dorgeshuun
+goes to Goblin, Vampyre to Undead, Imp to Demon and ape to Gorilla. Reach for [[add-race]] only
+when the species genuinely needs its own accent and voice pool, as Crab, Penguin and Dog did.
+A species that is merely unusual and has one speaking member gets a `byId` style instead. See
+[[add-npc-profile]] for that decision.
 
 ### Confirm who actually speaks
 
-The probe finds NPCs, not speakers. Before an id reaches an issue, read
-`Transcript:<Quest>` and sort its lines:
+The probe finds NPCs, not speakers. Before an id reaches an issue, read `Transcript:<Quest>` and
+sort its lines:
 
 - A plain line is a dialogue widget line and **is** synthesized today.
-- A `{{overhead|...}}` line is overhead chatter, which stays inert until the overhead chatter
-  feature ships, so it is out of scope.
+- A `{{overhead|...}}` line is overhead chatter, inert until the overhead chatter feature ships.
 - A `{{tbox|...}}` line is narration and already voices in the narrator voice.
 
-This distinction decides real scope. In A Ruff Situation the stray dog has plain lines
-(`Arf arf!`, `Whimper.`) while her puppies have overhead ones only, so the dog's voice is a
-live defect and the puppies' is not.
+This decides real scope. In A Ruff Situation the stray dog has plain lines (`Arf arf!`,
+`Whimper.`) while her puppies have overhead ones only, so the dog's voice is a live defect and
+the puppies' is not.
 
 ## Stage 3: file one issue per gap quest
 
@@ -233,47 +290,43 @@ The body has to let someone implement without redoing the research:
    field, prose pronoun, or inferred from the name). Name the inferred ones as inferred. A name
    is not evidence of gender: Ffion of Wyrmscraig reads female and is male.
 3. **Out-of-scope ids, listed explicitly.** Every non-speaking id in the quest's id block, named
-   so it is visibly excluded rather than quietly forgotten. A reader has to be able to tell
-   "decided against" from "never looked at".
-4. **The wiring points** for any new race, as a path-by-path table. Read the live paths off the
-   tree rather than copying them from [[add-race]], whose paths predate the package restructure.
+   so a reader can tell "decided against" from "never looked at".
+4. **The wiring points** for any new race, as a path-by-path table, read off the tree rather than
+   copied from another document.
 5. **Ready-to-paste snippets** for `tools/overrides.json` and `tools/profiles.json`.
-6. **Acceptance criteria per NPC**, naming ids and the expected race, gender and origin, plus
-   the regenerate-and-verify step and a passing `./gradlew clean build`.
+6. **Acceptance criteria per NPC**, naming ids and the expected race, gender and origin, plus the
+   regenerate-and-verify step and a passing `./gradlew clean build`.
 
 Keep the body public-safe and timeless: no local paths, no dates beyond the quest's own release,
 no em dashes, and issue references rendered as links rather than bare numbers.
 
 ## Gotchas
 
-- **The plugin resolves by active id, not base composition id.** `NpcDemographicAnalyzer` prefers
-  `npc.getId()` and falls back to the composition id, so a transformed multiloc NPC is looked up
-  under the id it transformed into. When two characters share a transformed id, pin it to one of
-  them on purpose, say which lines that trades away, and flag it for Debug Mode confirmation.
-  Crab Quest has two such ids.
-- **A `Multi Infobox` page mixes NPC and item ids.** The Stray puppy page carries both its NPC
-  ids and its item ids; the item ids must never reach an override. Check which infobox block an
-  id sits under before trusting it.
+- **A `Multi Infobox` page mixes NPC and item ids.** The Stray puppy page carries its NPC ids and
+  its item ids under one title, and the item ids must never reach an override. Split the page at
+  the second infobox block before reading ids.
 - **Unwrap a piped race link before matching it.** `[[Crab (disambiguation)|Crab]]` has to read
-  `Crab`, or it matches no bucket and the NPC looks unmappable when it is merely badly linked.
-- **`byEthnicity` applies to `Human` and `Unknown` only.** `NpcProfileTable#collectLayers` skips
-  the ethnicity tint for a distinctive race, so an `ethnicity` on a Dwarf or a Dog is a no-op.
-  Set it on Human NPCs and nothing else.
+  `Crab`, or the race matches no bucket and a badly linked NPC looks like an unmapped species.
+- **A present `leagueRegion` is not an origin.** `ethnicity_key` returns nothing for `No`,
+  `General`, `N/A` and any multi-region value, so call it rather than testing the field's
+  presence.
 - **Versioned infoboxes carry per-version genders.** `gender1`, `gender2` and `gender3` belong to
-  different ids, so gender each id pair from its own version rather than from the first field
-  found.
-- **A freshly released quest is in no cache dump.** The bundled `npctypes.txt` dump stops well
-  short of current ids, so the wiki Infobox `id` is the source of truth. Only reach for
-  [[resolve-npc-ids]] when the infoboxes are genuinely empty, which recent quest pages usually
-  are not.
+  different ids, so gender each id from its own version rather than from the first field found.
+- **A shared transformed id needs a deliberate call.** The table is keyed on the active id (see
+  [[add-npc-profile]]), so when a transformation leaves two characters sharing one id, pin it to
+  one of them on purpose, state which lines that trades away, and flag it for Debug Mode
+  confirmation. Crab Quest has two such ids.
+- **A freshly released quest is in no cache dump.** The bundled `npctypes.txt` stops well short
+  of current ids, so the wiki Infobox `id` is the source of truth. Reach for [[resolve-npc-ids]]
+  only when the infoboxes are genuinely empty, which recent quest pages usually are not.
 - **Quest release does not mean wiki completeness.** A cast member whose page is a stub with no
-  infobox is invisible to the generator and needs a full override entry, race and gender
-  included.
+  infobox is invisible to the generator and needs a full override entry, race and gender included.
 
 ## Related skills
 
-- [[add-race]], when a quest brings a species the plugin has no bucket for
-- [[add-npc-profile]], for per-NPC race, gender, origin and personality work
-- [[regenerate-npc-voices]], the mandatory regenerate-and-verify step the issues hand off to
+- [[add-npc-profile]], for per-NPC race, gender, origin and personality work, and for the
+  decision between mapping a race onto an existing bucket and adding a new one
+- [[add-race]], when a quest brings a species that genuinely needs its own voice
+- [[regenerate-npc-voices]], the regenerate-and-verify step the issues hand off to
 - [[find-npc-true-origin]], when a Human's real origin differs from where they are found
 - [[resolve-npc-ids]], only when the wiki infoboxes carry no ids
