@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -30,7 +31,7 @@ public class DiskAudioCache {
   public static final long UNLIMITED = 0;
 
   private final Path dir;
-  private final long maxBytes;
+  private final LongSupplier maxBytes;
 
   private volatile boolean disabled;
 
@@ -39,6 +40,10 @@ public class DiskAudioCache {
   }
 
   public DiskAudioCache(Path dir, long maxBytes) {
+    this(dir, () -> maxBytes);
+  }
+
+  public DiskAudioCache(Path dir, LongSupplier maxBytes) {
     this.dir = dir;
     this.maxBytes = maxBytes;
   }
@@ -181,7 +186,8 @@ public class DiskAudioCache {
   }
 
   private void enforceSizeCap() {
-    if (maxBytes <= UNLIMITED) {
+    long cap = maxBytes.getAsLong();
+    if (cap <= UNLIMITED) {
       return;
     }
     List<Entry> entries = new ArrayList<>();
@@ -201,12 +207,12 @@ public class DiskAudioCache {
       log.debug("Disk cache size scan failed; skipping eviction this round", e);
       return;
     }
-    if (total <= maxBytes) {
+    if (total <= cap) {
       return;
     }
     entries.sort(Comparator.comparingLong(e -> e.mtime));
     for (Entry e : entries) {
-      if (total <= maxBytes) {
+      if (total <= cap) {
         break;
       }
       deleteQuietly(e.path);

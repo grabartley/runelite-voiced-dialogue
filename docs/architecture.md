@@ -264,9 +264,11 @@ real streaming gain per provider is measurable. Prefetch and cave-echo lines alw
 The primary cost lever remains the persistent disk cache, always present, which keeps any
 already-heard line from being billed again across sessions. Its footprint is bounded by the **Cache
 Size Limit** (default 1024 MiB) and evicted oldest-first (FIFO) so it never grows past the
-configured limit; a read never rescues an old entry, and the just-written clip always survives.
-Setting the limit to `0` opts out of eviction entirely, so the cache keeps every clip for users who
-would rather spend disk than ever re-bill a line.
+configured limit; a read never rescues an old entry, and the just-written clip survives unless it
+alone exceeds the cap, in which case the pass clears the directory and that line is billed again
+next time. Setting the limit to `0` opts out of eviction entirely, so the cache keeps every clip
+for users who would rather spend disk than ever re-bill a line. The limit is read at eviction time
+rather than held from start-up, so changing it applies from the next cached line with no restart.
 
 ## Cave echo
 
