@@ -53,6 +53,8 @@ public enum RaceBucket {
       "devil",
       "hellhound"),
   DOG("Dog", NpcRace.DOG, "\\bdogs?\\b", "dog"),
+  CRAB("Crab", NpcRace.CRAB, "\\bcrabs?\\b", "crab"),
+  PENGUIN("Penguin", NpcRace.PENGUIN, "\\bpenguins?\\b", "penguin"),
   GORILLA("Gorilla", NpcRace.GORILLA, null, "gorilla"),
   MONKEY("Monkey", NpcRace.MONKEY, "monkey|gorilla|primate|baboon|mandril", "monkey", "primate"),
   WIZARD(
@@ -65,11 +67,13 @@ public enum RaceBucket {
   ICYENE("Icyene", NpcRace.ICYENE, null, "icyene");
 
   /**
-   * The order wiki race text is scanned in; buckets the wiki never emits are absent. Dog sits
-   * behind undead and demon in both scans, so a risen or demonic hound keeps its own bucket.
+   * The order wiki race text is scanned in; buckets the wiki never emits are absent. Dog, crab and
+   * penguin sit behind undead and demon in both scans, so a risen or demonic one keeps its own
+   * bucket.
    */
   private static final RaceBucket[] WIKI_SCAN = {
-    ARANEI, UNDEAD, DEMON, DOG, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
+    ARANEI, UNDEAD, DEMON, DOG, CRAB, PENGUIN, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD,
+    HUMAN
   };
 
   private final String bucketName;

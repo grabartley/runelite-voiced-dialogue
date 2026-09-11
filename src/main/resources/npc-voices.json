@@ -6,28 +6,30 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1734,
+    "overrides_applied": 1748,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
+      "Crab": 24,
       "Demon": 790,
       "Dog": 318,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
-      "Goblin": 371,
+      "Goblin": 366,
       "Gorilla": 11,
-      "Human": 9863,
+      "Human": 9820,
       "Icyene": 11,
       "Monkey": 64,
+      "Penguin": 24,
       "Tortugan": 65,
       "Troll": 469,
       "Undead": 895,
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1975,
-      "Male": 12128
+      "Female": 1974,
+      "Male": 12129
     },
     "ethnicity_counts": {
       "asgarnia": 685,
@@ -48,7 +50,7 @@
     "life_stage_counts": {
       "child": 45
     },
-    "profiles_bespoke": 6437
+    "profiles_bespoke": 6447
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -166,6 +168,18 @@
         "accent": "Voiced purely as dog sounds: every line barked, yipped, whined, growled or snuffled out as the animal itself would make it, the meaning carried by the noise rather than by pronounced words.",
         "style": "A loyal, wholehearted dog who means every sound it makes. Eager, urgent and openly expressive, swinging between bright excitement, anxious pleading and a low protective rumble.",
         "pace": "Short, sharp bursts, panting quick between them."
+      },
+      "Crab": {
+        "name": "Crab",
+        "accent": "Bright, chirpy British English with a broad West Country seaside lilt, pitched high and small, each phrase snapping shut like a claw.",
+        "style": "A pint-sized beach crab who takes crab society entirely seriously. Scuttling and excitable, forever anxious about standing among the other crabs, tipping from breathless enthusiasm into sideways panic, and ready to lose itself in the rhythm the moment a beat starts.",
+        "pace": "Quick and skittering, darting through a phrase and then stopping dead."
+      },
+      "Penguin": {
+        "name": "Penguin",
+        "accent": "A crisp Russian accent, the clipped consonants and rolled r's of an operative of the Motherland speaking careful, precise English.",
+        "style": "A flightless bird of the penguin Motherland, disciplined, humourless and certain of the cause. Formal and deadpan to the point of comedy, delivering the absurd with total conviction and treating the smallest exchange as a matter of state security.",
+        "pace": "Measured and clipped, each sentence closed off like a line of a report."
       }
     },
     "byCategory": [
@@ -26613,6 +26627,46 @@
       "16534": {
         "name": "Picklenose",
         "style": "A goblin who has appointed himself the world's foremost authority on raising guard dogs and is sure of nothing else whatsoever; swaggering and insistent, doling out confident instruction he has entirely made up."
+      },
+      "16469": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16470": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16471": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16472": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16473": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16474": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16479": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16481": {
+        "name": "Crab",
+        "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."
+      },
+      "16484": {
+        "name": "Crab",
+        "style": "A shy crab who cannot get a word out near the bass player she adores. Softly spoken and self-effacing, dreading being looked at, going quiet and tongue-tied whenever he is mentioned, and quietly certain of how she feels underneath it all."
+      },
+      "16485": {
+        "name": "'Crab'",
+        "style": "A Killer Gentoo Penguin working the beach in a crab costume, certain the disguise is flawless. Flat, formal and utterly deadpan, treating a shoreline of crabs as hostile territory and reporting the obvious as classified intelligence."
       }
     }
   },
@@ -27530,7 +27584,7 @@
       "gender": "Male"
     },
     "233": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
@@ -29536,7 +29590,7 @@
       "ethnicity": "kharidian"
     },
     "731": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male"
     },
     "732": {
@@ -29942,97 +29996,97 @@
       "ethnicity": "kandarin"
     },
     "830": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "831": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "832": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "833": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "834": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "835": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "836": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "837": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "838": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "839": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "840": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "fremennik"
     },
     "841": {
-      "race": "Goblin",
+      "race": "Penguin",
       "gender": "Male"
     },
     "842": {
-      "race": "Goblin",
+      "race": "Penguin",
       "gender": "Male"
     },
     "844": {
-      "race": "Goblin",
+      "race": "Penguin",
       "gender": "Male"
     },
     "845": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "847": {
-      "race": "Goblin",
+      "race": "Penguin",
       "gender": "Male"
     },
     "848": {
-      "race": "Goblin",
+      "race": "Penguin",
       "gender": "Male"
     },
     "849": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "850": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
     "851": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male",
       "ethnicity": "kandarin"
     },
@@ -30849,7 +30903,7 @@
       "gender": "Male"
     },
     "1040": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "1041": {
@@ -32940,7 +32994,7 @@
       "ethnicity": "asgarnia"
     },
     "1553": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "1554": {
@@ -34950,7 +35004,7 @@
       "gender": "Male"
     },
     "2063": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male"
     },
     "2064": {
@@ -56966,22 +57020,22 @@
       "ethnicity": "kourend"
     },
     "7576": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7577": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7578": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "kourend"
     },
     "7579": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "kourend"
     },
@@ -57946,12 +58000,12 @@
       "ethnicity": "asgarnia"
     },
     "7799": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "misthalin"
     },
     "7800": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "misthalin"
     },
@@ -61340,7 +61394,7 @@
       "ethnicity": "kourend"
     },
     "8733": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "8736": {
@@ -63436,7 +63490,7 @@
       "gender": "Male"
     },
     "9201": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "tirannwn"
     },
@@ -68670,7 +68724,7 @@
       "ethnicity": "kharidian"
     },
     "10563": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male",
       "ethnicity": "kharidian"
     },
@@ -85204,7 +85258,7 @@
       "gender": "Male"
     },
     "14939": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "14940": {
@@ -88865,27 +88919,27 @@
       "gender": "Male"
     },
     "16469": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16470": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16471": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16472": {
-      "race": "Human",
-      "gender": "Female"
+      "race": "Crab",
+      "gender": "Male"
     },
     "16473": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16474": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16475": {
@@ -88905,31 +88959,31 @@
       "gender": "Male"
     },
     "16479": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16480": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16481": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16482": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16483": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Male"
     },
     "16484": {
-      "race": "Human",
+      "race": "Crab",
       "gender": "Female"
     },
     "16485": {
-      "race": "Human",
+      "race": "Penguin",
       "gender": "Male"
     },
     "16486": {

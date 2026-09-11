@@ -56,7 +56,9 @@ public class NpcProfilesResourceTest {
           "Icyene",
           "Arceuus",
           "Aranei",
-          "Dog"
+          "Dog",
+          "Crab",
+          "Penguin"
         }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
@@ -106,6 +108,42 @@ public class NpcProfilesResourceTest {
     assertTrue(
         "dogs vocalise their lines rather than pronouncing them",
         resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barked"));
+    assertTrue(
+        "crabs sound bright and West Country seaside",
+        resolve(null, "Crab", "Crab", null).profile().accent().contains("West Country"));
+    assertTrue(
+        "penguins sound Russian",
+        resolve(null, "KGP Agent", "Penguin", null).profile().accent().contains("Russian"));
+  }
+
+  @Test
+  public void theCrabQuestLeadsLayerABespokeStyleOverTheirRaceAccent() {
+    NpcProfileTable.Resolution hero = resolve(16469, "Crab", "Crab", null);
+    assertTrue("the protagonist resolves his own entry", hero.source().contains("id:16469"));
+    assertTrue("he is the bass player", hero.profile().style().contains("bass guitar"));
+    assertTrue(
+        "the crab accent still carries him", hero.profile().accent().contains("West Country"));
+
+    NpcProfileTable.Resolution lover = resolve(16484, "Crab", "Crab", null);
+    assertTrue("the lover resolves her own entry", lover.source().contains("id:16484"));
+    assertNotEquals(
+        "the lover is not delivered as the protagonist",
+        hero.profile().style(),
+        lover.profile().style());
+
+    NpcProfileTable.Resolution spy = resolve(16485, "'Crab'", "Penguin", null);
+    assertTrue(
+        "the penguin in the crab costume resolves his own entry",
+        spy.source().contains("id:16485"));
+    assertTrue("he is running a disguise", spy.profile().style().contains("costume"));
+    assertTrue("the penguin accent carries him", spy.profile().accent().contains("Russian"));
+  }
+
+  @Test
+  public void penguinsKeepTheirOwnAccentRatherThanTheRegionTheyAreFoundIn() {
+    CharacterProfile p = resolve(null, "Pescaling Pax", "Penguin", "fremennik").profile();
+    assertTrue("the penguin accent holds over the region", p.accent().contains("Russian"));
+    assertFalse("the Fremennik accent does not apply", p.accent().contains("Norse"));
   }
 
   @Test

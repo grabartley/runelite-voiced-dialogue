@@ -42,7 +42,7 @@ public class NpcDemographicParserTest {
       // Unknown or empty falls through to UNKNOWN.
       new Object[] {null, NpcRace.UNKNOWN},
       new Object[] {"", NpcRace.UNKNOWN},
-      new Object[] {"Penguin", NpcRace.UNKNOWN},
+      new Object[] {"Merfolk", NpcRace.UNKNOWN},
     };
   }
 

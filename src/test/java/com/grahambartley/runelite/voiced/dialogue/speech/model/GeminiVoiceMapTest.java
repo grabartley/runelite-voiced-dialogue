@@ -39,7 +39,9 @@ public class GeminiVoiceMapTest {
     NpcRace.ICYENE,
     NpcRace.ARCEUUS,
     NpcRace.ARANEI,
-    NpcRace.DOG
+    NpcRace.DOG,
+    NpcRace.CRAB,
+    NpcRace.PENGUIN
   };
 
   /**
@@ -295,6 +297,16 @@ public class GeminiVoiceMapTest {
   @Test
   public void dogsPairTheExcitableAnchorWithTheDeepestOne() {
     assertPools(NpcRace.DOG, pool("Fenrir", "Orus"), pool("Pulcherrima", "Gacrux"));
+  }
+
+  @Test
+  public void crabsDrawTheBrightGoblinAndMonkeyTimbres() {
+    assertPools(NpcRace.CRAB, pool("Zubenelgenubi", "Sadachbia"), pool("Pulcherrima", "Laomedeia"));
+  }
+
+  @Test
+  public void penguinsDrawTheUpbeatAndCasualBrightTimbres() {
+    assertPools(NpcRace.PENGUIN, pool("Puck", "Zubenelgenubi"), pool("Zephyr", "Laomedeia"));
   }
 
   private void assertPools(NpcRace race, Set<String> expectedMale, Set<String> expectedFemale) {

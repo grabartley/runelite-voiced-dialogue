@@ -254,6 +254,56 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void theCrabQuestCastResolvesAsCrabsOfItsStatedGender() {
+    for (int npcId :
+        new int[] {16469, 16470, 16471, 16472, 16473, 16474, 16479, 16480, 16481, 16482, 16483}) {
+      assertAttributes(npcId, "Crab", "Male");
+    }
+    assertAttributes(16484, "Crab", "Female");
+  }
+
+  @Test
+  public void theCrabCostumeOnDognoseIslandIsAPenguinUnderneath() {
+    assertAttributes(16485, "Penguin", "Male");
+  }
+
+  @Test
+  public void theQuestsFishingSpotIsLeftUnvoiced() {
+    // Floatsam speaks no lines, so it stays off the crab race the rest of the island carries.
+    for (int npcId : new int[] {16475, 16476, 16477, 16478}) {
+      assertFalse(
+          "Floatsam " + npcId + " is not a crab",
+          "Crab".equals(analyze(npcId, "Floatsam").getRace()));
+    }
+  }
+
+  @Test
+  public void thePenguinsOfGielinorResolveAsPenguinsRatherThanAsTownsfolk() {
+    for (int npcId :
+        new int[] {
+          233, 731, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 844, 845, 847,
+          848, 849, 850, 851, 2063
+        }) {
+      assertAttributes(npcId, "Penguin", "Male");
+    }
+  }
+
+  @Test
+  public void theCrabsAlreadyScatteredAroundGielinorPickUpTheCrabRace() {
+    for (int npcId :
+        new int[] {1040, 1553, 7576, 7577, 7578, 7579, 7799, 7800, 8733, 9201, 10563, 14939}) {
+      assertAttributes(npcId, "Crab", "Male");
+    }
+  }
+
+  @Test
+  public void anIdTwoWikiPagesBothClaimResolvesToTheOneTheCacheAgreesWith() {
+    // The Hellpuppy page lists 13247 alongside the Civitas illa Fortis squires; the cache names it
+    // a squire, so the pin keeps it off the hellhound bucket whichever page the scan reaches first.
+    assertAttributes(13247, "Human", "Male");
+  }
+
+  @Test
   public void femaleNamedTownsfolkResolveFemale() {
     // Gender comes straight from the wiki, so townsfolk with no gendered title
     // (Gertrude, Cassie) still resolve Female instead of defaulting to male.

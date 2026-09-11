@@ -114,6 +114,18 @@
       "accent": "Voiced purely as dog sounds: every line barked, yipped, whined, growled or snuffled out as the animal itself would make it, the meaning carried by the noise rather than by pronounced words.",
       "style": "A loyal, wholehearted dog who means every sound it makes. Eager, urgent and openly expressive, swinging between bright excitement, anxious pleading and a low protective rumble.",
       "pace": "Short, sharp bursts, panting quick between them."
+    },
+    "Crab": {
+      "name": "Crab",
+      "accent": "Bright, chirpy British English with a broad West Country seaside lilt, pitched high and small, each phrase snapping shut like a claw.",
+      "style": "A pint-sized beach crab who takes crab society entirely seriously. Scuttling and excitable, forever anxious about standing among the other crabs, tipping from breathless enthusiasm into sideways panic, and ready to lose itself in the rhythm the moment a beat starts.",
+      "pace": "Quick and skittering, darting through a phrase and then stopping dead."
+    },
+    "Penguin": {
+      "name": "Penguin",
+      "accent": "A crisp Russian accent, the clipped consonants and rolled r's of an operative of the Motherland speaking careful, precise English.",
+      "style": "A flightless bird of the penguin Motherland, disciplined, humourless and certain of the cause. Formal and deadpan to the point of comedy, delivering the absurd with total conviction and treating the smallest exchange as a matter of state security.",
+      "pace": "Measured and clipped, each sentence closed off like a line of a report."
     }
   },
   "byCategory": [
@@ -6730,6 +6742,16 @@
     "16529": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
     "16530": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
     "16523": {"name": "Picklenose", "style": "A goblin who has appointed himself the world's foremost authority on raising guard dogs and is sure of nothing else whatsoever; swaggering and insistent, doling out confident instruction he has entirely made up."},
-    "16534": {"name": "Picklenose", "style": "A goblin who has appointed himself the world's foremost authority on raising guard dogs and is sure of nothing else whatsoever; swaggering and insistent, doling out confident instruction he has entirely made up."}
+    "16534": {"name": "Picklenose", "style": "A goblin who has appointed himself the world's foremost authority on raising guard dogs and is sure of nothing else whatsoever; swaggering and insistent, doling out confident instruction he has entirely made up."},
+    "16469": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16470": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16471": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16472": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16473": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16474": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16479": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16481": {"name": "Crab", "style": "A lovelorn young crab who has taught himself the bass guitar to be noticed at the mating ceremony, and is frightened of every part of it. Earnest, eager and wide open about how he feels, tipping into flustered babbling the moment the crab he loves comes up, and finding a wobbly courage when it counts."},
+    "16484": {"name": "Crab", "style": "A shy crab who cannot get a word out near the bass player she adores. Softly spoken and self-effacing, dreading being looked at, going quiet and tongue-tied whenever he is mentioned, and quietly certain of how she feels underneath it all."},
+    "16485": {"name": "'Crab'", "style": "A Killer Gentoo Penguin working the beach in a crab costume, certain the disguise is flawless. Flat, formal and utterly deadpan, treating a shoreline of crabs as hostile territory and reporting the obvious as classified intelligence."}
   }
 }

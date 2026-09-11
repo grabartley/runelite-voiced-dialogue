@@ -109,6 +109,12 @@ public final class GeminiVoiceMap {
     // timbres paired with the deepest anchors, so a bark lands as a sound with an animal behind
     // it rather than as a word being read out.
     put(NpcRace.DOG, male("Fenrir", "Orus"), female("Pulcherrima", "Gacrux"));
+    // Crab (small, clicky, comic beach folk): the bright, light end alongside the goblins, so a
+    // scuttling crab never reads as something large standing over you.
+    put(NpcRace.CRAB, male("Zubenelgenubi", "Sadachbia"), female("Pulcherrima", "Laomedeia"));
+    // Penguin (small, clipped, deadpan): bright and light too, paired so the upbeat anchor carries
+    // the waddling comedy and the casual one the flat spy deadpan.
+    put(NpcRace.PENGUIN, male("Puck", "Zubenelgenubi"), female("Zephyr", "Laomedeia"));
   }
 
   private static String[] male(String... voices) {
