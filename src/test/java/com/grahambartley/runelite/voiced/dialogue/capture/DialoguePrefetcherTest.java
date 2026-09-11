@@ -27,7 +27,9 @@ public class DialoguePrefetcherTest {
         text,
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE);
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   private static List<SynthesisRequest> options(String... texts) {

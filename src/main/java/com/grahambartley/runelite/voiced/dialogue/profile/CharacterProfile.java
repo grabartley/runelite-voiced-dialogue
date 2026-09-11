@@ -16,7 +16,7 @@ public final class CharacterProfile {
   private final String style;
   private final String pace;
 
-  public static final String TRANSCRIPT_DIVIDER = "#### TRANSCRIPT";
+  static final String TRANSCRIPT_DIVIDER = "#### TRANSCRIPT";
 
   static final String GUARD =
       "VOICE ONLY THE TRANSCRIPT BELOW THE DIVIDER, WORD FOR WORD. ADD NO WORDS OF YOUR OWN.";

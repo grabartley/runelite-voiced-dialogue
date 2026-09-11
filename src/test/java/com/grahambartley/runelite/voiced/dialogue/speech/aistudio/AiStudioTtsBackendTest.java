@@ -93,11 +93,13 @@ public class AiStudioTtsBackendTest {
         "Hello & welcome",
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE);
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   private static String spokenText(JsonObject body) {
-    return TestFixtures.spokenTranscript(sentPayload(body));
+    return TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, sentPayload(body));
   }
 
   private static String sentPayload(JsonObject body) {
@@ -434,13 +436,17 @@ public class AiStudioTtsBackendTest {
             "a",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     SynthesisRequest elfFemale =
         new SynthesisRequest(
             "a",
             VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
 
     String variant = backend.cacheVariant(humanMale);
     assertTrue(

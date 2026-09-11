@@ -142,7 +142,9 @@ public class CloudSpeechExecutorTest {
         "Hello",
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE);
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   private final class StubOps implements CloudSpeechExecutor.Ops {

@@ -106,7 +106,9 @@ public class OpenRouterTtsBackendTest {
         "Hello & welcome",
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE);
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   @Test
@@ -150,10 +152,13 @@ public class OpenRouterTtsBackendTest {
             "Hello & welcome",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             emotion,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     backend(keyedConfig()).synthesize(request);
 
-    return TestFixtures.spokenTranscript(sentBody().get("input").getAsString());
+    return TestFixtures.spokenTranscript(
+        TestFixtures.TROLL_PROFILE, sentBody().get("input").getAsString());
   }
 
   private JsonObject sentBody() throws Exception {
@@ -195,7 +200,9 @@ public class OpenRouterTtsBackendTest {
 
     JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
     assertEquals("google/gemini-3.1-flash-tts-preview", body.get("model").getAsString());
-    assertEquals("Hello & welcome", TestFixtures.spokenTranscript(body.get("input").getAsString()));
+    assertEquals(
+        "Hello & welcome",
+        TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, body.get("input").getAsString()));
     assertEquals("pcm", body.get("response_format").getAsString());
     assertEquals("Charon", body.get("voice").getAsString());
   }
@@ -209,7 +216,9 @@ public class OpenRouterTtsBackendTest {
             "Hi",
             VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     backend(keyedConfig()).synthesize(female);
 
     assertEquals(
@@ -227,13 +236,17 @@ public class OpenRouterTtsBackendTest {
             "a",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     SynthesisRequest elfFemale =
         new SynthesisRequest(
             "a",
             VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
 
     String variant = backend.cacheVariant(humanMale);
     assertTrue(
@@ -310,7 +323,9 @@ public class OpenRouterTtsBackendTest {
             "a",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
 
     String atDefaultPace = backend.cacheVariant(line);
     config.speedPercent = 150;
@@ -330,7 +345,9 @@ public class OpenRouterTtsBackendTest {
             longLine,
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     OpenRouterTtsBackend backend = backend(config);
 
     backend.synthesize(request);
@@ -338,13 +355,16 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the whole line is sent",
         longLine,
-        TestFixtures.spokenTranscript(sentBody().get("input").getAsString()));
+        TestFixtures.spokenTranscript(
+            TestFixtures.TROLL_PROFILE, sentBody().get("input").getAsString()));
     SynthesisRequest shortLine =
         new SynthesisRequest(
             "ab",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     assertEquals(
         "line length never enters the cache key, so no line is re-keyed by its length",
         backend.cacheVariant(shortLine),
@@ -407,7 +427,9 @@ public class OpenRouterTtsBackendTest {
                 "Well met.",
                 VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
                 Emotion.NEUTRAL,
-                TestFixtures.TROLL_PROFILE));
+                TestFixtures.TROLL_PROFILE,
+                false,
+                false));
 
     RecordedRequest translation = server.takeRequest();
     assertTrue(
@@ -421,7 +443,8 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the rewritten line is what is voiced",
         "no cap, well met",
-        TestFixtures.spokenTranscript(speech.get("input").getAsString()));
+        TestFixtures.spokenTranscript(
+            TestFixtures.TROLL_PROFILE, speech.get("input").getAsString()));
     assertEquals(
         "the language_code stays the base language, not the quirk",
         "en-GB",
@@ -437,7 +460,9 @@ public class OpenRouterTtsBackendTest {
             "a",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
 
     String plain = backend.cacheVariant(line);
     assertFalse("plain English with no style adds no language fragment", plain.contains("|l"));
@@ -529,7 +554,9 @@ public class OpenRouterTtsBackendTest {
             "a",
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
             Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE);
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
 
     String english = backend.cacheVariant(line);
     assertFalse("English (default) adds no language fragment", english.contains("|l"));
@@ -554,7 +581,9 @@ public class OpenRouterTtsBackendTest {
                 "Hello",
                 VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
                 Emotion.NEUTRAL,
-                TestFixtures.TROLL_PROFILE));
+                TestFixtures.TROLL_PROFILE,
+                false,
+                false));
 
     RecordedRequest first = server.takeRequest();
     assertTrue("the translation hop runs first", first.getPath().endsWith("/chat/completions"));
@@ -564,7 +593,7 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the spoken transcript is the translation, not the source",
         "Bonjour",
-        TestFixtures.spokenTranscript(body.get("input").getAsString()));
+        TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, body.get("input").getAsString()));
     assertEquals(
         "the BCP-47 language_code matches the target",
         "fr-FR",
@@ -598,7 +627,7 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the transcript is the source text exactly as typed, untranslated",
         "Hello",
-        TestFixtures.spokenTranscript(body.get("input").getAsString()));
+        TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, body.get("input").getAsString()));
     assertFalse("an untranslated line carries no language_code", body.has("language_code"));
   }
 

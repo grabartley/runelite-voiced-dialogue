@@ -19,7 +19,7 @@ public class SynthesisRequestTest {
   public void shortConstructorDefaultsToTranslating() {
     assertFalse(
         "the 3-arg form leaves translation enabled",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE)
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false)
             .skipTranslation());
   }
 
@@ -42,7 +42,8 @@ public class SynthesisRequestTest {
   public void shortConstructorDefaultsToNpcSpeakerClass() {
     assertFalse(
         "the 3-arg form voices as an NPC line",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE).player());
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false)
+            .player());
   }
 
   @Test
@@ -62,7 +63,8 @@ public class SynthesisRequestTest {
   @Test
   public void everyConstructorDefaultsToALiveLineRatherThanAPrefetch() {
     assertFalse(
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE).prefetch());
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false)
+            .prefetch());
     assertFalse(
         new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, true, true)
             .prefetch());

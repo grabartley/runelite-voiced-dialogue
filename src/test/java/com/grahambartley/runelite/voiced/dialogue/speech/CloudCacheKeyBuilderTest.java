@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
@@ -23,6 +24,7 @@ public class CloudCacheKeyBuilderTest {
   @Test
   public void baseKeyIsModelVoiceAndProfileWithNoOptionalFragments() {
     assertEquals(
+        "every speaker resolves to a profile, so the profile fragment is part of the base key",
         "m|v|p" + TestFixtures.TROLL_PROFILE.cacheKey(),
         build("m", "v", 100, TestFixtures.TROLL_PROFILE, "English", false));
   }
@@ -35,23 +37,10 @@ public class CloudCacheKeyBuilderTest {
   }
 
   @Test
-  public void profileFragmentIsTheProfileContentKey() {
-    String withProfile = build("m", "v", 100, TestFixtures.TROLL_PROFILE, "English", false);
-    assertEquals("m|v|p" + TestFixtures.TROLL_PROFILE.cacheKey(), withProfile);
-  }
-
-  @Test
-  public void everyLineCarriesAProfileFragment() {
-    assertTrue(
-        "a profile is resolved for every speaker, so the key always folds one in",
-        build("m", "v", 100, TestFixtures.NARRATOR_PROFILE, "English", false).contains("|p"));
-  }
-
-  @Test
   public void twoProfilesNeverShareAKey() {
-    assertFalse(
-        build("m", "v", 100, TestFixtures.TROLL_PROFILE, "English", false)
-            .equals(build("m", "v", 100, TestFixtures.NARRATOR_PROFILE, "English", false)));
+    assertNotEquals(
+        build("m", "v", 100, TestFixtures.TROLL_PROFILE, "English", false),
+        build("m", "v", 100, TestFixtures.NARRATOR_PROFILE, "English", false));
   }
 
   @Test

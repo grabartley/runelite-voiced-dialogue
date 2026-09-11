@@ -22,9 +22,12 @@ public final class TestFixtures {
 
   private TestFixtures() {}
 
-  public static String spokenTranscript(String payload) {
-    int divider = payload.indexOf(CharacterProfile.TRANSCRIPT_DIVIDER);
-    return payload.substring(divider + CharacterProfile.TRANSCRIPT_DIVIDER.length() + 1);
+  public static String spokenTranscript(CharacterProfile profile, String payload) {
+    String block = profile.renderPromptBlock();
+    if (!payload.startsWith(block)) {
+      throw new AssertionError("payload does not lead with the profile block: " + payload);
+    }
+    return payload.substring(block.length());
   }
 
   public static String chatResponse(String content) {
