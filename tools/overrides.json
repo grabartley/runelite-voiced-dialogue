@@ -1730,6 +1730,9 @@
     "14154": {"name": "Royal Titans attack handler", "race": "Human", "gender": "Male"},
     "14156": {"name": "Pirate", "race": "Human", "gender": "Male"},
     "14158": {"name": "Mounted crawling hand", "race": "Undead", "gender": "Male", "ethnicity": null},
+    "14162": {"name": "Mounted cockatrice", "race": "Demon", "gender": "Male", "ethnicity": null},
+    "14164": {"name": "Mounted cockatrice", "race": "Demon", "gender": "Male", "ethnicity": null},
+    "14166": {"name": "Mounted basilisk", "race": "Demon", "gender": "Male", "ethnicity": null},
     "7025": {"name": "Reanimated dog", "race": "Undead", "gender": "Male"},
     "11463": {"name": "Reanimated hellhound", "race": "Undead", "gender": "Male"}
   }

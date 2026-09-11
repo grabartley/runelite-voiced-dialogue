@@ -236,7 +236,21 @@ public class NpcDemographicAnalyzerTest {
   public void varrockTownsfolkAreNotDraggedIntoTheDogBucket() {
     assertAttributes(7284, "Human", "Female"); // Gertrude
     assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());
-    assertAttributes(766, "Human", "Male"); // Banker
+  }
+
+  @Test
+  public void reusedIdsTheNameDumpStillRemembersAsDogsResolveToWhatTheyAreNow() {
+    for (int npcId : new int[] {14154, 14156}) {
+      assertAttributes(npcId, "Human", "Male");
+    }
+    assertAttributes(14158, "Undead", "Male");
+    for (int npcId : new int[] {14162, 14164, 14166}) {
+      assertAttributes(npcId, "Demon", "Male");
+    }
+    assertAttributes(14163, "Dog", "Female");
+    for (int npcId : new int[] {14165, 14167, 14169}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
   }
 
   @Test

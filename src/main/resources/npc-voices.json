@@ -6,12 +6,12 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1731,
+    "overrides_applied": 1734,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
-      "Demon": 787,
-      "Dog": 321,
+      "Demon": 790,
+      "Dog": 318,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
@@ -26,11 +26,11 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1976,
-      "Male": 12127
+      "Female": 1975,
+      "Male": 12128
     },
     "ethnicity_counts": {
-      "asgarnia": 688,
+      "asgarnia": 685,
       "easternlands": 2,
       "fremennik": 663,
       "kandarin": 1120,
@@ -82852,9 +82852,8 @@
       "gender": "Male"
     },
     "14162": {
-      "race": "Dog",
-      "gender": "Female",
-      "ethnicity": "asgarnia"
+      "race": "Demon",
+      "gender": "Male"
     },
     "14163": {
       "race": "Dog",
@@ -82862,9 +82861,8 @@
       "ethnicity": "asgarnia"
     },
     "14164": {
-      "race": "Dog",
-      "gender": "Male",
-      "ethnicity": "asgarnia"
+      "race": "Demon",
+      "gender": "Male"
     },
     "14165": {
       "race": "Dog",
@@ -82872,9 +82870,8 @@
       "ethnicity": "asgarnia"
     },
     "14166": {
-      "race": "Dog",
-      "gender": "Male",
-      "ethnicity": "asgarnia"
+      "race": "Demon",
+      "gender": "Male"
     },
     "14167": {
       "race": "Dog",
