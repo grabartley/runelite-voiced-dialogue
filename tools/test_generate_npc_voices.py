@@ -164,6 +164,15 @@ class RaceBucketTest(unittest.TestCase):
     def test_dog_is_a_valid_override_race(self):
         self.assertIn("Dog", gen.VALID_RACES)
 
+    def test_a_hellhound_is_a_demon(self):
+        self.assertEqual(gen.bucket_for_race("Hellhound"), "Demon")
+        self.assertEqual(gen.bucket_for_race("[[Hellhound]]"), "Demon")
+        self.assertEqual(gen.bucket_from_categories(["Category:Hellhounds"]), "Demon")
+
+    def test_a_hellhound_dragged_back_from_the_grave_is_undead_first(self):
+        for race in ("Skeleton Hellhound", "Revenant hellhound", "Reanimated hellhound"):
+            self.assertEqual(gen.bucket_for_race(race), "Undead")
+
 
 if __name__ == "__main__":
     unittest.main()

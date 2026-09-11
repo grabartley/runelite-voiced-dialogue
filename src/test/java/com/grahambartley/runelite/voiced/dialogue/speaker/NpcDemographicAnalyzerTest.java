@@ -178,11 +178,32 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void hellhoundsStayDemonsRatherThanFollowingTheDogsAcross() {
-    for (int npcId : new int[] {104, 105, 3133, 7256, 7877}) {
+  public void theWholeHellhoundFamilyResolvesToOneRaceRatherThanToWhicheverPageClaimedIt() {
+    for (int npcId : new int[] {104, 105, 135, 964, 1224, 3099, 3133, 7256, 7877, 12374, 13247}) {
       assertAttributes(npcId, "Demon", "Male");
     }
-    assertAttributes(7935, "Undead", "Male"); // Revenant hellhound
+  }
+
+  @Test
+  public void hellhoundsDraggedBackFromTheGraveAreUndeadFirst() {
+    // Skeletal, revenant and reanimated all outrank hellhound in the scan, so the grave wins.
+    for (int npcId : new int[] {5054, 6326, 6387, 6613, 6614, 7025, 7935, 11463, 12107, 12108}) {
+      assertAttributes(npcId, "Undead", "Male");
+    }
+  }
+
+  @Test
+  public void houndsTheWikiCallsDogLikeVoiceAsDogs() {
+    for (int npcId : new int[] {3449, 4185, 6473, 6474, 11583}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void wolvesVoiceAsDogsRatherThanAsPeople() {
+    for (int npcId : new int[] {106, 116, 117, 2490, 2491, 3912}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
   }
 
   @Test

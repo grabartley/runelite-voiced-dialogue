@@ -61,7 +61,7 @@ CATEGORY_RACE_RULES = [
     ("wight", "Undead"), ("revenant", "Undead"), ("spectre", "Undead"), ("wraith", "Undead"),
     ("banshee", "Undead"), ("mummy", "Undead"), ("ankou", "Undead"),
     ("tzhaar", "Demon"), ("demon", "Demon"), ("dragon", "Demon"), ("devil", "Demon"),
-    ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"),
+    ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"), ("hellhound", "Demon"),
     ("dog", "Dog"),
     ("gnome", "Gnome"),
     ("goblin", "Goblin"), ("hobgoblin", "Goblin"),
@@ -101,7 +101,7 @@ RACE_BUCKET_RULES = [
     (r"\baranei\b", "Aranei"),
     (r"vampyre|vampire|\bvyre\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|"
      r"revenant|mummy|banshee|spectre|wraith|ankou|lich|reanimat", "Undead"),
-    (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal", "Demon"),
+    (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal|hellhound", "Demon"),
     # After the undead and demon rules, so a skeletal hound or a hellhound keeps its own bucket.
     (r"\bdogs?\b", "Dog"),
     (r"gnome", "Gnome"),

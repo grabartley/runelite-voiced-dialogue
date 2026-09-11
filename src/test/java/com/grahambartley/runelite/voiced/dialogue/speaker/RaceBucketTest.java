@@ -42,6 +42,8 @@ public class RaceBucketTest {
       new Object[] {"Demon", "Demon", NpcRace.DEMON},
       new Object[] {"Dragon", "Demon", NpcRace.DEMON},
       new Object[] {"Imp", "Demon", NpcRace.DEMON},
+      new Object[] {"Hellhound", "Demon", NpcRace.DEMON},
+      new Object[] {"Skeleton Hellhound", "Undead", NpcRace.UNDEAD},
       // Case and surrounding words do not matter, and the distinctive race wins over "human".
       new Object[] {"GHOST", "Undead", NpcRace.UNDEAD},
       new Object[] {"Human/Elf hybrid", "Elf", NpcRace.ELF},
@@ -63,6 +65,8 @@ public class RaceBucketTest {
       // A hound dragged back from the grave or out of the abyss is that before it is a dog.
       new Object[] {"Undead dog", NpcRace.UNDEAD},
       new Object[] {"Demonic dog", NpcRace.DEMON},
+      new Object[] {"Hellhound", NpcRace.DEMON},
+      new Object[] {"Revenant hellhound", NpcRace.UNDEAD},
     };
   }
 

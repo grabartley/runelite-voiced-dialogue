@@ -6,23 +6,23 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1678,
+    "overrides_applied": 1702,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
-      "Demon": 787,
-      "Dog": 286,
+      "Demon": 788,
+      "Dog": 297,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9907,
+      "Human": 9887,
       "Icyene": 11,
       "Monkey": 64,
       "Tortugan": 65,
       "Troll": 469,
-      "Undead": 886,
+      "Undead": 894,
       "Wizard": 24
     },
     "gender_counts": {
@@ -27048,7 +27048,7 @@
       "gender": "Male"
     },
     "106": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "107": {
@@ -27088,11 +27088,11 @@
       "gender": "Male"
     },
     "116": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "117": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "118": {
@@ -27154,7 +27154,7 @@
       "gender": "Male"
     },
     "135": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male"
     },
     "136": {
@@ -30511,7 +30511,7 @@
       "ethnicity": "kharidian"
     },
     "964": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male",
       "ethnicity": "asgarnia"
     },
@@ -31592,7 +31592,7 @@
       "ethnicity": "kandarin"
     },
     "1224": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male"
     },
     "1225": {
@@ -36847,11 +36847,11 @@
       "gender": "Male"
     },
     "2490": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "2491": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "2492": {
@@ -39362,7 +39362,7 @@
       "ethnicity": "fremennik"
     },
     "3099": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male",
       "ethnicity": "asgarnia"
     },
@@ -40718,7 +40718,7 @@
       "gender": "Male"
     },
     "3449": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "3450": {
@@ -42815,7 +42815,7 @@
       "gender": "Male"
     },
     "3912": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "3913": {
@@ -44018,7 +44018,7 @@
       "gender": "Male"
     },
     "4185": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "4187": {
@@ -52061,7 +52061,7 @@
       "gender": "Male"
     },
     "6326": {
-      "race": "Demon",
+      "race": "Undead",
       "gender": "Male"
     },
     "6327": {
@@ -52308,7 +52308,7 @@
       "gender": "Male"
     },
     "6387": {
-      "race": "Demon",
+      "race": "Undead",
       "gender": "Male"
     },
     "6388": {
@@ -52674,11 +52674,11 @@
       "ethnicity": "morytania"
     },
     "6473": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "6474": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "6475": {
@@ -53140,12 +53140,12 @@
       "gender": "Male"
     },
     "6613": {
-      "race": "Human",
+      "race": "Undead",
       "gender": "Male",
       "ethnicity": "wilderness"
     },
     "6614": {
-      "race": "Human",
+      "race": "Undead",
       "gender": "Male",
       "ethnicity": "wilderness"
     },
@@ -54840,7 +54840,7 @@
       "gender": "Male"
     },
     "7025": {
-      "race": "Demon",
+      "race": "Undead",
       "gender": "Male"
     },
     "7026": {
@@ -72200,7 +72200,7 @@
       "gender": "Male"
     },
     "11463": {
-      "race": "Demon",
+      "race": "Undead",
       "gender": "Male"
     },
     "11464": {
@@ -72736,7 +72736,7 @@
       "gender": "Male"
     },
     "11583": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "11584": {
@@ -74649,12 +74649,12 @@
       "ethnicity": "misthalin"
     },
     "12107": {
-      "race": "Human",
+      "race": "Undead",
       "gender": "Male",
       "ethnicity": "wilderness"
     },
     "12108": {
-      "race": "Human",
+      "race": "Undead",
       "gender": "Male",
       "ethnicity": "wilderness"
     },
@@ -79413,7 +79413,7 @@
       "ethnicity": "varlamore"
     },
     "13247": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male",
       "ethnicity": "asgarnia"
     },
