@@ -202,8 +202,9 @@ public class NpcDemographicAnalyzerTest {
   public void wolvesVoiceAsDogsRatherThanAsPeople() {
     for (int npcId :
         new int[] {
-          106, 107, 108, 110, 116, 117, 231, 645, 646, 647, 710, 711, 712, 713, 714, 715, 2490,
-          2491, 3912
+          106, 107, 108, 109, 110, 115, 116, 117, 231, 232, 645, 646, 647, 710, 711, 712, 713, 714,
+          715, 2490, 2491, 3426, 3912, 4649, 4650, 4651, 9031, 9045, 9181, 10522, 10533, 13812,
+          13813
         }) {
       assertAttributes(npcId, "Dog", "Male");
     }
@@ -232,7 +233,7 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void theDogShelterRegularsStayHumanMisthalinTownsfolk() {
+  public void varrockTownsfolkAreNotDraggedIntoTheDogBucket() {
     assertAttributes(7284, "Human", "Female"); // Gertrude
     assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());
     assertAttributes(766, "Human", "Male"); // Banker

@@ -158,9 +158,6 @@ class RaceBucketTest(unittest.TestCase):
         self.assertEqual(gen.bucket_for_race("Undead dog"), "Undead")
         self.assertEqual(gen.bucket_for_race("Demonic dog"), "Demon")
 
-    def test_dog_category_buckets_when_the_infobox_has_no_race(self):
-        self.assertEqual(gen.bucket_from_categories(["Category:Dogs"]), "Dog")
-
     def test_dog_is_a_valid_override_race(self):
         self.assertIn("Dog", gen.VALID_RACES)
 

@@ -62,7 +62,6 @@ CATEGORY_RACE_RULES = [
     ("banshee", "Undead"), ("mummy", "Undead"), ("ankou", "Undead"),
     ("tzhaar", "Demon"), ("demon", "Demon"), ("dragon", "Demon"), ("devil", "Demon"),
     ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"),
-    ("dog", "Dog"),
     ("gnome", "Gnome"),
     ("goblin", "Goblin"), ("hobgoblin", "Goblin"),
     ("dwarf", "Dwarf"), ("dwarves", "Dwarf"),
