@@ -288,44 +288,32 @@ public class GeminiVoiceMapTest {
   }
 
   @Test
-  public void araneiBlendTheUndeadAndHumanAnchorsWithoutIntroducingANewVoice() {
-    Set<String> male = new HashSet<>();
-    Set<String> female = new HashSet<>();
-    for (int seed = 0; seed < 64; seed++) {
-      male.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARANEI, NpcGender.MALE, seed)));
-      female.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARANEI, NpcGender.FEMALE, seed)));
-    }
-    assertEquals(
-        "aranei males pair the undead breathy anchor with the human clear one",
-        new HashSet<>(java.util.Arrays.asList("Enceladus", "Iapetus")),
-        male);
-    assertEquals(
-        "aranei females pair the undead breathy anchor with the human clear one",
-        new HashSet<>(java.util.Arrays.asList("Achernar", "Erinome")),
-        female);
-    Set<String> overlap = new HashSet<>(male);
-    overlap.retainAll(female);
-    assertTrue("no aranei voice serves both genders: " + overlap, overlap.isEmpty());
+  public void araneiPairTheUndeadBreathyAnchorWithTheHumanClearOne() {
+    assertPools(NpcRace.ARANEI, pool("Enceladus", "Iapetus"), pool("Achernar", "Erinome"));
   }
 
   @Test
-  public void dogsPairTheExcitableAnchorsWithTheDeepestOnesWithoutIntroducingANewVoice() {
+  public void dogsPairTheExcitableAnchorWithTheDeepestOne() {
+    assertPools(NpcRace.DOG, pool("Fenrir", "Orus"), pool("Pulcherrima", "Gacrux"));
+  }
+
+  private void assertPools(NpcRace race, Set<String> expectedMale, Set<String> expectedFemale) {
     Set<String> male = new HashSet<>();
     Set<String> female = new HashSet<>();
     for (int seed = 0; seed < 64; seed++) {
-      male.add(map.voiceFor(VoiceSpec.npc(NpcRace.DOG, NpcGender.MALE, seed)));
-      female.add(map.voiceFor(VoiceSpec.npc(NpcRace.DOG, NpcGender.FEMALE, seed)));
+      male.add(map.voiceFor(VoiceSpec.npc(race, NpcGender.MALE, seed)));
+      female.add(map.voiceFor(VoiceSpec.npc(race, NpcGender.FEMALE, seed)));
     }
-    assertEquals(
-        "male dogs pair the excitable anchor with the deepest one",
-        new HashSet<>(java.util.Arrays.asList("Fenrir", "Orus")),
-        male);
-    assertEquals(
-        "female dogs pair the bright anchor with the deepest one",
-        new HashSet<>(java.util.Arrays.asList("Pulcherrima", "Gacrux")),
-        female);
+    assertEquals(race + " males draw their stated pool", expectedMale, male);
+    assertEquals(race + " females draw their stated pool", expectedFemale, female);
+    assertTrue(race + " draws only catalog voices", GEMINI_VOICE_CATALOG.containsAll(male));
+    assertTrue(race + " draws only catalog voices", GEMINI_VOICE_CATALOG.containsAll(female));
     Set<String> overlap = new HashSet<>(male);
     overlap.retainAll(female);
-    assertTrue("no dog voice serves both genders: " + overlap, overlap.isEmpty());
+    assertTrue("no " + race + " voice serves both genders: " + overlap, overlap.isEmpty());
+  }
+
+  private static Set<String> pool(String... voices) {
+    return new HashSet<>(java.util.Arrays.asList(voices));
   }
 }

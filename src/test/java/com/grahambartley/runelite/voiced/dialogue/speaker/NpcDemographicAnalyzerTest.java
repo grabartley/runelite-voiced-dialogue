@@ -195,7 +195,7 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void theDogShelterRegularsAreUntouchedByTheCanineReclassification() {
+  public void theDogShelterRegularsStayHumanMisthalinTownsfolk() {
     assertAttributes(7284, "Human", "Female"); // Gertrude
     assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());
     assertAttributes(766, "Human", "Male"); // Banker

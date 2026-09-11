@@ -47,8 +47,6 @@ public class RaceBucketTest {
       new Object[] {"Human/Elf hybrid", "Elf", NpcRace.ELF},
       new Object[] {"[[Aranei]]", "Aranei", NpcRace.ARANEI},
       new Object[] {"[[Dog]]", "Dog", NpcRace.DOG},
-      // An undead hound is dragged back from the grave before it is a dog.
-      new Object[] {"Undead dog", "Undead", NpcRace.UNDEAD},
     };
   }
 
@@ -58,6 +56,23 @@ public class RaceBucketTest {
     RaceBucket matched = RaceBucket.forWikiText(wikiText);
     assertEquals("bucket for '" + wikiText + "'", bucket, matched.bucketName());
     assertEquals("race for bucket '" + bucket + "'", race, NpcDemographicParser.toRace(bucket));
+  }
+
+  private Object[] storedRaceKeywordCases() {
+    return new Object[] {
+      new Object[] {"Dog", NpcRace.DOG},
+      new Object[] {"Guard dog", NpcRace.DOG},
+      // A hound dragged back from the grave or out of the abyss is that before it is a dog.
+      new Object[] {"Undead dog", NpcRace.UNDEAD},
+      new Object[] {"Demonic dog", NpcRace.DEMON},
+    };
+  }
+
+  @Test
+  @Parameters(method = "storedRaceKeywordCases")
+  public void aStoredRaceStringVoicesByItsMostDistinctiveKeyword(String stored, NpcRace race) {
+    assertEquals(
+        "race for stored text '" + stored + "'", race, NpcDemographicParser.toRace(stored));
   }
 
   @Test

@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 public enum RaceBucket {
   ARCEUUS("Arceuus", NpcRace.ARCEUUS, null, "arceuus"),
   ARANEI("Aranei", NpcRace.ARANEI, "\\baranei\\b", "aranei"),
-  DOG("Dog", NpcRace.DOG, "\\bdogs?\\b", "dog"),
   HUMAN("Human", NpcRace.HUMAN, "\\bhuman\\b|\\bman\\b|\\bwoman\\b", "human", "man", "person"),
   ELF("Elf", NpcRace.ELF, "\\belf\\b|\\belves\\b|elven", "elf", "elven"),
   DWARF("Dwarf", NpcRace.DWARF, "dwarf|dwarven", "dwarf", "dwarven"),
@@ -50,6 +49,7 @@ public enum RaceBucket {
       "demon",
       "dragon",
       "devil"),
+  DOG("Dog", NpcRace.DOG, "\\bdogs?\\b", "dog"),
   GORILLA("Gorilla", NpcRace.GORILLA, null, "gorilla"),
   MONKEY("Monkey", NpcRace.MONKEY, "monkey|gorilla|primate|baboon|mandril", "monkey", "primate"),
   WIZARD(
