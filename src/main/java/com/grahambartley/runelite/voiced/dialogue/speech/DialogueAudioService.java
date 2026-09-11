@@ -256,7 +256,6 @@ public final class DialogueAudioService {
     }
     Pcm pcm = cache.lookup(key);
     if (pcm != null) {
-      // A cache hit always plays buffered and instantly, no matter the streaming setting.
       playBuffered(mine, pcm, applyEcho);
       return;
     }

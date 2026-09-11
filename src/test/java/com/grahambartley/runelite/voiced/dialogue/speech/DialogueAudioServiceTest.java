@@ -91,14 +91,15 @@ public class DialogueAudioServiceTest {
 
   /** Records playback and interruption so the pipeline's decisions are observable. */
   private static final class FakeOutput implements AudioOutput {
-    int streamCalls;
-    int stopCalls;
-    int lastVolume = -1;
-    float[] lastSamples;
+    // Volatile because a pool thread writes these while the test thread spins on them.
+    volatile int streamCalls;
+    volatile int stopCalls;
+    volatile int lastVolume = -1;
+    volatile float[] lastSamples;
 
-    int beginStreamCalls;
-    int endStreamCalls;
-    int lastStreamVolume = -1;
+    volatile int beginStreamCalls;
+    volatile int endStreamCalls;
+    volatile int lastStreamVolume = -1;
     final List<float[]> streamedChunks = new ArrayList<>();
 
     @Override

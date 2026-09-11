@@ -20,12 +20,12 @@ import org.junit.Test;
  */
 public class VoicedDialogueConfigTest {
 
-  /** What a tooltip a player reads at a glance can hold. */
   private static final int MAX_DESCRIPTION_CHARS = 120;
 
   /**
    * Voice Provider is the one tooltip allowed to run long: it carries the daily-ceiling disclosure
-   * that {@code docs/architecture.md} requires player-facing copy to state.
+   * {@code docs/architecture.md} requires of player-facing copy, and the billing disclosure {@code
+   * docs/hub-compliance-checklist.md} records as verified.
    */
   private static final int DISCLOSURE_CHARS = 200;
 
@@ -43,6 +43,11 @@ public class VoicedDialogueConfigTest {
     assertTrue(
         "and that the other one has none: " + description,
         description.contains("OpenRouter has no daily cap"));
+    assertTrue(
+        "and that the provider bills them, which docs/hub-compliance-checklist.md records as a"
+            + " verified disclosure: "
+            + description,
+        description.contains("bills the calls"));
   }
 
   @Test
@@ -105,7 +110,10 @@ public class VoicedDialogueConfigTest {
       if (item == null) {
         continue;
       }
-      int limit = "ttsProvider".equals(item.keyName()) ? DISCLOSURE_CHARS : MAX_DESCRIPTION_CHARS;
+      int limit =
+          VoicedDialogueConfig.PROVIDER_KEY.equals(item.keyName())
+              ? DISCLOSURE_CHARS
+              : MAX_DESCRIPTION_CHARS;
       if (item.description().length() > limit) {
         tooLong.add(item.name() + " (" + item.description().length() + " > " + limit + ")");
       }

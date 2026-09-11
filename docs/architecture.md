@@ -254,12 +254,11 @@ the first decoded chunk instead of after the whole body. On Google AI Studio tha
 audio event as it arrives, and audio starts after roughly 0.8s whatever the line's length.
 OpenRouter reads the raw PCM body per network read, but sends nothing until the whole clip is
 generated, so its first chunk only lands once the line is finished and the wait grows with the
-line's length: measured at ~1.7s for a 20-character line and ~15s for a 400-character one.
-Streaming therefore only shortens time-to-sound on AI Studio. The whole line is still accumulated
-and cached on a clean finish, an
-interrupted or incomplete stream plays what arrived but is never cached, and debug mode logs
-`firstChunkMs` (time to first audible chunk) alongside the full elapsed time so the real streaming
-gain per provider is measurable. Prefetch and cave-echo lines always buffer.
+line's length: measured at ~1.7s for a 20-character line and ~15s for a 400-character one. Streaming
+therefore only shortens time-to-sound on AI Studio. The whole line is still accumulated and cached
+on a clean finish, an interrupted or incomplete stream plays what arrived but is never cached, and
+debug mode logs `firstChunkMs` (time to first audible chunk) alongside the full elapsed time so the
+real streaming gain per provider is measurable. Prefetch and cave-echo lines always buffer.
 
 The primary cost lever remains the persistent disk cache, always present, which keeps any
 already-heard line from being billed again across sessions. Its footprint is bounded by the **Cache

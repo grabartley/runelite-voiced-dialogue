@@ -24,7 +24,7 @@ public interface VoicedDialogueConfig extends Config {
 
   @ConfigSection(
       name = "General",
-      description = "Provider, API keys, playback, cache.",
+      description = "Provider, API keys, volume, and prefetch.",
       position = 0)
   String generalSection = "general";
 
