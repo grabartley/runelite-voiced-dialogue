@@ -23,6 +23,7 @@ Walk up, talk, and listen. That is the whole setup.
 - **Real emotion.** The plugin reads each speaker's chat-head expression and delivers the line happy, sad, angry, scared, or neutral, so a furious dwarf actually sounds furious.
 - **You star in it too.** Set your own hero's accent, persona, and pace and play the dashing knight, the gruff mercenary, or the chaos goblin of your dreams.
 - **A narrator for the story.** Switch on **Voice Narration** and the message and item boxes quests lean on ("You find a key.", the cutscene beats between conversations) are read aloud by a dedicated narrator voice, so a quest keeps its voice at the moments it is actually about.
+- **Examine anything, hear it described.** Switch on **Voice Examine Text** and the narrator reads the flavour line behind every item, NPC, and bit of scenery you examine.
 - **Your chat, out loud.** Turn on **Voice My Public Chat** and everything you type in public chat is spoken in your character's voice.
 - **Speak any language, any vibe.** Pipe dialogue through another language, or drop a delivery style over it: be a roadman in Gen Z slang among posh nobles, or run the whole realm as a pirate crew.
 - **Atmosphere on tap.** Lines spoken underground pick up a cave echo, so dungeons and sewers feel enclosed.
@@ -157,6 +158,7 @@ Settings mirror the in-game panel: **General** (provider, keys, playback, cachin
 | **Your Pace** | Normal | Speaking pace for your character's voice. |
 | **Character Voices** | `On` | Gives each speaker a distinct accent, style, and pace instead of one shared voice. Off gives the plainest, cheapest delivery. |
 | **Voice Narration** | `Off` | Reads message and item boxes aloud in a narrator voice. This is the game telling the story rather than a character speaking, so it keeps its own voice and ignores the speaking styles. The game shows these boxes for interface prompts as well as story beats, so a world switch warning is narrated too. |
+| **Voice Examine Text** | `Off` | Reads examine text aloud in the narrator voice when you examine an item, an NPC, or scenery. Examine lines are short and repeat heavily, so after the first hearing they replay free from the cache, but exploring somewhere new voices a lot of fresh lines. |
 | **Auto-learn New NPCs** | `Off` | For an NPC the plugin does not recognise, looks its race, gender, and origin up on the OSRS Wiki once and remembers it. The first line still uses the default voice while the lookup runs. |
 
 </details>

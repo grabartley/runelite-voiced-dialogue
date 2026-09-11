@@ -36,7 +36,7 @@ never a peer.
 | Tier | Package | Holds |
 |---|---|---|
 | 7 | (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties`, and the wiring that constructs both provider backends |
-| 6 | `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, public chat, prefetch |
+| 6 | `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, narration, public chat, examine, prefetch |
 | 6 | `speech.openrouter` | The OpenRouter transport: payload shape, credit metering, usage reads |
 | 6 | `speech.aistudio` | The Google AI Studio transport: `generateContent`, SSE streaming, token usage |
 | 5 | `speech` | The provider-neutral call flow: retry and back-off, HTTP helpers, the backend contract, the off-thread pipeline |

@@ -369,10 +369,20 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "voiceExamineText",
+      name = "Voice Examine Text",
+      description = "Read examine text aloud in the narrator voice. Repeats replay free.",
+      position = 6,
+      section = voicesSection)
+  default boolean voiceExamineText() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "autoLearnNewNpcs",
       name = "Auto-learn New NPCs",
       description = "Look up unknown NPCs on the wiki once, then cache.",
-      position = 6,
+      position = 7,
       section = voicesSection)
   default boolean autoLearnNewNpcs() {
     return false;

@@ -47,6 +47,28 @@ game state as a quest's narration. Nothing in the widget, the chat type, or the 
 separates them, so narration is opt-in rather than filtered by a heuristic that would have to guess
 what counts as story.
 
+Examine text (`ExamineSpeaker`, gated by **Voice Examine Text**, off by default) rides the same
+narrator path. The client tags examines with their own chat types (`ITEM_EXAMINE`, `NPC_EXAMINE`,
+`OBJECT_EXAMINE`), so no other game-channel message can reach it and no string matching is needed.
+The types alone are not sufficient, though, because other plugins publish their own lines on them:
+RuneLite's Examine plugin appends an item price on `ITEM_EXAMINE` moments after the real examine
+text, and since every new line stops the one playing, voicing it would talk over the flavour line the
+player asked for. Only lines the game authored are voiced, told apart by the RuneLite format message
+the client stamps onto any node published through `ChatMessageManager` with a RuneLite-formatted
+message. Both built-in publishers on these types, the Examine and Barrows plugins, supply one.
+
+That test cannot be applied on arrival. `ChatMessageManager.add` publishes the message and stamps the
+format message on the following statement, so every subscriber first sees the node unmarked. The
+decision is therefore deferred to the next client tick (`ClientThread.invokeLater`, roughly 20ms) by
+which point the stamp has landed.
+
+Examine yields the audio channel while a dialogue is open, asking `DialogueWatcher`, the single owner
+of that state, rather than reading the dialogue widgets a second time. That gate is checked in the
+deferred task, the moment the channel would actually be taken, so a dialogue opening during the
+intervening tick still wins it. Like every other voiced line an examine goes through
+`DialogueAudioService.speak`, which stops current playback and advances the epoch, so a fresh examine
+cuts the one before it exactly as a new dialogue line cuts the line being skipped.
+
 ## The OpenRouter speech call
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It

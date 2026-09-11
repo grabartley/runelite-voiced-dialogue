@@ -19,6 +19,9 @@ import net.runelite.api.widgets.Widget;
  *
  * <p>The narration boxes are scanned by the {@link NarrationWatcher} this owns, so they share that
  * one interrupt edge with the chat widgets rather than racing it from a second subscriber.
+ *
+ * <p>Also the single owner of whether a dialogue is open ({@link #isDialogueOpen()}), which the
+ * chat-driven speakers read to keep the audio channel for the conversation in front of the player.
  */
 public final class DialogueWatcher {
 
@@ -32,7 +35,7 @@ public final class DialogueWatcher {
 
   private final Map<Speaker, String> lastSpokenBySpeaker = new EnumMap<>(Speaker.class);
 
-  private boolean wasDialogueOpen;
+  private boolean dialogueOpen;
   private boolean wasFullyClosed;
 
   public DialogueWatcher(
@@ -73,23 +76,38 @@ public final class DialogueWatcher {
       prefetchCoordinator.prefetchOptions(options);
     }
 
-    boolean dialogueOpen = npcVisible || playerVisible || narrationVisible;
-    if (shouldInterruptOnClose(dialogueOpen, wasDialogueOpen)) {
+    boolean open = npcVisible || playerVisible || narrationVisible;
+    if (shouldInterruptOnClose(open, dialogueOpen)) {
       audioService.interrupt();
       lastSpokenBySpeaker.clear();
       narrationWatcher.reset();
     }
-    wasDialogueOpen = dialogueOpen;
+    dialogueOpen = open;
 
     // Reset prefetch only once the dialogue is fully gone (no text and no option list), so the
     // session cap and queued warming survive the option-select screen. Edge-triggered like the
     // interrupt above, because "fully closed" is also the state of every idle tick spent walking
     // around, and re-cancelling on each of those would churn for nothing.
-    boolean fullyClosed = !dialogueOpen && !optionsVisible;
+    boolean fullyClosed = !open && !optionsVisible;
     if (fullyClosed && !wasFullyClosed) {
       prefetchCoordinator.reset();
     }
     wasFullyClosed = fullyClosed;
+  }
+
+  /**
+   * Whether an NPC or player dialogue, or a narration box being voiced, was open as of the last
+   * game tick. The option list is not counted, and a narration box counts only while narration is
+   * switched on, because {@link NarrationWatcher#tick()} reports closed when it is off. The single
+   * owner of that question, so a feature that must yield the audio channel to dialogue consults
+   * this instead of reading the same widgets a second time and drifting from it.
+   *
+   * <p>Sampled per tick, so between ticks it can lag the client by one. That is why it gates speech
+   * the player has just triggered, where a tick of lag is unnoticeable, and never the interrupt,
+   * which is edge-triggered from the live scan above.
+   */
+  public boolean isDialogueOpen() {
+    return dialogueOpen;
   }
 
   private void speakIfNew(
