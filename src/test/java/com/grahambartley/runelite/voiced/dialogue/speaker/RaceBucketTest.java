@@ -74,8 +74,9 @@ public class RaceBucketTest {
       new Object[] {"Demonic dog", NpcRace.DEMON},
       new Object[] {"Hellhound", NpcRace.DEMON},
       new Object[] {"Revenant hellhound", NpcRace.UNDEAD},
-      new Object[] {"Crab", NpcRace.CRAB},
-      new Object[] {"Penguin", NpcRace.PENGUIN},
+      new Object[] {"Undead crab", NpcRace.UNDEAD},
+      new Object[] {"Demonic penguin", NpcRace.DEMON},
+      new Object[] {"Sand crab", NpcRace.CRAB},
     };
   }
 

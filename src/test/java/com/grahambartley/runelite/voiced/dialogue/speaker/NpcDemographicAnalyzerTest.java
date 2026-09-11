@@ -268,12 +268,10 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void theQuestsFishingSpotIsLeftUnvoiced() {
-    // Floatsam speaks no lines, so it stays off the crab race the rest of the island carries.
+  public void theQuestsFishingSpotStaysOffTheCrabRace() {
+    // Floatsam speaks no lines, so it keeps the default rather than the race the island carries.
     for (int npcId : new int[] {16475, 16476, 16477, 16478}) {
-      assertFalse(
-          "Floatsam " + npcId + " is not a crab",
-          "Crab".equals(analyze(npcId, "Floatsam").getRace()));
+      assertAttributes(npcId, "Human", "Male");
     }
   }
 
@@ -298,9 +296,9 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void anIdTwoWikiPagesBothClaimResolvesToTheOneTheCacheAgreesWith() {
-    // The Hellpuppy page lists 13247 alongside the Civitas illa Fortis squires; the cache names it
-    // a squire, so the pin keeps it off the hellhound bucket whichever page the scan reaches first.
-    assertAttributes(13247, "Human", "Male");
+    // The Hellpuppy page lists 13247 alongside the Civitas illa Fortis squires, so the scan order
+    // alone decided its race, gender and region. The cache names it a female Varlamore squire.
+    assertAttributes(13247, "Human", "Female");
   }
 
   @Test

@@ -69,6 +69,8 @@ CATEGORY_RACE_RULES = [
     ("troll", "Troll"), ("ogre", "Troll"), ("cyclop", "Troll"), ("giant", "Troll"),
     ("wizard", "Wizard"), ("sorcerer", "Wizard"),
     ("tortugan", "Tortugan"), ("tortuga", "Tortugan"),
+    # Penguin has a species category; crab deliberately has none, because the only wiki categories
+    # whose names contain "crab" are a quest and a cave that also hold a human and a snake.
     ("penguin", "Penguin"),
     ("icyene", "Icyene"),
     ("human", "Human"),

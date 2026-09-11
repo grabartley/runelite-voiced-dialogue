@@ -1742,12 +1742,12 @@
     "16474": {"name": "Crab (protagonist)", "race": "Crab", "gender": "Male"},
     "16479": {"name": "Crab (protagonist)", "race": "Crab", "gender": "Male"},
     "16481": {"name": "Crab (protagonist)", "race": "Crab", "gender": "Male"},
-    "16472": {"name": "Crab (blushing)", "race": "Crab", "gender": "Male"},
+    "16472": {"name": "Crab (protagonist blushing; id shared with the lover blushing)", "race": "Crab", "gender": "Male"},
     "16484": {"name": "Crab (lover)", "race": "Crab", "gender": "Female"},
-    "16483": {"name": "Crab (ceremony recruit)", "race": "Crab", "gender": "Male"},
+    "16483": {"name": "Crab (ceremony recruit; id shared with the lover performing)", "race": "Crab", "gender": "Male"},
     "16480": {"name": "Crab (ceremonial leader)", "race": "Crab", "gender": "Male"},
     "16482": {"name": "Crab (ceremony audience)", "race": "Crab", "gender": "Male"},
     "16485": {"name": "'Crab'", "race": "Penguin", "gender": "Male"},
-    "13247": {"name": "Squire", "race": "Human"}
+    "13247": {"name": "Squire", "race": "Human", "gender": "Female", "ethnicity": "varlamore"}
   }
 }

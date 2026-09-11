@@ -28,11 +28,11 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1974,
-      "Male": 12129
+      "Female": 1975,
+      "Male": 12128
     },
     "ethnicity_counts": {
-      "asgarnia": 685,
+      "asgarnia": 684,
       "easternlands": 2,
       "fremennik": 663,
       "kandarin": 1120,
@@ -43,7 +43,7 @@
       "misthalin": 1056,
       "morytania": 1032,
       "tirannwn": 331,
-      "varlamore": 1016,
+      "varlamore": 1017,
       "wilderness": 120,
       "wyrmscraig": 11
     },
@@ -79468,8 +79468,8 @@
     },
     "13247": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "asgarnia"
+      "gender": "Female",
+      "ethnicity": "varlamore"
     },
     "13248": {
       "race": "Human",
