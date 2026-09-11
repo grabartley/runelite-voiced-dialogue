@@ -169,7 +169,5 @@ public class VoicedDialogueConfigTest {
         VoicedDialogueConfig.class.getMethod("speakingPace").getAnnotation(ConfigItem.class);
     assertEquals("Your Delivery Pace", direction.name());
     assertEquals("Speaking Pace", speed.name());
-    assertFalse(
-        "the two pace settings must not share a label", direction.name().equals(speed.name()));
   }
 }

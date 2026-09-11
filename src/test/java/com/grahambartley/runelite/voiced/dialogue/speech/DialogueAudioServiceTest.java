@@ -651,7 +651,9 @@ public class DialogueAudioServiceTest {
             if ("Blocker".equals(request.text())) {
               blockerEntered.countDown();
               try {
-                releaseBlocker.await(2, TimeUnit.SECONDS);
+                // Untimed: a timeout here would let the blocker close its stream and race the
+                // endStreamCalls assertion. The finally block always releases it.
+                releaseBlocker.await();
               } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
               }
