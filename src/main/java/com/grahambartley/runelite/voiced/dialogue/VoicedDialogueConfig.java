@@ -225,9 +225,8 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "ttsProvider",
       name = "Voice Provider",
       description =
-          "Cloud service that voices dialogue and bills the calls. Google AI Studio voices lines"
-              + " fastest but begins at 100 fresh lines a day, prefetched options included;"
-              + " OpenRouter has no daily cap.",
+          "Cloud service that voices dialogue. Google AI Studio is fastest but begins at 100 fresh"
+              + " lines a day, prefetched options included; OpenRouter has no daily cap.",
       position = 0,
       section = generalSection)
   default TtsProvider ttsProvider() {
@@ -288,26 +287,6 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "persistentCache",
-      name = "Save Audio To Disk",
-      description = "Save audio to disk so repeat lines replay for free.",
-      position = 6,
-      section = generalSection)
-  default boolean persistentCache() {
-    return true;
-  }
-
-  @ConfigItem(
-      keyName = "streamPlayback",
-      name = "Stream Playback",
-      description = "Start playing a line as it downloads instead of waiting for the whole clip.",
-      position = 7,
-      section = generalSection)
-  default boolean streamPlayback() {
-    return true;
-  }
-
-  @ConfigItem(
       keyName = "playerVoice",
       name = "Player Voice",
       description = "Voice for your character's dialogue and public chat.",
@@ -339,8 +318,8 @@ public interface VoicedDialogueConfig extends Config {
 
   @ConfigItem(
       keyName = "playerPace",
-      name = "Your Pace",
-      description = "Your speaking pace. Needs Character Voices on.",
+      name = "Your Delivery Pace",
+      description = "How your character paces their words. Needs Character Voices on.",
       position = 3,
       section = voicesSection)
   default String playerPace() {
@@ -360,8 +339,7 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "voiceNarration",
       name = "Voice Narration",
-      description =
-          "Speak message and item boxes in a narrator voice. Covers interface prompts too.",
+      description = "Speak message and item boxes in a narrator voice.",
       position = 5,
       section = voicesSection)
   default boolean voiceNarration() {
@@ -461,21 +439,10 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "cloudMaxChars",
-      name = "Max Characters Per Line",
-      description = "Cap characters sent per line. 0 = whole line, uncapped.",
-      position = 1,
-      section = advancedSection)
-  @Range(min = 0, max = 5000)
-  default int cloudMaxChars() {
-    return 0;
-  }
-
-  @ConfigItem(
       keyName = "debugMode",
       name = "Debug Logging",
       description = "Log NPC race/gender resolution to the client logs.",
-      position = 2,
+      position = 1,
       section = advancedSection)
   default boolean debugMode() {
     return false;

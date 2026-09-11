@@ -136,15 +136,11 @@ speaking style works without an OpenRouter key.
 Because synthesis is billed per character, several guards keep cost bounded and latency low:
 
 - **Cache key.** `cacheVariant` folds in the model, the resolved Gemini voice, and (only when not at
-  their defaults) the speaking pace, the character cap, the character profile, and a non-English
-  spoken language, on top of the shared `(backendId, voiceKey, emotion, text)` identity. A model,
-  voice, pace, profile, or language change therefore never replays the wrong audio, while a short
-  English line stays on a stable key so changing a setting that cannot affect it does not force a
-  needless re-bill.
-- **Per-line character cap.** When **Max Characters Per Line** is a positive value, each line is
-  truncated to it at a sentence boundary, or a word boundary if there is none, before sending. `0`
-  (the default) sends the whole line uncapped. OSRS lines are short, so a cap only bounds pathological
-  cases.
+  their defaults) the speaking pace, the character profile, and a non-English spoken language, on
+  top of the shared `(backendId, voiceKey, emotion, text)` identity. A model, voice, pace, profile,
+  or language change therefore never replays the wrong audio, while a plain English line stays on a
+  stable key so changing a setting that cannot affect it does not force a needless re-bill. Line
+  length is not part of the key: every line is sent whole.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
 - **Session spend readout.** `SpendTracker` counts billable work per provider, recorded inside each
@@ -252,8 +248,7 @@ is plain English, so the line bypasses the model entirely and the source text go
 speech: no chat-completions request, no added latency or cost. Setting a non-English language, a
 style for that class, or both is what turns the hop on.
 
-With **Stream Playback** on (the default), a cache-missed live line plays as it downloads: the
-backend's `synthesizeStreaming` decodes the response incrementally and feeds each chunk to the
+A cache-missed live line plays as it downloads: the backend's `synthesizeStreaming` decodes the response incrementally and feeds each chunk to the
 player through a `PcmSink`, so audio starts on the first decoded chunk instead of after the whole
 body. On Google AI Studio that decodes each SSE audio event as it arrives, and audio starts after
 roughly 0.8s whatever the line's length. OpenRouter reads the raw PCM body per network read, but

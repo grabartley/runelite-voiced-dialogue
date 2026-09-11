@@ -162,9 +162,7 @@ public class VoicedDialoguePlugin extends Plugin {
     aiStudioBackend.setSpendTracker(spendTracker);
     backendProvider = new BackendProvider(openRouterBackend, aiStudioBackend, config::ttsProvider);
     DiskAudioCache diskCache =
-        config.persistentCache()
-            ? new DiskAudioCache(ttsDir.resolve("cache"), config.cacheSizeLimitMiB() * 1024L * 1024)
-            : null;
+        new DiskAudioCache(ttsDir.resolve("cache"), config.cacheSizeLimitMiB() * 1024L * 1024);
     audioService =
         new DialogueAudioService(
             backendProvider,
@@ -172,8 +170,7 @@ public class VoicedDialoguePlugin extends Plugin {
             diskCache,
             CACHE_SIZE,
             QUEUE_CAPACITY,
-            config::volume,
-            config::streamPlayback);
+            config::volume);
     // Warm the backend off the game thread so the first line is not the one that pays the cloud
     // connection handshake, and the game thread never blocks on it.
     audioService.prewarm(backendProvider::warmUpActive);

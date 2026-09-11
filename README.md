@@ -82,8 +82,6 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Dialogue Volume** | `20` | Loudness of spoken dialogue, `0` (muted) to `100`. |
 | **Voice My Public Chat** | `Off` | Speaks your public chat aloud in your player voice, exactly as typed. |
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options on screen so your pick plays instantly; can spend credit on branches you never choose. |
-| **Save Audio To Disk** | `On` | Keeps audio on disk so repeated lines replay instantly and free across sessions. |
-| **Stream Playback** | `On` | Starts speaking as audio arrives instead of waiting for the full clip. Only Google AI Studio delivers audio early enough for this to help. |
 
 </details>
 
@@ -95,7 +93,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
 | **Your Accent** | British (Cambridge) | Accent for your character's voice. Needs **Character Voices** on. |
 | **Your Persona** | friendly and plucky | Persona and delivery style for your character. Needs **Character Voices** on. |
-| **Your Pace** | Normal | Speaking pace for your character. Needs **Character Voices** on. |
+| **Your Delivery Pace** | Normal | How your character paces their words. Needs **Character Voices** on. |
 | **Character Voices** | `On` | Gives each speaker their own accent, persona, and pace. Off gives one plain shared delivery, the cheapest option. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
@@ -123,7 +121,6 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Cache Size Limit (MiB)** | `1024` | Maximum on-disk cache size; oldest clips are deleted first. `0` for no limit. |
-| **Max Characters Per Line** | `0` | Caps how much of a line is voiced, to bound worst-case cost. `0` voices the whole line. |
 | **Debug Logging** | `Off` | Writes per-line voice decisions and timing logs for troubleshooting. |
 
 </details>

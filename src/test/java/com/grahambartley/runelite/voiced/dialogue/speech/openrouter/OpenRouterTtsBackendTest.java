@@ -85,7 +85,6 @@ public class OpenRouterTtsBackendTest {
   private static MutableTestConfig keyedConfig() {
     MutableTestConfig config = new MutableTestConfig();
     config.openRouterKey = "sk-or-abc";
-    config.maxChars = 600;
     return config;
   }
 
@@ -320,43 +319,24 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void cacheVariantFoldsInCapOnlyForLinesItWouldTruncate() {
-    MutableTestConfig config = new MutableTestConfig();
+  public void aLongLineIsSentWholeAndKeyedTheSameAsAShortOne() throws Exception {
+    MutableTestConfig config = keyedConfig();
+    enqueuePcm((short) 1);
+    String longLine = "This is a long sentence. More text that must not be dropped by any cap.";
+    SynthesisRequest request =
+        new SynthesisRequest(
+            longLine, VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
     OpenRouterTtsBackend backend = backend(config);
+
+    backend.synthesize(request);
+
+    assertEquals("the whole line is sent", longLine, sentBody().get("input").getAsString());
     SynthesisRequest shortLine =
         new SynthesisRequest("ab", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
-    SynthesisRequest longLine =
-        new SynthesisRequest(
-            "abcdef", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
-
-    String shortAtDefault = backend.cacheVariant(shortLine);
-    String longAtDefault = backend.cacheVariant(longLine);
-    config.maxChars = 3;
     assertEquals(
-        "a cap that cannot truncate this line leaves its key stable, avoiding needless re-bills",
-        shortAtDefault,
-        backend.cacheVariant(shortLine));
-    assertNotEquals(
-        "a cap that truncates this line must re-key so the full-length audio is not served",
-        longAtDefault,
-        backend.cacheVariant(longLine));
-  }
-
-  @Test
-  public void longLineIsCappedBeforeSending() throws Exception {
-    MutableTestConfig config = keyedConfig();
-    config.maxChars = 30;
-    enqueuePcm((short) 1);
-
-    String longLine = "This is a long sentence. More text that should be dropped beyond the cap.";
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                longLine, VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL));
-
-    String input = sentBody().get("input").getAsString();
-    assertTrue("the sent input respects the cap", input.length() <= 30);
-    assertEquals("it is truncated at the sentence boundary", "This is a long sentence.", input);
+        "line length never enters the cache key, so no line is re-keyed by its length",
+        backend.cacheVariant(shortLine),
+        backend.cacheVariant(request));
   }
 
   @Test

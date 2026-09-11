@@ -10,7 +10,6 @@ public final class MutableTestConfig implements VoicedDialogueConfig {
 
   public String openRouterKey = "";
   public String googleAiStudioKey = "";
-  public int maxChars;
   public int speedPercent = 100;
   public VoicedDialogueConfig.SpokenLanguage language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
   public VoicedDialogueConfig.SpeakingStyle playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
@@ -24,11 +23,6 @@ public final class MutableTestConfig implements VoicedDialogueConfig {
   @Override
   public String googleAiStudioApiKey() {
     return googleAiStudioKey;
-  }
-
-  @Override
-  public int cloudMaxChars() {
-    return maxChars;
   }
 
   @Override

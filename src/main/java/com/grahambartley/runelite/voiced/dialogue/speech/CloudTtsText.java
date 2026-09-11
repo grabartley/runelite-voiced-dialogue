@@ -3,39 +3,14 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 
 /**
- * Provider-neutral text rules shared by every cloud TTS provider: the line-length cap, the
- * translation-target decision, the language/quirk combination, and the translator's fixed system
- * prompt. Kept in one place so every provider transforms a line identically, which keeps their
- * synthesis caches and the model-side prompt caches keyed the same way.
+ * Provider-neutral text rules shared by every cloud TTS provider: the translation-target decision,
+ * the language/quirk combination, and the translator's fixed system prompt. Kept in one place so
+ * every provider transforms a line identically, which keeps their synthesis caches and the
+ * model-side prompt caches keyed the same way.
  */
 public final class CloudTtsText {
 
   private CloudTtsText() {}
-
-  /**
-   * Truncates {@code text} to at most {@code maxChars} characters, cutting at the latest sentence
-   * boundary in the kept window, or failing that the latest word boundary, so a capped line still
-   * ends cleanly rather than mid-word. A non-positive cap or an already-short line is returned
-   * unchanged. The sentence boundary is only honoured past the halfway mark so an early period does
-   * not collapse a long line down to a fragment.
-   */
-  static String capLength(String text, int maxChars) {
-    if (text == null || maxChars <= 0 || text.length() <= maxChars) {
-      return text;
-    }
-    String window = text.substring(0, maxChars);
-    for (int i = window.length() - 1; i >= maxChars / 2; i--) {
-      char c = window.charAt(i);
-      if (c == '.' || c == '!' || c == '?') {
-        return window.substring(0, i + 1).trim();
-      }
-    }
-    int lastSpace = window.lastIndexOf(' ');
-    if (lastSpace > 0) {
-      return window.substring(0, lastSpace).trim();
-    }
-    return window.trim();
-  }
 
   /** A target language other than English (case-insensitive, blank treated as English). */
   static boolean needsTranslation(String language) {
