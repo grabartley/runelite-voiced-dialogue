@@ -1666,6 +1666,18 @@
     "10439": {"name": "Sheepdog", "race": "Dog", "gender": "Female"},
     "9729": {"name": "Vampyre Juvinate", "race": "Undead", "gender": "Male", "ethnicity": null},
     "12650": {"name": "Prince Itzla Arkan", "race": "Human", "gender": "Male", "ethnicity": "varlamore"},
-    "12651": {"name": "Prince Itzla Arkan", "race": "Human", "gender": "Male", "ethnicity": "varlamore"}
+    "12651": {"name": "Prince Itzla Arkan", "race": "Human", "gender": "Male", "ethnicity": "varlamore"},
+    "112": {"name": "Wild dog", "race": "Dog", "gender": "Male"},
+    "113": {"name": "Wild dog", "race": "Dog", "gender": "Male"},
+    "114": {"name": "Guard dog", "race": "Dog", "gender": "Male"},
+    "131": {"name": "Guard dog (player-owned house)", "race": "Dog", "gender": "Male"},
+    "7209": {"name": "Guard dog", "race": "Dog", "gender": "Male"},
+    "2802": {"name": "Sheepdog", "race": "Dog", "gender": "Female"},
+    "12992": {"name": "Molossus", "race": "Dog", "gender": "Male"},
+    "12993": {"name": "Molossus", "race": "Dog", "gender": "Male"},
+    "12994": {"name": "Molossus", "race": "Dog", "gender": "Male"},
+    "12995": {"name": "Molossus", "race": "Dog", "gender": "Male"},
+    "12999": {"name": "Molossus", "race": "Dog", "gender": "Male"},
+    "12998": {"name": "Lola", "race": "Dog", "gender": "Female"}
   }
 }

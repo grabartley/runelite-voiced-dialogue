@@ -166,6 +166,26 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void dogsTheWikiLeavesUnlabelledStillResolveAsDogs() {
+    // Their pages carry an Infobox Monster or omit the race field, so the bucket comes from a pin.
+    for (int npcId :
+        new int[] {112, 113, 114, 131, 7209, 7771, 12992, 12993, 12994, 12995, 12999}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+    for (int npcId : new int[] {2802, 10438, 10439, 12998}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
+  }
+
+  @Test
+  public void hellhoundsStayDemonsRatherThanFollowingTheDogsAcross() {
+    for (int npcId : new int[] {104, 105, 3133, 7256, 7877}) {
+      assertAttributes(npcId, "Demon", "Male");
+    }
+    assertAttributes(7935, "Undead", "Male"); // Revenant hellhound
+  }
+
+  @Test
   public void theDogShelterHumanAndGoblinCastResolvesToItsDeliberateRaces() {
     assertAttributes(16486, "Human", "Female"); // Talia
     assertAttributes(16487, "Human", "Male"); // Chase

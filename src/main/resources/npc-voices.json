@@ -6,18 +6,18 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1666,
+    "overrides_applied": 1678,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
       "Demon": 787,
-      "Dog": 274,
+      "Dog": 286,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9919,
+      "Human": 9907,
       "Icyene": 11,
       "Monkey": 64,
       "Tortugan": 65,
@@ -27072,15 +27072,15 @@
       "gender": "Male"
     },
     "112": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "113": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "114": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "115": {
@@ -27138,7 +27138,7 @@
       "gender": "Male"
     },
     "131": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "132": {
@@ -38135,7 +38135,7 @@
       "gender": "Male"
     },
     "2802": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Female",
       "ethnicity": "asgarnia"
     },
@@ -55584,7 +55584,7 @@
       "gender": "Male"
     },
     "7209": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "7212": {
@@ -78222,22 +78222,22 @@
       "ethnicity": "varlamore"
     },
     "12992": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male",
       "ethnicity": "varlamore"
     },
     "12993": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male",
       "ethnicity": "varlamore"
     },
     "12994": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male",
       "ethnicity": "varlamore"
     },
     "12995": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male",
       "ethnicity": "varlamore"
     },
@@ -78252,12 +78252,12 @@
       "ethnicity": "varlamore"
     },
     "12998": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Female",
       "ethnicity": "varlamore"
     },
     "12999": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male",
       "ethnicity": "varlamore"
     },
