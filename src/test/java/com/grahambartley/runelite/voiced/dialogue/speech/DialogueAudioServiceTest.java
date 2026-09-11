@@ -125,11 +125,6 @@ public class DialogueAudioServiceTest {
       };
     }
 
-    /** Plays across both paths: a live miss opens a stream, a cache hit plays buffered. */
-    int plays() {
-      return streamCalls + beginStreamCalls;
-    }
-
     @Override
     public void stop() {
       stopCalls++;
@@ -211,7 +206,8 @@ public class DialogueAudioServiceTest {
     executor.runAll();
 
     assertEquals("second identical line should hit the cache", 1, backend.requests.size());
-    assertEquals("both lines should still play", 2, output.plays());
+    assertEquals("the live miss streamed", 1, output.beginStreamCalls);
+    assertEquals("the cached repeat played buffered", 1, output.streamCalls);
   }
 
   @Test
@@ -449,7 +445,8 @@ public class DialogueAudioServiceTest {
 
     assertEquals("stale first line should never synthesize", 1, backend.requests.size());
     assertTrue(backend.requests.get(0).endsWith("|Second line"));
-    assertEquals("only the live line should play", 1, output.plays());
+    assertEquals("only the live line should play, and it streams", 1, output.beginStreamCalls);
+    assertEquals("nothing plays buffered", 0, output.streamCalls);
   }
 
   @Test
@@ -551,7 +548,8 @@ public class DialogueAudioServiceTest {
 
     assertEquals("downgraded emotion reuses the neutral cache entry", 1, backend.requests.size());
     assertTrue(backend.requests.get(0).contains("|NEUTRAL|"));
-    assertEquals("both lines still play", 2, output.plays());
+    assertEquals("the first line streamed", 1, output.beginStreamCalls);
+    assertEquals("the downgraded repeat played buffered from cache", 1, output.streamCalls);
   }
 
   @Test
@@ -669,13 +667,13 @@ public class DialogueAudioServiceTest {
 
       svc.speak(req("Second", NpcRace.HUMAN, NpcGender.MALE));
       long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-      while (output.plays() == 0 && System.nanoTime() < deadline) {
+      while (output.beginStreamCalls == 0 && System.nanoTime() < deadline) {
         Thread.onSpinWait();
       }
       assertEquals(
           "the second line played on the free worker while the first was still blocked",
           1,
-          output.plays());
+          output.beginStreamCalls);
     } finally {
       releaseBlocker.countDown();
       pool.shutdownNow();

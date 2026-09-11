@@ -248,23 +248,25 @@ is plain English, so the line bypasses the model entirely and the source text go
 speech: no chat-completions request, no added latency or cost. Setting a non-English language, a
 style for that class, or both is what turns the hop on.
 
-A cache-missed live line plays as it downloads: the backend's `synthesizeStreaming` decodes the response incrementally and feeds each chunk to the
-player through a `PcmSink`, so audio starts on the first decoded chunk instead of after the whole
-body. On Google AI Studio that decodes each SSE audio event as it arrives, and audio starts after
-roughly 0.8s whatever the line's length. OpenRouter reads the raw PCM body per network read, but
-sends nothing until the whole clip is generated, so its first chunk only lands once the line is
-finished and the wait grows with the line's length: measured at ~1.7s for a 20-character line and
-~15s for a 400-character one. Streaming therefore only shortens time-to-sound on AI Studio. The whole line is still accumulated and cached on a clean finish, an
+A cache-missed live line plays as it downloads: the backend's `synthesizeStreaming` decodes the
+response incrementally and feeds each chunk to the player through a `PcmSink`, so audio starts on
+the first decoded chunk instead of after the whole body. On Google AI Studio that decodes each SSE
+audio event as it arrives, and audio starts after roughly 0.8s whatever the line's length.
+OpenRouter reads the raw PCM body per network read, but sends nothing until the whole clip is
+generated, so its first chunk only lands once the line is finished and the wait grows with the
+line's length: measured at ~1.7s for a 20-character line and ~15s for a 400-character one.
+Streaming therefore only shortens time-to-sound on AI Studio. The whole line is still accumulated
+and cached on a clean finish, an
 interrupted or incomplete stream plays what arrived but is never cached, and debug mode logs
 `firstChunkMs` (time to first audible chunk) alongside the full elapsed time so the real streaming
 gain per provider is measurable. Prefetch and cave-echo lines always buffer.
 
-The primary cost lever remains the persistent disk cache, on by default, which keeps any already-heard
-line from being billed again across sessions. Its footprint is bounded by the **Cache Size Limit**
-(default 1024 MiB) and evicted oldest-first (FIFO) so it never grows past the configured limit; a read
-never rescues an old entry, and the just-written clip always survives. Setting the limit to `0` opts
-out of eviction entirely, so the cache keeps every clip for users who would rather spend disk than
-ever re-bill a line.
+The primary cost lever remains the persistent disk cache, always present, which keeps any
+already-heard line from being billed again across sessions. Its footprint is bounded by the **Cache
+Size Limit** (default 1024 MiB) and evicted oldest-first (FIFO) so it never grows past the
+configured limit; a read never rescues an old entry, and the just-written clip always survives.
+Setting the limit to `0` opts out of eviction entirely, so the cache keeps every clip for users who
+would rather spend disk than ever re-bill a line.
 
 ## Cave echo
 

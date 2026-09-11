@@ -20,6 +20,15 @@ import org.junit.Test;
  */
 public class VoicedDialogueConfigTest {
 
+  /** What a tooltip a player reads at a glance can hold. */
+  private static final int MAX_DESCRIPTION_CHARS = 120;
+
+  /**
+   * Voice Provider is the one tooltip allowed to run long: it carries the daily-ceiling disclosure
+   * that {@code docs/architecture.md} requires player-facing copy to state.
+   */
+  private static final int DISCLOSURE_CHARS = 200;
+
   @Test
   public void theProviderTooltipStatesTheCeilingAndTheUncappedAlternative() throws Exception {
     String description =
@@ -88,12 +97,6 @@ public class VoicedDialogueConfigTest {
     assertEquals("Latin American Spanish", SpokenLanguage.LATIN_AMERICAN_SPANISH.label());
   }
 
-  /**
-   * The Voice Provider tooltip is the longest by necessity: it carries the daily-ceiling
-   * disclosure. Everything else has to stay well inside a tooltip a player reads at a glance.
-   */
-  private static final int MAX_DESCRIPTION_CHARS = 160;
-
   @Test
   public void noSettingDescriptionRunsLongerThanATooltipComfortablyShows() {
     List<String> tooLong = new ArrayList<>();
@@ -102,12 +105,12 @@ public class VoicedDialogueConfigTest {
       if (item == null) {
         continue;
       }
-      if (item.description().length() > MAX_DESCRIPTION_CHARS) {
-        tooLong.add(item.name() + " (" + item.description().length() + " chars)");
+      int limit = "ttsProvider".equals(item.keyName()) ? DISCLOSURE_CHARS : MAX_DESCRIPTION_CHARS;
+      if (item.description().length() > limit) {
+        tooLong.add(item.name() + " (" + item.description().length() + " > " + limit + ")");
       }
     }
-    assertTrue(
-        "descriptions over " + MAX_DESCRIPTION_CHARS + " chars: " + tooLong, tooLong.isEmpty());
+    assertTrue("descriptions longer than a tooltip shows: " + tooLong, tooLong.isEmpty());
   }
 
   @Test
