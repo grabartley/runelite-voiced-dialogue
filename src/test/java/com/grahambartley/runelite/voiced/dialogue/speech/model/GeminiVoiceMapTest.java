@@ -37,6 +37,7 @@ public class GeminiVoiceMapTest {
     NpcRace.WIZARD,
     NpcRace.TORTUGAN,
     NpcRace.ICYENE,
+    NpcRace.ARANEI,
     NpcRace.ARCEUUS
   };
 

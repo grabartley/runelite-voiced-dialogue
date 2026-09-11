@@ -80,6 +80,58 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void everyAraneiFormResolvesToItsOwnRaceRatherThanHuman() {
+    for (int npcId :
+        new int[] {
+          15749, 15750, 15752, 15754, 15737, 15738, 15762, 8208, 10875, 10876, 10877, 11162, 16269,
+          16270, 9639, 9640, 16360
+        }) {
+      assertAttributes(npcId, "Aranei", "Male");
+    }
+    for (int npcId : new int[] {16268, 16005, 16006, 16007, 16008, 16009, 16242}) {
+      assertAttributes(npcId, "Aranei", "Female");
+    }
+  }
+
+  @Test
+  public void theBloodMoonCastResolvesToItsDeliberateRaces() {
+    assertAttributes(16212, "Undead", "Male");
+    for (int npcId : new int[] {11181, 15967, 15968, 15969, 16190}) {
+      assertAttributes(npcId, "Demon", "Female");
+    }
+    for (int npcId : new int[] {15893, 15895, 15896, 15897, 15898}) {
+      assertAttributes(npcId, "Human", "Male");
+    }
+    for (int npcId : new int[] {15879, 15885}) {
+      assertAttributes(npcId, "Human", "Male");
+    }
+  }
+
+  @Test
+  public void theSlavesCarryTheirPerVersionGenders() {
+    for (int npcId : new int[] {16163, 16164, 16165}) {
+      assertAttributes(npcId, "Human", "Male");
+    }
+    for (int npcId : new int[] {16166, 16167, 16168}) {
+      assertAttributes(npcId, "Human", "Female");
+    }
+  }
+
+  @Test
+  public void theBloodMoonMorytaniansKeepTheirRegionalOrigin() {
+    for (int npcId : new int[] {15893, 15895, 15898, 15879, 15885, 16163, 16166}) {
+      assertEquals("origin for id " + npcId, "morytania", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void aDistinctiveRaceCarriesNoRegionalTint() {
+    for (int npcId : new int[] {16268, 16005, 8208, 11181, 16212}) {
+      assertNull("no origin for id " + npcId, analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
   public void femaleNamedTownsfolkResolveFemale() {
     // Gender comes straight from the wiki, so townsfolk with no gendered title
     // (Gertrude, Cassie) still resolve Female instead of defaulting to male.

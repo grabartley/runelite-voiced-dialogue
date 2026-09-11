@@ -55,6 +55,7 @@ INFOBOX_TEMPLATES = ["Template:Infobox NPC", "Template:Infobox Monster"]
 # Infobox Monster NPCs (trolls like Kob, ghosts, TzHaar, ...) get a race the infobox does not carry.
 CATEGORY_RACE_RULES = [
     ("citizens of arceuus", "Arceuus"),
+    ("aranei", "Aranei"),
     ("vampyre", "Undead"), ("vyre", "Undead"), ("ghost", "Undead"), ("skeleton", "Undead"),
     ("zombie", "Undead"), ("ghoul", "Undead"), ("undead", "Undead"), ("shade", "Undead"),
     ("wight", "Undead"), ("revenant", "Undead"), ("spectre", "Undead"), ("wraith", "Undead"),
@@ -82,7 +83,7 @@ DEFAULT_SUMMARY_URL = (
 )
 
 VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
-               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus"}
+               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei"}
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
@@ -96,6 +97,7 @@ RACE_BUCKET_RULES = [
     # First: the Citizens of Arceuus are ascended humans, so the human bucket would
     # otherwise claim them wherever the wiki spells the race out longhand.
     (r"citizens? of arceuus", "Arceuus"),
+    (r"aranei", "Aranei"),
     (r"vampyre|vampire|\bvyre\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|"
      r"revenant|mummy|banshee|spectre|wraith|ankou|lich|reanimat", "Undead"),
     (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal", "Demon"),

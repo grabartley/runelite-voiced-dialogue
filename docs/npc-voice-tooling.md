@@ -68,6 +68,9 @@ name still resolves to a documented NPC is covered too.
   the Dark Altar) are their own `Arceuus` race, matched ahead of the human
   fallback and carrying a cool, faintly echoing delivery wherever they are found;
   the mortals who declined immortality stay `Human`.
+  The aranei (the hooded, telepathic servants bound to House Shadum) are their own
+  `Aranei` race, carrying a soft, breathy delivery wherever they are found,
+  including the Mysterious Stranger in every place she appears.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
