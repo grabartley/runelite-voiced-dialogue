@@ -61,7 +61,10 @@ public enum RaceBucket {
   TORTUGAN("Tortugan", NpcRace.TORTUGAN, null, "tortugan", "tortuga"),
   ICYENE("Icyene", NpcRace.ICYENE, null, "icyene");
 
-  /** The order wiki race text is scanned in; buckets the wiki never emits are absent. */
+  /**
+   * The order wiki race text is scanned in; buckets the wiki never emits are absent. Dog sits
+   * behind undead and demon in both scans, so a risen or demonic hound keeps its own bucket.
+   */
   private static final RaceBucket[] WIKI_SCAN = {
     ARANEI, UNDEAD, DEMON, DOG, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
   };

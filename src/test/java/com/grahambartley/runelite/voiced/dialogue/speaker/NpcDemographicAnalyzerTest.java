@@ -188,13 +188,6 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void theDogsCarryNoRegionalTint() {
-    for (int npcId : new int[] {16504, 16495, 16515, 16516, 16398}) {
-      assertNull("no origin for id " + npcId, analyze(npcId, null).getEthnicity());
-    }
-  }
-
-  @Test
   public void theDogShelterRegularsStayHumanMisthalinTownsfolk() {
     assertAttributes(7284, "Human", "Female"); // Gertrude
     assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());

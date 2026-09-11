@@ -109,6 +109,13 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void dogsKeepTheirVocalisedDeliveryWhereverTheyAreFound() {
+    CharacterProfile p = resolve(null, "Stray dog", "Dog", "morytania").profile();
+    assertTrue("the dog delivery holds over the region", p.accent().contains("barked"));
+    assertFalse("the Morytanian accent does not apply", p.accent().contains("gothic"));
+  }
+
+  @Test
   public void arceuusCitizensKeepTheirOwnAccentRatherThanTheKourendOne() {
     // They are ascended, not local townsfolk, so the region accent must not tint them even though
     // the generated table still records where they are found.

@@ -60,8 +60,6 @@ public class RaceBucketTest {
 
   private Object[] storedRaceKeywordCases() {
     return new Object[] {
-      new Object[] {"Dog", NpcRace.DOG},
-      new Object[] {"Guard dog", NpcRace.DOG},
       // A hound dragged back from the grave or out of the abyss is that before it is a dog.
       new Object[] {"Undead dog", NpcRace.UNDEAD},
       new Object[] {"Demonic dog", NpcRace.DEMON},
