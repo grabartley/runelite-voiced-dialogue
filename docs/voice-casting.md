@@ -102,8 +102,7 @@ exists instead, and the reference is itself the casting decision:
   one. Enceladus is the breathy voice and Achernar the soft one, which is what carries their
   hushed, telepathic delivery; the clear half keeps them sounding like a living species.
 - **Dogs** anchor on the monkey pool's excitable, bright voices and pair each with one from the
-  deep end, so a bark lands as a sound with an animal behind it rather than as a word read
-  aloud.
+  deep end, so a bark lands as a sound with an animal behind it rather than a word read aloud.
 - **Crabs** take one goblin voice and one monkey voice in each gender, which keeps them small and
   quick without making them sound like goblins outright.
 - **Penguins** take the goblin male pool unchanged, where the upbeat anchor carries the waddling
