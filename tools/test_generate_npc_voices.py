@@ -135,6 +135,21 @@ class RaceBucketTest(unittest.TestCase):
     def test_arceuus_is_a_valid_override_race(self):
         self.assertIn("Arceuus", gen.VALID_RACES)
 
+    def test_aranei_buckets_to_its_own_race(self):
+        self.assertEqual(gen.bucket_for_race("Aranei"), "Aranei")
+        self.assertEqual(gen.bucket_for_race("[[Aranei]]"), "Aranei")
+
+    def test_araxytes_are_not_aranei(self):
+        # The Nylocas Queen reads as a tribrid including vampyre, so she buckets Undead on the
+        # wiki text alone and is pinned away from it in the overrides.
+        self.assertEqual(gen.bucket_for_race("Nylocas/araxyte/vampyre tribrid"), "Undead")
+
+    def test_aranei_category_buckets_when_the_infobox_has_no_race(self):
+        self.assertEqual(gen.bucket_from_categories(["Category:Aranei"]), "Aranei")
+
+    def test_aranei_is_a_valid_override_race(self):
+        self.assertIn("Aranei", gen.VALID_RACES)
+
 
 if __name__ == "__main__":
     unittest.main()

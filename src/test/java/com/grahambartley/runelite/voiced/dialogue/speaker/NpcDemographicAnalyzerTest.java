@@ -83,12 +83,14 @@ public class NpcDemographicAnalyzerTest {
   public void everyAraneiFormResolvesToItsOwnRaceRatherThanHuman() {
     for (int npcId :
         new int[] {
-          15749, 15750, 15752, 15754, 15737, 15738, 15762, 8208, 10875, 10876, 10877, 11162, 16269,
-          16270, 9639, 9640, 16360
+          15749, 15750, 15752, 15754, 15737, 15738, 15762, 16269, 16270, 9639, 9640, 16360
         }) {
       assertAttributes(npcId, "Aranei", "Male");
     }
-    for (int npcId : new int[] {16268, 16005, 16006, 16007, 16008, 16009, 16242}) {
+    for (int npcId :
+        new int[] {
+          16268, 8208, 10875, 10876, 10877, 11162, 16005, 16006, 16007, 16008, 16009, 16242
+        }) {
       assertAttributes(npcId, "Aranei", "Female");
     }
   }
@@ -99,10 +101,7 @@ public class NpcDemographicAnalyzerTest {
     for (int npcId : new int[] {11181, 15967, 15968, 15969, 16190}) {
       assertAttributes(npcId, "Demon", "Female");
     }
-    for (int npcId : new int[] {15893, 15895, 15896, 15897, 15898}) {
-      assertAttributes(npcId, "Human", "Male");
-    }
-    for (int npcId : new int[] {15879, 15885}) {
+    for (int npcId : new int[] {15893, 15894, 15895, 15896, 15897, 15898, 15879, 15885}) {
       assertAttributes(npcId, "Human", "Male");
     }
   }
@@ -119,7 +118,8 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void theBloodMoonMorytaniansKeepTheirRegionalOrigin() {
-    for (int npcId : new int[] {15893, 15895, 15898, 15879, 15885, 16163, 16166}) {
+    for (int npcId :
+        new int[] {15893, 15894, 15895, 15896, 15897, 15898, 15879, 15885, 16163, 16166}) {
       assertEquals("origin for id " + npcId, "morytania", analyze(npcId, null).getEthnicity());
     }
   }

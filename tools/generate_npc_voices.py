@@ -97,7 +97,7 @@ RACE_BUCKET_RULES = [
     # First: the Citizens of Arceuus are ascended humans, so the human bucket would
     # otherwise claim them wherever the wiki spells the race out longhand.
     (r"citizens? of arceuus", "Arceuus"),
-    (r"aranei", "Aranei"),
+    (r"\baranei\b", "Aranei"),
     (r"vampyre|vampire|\bvyre\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|"
      r"revenant|mummy|banshee|spectre|wraith|ankou|lich|reanimat", "Undead"),
     (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal", "Demon"),

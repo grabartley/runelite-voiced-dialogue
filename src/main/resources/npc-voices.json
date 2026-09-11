@@ -25,8 +25,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1939,
-      "Male": 11822
+      "Female": 1944,
+      "Male": 11817
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -38,7 +38,7 @@
       "kourend": 778,
       "menaphite": 132,
       "misthalin": 911,
-      "morytania": 976,
+      "morytania": 977,
       "tirannwn": 317,
       "varlamore": 999,
       "wilderness": 115,
@@ -47,7 +47,7 @@
     "life_stage_counts": {
       "child": 45
     },
-    "profiles_bespoke": 6424
+    "profiles_bespoke": 6431
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -10430,6 +10430,18 @@
         "style": "Elegant, supercilious vampyre lady; cool and refined, drawling with bored aristocratic poise."
       },
       "8208": {
+        "name": "Mysterious Stranger",
+        "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
+      },
+      "16269": {
+        "name": "Mysterious Stranger",
+        "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
+      },
+      "16270": {
+        "name": "Mysterious Stranger",
+        "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
+      },
+      "16360": {
         "name": "Mysterious Stranger",
         "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
       },
@@ -26504,6 +26516,30 @@
         "accent": "A ragged, inhuman rasp, human words splintering into a beast's snarl."
       },
       "11181": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "15967": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "15968": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "15969": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "16190": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
         "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
@@ -59142,7 +59178,7 @@
     },
     "8208": {
       "race": "Aranei",
-      "gender": "Male"
+      "gender": "Female"
     },
     "8209": {
       "race": "Undead",
@@ -69527,15 +69563,15 @@
     },
     "10875": {
       "race": "Aranei",
-      "gender": "Male"
+      "gender": "Female"
     },
     "10876": {
       "race": "Aranei",
-      "gender": "Male"
+      "gender": "Female"
     },
     "10877": {
       "race": "Aranei",
-      "gender": "Male"
+      "gender": "Female"
     },
     "10878": {
       "race": "Undead",
@@ -70669,7 +70705,7 @@
     },
     "11162": {
       "race": "Aranei",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11169": {
       "race": "Human",
@@ -87462,7 +87498,8 @@
     },
     "15894": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "morytania"
     },
     "15895": {
       "race": "Human",
