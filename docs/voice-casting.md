@@ -90,12 +90,14 @@ anchor is the breathy voice, which reads hollow rather than merely low.
 Most races have a pool assembled for them. These are cast by reference to a pool that already
 exists instead, and the reference is itself the casting decision:
 
-- **Tortugans** take the player male pool unchanged and the wizard female pool unchanged. Both
-  read relaxed and mid-depth rather than characterful, which suits warm island folk who are
-  otherwise plain people.
+- **Tortugans** take the player male pool unchanged and the wizard female pool unchanged:
+  friendly and clear in one, warm and gentle in the other, which is the relaxed mid-depth that
+  suits warm island folk.
 - **Citizens of Arceuus** take the elf pool unchanged, and the elf pool is itself cast off the
   human one: it keeps Iapetus and Erinome, drops the human anchors Charon and Despina, and adds
-  Rasalgethi and Vindemiatrix, which read more refined and carry an incorporeal delivery better.
+  Rasalgethi and Vindemiatrix. The catalog groups Charon and Rasalgethi together, so this split
+  is one the ear made and the adjectives do not: the elf pair reads more refined, and carries an
+  incorporeal delivery better.
 - **Aranei** keep one undead voice per gender, Enceladus and Achernar, and pair each with a clear
   one. Enceladus is the breathy voice and Achernar the soft one, which is what carries their
   hushed, telepathic delivery; the clear half keeps them sounding like a living species.
