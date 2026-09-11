@@ -69,7 +69,13 @@ public class BackendProviderTest {
   }
 
   private static SynthesisRequest req(Emotion emotion) {
-    return new SynthesisRequest("hi", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), emotion);
+    return new SynthesisRequest(
+        "hi",
+        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
+        emotion,
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   @Test

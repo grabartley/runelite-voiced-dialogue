@@ -68,20 +68,17 @@ public class VoiceManager {
   }
 
   public ResolvedSpeaker resolve(Speaker speaker, String npcName) {
-    boolean withProfile = config.cloudCharacterProfiles();
     if (speaker == Speaker.PLAYER) {
-      return new ResolvedSpeaker(playerVoice(), withProfile ? playerProfile() : null);
+      return new ResolvedSpeaker(playerVoice(), playerProfile());
     }
 
     NpcIdentity identity = identityResolver.resolve(npcName);
     VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
-    return new ResolvedSpeaker(voice, withProfile ? npcProfile(npcName, identity) : null);
+    return new ResolvedSpeaker(voice, npcProfile(npcName, identity));
   }
 
   public ResolvedSpeaker resolveNarrator() {
-    CharacterProfile profile =
-        config.cloudCharacterProfiles() ? profileTable.resolveNarrator() : null;
-    return new ResolvedSpeaker(VoiceSpec.NARRATOR, profile);
+    return new ResolvedSpeaker(VoiceSpec.NARRATOR, profileTable.resolveNarrator());
   }
 
   private VoiceSpec playerVoice() {

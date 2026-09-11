@@ -3,7 +3,6 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -21,34 +20,24 @@ public class VoiceManagerTest {
 
   private static final class TestConfig implements VoicedDialogueConfig {
     private final PlayerVoice playerVoice;
-    private final boolean characterProfiles;
 
-    TestConfig(PlayerVoice playerVoice, boolean characterProfiles) {
+    TestConfig(PlayerVoice playerVoice) {
       this.playerVoice = playerVoice;
-      this.characterProfiles = characterProfiles;
     }
 
     @Override
     public PlayerVoice playerVoice() {
       return playerVoice;
     }
-
-    @Override
-    public boolean cloudCharacterProfiles() {
-      return characterProfiles;
-    }
   }
 
-  private VoiceManager newManager(PlayerVoice playerVoice, boolean characterProfiles) {
+  private VoiceManager newManager(PlayerVoice playerVoice) {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
     NpcProfileTable profileTable = new NpcProfileTable();
     profileTable.initialize();
     return new VoiceManager(
-        new TestConfig(playerVoice, characterProfiles),
-        client,
-        new NpcDemographicAnalyzer(),
-        profileTable);
+        new TestConfig(playerVoice), client, new NpcDemographicAnalyzer(), profileTable);
   }
 
   @Test
@@ -59,7 +48,7 @@ public class VoiceManagerTest {
 
   @Test
   public void playerResolvesToPlayerSpecWithConfiguredGender() {
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_B, true).resolve(Speaker.PLAYER, null).voice();
+    VoiceSpec spec = newManager(PlayerVoice.TYPE_B).resolve(Speaker.PLAYER, null).voice();
     assertTrue("player voice should be a player spec", spec.player());
     assertEquals(NpcGender.FEMALE, spec.gender());
     assertEquals("player:FEMALE", spec.key());
@@ -68,7 +57,7 @@ public class VoiceManagerTest {
 
   @Test
   public void undetectedNpcResolvesToTheDefaultHumanMaleVoice() {
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_A, true).resolve(Speaker.NPC, "Hans").voice();
+    VoiceSpec spec = newManager(PlayerVoice.TYPE_A).resolve(Speaker.NPC, "Hans").voice();
     assertFalse(spec.player());
     assertEquals(NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.MALE, spec.gender());
@@ -78,7 +67,7 @@ public class VoiceManagerTest {
 
   @Test
   public void narratorResolvesToTheFixedNarratorSpec() {
-    VoiceManager manager = newManager(PlayerVoice.TYPE_B, true);
+    VoiceManager manager = newManager(PlayerVoice.TYPE_B);
 
     VoiceSpec spec = manager.resolveNarrator().voice();
     assertTrue("the narrator is its own speaker class", spec.narrator());
@@ -86,24 +75,25 @@ public class VoiceManagerTest {
     assertEquals(
         "the player voice setting must not move the narrator",
         spec,
-        newManager(PlayerVoice.TYPE_A, true).resolveNarrator().voice());
+        newManager(PlayerVoice.TYPE_A).resolveNarrator().voice());
   }
 
   @Test
-  public void profilesResolveForBothSpeakersWhenEnabled() {
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A, true);
-    assertNotNull(manager.resolve(Speaker.PLAYER, null).profile());
-    assertNotNull(manager.resolve(Speaker.NPC, "Hans").profile());
-    assertNotNull(manager.resolveNarrator().profile());
+  public void everySpeakerAlwaysResolvesToACharacterProfile() {
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    assertNotNull(
+        "the player always carries a profile", manager.resolve(Speaker.PLAYER, null).profile());
+    assertNotNull(
+        "an NPC always carries a profile", manager.resolve(Speaker.NPC, "Hans").profile());
+    assertNotNull("the narrator always carries a profile", manager.resolveNarrator().profile());
   }
 
   @Test
-  public void noProfileIsResolvedWhenCharacterProfilesAreOff() {
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A, false);
-    assertNull(manager.resolve(Speaker.PLAYER, null).profile());
-    assertNull(manager.resolve(Speaker.NPC, "Hans").profile());
-    assertNull(manager.resolveNarrator().profile());
-    assertNotNull("the voice is still resolved", manager.resolve(Speaker.NPC, "Hans").voice());
-    assertNotNull("the narrator voice is still resolved", manager.resolveNarrator().voice());
+  public void anUndetectedNpcStillResolvesToTheDefaultProfileRatherThanNone() {
+    CharacterProfile profile =
+        newManager(PlayerVoice.TYPE_A).resolve(Speaker.NPC, "Hans").profile();
+    assertNotNull(profile);
+    assertFalse("the default profile still names a voice", profile.name().trim().isEmpty());
+    assertFalse("the default profile still carries an accent", profile.accent().trim().isEmpty());
   }
 }

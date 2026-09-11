@@ -265,7 +265,7 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "playerAccent",
       name = "Your Accent",
-      description = "Your voice's accent. Needs Character Voices on.",
+      description = "Your voice's accent.",
       position = 1,
       section = voicesSection)
   default String playerAccent() {
@@ -275,7 +275,7 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "playerPersona",
       name = "Your Persona",
-      description = "Who your adventurer is. Needs Character Voices on.",
+      description = "Who your adventurer is.",
       position = 2,
       section = voicesSection)
   default String playerPersona() {
@@ -285,7 +285,7 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "playerPace",
       name = "Your Delivery Pace",
-      description = "How your character paces their words. Needs Character Voices on.",
+      description = "How your character paces their words.",
       position = 3,
       section = voicesSection)
   default String playerPace() {
@@ -293,20 +293,10 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "cloudCharacterProfiles",
-      name = "Character Voices",
-      description = "Give each speaker a distinct voice from the table.",
-      position = 4,
-      section = voicesSection)
-  default boolean cloudCharacterProfiles() {
-    return true;
-  }
-
-  @ConfigItem(
       keyName = "voiceNarration",
       name = "Voice Narration",
       description = "Speak message and item boxes in a narrator voice.",
-      position = 5,
+      position = 4,
       section = voicesSection)
   default boolean voiceNarration() {
     return false;
@@ -316,7 +306,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "voiceExamineText",
       name = "Voice Examine Text",
       description = "Read examine text aloud in the narrator voice. Repeats replay free.",
-      position = 6,
+      position = 5,
       section = voicesSection)
   default boolean voiceExamineText() {
     return false;
@@ -326,7 +316,7 @@ public interface VoicedDialogueConfig extends Config {
       keyName = "autoLearnNewNpcs",
       name = "Auto-learn New NPCs",
       description = "Look up unknown NPCs on the wiki once, then cache.",
-      position = 7,
+      position = 6,
       section = voicesSection)
   default boolean autoLearnNewNpcs() {
     return false;

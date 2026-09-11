@@ -13,7 +13,22 @@ public final class TestFixtures {
           "A huge, slow, simple-minded troll.",
           "Slow and heavy.");
 
+  public static final CharacterProfile NARRATOR_PROFILE =
+      new CharacterProfile(
+          "Narrator",
+          "Received Pronunciation British English.",
+          "A storyteller reading a tale aloud.",
+          "Normal.");
+
   private TestFixtures() {}
+
+  public static String spokenTranscript(CharacterProfile profile, String payload) {
+    String block = profile.renderPromptBlock();
+    if (!payload.startsWith(block)) {
+      throw new AssertionError("payload does not lead with the profile block: " + payload);
+    }
+    return payload.substring(block.length());
+  }
 
   public static String chatResponse(String content) {
     JsonObject message = new JsonObject();

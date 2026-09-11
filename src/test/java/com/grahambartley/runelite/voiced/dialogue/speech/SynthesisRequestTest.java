@@ -19,19 +19,20 @@ public class SynthesisRequestTest {
   public void shortConstructorDefaultsToTranslating() {
     assertFalse(
         "the 3-arg form leaves translation enabled",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).skipTranslation());
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false)
+            .skipTranslation());
   }
 
   @Test
   public void withEmotionPreservesSkipTranslation() {
     SynthesisRequest publicChat =
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true, false);
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, true, false);
     assertTrue(
         "a re-emotioned copy keeps skip-translation, so a downgrade never re-enables translation",
         publicChat.withEmotion(Emotion.HAPPY).skipTranslation());
 
     SynthesisRequest dialogue =
-        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false, false);
+        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, TestFixtures.TROLL_PROFILE, false, false);
     assertFalse(
         "a normal line stays translating after a downgrade",
         dialogue.withEmotion(Emotion.NEUTRAL).skipTranslation());
@@ -41,31 +42,38 @@ public class SynthesisRequestTest {
   public void shortConstructorDefaultsToNpcSpeakerClass() {
     assertFalse(
         "the 3-arg form voices as an NPC line",
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).player());
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false)
+            .player());
   }
 
   @Test
   public void withEmotionPreservesPlayerClass() {
     SynthesisRequest playerLine =
-        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, false, true);
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, true);
     assertTrue(
         "a re-emotioned player line stays a player line, so it keeps the player Speaking Style",
         playerLine.withEmotion(Emotion.HAPPY).player());
 
-    SynthesisRequest npcLine = new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false, false);
+    SynthesisRequest npcLine =
+        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, TestFixtures.TROLL_PROFILE, false, false);
     assertFalse(
         "a re-emotioned NPC line stays an NPC line", npcLine.withEmotion(Emotion.NEUTRAL).player());
   }
 
   @Test
   public void everyConstructorDefaultsToALiveLineRatherThanAPrefetch() {
-    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL).prefetch());
-    assertFalse(new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, null, true, true).prefetch());
+    assertFalse(
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false)
+            .prefetch());
+    assertFalse(
+        new SynthesisRequest("hi", VOICE, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, true, true)
+            .prefetch());
   }
 
   @Test
   public void asPrefetchMarksTheLineAndChangesNothingElse() {
-    SynthesisRequest live = new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, true, true);
+    SynthesisRequest live =
+        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, TestFixtures.TROLL_PROFILE, true, true);
     SynthesisRequest warmed = live.asPrefetch();
 
     assertTrue("the copy is marked speculative", warmed.prefetch());
@@ -81,7 +89,8 @@ public class SynthesisRequestTest {
   @Test
   public void withEmotionPreservesThePrefetchMark() {
     SynthesisRequest warmed =
-        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, null, false, true).asPrefetch();
+        new SynthesisRequest("hi", VOICE, Emotion.HAPPY, TestFixtures.TROLL_PROFILE, false, true)
+            .asPrefetch();
     assertTrue(
         "an emotion downgrade must not turn speculative warming into a voiced line",
         warmed.withEmotion(Emotion.NEUTRAL).prefetch());

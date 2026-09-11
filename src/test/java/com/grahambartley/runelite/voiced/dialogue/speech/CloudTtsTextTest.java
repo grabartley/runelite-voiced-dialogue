@@ -95,13 +95,19 @@ public class CloudTtsTextTest {
 
   private static SynthesisRequest narrationRequest() {
     return new SynthesisRequest(
-        "You find a key.", VoiceSpec.NARRATOR, Emotion.NEUTRAL, null, false, false);
+        "You find a key.",
+        VoiceSpec.NARRATOR,
+        Emotion.NEUTRAL,
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   private static SynthesisRequest characterRequest(boolean player) {
     VoiceSpec voice =
         player ? VoiceSpec.player(NpcGender.MALE) : VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE);
-    return new SynthesisRequest("Hello.", voice, Emotion.NEUTRAL, null, false, player);
+    return new SynthesisRequest(
+        "Hello.", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, player);
   }
 
   @Test

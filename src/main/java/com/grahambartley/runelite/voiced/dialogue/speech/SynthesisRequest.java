@@ -49,10 +49,6 @@ public final class SynthesisRequest {
     this(text, voice, emotion, profile, skipTranslation, player, false);
   }
 
-  public SynthesisRequest(String text, VoiceSpec voice, Emotion emotion) {
-    this(text, voice, emotion, null, false, false);
-  }
-
   public SynthesisRequest withEmotion(Emotion newEmotion) {
     if (newEmotion == emotion) {
       return this;

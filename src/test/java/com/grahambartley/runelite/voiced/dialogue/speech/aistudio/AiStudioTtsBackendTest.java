@@ -90,10 +90,19 @@ public class AiStudioTtsBackendTest {
 
   private static SynthesisRequest req() {
     return new SynthesisRequest(
-        "Hello & welcome", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
+        "Hello & welcome",
+        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
+        Emotion.NEUTRAL,
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   private static String spokenText(JsonObject body) {
+    return TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, sentPayload(body));
+  }
+
+  private static String sentPayload(JsonObject body) {
     return body.getAsJsonArray("contents")
         .get(0)
         .getAsJsonObject()
@@ -204,7 +213,7 @@ public class AiStudioTtsBackendTest {
 
     JsonObject body =
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String text = spokenText(body);
+    String text = sentPayload(body);
     assertTrue(
         "the profile block leads and the emotion-tagged transcript follows",
         text.endsWith("[angry] You no take candle!"));
@@ -225,7 +234,7 @@ public class AiStudioTtsBackendTest {
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
     assertTrue(
         "a non-default pace has no API parameter, so it is a prompt direction",
-        spokenText(body).startsWith("SPEAKING PACE: 150% of normal."));
+        sentPayload(body).startsWith("SPEAKING PACE: 150% of normal."));
   }
 
   @Test
@@ -423,9 +432,21 @@ public class AiStudioTtsBackendTest {
     AiStudioTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
-        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
+        new SynthesisRequest(
+            "a",
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
+            Emotion.NEUTRAL,
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
     SynthesisRequest elfFemale =
-        new SynthesisRequest("a", VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE), Emotion.NEUTRAL);
+        new SynthesisRequest(
+            "a",
+            VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE),
+            Emotion.NEUTRAL,
+            TestFixtures.TROLL_PROFILE,
+            false,
+            false);
 
     String variant = backend.cacheVariant(humanMale);
     assertTrue(
@@ -532,7 +553,7 @@ public class AiStudioTtsBackendTest {
 
     JsonObject sent =
         new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String input = spokenText(sent);
+    String input = sentPayload(sent);
 
     SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
     assertEquals(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, recorded.provider());

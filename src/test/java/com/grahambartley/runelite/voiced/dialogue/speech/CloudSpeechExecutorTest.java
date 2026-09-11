@@ -139,7 +139,12 @@ public class CloudSpeechExecutorTest {
 
   private static SynthesisRequest request() {
     return new SynthesisRequest(
-        "Hello", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
+        "Hello",
+        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
+        Emotion.NEUTRAL,
+        TestFixtures.TROLL_PROFILE,
+        false,
+        false);
   }
 
   private final class StubOps implements CloudSpeechExecutor.Ops {
