@@ -23,11 +23,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-/**
- * Warms the cache for the visible dialogue options: each non-header, non-blank option is built into
- * the same player request the dispatcher would produce and handed to the prefetcher. Gated by the
- * prefetch toggle and backend availability.
- */
 public class DialoguePrefetchCoordinatorTest {
 
   private final VoiceManager voiceManager = mock(VoiceManager.class);

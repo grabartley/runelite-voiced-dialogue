@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.TtsProvider;
 import org.junit.Test;
 
-/** Who keeps OpenRouter when the shipped default becomes Google AI Studio, and who does not. */
 public class ProviderDefaultPolicyTest {
 
   @Test

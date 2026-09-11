@@ -10,7 +10,6 @@ import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import org.junit.Test;
 
-/** Tolerant by-name NPC lookup against the world list. */
 public class NpcFinderTest {
 
   @Test

@@ -10,19 +10,15 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** The cloud 429 back-off window growth, the honoured wait, and the throttle state transitions. */
 @RunWith(JUnitParamsRunner.class)
 public class RateLimitBackoffTest {
 
-  /** A rejection that stated no wait, leaving the window to the computed ladder. */
   private static final long NO_STATED_WAIT = 0;
 
-  /** The wait a real per-model daily cap asked for. */
   private static final long DAILY_CAP_WAIT_MILLIS = 2_917_000;
 
   private static final long ONE_HOUR_MILLIS = 60 * 60 * 1_000L;
 
-  /** The injected monotonic clock reads nanoseconds, as {@link System#nanoTime} does. */
   private final AtomicLong nanos = new AtomicLong(-4_000_000_000L);
 
   private final RateLimitBackoff backoff = new RateLimitBackoff(nanos::get);
@@ -115,7 +111,6 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aGuessLandingBehindAStatedWaitDoesNotShortenIt() {
-    // A line and a prefetch are rejected on separate threads, so the two arrive interleaved.
     rateLimited(DAILY_CAP_WAIT_MILLIS);
 
     rateLimited(NO_STATED_WAIT);
@@ -139,7 +134,6 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aStatedWaitShorterThanTheLiveGuessStillTakesOver() {
-    // Five rejections put the ladder at 16s, then the provider names five.
     for (int i = 0; i < 5; i++) {
       rateLimited(NO_STATED_WAIT);
     }
@@ -156,8 +150,6 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aRejectionThatPredatesASuccessIsDropped() {
-    // A line and a prefetch overlap, the prefetch is refused, the line succeeds, and the refusal's
-    // handler is the one to finish second.
     long observed = backoff.generation();
     backoff.recordSuccess();
 
@@ -169,7 +161,6 @@ public class RateLimitBackoffTest {
 
   @Test
   public void aShorterStatedWaitDoesNotShortenALongerOneAlreadyStanding() {
-    // Two rejections state different waits; the nearer one is the second to commit.
     rateLimited(DAILY_CAP_WAIT_MILLIS);
 
     rateLimited(5_000);
@@ -218,7 +209,6 @@ public class RateLimitBackoffTest {
     assertFalse("a wrapped deadline is still reached, not held forever", backoff.isRefusing());
   }
 
-  /** Records a rejection observed at the current generation, as a live caller does. */
   private void rateLimited(long statedWaitMillis) {
     backoff.recordRateLimited(statedWaitMillis, backoff.generation());
   }

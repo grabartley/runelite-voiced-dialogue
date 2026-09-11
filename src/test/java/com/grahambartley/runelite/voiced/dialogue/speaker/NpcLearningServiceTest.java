@@ -14,7 +14,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/** The learn coordinator: gating, one-attempt dedup, and writing wiki hits to the store. */
 public class NpcLearningServiceTest {
 
   private static final Executor INLINE = Runnable::run;

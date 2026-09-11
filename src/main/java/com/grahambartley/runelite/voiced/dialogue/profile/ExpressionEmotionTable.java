@@ -11,44 +11,19 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Loads the bundled {@code expression-emotions.json} table mapping an OSRS dialogue chat-head
- * expression animation id to a canonical {@link Emotion}, and resolves ids against it.
- *
- * <p>The table lists the OSRS chat-head expression seq ids that carry a non-neutral emotion, taken
- * from the live cache seq name dump (the generic {@code chathap}/{@code chatsad}/{@code chatang}/
- * {@code chatscared} block plus per-NPC expression heads); see {@code docs/emotion-detection.md}
- * for how it is derived and regenerated. Only non-neutral ids are listed: this class owns the
- * documented default contract that every consumer depends on: <strong>any unmapped animation id,
- * and {@code -1} (no/stale head animation), resolves to {@link Emotion#NEUTRAL}</strong>. That
- * makes a neutral expression, an unseen id, a non-human head, or the one-tick race where the head
- * animation lags the line a safe no-op rather than a crash.
- *
- * <p>Emotion detection wires its runtime {@code EmotionResolver} on top of this loader to read the
- * live widget and thread the resolved {@link Emotion} into each {@code SynthesisRequest}; this
- * class keeps the table + default contract loadable and testable in isolation.
- */
 @Slf4j
 public class ExpressionEmotionTable {
 
-  /** Keys beginning with this prefix are documentation (for example {@code _meta}), not ids. */
   private static final String DOC_KEY_PREFIX = "_";
 
   static final String TABLE_RESOURCE = "/expression-emotions.json";
 
-  /** Immutable animationId -> Emotion table loaded once from the bundled resource. */
   private final Map<Integer, Emotion> table;
 
   private ExpressionEmotionTable(Map<Integer, Emotion> table) {
     this.table = table;
   }
 
-  /**
-   * Loads the table from the bundled {@code /expression-emotions.json} resource. Documentation keys
-   * (those starting with {@code _}) are skipped; every remaining key must parse as an integer and
-   * every value must name a valid {@link Emotion}. A missing or malformed resource yields an empty
-   * table, so {@link #resolve(int)} still honours the default-to-{@code NEUTRAL} contract.
-   */
   public static ExpressionEmotionTable load() {
     try (InputStream stream = ExpressionEmotionTable.class.getResourceAsStream(TABLE_RESOURCE)) {
       if (stream == null) {
@@ -57,8 +32,6 @@ public class ExpressionEmotionTable {
             TABLE_RESOURCE);
         return new ExpressionEmotionTable(Collections.emptyMap());
       }
-      // The bundled Gson predates the static JsonParser.parseReader API, so use the instance
-      // method.
       JsonObject root =
           new JsonParser()
               .parse(new InputStreamReader(stream, StandardCharsets.UTF_8))
@@ -73,11 +46,6 @@ public class ExpressionEmotionTable {
     }
   }
 
-  /**
-   * Parses the raw JSON object into an animationId -> {@link Emotion} map. Documentation keys are
-   * ignored; every other key must be an integer and every value a valid {@link Emotion} name, or an
-   * {@link IllegalArgumentException} is thrown so malformed seeds fail loudly under test.
-   */
   static Map<Integer, Emotion> parse(JsonObject root) {
     Map<Integer, Emotion> parsed = new HashMap<>();
     for (Map.Entry<String, JsonElement> entry : root.entrySet()) {
@@ -109,11 +77,6 @@ public class ExpressionEmotionTable {
     return Collections.unmodifiableMap(parsed);
   }
 
-  /**
-   * Resolves a chat-head expression animation id to an {@link Emotion}. Returns the mapped emotion
-   * for a known human-head id; returns {@link Emotion#NEUTRAL} for {@code -1} and for any id absent
-   * from the table (unseen expression or non-human head). Never returns {@code null}.
-   */
   public Emotion resolve(int animationId) {
     if (animationId < 0) {
       return Emotion.NEUTRAL;

@@ -18,17 +18,11 @@ import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Reads the {@code profiles} section of the bundled resource into {@link NpcProfileLayers}, so
- * loading and parsing stay separate from resolution. Every failure is survivable: an unreadable
- * resource or a malformed entry is reported and skipped, leaving the built-in default in charge.
- */
 @Slf4j
 final class NpcProfileParser {
 
   private NpcProfileParser() {}
 
-  /** Parses the {@code profiles} section of a bundled resource, or {@code null} when unusable. */
   static NpcProfileLayers loadResource(String resource) {
     try (InputStream stream = NpcProfileParser.class.getResourceAsStream(resource)) {
       if (stream == null) {
@@ -37,8 +31,6 @@ final class NpcProfileParser {
             resource);
         return null;
       }
-      // Note: the bundled Gson predates the static JsonParser.parseReader API, so the instance
-      // method is used here.
       JsonObject root =
           new JsonParser()
               .parse(new InputStreamReader(stream, StandardCharsets.UTF_8))
@@ -114,9 +106,6 @@ final class NpcProfileParser {
     return Collections.unmodifiableMap(ids);
   }
 
-  /**
-   * Parses an object of {@code key -> sparse layer} (e.g. byRace, byEthnicity), keyed lower-case.
-   */
   private static Map<String, Layer> parseLayerMap(JsonObject obj) {
     if (obj == null) {
       return Collections.emptyMap();
@@ -131,7 +120,6 @@ final class NpcProfileParser {
     return Collections.unmodifiableMap(map);
   }
 
-  /** Parses a sparse layer; absent fields stay {@code null} so they inherit. */
   private static Layer parseLayer(JsonObject obj) {
     if (obj == null) {
       return null;
@@ -143,9 +131,6 @@ final class NpcProfileParser {
         optString(obj, "pace"));
   }
 
-  /**
-   * Parses a layer that must be complete (all four fields); returns {@code null} if any is absent.
-   */
   private static CharacterProfile parseComplete(JsonObject obj) {
     Layer layer = parseLayer(obj);
     if (layer == null

@@ -17,17 +17,8 @@ import java.util.Collections;
 import net.runelite.api.Client;
 import org.junit.Test;
 
-/**
- * The {@link VoiceManager} facade: player resolution, the NPC default-voice path, narrator
- * resolution, and the character profile gate. Trace formatting, name normalisation, demographic
- * parsing, NPC lookup, identity resolution, and NPC voice resolution have their own tests.
- */
 public class VoiceManagerTest {
 
-  /**
-   * Minimal config used to drive resolution without the RuneLite client. Only the toggles the
-   * mapping reads are overridden; everything else keeps its interface default.
-   */
   private static final class TestConfig implements VoicedDialogueConfig {
     private final PlayerVoice playerVoice;
     private final boolean characterProfiles;
@@ -49,8 +40,6 @@ public class VoiceManagerTest {
   }
 
   private VoiceManager newManager(PlayerVoice playerVoice, boolean characterProfiles) {
-    // An empty world list means the NPC is never found, so NPC lookups exercise the default-voice
-    // path without needing a live game world.
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
     NpcProfileTable profileTable = new NpcProfileTable();
@@ -68,8 +57,6 @@ public class VoiceManagerTest {
     assertEquals(NpcGender.FEMALE, PlayerVoice.TYPE_B.getGender());
   }
 
-  // ---- Player resolution ----
-
   @Test
   public void playerResolvesToPlayerSpecWithConfiguredGender() {
     VoiceSpec spec = newManager(PlayerVoice.TYPE_B, true).resolve(Speaker.PLAYER, null).voice();
@@ -79,11 +66,8 @@ public class VoiceManagerTest {
     assertFalse("the player carries no per-NPC variety seed", spec.hasVoiceSeed());
   }
 
-  // ---- NPC default-voice path ----
-
   @Test
   public void undetectedNpcResolvesToTheDefaultHumanMaleVoice() {
-    // The NPC is not in the world, so detection resolves to the default human-male voice.
     VoiceSpec spec = newManager(PlayerVoice.TYPE_A, true).resolve(Speaker.NPC, "Hans").voice();
     assertFalse(spec.player());
     assertEquals(NpcRace.HUMAN, spec.race());
@@ -91,8 +75,6 @@ public class VoiceManagerTest {
     assertTrue("default-voice NPC still gets a per-NPC variety seed", spec.hasVoiceSeed());
     assertEquals("npc:HUMAN:MALE", spec.key());
   }
-
-  // ---- Narrator resolution ----
 
   @Test
   public void narratorResolvesToTheFixedNarratorSpec() {
@@ -106,8 +88,6 @@ public class VoiceManagerTest {
         spec,
         newManager(PlayerVoice.TYPE_A, true).resolveNarrator().voice());
   }
-
-  // ---- Character profile gate ----
 
   @Test
   public void profilesResolveForBothSpeakersWhenEnabled() {

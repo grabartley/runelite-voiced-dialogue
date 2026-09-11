@@ -8,12 +8,6 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * Validates the character profiles actually bundled in {@code /npc-voices.json}: the section loads,
- * every race bucket resolves, the stated special accents hold (race, ethnicity, and keyword), and
- * the player and a bespoke NPC resolve. Guards against a malformed or regenerated resource shipping
- * broken profiles.
- */
 public class NpcProfilesResourceTest {
 
   private NpcProfileTable table;
@@ -155,8 +149,6 @@ public class NpcProfilesResourceTest {
 
   @Test
   public void arceuusCitizensKeepTheirOwnAccentRatherThanTheKourendOne() {
-    // They are ascended, not local townsfolk, so the region accent must not tint them even though
-    // the generated table still records where they are found.
     CharacterProfile p = resolve(null, "Regath", "Arceuus", "kourend").profile();
     assertTrue("the Arceuus accent holds over the region", p.accent().contains("beyond the room"));
     assertFalse("the rustic Kourend accent does not apply", p.accent().contains("rustic"));
@@ -164,7 +156,6 @@ public class NpcProfilesResourceTest {
 
   @Test
   public void aBespokeArceuusStyleLayersOverTheRaceAccent() {
-    // Logosia, chief librarian of the Arceuus Library, carries a bespoke byId style.
     NpcProfileTable.Resolution r = resolve(7044, "Logosia", "Arceuus", "kourend");
     assertTrue("the bespoke layer contributes", r.source().contains("id:7044"));
     assertTrue("the race layer contributes", r.source().contains("race:Arceuus"));
@@ -265,9 +256,6 @@ public class NpcProfilesResourceTest {
 
   @Test
   public void childrenKeepTheirRaceOrEthnicityAccentAcrossRaces() {
-    // The child category layers style only, so the accent keeps coming from the race or ethnicity
-    // layer: a gnome child is an Irish-accented child, a troll child a South London one, and a
-    // Menaphite street kid an Egyptian one, all on the same youthful voice pool.
     NpcProfileTable.Resolution gnome = resolve(6077, "Gnome child", "Gnome", null);
     assertTrue("the child category matched", gnome.source().contains("keyword:child"));
     assertTrue(

@@ -35,7 +35,6 @@ public class DialogueAudioServiceTest {
 
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
-  /** Backend scaffolding shared by every case here; only the synth methods differ. */
   private abstract static class TestBackend implements SynthesisBackend {
     private final String id;
     private final EnumSet<Emotion> supported;
@@ -65,7 +64,6 @@ public class DialogueAudioServiceTest {
     }
   }
 
-  /** Records synth requests and hands back canned PCM so cache behavior is observable. */
   private static class FakeBackend extends TestBackend {
     final List<String> requests = new ArrayList<>();
     volatile boolean throttled;
@@ -90,9 +88,7 @@ public class DialogueAudioServiceTest {
     }
   }
 
-  /** Records playback and interruption so the pipeline's decisions are observable. */
   private static final class FakeOutput implements AudioOutput {
-    // Volatile because a pool thread writes these while the test thread spins on them.
     volatile int streamCalls;
     volatile int stopCalls;
     volatile int lastVolume = -1;
@@ -136,7 +132,6 @@ public class DialogueAudioServiceTest {
     public void close() {}
   }
 
-  /** Executor that defers tasks until explicitly drained, to simulate a real queue. */
   private static final class DeferredExecutor implements Executor {
     final List<Runnable> tasks = new ArrayList<>();
 
@@ -146,7 +141,6 @@ public class DialogueAudioServiceTest {
     }
 
     void runAll() {
-      // Copy because running a task may enqueue more.
       List<Runnable> snapshot = new ArrayList<>(tasks);
       tasks.clear();
       for (Runnable r : snapshot) {
@@ -166,7 +160,6 @@ public class DialogueAudioServiceTest {
       Executor executor,
       int cacheSize,
       int volume) {
-    // One executor for synthesis, warm-up and prefetch keeps the tests single-threaded.
     return new DialogueAudioService(
         provider,
         output,
@@ -253,7 +246,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    svc.speak(req("Boo", NpcRace.HUMAN, NpcGender.MALE), /* applyEcho= */ true);
+    svc.speak(req("Boo", NpcRace.HUMAN, NpcGender.MALE), true);
     executor.runAll();
 
     assertEquals(
@@ -282,10 +275,6 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     List<String> synthed = new ArrayList<>();
     Runnable[] skipHook = {() -> {}};
-    // A backend that keeps draining the body to the complete line even though a skip lands mid-way
-    // (the real backend does the same). The service must still cache that complete line.
-    // The player is what drops the post-skip chunk from the speakers; that is covered by
-    // StreamingAudioPlayerTest, so here we assert the service-level caching and stream release.
     SynthesisBackend streaming =
         new TestBackend() {
           @Override
@@ -298,13 +287,13 @@ public class DialogueAudioServiceTest {
           public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
             synthed.add(request.text());
             sink.accept(new float[] {0.1f}, 24_000);
-            skipHook[0].run(); // the player skips mid-line here
+            skipHook[0].run();
             sink.accept(new float[] {0.2f}, 24_000);
             return new Pcm(new float[] {0.1f, 0.2f}, 24_000);
           }
         };
     DialogueAudioService svc = service(provider(streaming), output, executor, 8, 100);
-    skipHook[0] = svc::interrupt; // interrupting advances the epoch, like a Continue-click
+    skipHook[0] = svc::interrupt;
 
     svc.speak(req("Skipme", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -313,7 +302,6 @@ public class DialogueAudioServiceTest {
     assertEquals(
         "the stream is released even though it was skipped mid-line", 1, output.endStreamCalls);
 
-    // The whole line was still cached despite the skip: a repeat is a cache hit.
     svc.speak(req("Skipme", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
@@ -326,8 +314,6 @@ public class DialogueAudioServiceTest {
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
     List<String> synthed = new ArrayList<>();
-    // A backend that plays a chunk but returns null (a truncated/failed stream: heard once, not
-    // cacheable). The service must release the stream and persist nothing clipped.
     SynthesisBackend streaming =
         new TestBackend() {
           @Override
@@ -340,7 +326,7 @@ public class DialogueAudioServiceTest {
           public Pcm synthesizeStreaming(SynthesisRequest request, PcmSink sink) {
             synthed.add(request.text());
             sink.accept(new float[] {0.1f, 0.2f}, 24_000);
-            return null; // played, but too incomplete to cache
+            return null;
           }
         };
     DialogueAudioService svc = service(provider(streaming), output, executor, 8, 100);
@@ -351,7 +337,6 @@ public class DialogueAudioServiceTest {
     assertEquals("it still played through the stream", 1, output.streamedChunks.size());
     assertEquals("the stream is released even on a null return", 1, output.endStreamCalls);
 
-    // Nothing was cached, so a repeat drives the backend again (never persisted clipped).
     svc.speak(req("Clipped", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
@@ -393,7 +378,6 @@ public class DialogueAudioServiceTest {
     assertEquals("streamed, not buffered", 0, output.streamCalls);
     assertEquals("stream ended once", 1, output.endStreamCalls);
 
-    // The complete line is cached: the repeat is a buffered cache hit, no second synth.
     svc.speak(req("ThreeParts", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
     assertEquals("the repeat is served from cache", 1, synths[0]);
@@ -417,7 +401,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void sameTextAndVoiceDifferentEmotionIsSynthesizedSeparately() {
-    // A backend that supports two emotions so neither downgrades to NEUTRAL.
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL, Emotion.ANGRY));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
@@ -440,7 +423,6 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
-    // Two lines enqueued before either runs: advancing dialogue supersedes the first.
     svc.speak(req("First line", NpcRace.HUMAN, NpcGender.MALE));
     svc.speak(req("Second line", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -536,8 +518,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void unsupportedEmotionDowngradesToNeutralAndSharesCacheEntry() {
-    // A NEUTRAL-only backend. An ANGRY line downgrades and collides with the NEUTRAL
-    // one, proving the downgrade happens before the cache key is built.
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
@@ -559,7 +539,6 @@ public class DialogueAudioServiceTest {
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     SynthesisRequest line = req("Welcome to Lumbridge", NpcRace.HUMAN, NpcGender.FEMALE);
 
-    // Session 1: fresh service with a fresh in-memory cache, real disk cache. Synthesizes once.
     FakeBackend backend1 = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor exec1 = new DeferredExecutor();
     DialogueAudioService session1 =
@@ -568,8 +547,6 @@ public class DialogueAudioServiceTest {
     exec1.runAll();
     assertEquals("first session synthesizes the line", 1, backend1.requests.size());
 
-    // Session 2: brand new service and a brand new in-memory cache, same disk dir. The in-memory
-    // tier is empty, so without disk this would re-synthesize.
     FakeBackend backend2 = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output2 = new FakeOutput();
     DeferredExecutor exec2 = new DeferredExecutor();
@@ -585,8 +562,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void aStreamingLineAwaitsAnInFlightSynthAndPlaysItBuffered() throws Exception {
-    // When a synth for this key is already in flight (e.g. a prefetch), a streaming line must await
-    // it and play it BUFFERED, issuing no second backend call and opening no stream.
     CountDownLatch entered = new CountDownLatch(1);
     CountDownLatch release = new CountDownLatch(1);
     AtomicInteger calls = new AtomicInteger();
@@ -616,14 +591,11 @@ public class DialogueAudioServiceTest {
     CacheKey key = new CacheKey("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
     SynthesisRequest request = req("Echo", NpcRace.HUMAN, NpcGender.MALE);
 
-    // Epoch is 0 on a fresh service (no speak yet), so runStreaming(0, ...) passes its epoch guard.
     Thread owner = new Thread(() -> svc.runStreaming(0, blocking, request, key));
     owner.start();
     assertTrue("owner reached the backend stream", entered.await(2, TimeUnit.SECONDS));
     Thread waiter = new Thread(() -> svc.runStreaming(0, blocking, request, key));
     waiter.start();
-    // Wait until the waiter parks inside the in-flight future, so releasing cannot race it into
-    // registering as a second owner.
     while (waiter.getState() != Thread.State.WAITING) {
       Thread.onSpinWait();
     }
@@ -638,9 +610,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void aBlockedLineDoesNotStallTheNextLineOnTheSynthesisPool() throws Exception {
-    // A slow/blocked synth (e.g. a backed-off cloud retry that is left running so its result still
-    // caches) holds one pool worker; a second, different line must still synthesize and play on the
-    // free worker rather than queueing behind it.
     CountDownLatch blockerEntered = new CountDownLatch(1);
     CountDownLatch releaseBlocker = new CountDownLatch(1);
     Pcm canned = new Pcm(new float[] {0.3f, -0.3f}, 24_000);
@@ -651,8 +620,6 @@ public class DialogueAudioServiceTest {
             if ("Blocker".equals(request.text())) {
               blockerEntered.countDown();
               try {
-                // Untimed: a timeout here would let the blocker close its stream and race the
-                // endStreamCalls assertion. The finally block always releases it.
                 releaseBlocker.await();
               } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -670,9 +637,6 @@ public class DialogueAudioServiceTest {
       assertTrue("the blocker occupied a worker", blockerEntered.await(2, TimeUnit.SECONDS));
 
       svc.speak(req("Second", NpcRace.HUMAN, NpcGender.MALE));
-      // The blocker opened its stream before parking in synthesize, so beginStreamCalls is
-      // already 1 and cannot distinguish the two lines. Only the second line can close a stream
-      // while the blocker is held, since the blocker's end() waits on releaseBlocker.
       long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
       while (output.endStreamCalls == 0 && System.nanoTime() < deadline) {
         Thread.onSpinWait();
@@ -691,8 +655,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void lateResponseIsDroppedWhenEpochAdvancesDuringSynth() {
-    // Simulates a slow cloud response that lands after the player skipped ahead: the epoch bumps
-    // mid-synth, so the now-stale audio must never play even though synthesis succeeded.
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
     final DialogueAudioService[] holder = new DialogueAudioService[1];
@@ -728,7 +690,6 @@ public class DialogueAudioServiceTest {
     assertEquals("prefetch never plays audio", 0, output.streamCalls);
     assertEquals("prefetch never interrupts playback", 0, output.stopCalls);
 
-    // The real line now arrives: it must come from the warmed cache, not a second synth.
     svc.speak(req("Yes, I'll help.", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
@@ -769,7 +730,6 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    // Queued but not yet run: leaving the node cancels it before it can spend.
     svc.prefetch(req("Branch the player left", NpcRace.HUMAN, NpcGender.MALE));
     svc.cancelPrefetch();
     executor.runAll();
@@ -777,7 +737,6 @@ public class DialogueAudioServiceTest {
     assertEquals("a cancelled prefetch never reaches the backend", 0, backend.requests.size());
   }
 
-  /** Counts disk-tier reads so a lookup on the wrong thread is observable. */
   private static final class CountingDiskCache extends DiskAudioCache {
     final AtomicInteger gets = new AtomicInteger();
 
@@ -794,10 +753,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void prefetchEarlyOutNeverReadsTheDiskCacheOnTheCallingThread() {
-    // prefetch(...) is driven from the game thread, so its pre-submit early-out must stay
-    // memory-tier only. Seed the disk tier in one session, then prefetch in a fresh session whose
-    // memory tier is empty: everything before the executor drains runs on the caller's thread, so
-    // any disk read counted there is a game-thread disk read.
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     SynthesisRequest line = req("Only on disk", NpcRace.HUMAN, NpcGender.MALE);
     FakeBackend seedBackend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
@@ -827,7 +782,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void prefetchedLineIsNotRebilledWhenSpokenAcrossTiers() {
-    // Prefetch writes through to disk too, so even a fresh in-memory tier serves the spoken line.
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     FakeBackend warm = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
     DeferredExecutor executor = new DeferredExecutor();
@@ -859,8 +813,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void echoIsRenderOnlyAndTheCacheStaysDry() {
-    // Speaking with echo, then again without, for the same key must reuse the cached DRY audio:
-    // one synth call, and the dry replay streams the original short buffer.
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
@@ -883,14 +835,11 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void crossSessionRepeatCostsTheBackendZeroAdditionalSynthCalls() {
-    // The headline cloud-cost guarantee: a repeated (backendId, voiceKey, emotion, text) across
-    // sessions must never bill the backend again. A fake cloud backend counts synth calls.
     Path cacheDir = tmp.getRoot().toPath().resolve("cache");
     FakeBackend cloud = new FakeBackend("cloud-openrouter", EnumSet.allOf(Emotion.class));
     SynthesisRequest line =
         req("Have you any quests?", NpcRace.HUMAN, NpcGender.MALE, Emotion.HAPPY);
 
-    // Session 1 on the cloud backend: one paid synth call.
     DeferredExecutor exec1 = new DeferredExecutor();
     DialogueAudioService session1 =
         diskService(provider(cloud), new FakeOutput(), new DiskAudioCache(cacheDir), exec1);
@@ -899,7 +848,6 @@ public class DialogueAudioServiceTest {
     int afterFirstSession = cloud.requests.size();
     assertEquals("first hearing of the line costs exactly one API call", 1, afterFirstSession);
 
-    // Session 2: fresh in-memory cache, same disk dir, same line. Must cost ZERO additional calls.
     DeferredExecutor exec2 = new DeferredExecutor();
     DialogueAudioService session2 =
         diskService(provider(cloud), new FakeOutput(), new DiskAudioCache(cacheDir), exec2);
@@ -912,10 +860,6 @@ public class DialogueAudioServiceTest {
         cloud.requests.size());
   }
 
-  /**
-   * The acceptance rule behind {@code ::voicedspend}: only a real backend call adds to the readout,
-   * so replaying a line from cache leaves the session totals exactly where they were.
-   */
   @Test
   public void cachedReplaysAndPrefetchHitsNeverAddToTheSpendReadout() {
     SpendTracker spend = new SpendTracker();

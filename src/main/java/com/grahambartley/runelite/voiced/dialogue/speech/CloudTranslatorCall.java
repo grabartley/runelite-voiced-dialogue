@@ -8,27 +8,16 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-/**
- * The provider-neutral control flow of one translation-hop call: execute, read, extract, and log
- * every outcome in the shared {@code [TTS cloud] translate} shape. A translator supplies the
- * request payload and the response-shape extraction through {@link Ops}; every failure path returns
- * {@code null} so the backend fails the line gracefully rather than voicing the wrong language or
- * caching a mistranslation.
- */
 @Slf4j
 public final class CloudTranslatorCall {
 
-  /** The provider-specific half of a translation call. */
   public interface Ops {
 
-    /** Builds the provider's translation request for one line. */
     Request buildRequest(String text, String language, String apiKey);
 
-    /** Extracts the translated text from a raw response body, or {@code null} when it has none. */
     String extractText(String raw);
   }
 
-  /** A completed translation plus the raw body it was extracted from. */
   public static final class Outcome {
     public final String text;
     public final String raw;
@@ -41,10 +30,6 @@ public final class CloudTranslatorCall {
 
   private CloudTranslatorCall() {}
 
-  /**
-   * Runs one translation call, returning the extracted text and raw body, or {@code null} on any
-   * failure (non-2xx, network error, empty/unparseable body).
-   */
   public static Outcome run(
       OkHttpClient httpClient,
       VoicedDialogueConfig config,

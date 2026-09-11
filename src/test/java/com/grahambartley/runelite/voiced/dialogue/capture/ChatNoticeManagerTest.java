@@ -26,11 +26,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
-/**
- * The plugin's user-facing chat output: the once-ever first-run onboarding guide, the
- * once-per-session missing-cloud-key warning, the pure decisions behind them, and the command
- * response path the {@code ::voicedspend} readout uses.
- */
 @RunWith(JUnitParamsRunner.class)
 public class ChatNoticeManagerTest {
 
@@ -43,11 +38,8 @@ public class ChatNoticeManagerTest {
 
   private Object[] onboardingCases() {
     return new Object[] {
-      // fresh install (flag never set) shows the guide
       new Object[] {null, true},
-      // flag explicitly false shows the guide
       new Object[] {false, true},
-      // flag true suppresses the guide
       new Object[] {true, false},
     };
   }
@@ -60,9 +52,7 @@ public class ChatNoticeManagerTest {
 
   private Object[] missingCloudKeyCases() {
     return new Object[] {
-      // a blank/missing key warns
       new Object[] {false, true},
-      // a key set stays quiet
       new Object[] {true, false},
     };
   }
@@ -73,7 +63,6 @@ public class ChatNoticeManagerTest {
     assertEquals(expected, ChatNoticeManager.shouldWarnMissingCloudKey(keySet));
   }
 
-  /** Stubs the persisted onboarding flag, the one input that decides whether the guide posts. */
   private void onboardingSeen(Boolean seen) {
     when(configManager.getConfiguration("voicedDialogue", "onboardingSeen", Boolean.class))
         .thenReturn(seen);
@@ -153,8 +142,6 @@ public class ChatNoticeManagerTest {
 
   @Test
   public void clearingTheKeyLaterInTheSessionStillWarnsOnce() {
-    // The player starts with a working key, then clears it mid-session: they should be told why
-    // dialogue went silent, and told only once.
     manager.maybeWarnMissingCloudKey(backend(true, OpenRouterTtsBackend.NO_KEY_NOTICE));
     manager.maybeWarnMissingCloudKey(backend(false, OpenRouterTtsBackend.NO_KEY_NOTICE));
     manager.maybeWarnMissingCloudKey(backend(false, OpenRouterTtsBackend.NO_KEY_NOTICE));
@@ -196,8 +183,6 @@ public class ChatNoticeManagerTest {
   public void aCommandResponseNeedsNoHopOntoTheClientThread() {
     manager.postCommandResponse("anything");
 
-    // The chat manager's queue is concurrent and drains on the game tick, so the readout can be
-    // posted straight from the thread that read the provider balance.
     verifyNoInteractions(clientThread);
   }
 }

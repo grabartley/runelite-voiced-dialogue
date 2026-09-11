@@ -13,7 +13,6 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.junit.Test;
 
-/** The stateless HTTP helpers shared by the cloud client classes. */
 public class CloudHttpTest {
 
   @Test
@@ -54,7 +53,6 @@ public class CloudHttpTest {
 
   @Test
   public void bodySnippetKeepsAWholeQuotaFailureBody() {
-    // A Gemini quota rejection runs ~1.4KB, with the fields naming the cause at the far end.
     assertFalse(
         "the field naming the cause must survive the log",
         CloudHttp.bodySnippet(filler(1_500)).endsWith("..."));

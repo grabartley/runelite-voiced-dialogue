@@ -14,44 +14,25 @@ import okhttp3.Protocol;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-/**
- * Stateless HTTP-side helpers shared by every cloud client class: the common header and media-type
- * constants, the derived keepalive client every backend runs on, and the small response-reading
- * utilities the failure traces need.
- */
 @Slf4j
 public final class CloudHttp {
 
-  /** RFC 6585 Too Many Requests, absent from {@link java.net.HttpURLConnection}'s constants. */
   public static final int HTTP_TOO_MANY_REQUESTS = 429;
 
-  /** Shared empty body for failure traces where no response bytes were (or could be) read. */
   static final byte[] EMPTY_BODY = new byte[0];
 
   public static final String USER_AGENT = "runelite-voiced-dialogue";
 
   public static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
-  /** Idle connections kept warm so back-to-back lines reuse a pooled connection. */
   private static final int MAX_IDLE_CONNECTIONS = 8;
 
-  /**
-   * Max bytes of a non-audio response body echoed into a diagnostic log line. A provider states why
-   * it rejected a call in a details block (quota id, limit, retry hint) that sits well past the
-   * first few hundred bytes, so diagnosing one from the log alone needs most of the body.
-   */
   private static final int BODY_SNIPPET_MAX_BYTES = 2_000;
 
   private static final Pattern CONTROL_CHARS = Pattern.compile("\\p{Cntrl}+");
 
   private CloudHttp() {}
 
-  /**
-   * Derives a long-lived keepalive client from the injected one (Hub rule: never new an
-   * OkHttpClient). {@code newBuilder()} shares the dispatcher cheaply; the derived client gets its
-   * own warm connection pool so back-to-back lines skip the TCP/TLS handshake, and its own
-   * connect/read/call timeouts without mutating the shared client's globals.
-   */
   public static OkHttpClient deriveClient(
       OkHttpClient base, RetryTuning tuning, Duration keepAlive, boolean pinHttp1) {
     OkHttpClient.Builder builder = base.newBuilder();
@@ -68,7 +49,6 @@ public final class CloudHttp {
         .build();
   }
 
-  /** Elapsed wall-clock since {@code startNanos}, in whole milliseconds, for a latency trace. */
   static long elapsedMs(long startNanos) {
     return (System.nanoTime() - startNanos) / 1_000_000L;
   }
@@ -78,10 +58,6 @@ public final class CloudHttp {
     return value == null ? "" : value;
   }
 
-  /**
-   * Reads a non-audio error body, tolerating a read failure. The bytes both feed the failure trace
-   * and word the provider's user-facing notice, so a rejection is read exactly once.
-   */
   static byte[] errorBody(Response response) {
     try {
       ResponseBody body = response.body();
@@ -91,12 +67,6 @@ public final class CloudHttp {
     }
   }
 
-  /**
-   * The {@code Retry-After} wait a rejection asks for, in milliseconds, or {@code 0} when it names
-   * none. Only the delta-seconds form is read: the HTTP-date form is absent from the cloud
-   * providers' 429s, and a date read against a skewed client clock would be worse than the caller's
-   * own back-off.
-   */
   static long retryAfterMillis(Response response) {
     String value = response.header("Retry-After");
     if (!isNonBlank(value)) {
@@ -115,7 +85,6 @@ public final class CloudHttp {
     return value != null && !value.trim().isEmpty();
   }
 
-  /** First chunk of a response body as printable UTF-8, for diagnosing a non-audio response. */
   static String bodySnippet(byte[] bytes) {
     int n = Math.min(bytes.length, BODY_SNIPPET_MAX_BYTES);
     String text =

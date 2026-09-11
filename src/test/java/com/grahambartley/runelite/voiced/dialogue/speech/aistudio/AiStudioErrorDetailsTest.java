@@ -9,7 +9,6 @@ import com.google.gson.JsonObject;
 import java.util.List;
 import org.junit.Test;
 
-/** Reading typed entries out of the {@code error.details} array a Gemini API rejection carries. */
 public class AiStudioErrorDetailsTest {
 
   private static final String QUOTA_FAILURE = "type.googleapis.com/google.rpc.QuotaFailure";

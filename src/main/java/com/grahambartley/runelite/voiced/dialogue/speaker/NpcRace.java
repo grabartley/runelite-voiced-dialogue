@@ -1,9 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.speaker;
 
-/**
- * The race buckets a speaker can voice as. Backend-neutral: the cloud backend maps each one onto
- * its own voice bank, and the character profile turns it into an accent and a persona.
- */
 public enum NpcRace {
   HUMAN,
   ELF,

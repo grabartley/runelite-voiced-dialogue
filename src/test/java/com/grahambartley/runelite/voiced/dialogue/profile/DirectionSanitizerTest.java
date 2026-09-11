@@ -6,10 +6,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-/**
- * The structural injection neutralizer: it flattens newlines, strips the block's own framing
- * markers, collapses whitespace, caps length, masks profanity, and is byte-stable for cache safety.
- */
 public class DirectionSanitizerTest {
 
   private final DirectionSanitizer sanitizer = new DirectionSanitizer(new ProfanityFilter());

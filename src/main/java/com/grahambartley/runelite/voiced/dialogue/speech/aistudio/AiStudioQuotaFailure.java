@@ -8,57 +8,35 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * The {@code google.rpc.QuotaFailure} violation a Gemini API 429 carries, and the one-time notice a
- * player is shown for it: which quota ran out, the limit it enforces, and the model it applies to.
- *
- * <p>A free-tier ceiling, a paid per-model cap, and a per-minute rate limit arrive in the same
- * response shape and are told apart only by the metric name, so reading the violation is the only
- * way the notice can state what actually happened. A notice that assumes the free tier tells a
- * billed key to enable billing it already has, for a cap that billing does not lift.
- */
 @Slf4j
 final class AiStudioQuotaFailure {
 
-  /**
-   * The notice for a 429 whose body does not say which quota ran out. It names no cause on purpose:
-   * the same status covers a free-tier ceiling, a paid per-model cap, and a per-minute rate limit,
-   * and naming the wrong one sends the player after an account problem they do not have.
-   */
   static final String QUOTA_NOTICE =
       "Your Google AI Studio quota was hit, so dialogue cannot be voiced right now. Check your"
           + " quota at aistudio.google.com, or switch Voice Provider to OpenRouter.";
 
   private static final String QUOTA_FAILURE_TYPE = "type.googleapis.com/google.rpc.QuotaFailure";
 
-  /** Strips the separators an id and a metric spell differently, so one marker matches both. */
   private static final Pattern SEPARATORS = Pattern.compile("[^A-Za-z0-9]+");
 
-  /** Google words this marker as {@code free_tier}, {@code FreeTier}, and {@code -FreeTier}. */
   private static final String FREE_TIER_MARKER = "freetier";
 
   private static final String PER_DAY_MARKER = "perday";
 
   private static final String PER_MINUTE_MARKER = "perminute";
 
-  /** Google meters tokens through the same violation shape it meters requests through. */
   private static final String TOKEN_MARKER = "token";
 
   private static final Pattern MARKUP = Pattern.compile("[<>]");
 
-  /** The quota's identifier, e.g. {@code GenerateRequestsPerDayPerProjectPerModel}. */
   final String quotaId;
 
-  /** The metered metric, e.g. {@code .../generate_requests_per_model_per_day}. */
   final String quotaMetric;
 
-  /** The limit the quota enforces, as reported; empty when the response omits it. */
   final String quotaValue;
 
-  /** The {@code model} dimension the quota applies to; empty when the response omits it. */
   final String model;
 
-  /** Id and metric as one lower-case separator-free string, so either spelling matches a marker. */
   private final String normalised;
 
   private AiStudioQuotaFailure(
@@ -71,7 +49,6 @@ final class AiStudioQuotaFailure {
         SEPARATORS.matcher(quotaId + quotaMetric).replaceAll("").toLowerCase(Locale.ROOT);
   }
 
-  /** The one-time user notice for a 429, worded from whatever quota the body reports. */
   static String noticeFor(Gson gson, byte[] body) {
     AiStudioQuotaFailure quota = parse(gson, body);
     if (quota == null) {
@@ -81,17 +58,12 @@ final class AiStudioQuotaFailure {
     return quota.notice();
   }
 
-  /**
-   * The first quota violation reported in an error body, or {@code null} when the body carries none
-   * or cannot be read, so a response shape change degrades to the generic notice.
-   */
   static AiStudioQuotaFailure parse(Gson gson, byte[] body) {
     for (JsonObject detail : AiStudioErrorDetails.ofType(gson, body, QUOTA_FAILURE_TYPE)) {
       JsonArray violations = AiStudioErrorDetails.array(detail, "violations");
       if (violations == null) {
         continue;
       }
-      // One malformed violation must not hide a well-formed one listed behind it.
       for (JsonElement violation : violations) {
         if (violation.isJsonObject()) {
           return of(violation.getAsJsonObject());
@@ -101,17 +73,14 @@ final class AiStudioQuotaFailure {
     return null;
   }
 
-  /** Whether the exhausted quota is a free-tier one, which enabling billing does lift. */
   boolean isFreeTier() {
     return normalised.contains(FREE_TIER_MARKER);
   }
 
-  /** Whether the quota meters tokens rather than requests, which the notice must not confuse. */
   boolean metersTokens() {
     return normalised.contains(TOKEN_MARKER);
   }
 
-  /** How often the reported quota resets, which decides how urgently the notice reads. */
   Period period() {
     if (normalised.contains(PER_DAY_MARKER)) {
       return Period.DAILY;
@@ -134,12 +103,10 @@ final class AiStudioQuotaFailure {
         + model;
   }
 
-  /** How often a quota resets, and the word the notice uses for it. */
   enum Period {
     DAILY("daily"),
     PER_MINUTE("per-minute"),
 
-    /** A quota naming no period, which the notice then claims none for. */
     UNKNOWN("");
 
     final String label;
@@ -149,12 +116,6 @@ final class AiStudioQuotaFailure {
     }
   }
 
-  /**
-   * The notice this violation reads as. The period is decided before the tier, because a per-minute
-   * ceiling clears within the minute on any tier and the rate-limit back-off already spaces the
-   * next line: telling a free-tier player to enable billing for that is the same misdirection as
-   * telling a billed one to enable billing they already have.
-   */
   private String notice() {
     Period period = period();
     if (period == Period.PER_MINUTE) {
@@ -172,15 +133,12 @@ final class AiStudioQuotaFailure {
           .append(" Voice Provider to OpenRouter.")
           .toString();
     }
-    // A quota naming neither a period nor a tier: nothing in the body backs a claim about when it
-    // clears or whether billing would lift it, so the notice makes neither.
     return cap(period)
         .append(". Check your quota at aistudio.google.com, or switch Voice Provider to")
         .append(" OpenRouter.")
         .toString();
   }
 
-  /** The opening clause naming what ran out, which every worded cap notice shares. */
   private StringBuilder cap(Period period) {
     StringBuilder notice = new StringBuilder("Google AI Studio ");
     notice.append(period == Period.PER_MINUTE ? "paused dialogue: " : "stopped voicing dialogue: ");
@@ -198,8 +156,6 @@ final class AiStudioQuotaFailure {
 
   private static AiStudioQuotaFailure of(JsonObject violation) {
     JsonObject dimensions = violation.getAsJsonObject("quotaDimensions");
-    // The two fields the notice echoes reach a chat line wrapped in a colour tag, so a stray angle
-    // bracket in a response would break the markup around the whole message.
     return new AiStudioQuotaFailure(
         AiStudioErrorDetails.text(violation, "quotaId"),
         AiStudioErrorDetails.text(violation, "quotaMetric"),

@@ -18,7 +18,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/** Request shape, content extraction, and graceful failure of the Gemini translation hop. */
 public class AiStudioTranslatorTest {
 
   private MockWebServer server;

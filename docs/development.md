@@ -25,6 +25,30 @@ cd runelite-voiced-dialogue
 ./gradlew test
 ```
 
+## Comments
+
+**The source carries no comments at all.** Not explanatory ones, not javadoc, not "why" ones. Names
+and structure carry the meaning, and anything that seems to need explaining is either a sign the
+code should be reshaped until it does not, or reasoning that belongs in a document under `docs/`.
+
+The rule is absolute because every softer version is a judgement call re-litigated in every review.
+A bar like "only when the why is surprising" needs someone to rule on surprising, line by line,
+forever, and what it produced here was a few thousand lines of commentary that mostly restated the
+code beside it.
+
+This covers `src/main/java` and `src/test/java` equally. Build scripts, workflow files, property
+files, and the Python tooling under `tools/` keep their comments: their comment markers appear
+inside ordinary values, so the rule does not transfer cleanly, and no Java linter covers them.
+Markdown is content rather than commentary and is unaffected.
+
+Two rules outlive the comments and still apply to names, log messages, notices, and every markdown
+file in the repo:
+
+- **No transient language.** Write the final state, always. Banned framing: "as before",
+  "previously", "legacy", "new", "now supports", "backward-compatible", migration or rollout
+  narration, and anything describing how the code got here rather than what it is.
+- **No bare issue or PR references.** In markdown, link them (`[#123](url)`), never `#123`.
+
 ## Package layout
 
 Packages under `com.grahambartley.runelite.voiced.dialogue` follow the lifecycle of a single
@@ -66,6 +90,8 @@ either from your IDE or wired into `build.gradle`.
 - [architecture.md](architecture.md): how the synthesis pipeline works end to end.
 - [npc-voice-tooling.md](npc-voice-tooling.md): the offline tooling that generates the bundled
   NPC voice and profile table.
+- [voice-casting.md](voice-casting.md): which Gemini voice each race, child, player, and the
+  narrator gets, and why that one.
 - [emotion-detection.md](emotion-detection.md): how chat-head expressions map to emotions.
 - [hub-submission.md](hub-submission.md) and
   [hub-compliance-checklist.md](hub-compliance-checklist.md): how the Plugin Hub listing works

@@ -25,12 +25,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * The per-tick dialogue scan: speaks a new NPC or player line once (deduped per speaker against the
- * last text that speaker said) and edge-triggers both the close interrupt and the prefetch reset
- * only on the open-&gt;closed transition, so idle ticks never truncate a playing public-chat clip
- * nor churn the prefetch session.
- */
 @RunWith(JUnitParamsRunner.class)
 public class DialogueWatcherTest {
 
@@ -66,13 +60,9 @@ public class DialogueWatcherTest {
 
   private Object[] interruptOnCloseCases() {
     return new Object[] {
-      // dialogue just closed -> cut its audio once
       new Object[] {false, true, true},
-      // still idle (was closed, still closed) -> never interrupt, so public chat plays on
       new Object[] {false, false, false},
-      // dialogue still open -> nothing to interrupt
       new Object[] {true, true, false},
-      // dialogue just opened -> nothing to interrupt
       new Object[] {true, false, false},
     };
   }
@@ -155,7 +145,6 @@ public class DialogueWatcherTest {
   public void reopenedDialogueRepeatsBothSpeakersLinesAfterTheCloseResetsThem() {
     Widget npc = visibleWidget("Greetings!");
     Widget player = visibleWidget("Yes.");
-    // One side renders per tick: NPC, player, fully closed, then the same conversation again.
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, null, null, npc, null);
     when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(null, player, null, null, player);
 
@@ -171,7 +160,6 @@ public class DialogueWatcherTest {
   @Test
   public void dialogueClosingInterruptsAudioAndResetsPrefetch() {
     Widget npc = visibleWidget("Greetings!");
-    // Open on the first tick, gone on the second.
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc, (Widget) null);
 
     watcher.tick();

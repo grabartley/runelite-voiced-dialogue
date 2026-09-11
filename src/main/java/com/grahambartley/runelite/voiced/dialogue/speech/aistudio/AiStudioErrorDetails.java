@@ -10,24 +10,11 @@ import java.util.Collections;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * The {@code error.details} array a Gemini API rejection carries, read by {@code @type}. One 429
- * states both which quota ran out and how long to wait, as two entries of this one array, so each
- * reader asks for the type it understands and ignores the rest.
- *
- * <p>The parse-failure log line names the quota failure alone, since players' logs are matched
- * against that text.
- */
 @Slf4j
 final class AiStudioErrorDetails {
 
   private AiStudioErrorDetails() {}
 
-  /**
-   * Every detail of {@code type} in an error body, in the order the response listed them. Empty
-   * when the body carries none, is not the expected shape, or cannot be read at all, so a caller
-   * degrades rather than failing the line it was already failing to voice.
-   */
   static List<JsonObject> ofType(Gson gson, byte[] body, String type) {
     if (body == null || body.length == 0) {
       return Collections.emptyList();
@@ -57,7 +44,6 @@ final class AiStudioErrorDetails {
     }
   }
 
-  /** One array field of a detail, or {@code null} when it is absent or not an array. */
   static JsonArray array(JsonObject object, String field) {
     if (object == null) {
       return null;
@@ -66,7 +52,6 @@ final class AiStudioErrorDetails {
     return value != null && value.isJsonArray() ? value.getAsJsonArray() : null;
   }
 
-  /** One string field of a detail, or {@code ""} when it is absent, null, or not a string. */
   static String text(JsonObject object, String field) {
     if (object == null || !object.has(field) || object.get(field).isJsonNull()) {
       return "";

@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
 
-/** Session dedup, the per-session cap, and reset/cancel behaviour. */
 public class DialoguePrefetcherTest {
 
   private final List<SynthesisRequest> warmed = new ArrayList<>();
@@ -91,7 +90,6 @@ public class DialoguePrefetcherTest {
 
     prefetcher.offer(options("Yes.", "No."));
     prefetcher.reset();
-    // After reset the same options are a new session, so they warm again.
     prefetcher.offer(options("Yes.", "No."));
 
     assertEquals("reset clears dedup so a new conversation re-warms", 4, warmed.size());

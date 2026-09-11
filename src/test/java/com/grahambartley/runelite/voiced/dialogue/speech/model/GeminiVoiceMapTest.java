@@ -12,18 +12,15 @@ import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
-/** Gender-correctness, determinism, and per-NPC spread of the Gemini race/gender voice map. */
 public class GeminiVoiceMapTest {
 
   private final GeminiVoiceMap map = new GeminiVoiceMap();
 
-  /** The youthful sub-pools a child spec must resolve within, regardless of race. */
   private static final Set<String> CHILD_MALE_POOL = new HashSet<>(java.util.Arrays.asList("Puck"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
       new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr"));
 
-  /** Races that carry a real race/gender mapping (UNKNOWN intentionally falls back). */
   private static final NpcRace[] MAPPED_RACES = {
     NpcRace.HUMAN,
     NpcRace.ELF,
@@ -44,11 +41,6 @@ public class GeminiVoiceMapTest {
     NpcRace.PENGUIN
   };
 
-  /**
-   * The 30 prebuilt Gemini TTS voices. Every voice the map can emit must be one of these names; a
-   * name that is not a real voice fails synthesis at runtime, so the map is checked against the
-   * catalog here rather than only by ear.
-   */
   private static final Set<String> GEMINI_VOICE_CATALOG =
       new HashSet<>(
           java.util.Arrays.asList(
@@ -107,10 +99,6 @@ public class GeminiVoiceMapTest {
         overlap.isEmpty());
   }
 
-  /**
-   * Every voice any spec of {@code gender} can produce, sweeping races, a spread of NPC seeds, and
-   * both the adult and child life stages, so the gender-disjointness invariant covers children too.
-   */
   private Set<String> voicesFor(NpcGender gender) {
     Set<String> voices = new HashSet<>();
     for (NpcRace race : MAPPED_RACES) {
@@ -240,8 +228,6 @@ public class GeminiVoiceMapTest {
 
   @Test
   public void sameRaceGenderDifferentChildrenSpreadAcrossTheChildPool() {
-    // The male pool is deliberately a single by-ear-approved voice, so the seed spread is
-    // observable on the female pool.
     Set<String> seen = new HashSet<>();
     for (int seed = 0; seed < 16; seed++) {
       seen.add(map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, seed, true)));
@@ -251,8 +237,6 @@ public class GeminiVoiceMapTest {
 
   @Test
   public void adultSpecsKeepTheirAdultRaceAnchors() {
-    // The child pools reuse voices the map already trusts for goblins and monkeys, so adults of
-    // OTHER races must be unaffected: a human male still anchors to Charon, not Puck.
     assertEquals(
         GeminiVoiceMap.DEFAULT_VOICE, map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE)));
     assertEquals("Despina", map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE)));

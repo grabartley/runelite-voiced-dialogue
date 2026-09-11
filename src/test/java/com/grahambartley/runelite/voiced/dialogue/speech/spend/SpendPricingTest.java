@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-/** Converting Google AI Studio's metered token counts into the estimate the readout quotes. */
 public class SpendPricingTest {
 
   private static final double TOLERANCE = 1e-12;
@@ -46,7 +45,6 @@ public class SpendPricingTest {
 
   @Test
   public void aTypicalLineLandsInTheRightOrderOfMagnitude() {
-    // ~170 audio tokens is a 100-character line at Gemini's audio token rate, plus a short prompt.
     double usd = SpendPricing.estimateSpeechUsd(170, 40);
 
     assertTrue("a single line costs fractions of a cent: " + usd, usd > 0.0005 && usd < 0.005);

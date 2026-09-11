@@ -10,16 +10,12 @@ import net.runelite.client.config.Range;
 @ConfigGroup(VoicedDialogueConfig.GROUP)
 public interface VoicedDialogueConfig extends Config {
 
-  /** The {@code @ConfigGroup} value, shared so config reads/writes never restate the literal. */
   String GROUP = "voicedDialogue";
 
-  /** Key of {@link #ttsProvider()}, shared by the code that reads and writes it directly. */
   String PROVIDER_KEY = "ttsProvider";
 
-  /** Key of {@link #openRouterApiKey()}, shared by the code that reacts to it changing. */
   String OPENROUTER_API_KEY = "openRouterApiKey";
 
-  /** Key of {@link #googleAiStudioApiKey()}, shared by the code that reacts to it changing. */
   String GOOGLE_AI_STUDIO_API_KEY = "googleAiStudioApiKey";
 
   @ConfigSection(
@@ -47,18 +43,6 @@ public interface VoicedDialogueConfig extends Config {
       closedByDefault = true)
   String advancedSection = "advanced";
 
-  /**
-   * The cloud service dialogue is synthesized through. Both providers voice through the same Gemini
-   * TTS model, so voices, emotion, and character profiles sound the same; they differ in who bills
-   * the call, which API key is used, how quickly audio starts, and how much can be voiced in a day.
-   * {@link #GOOGLE_AI_STUDIO} is the default: it sends requests directly to Google with a Gemini
-   * API key and streams audio back as it is generated, so a line starts speaking in about a second
-   * whatever its length, but an entry-tier key gets only 100 requests per day per project for the
-   * pinned preview speech model, and enabling billing does not lift that. {@link #OPENROUTER} uses
-   * the OpenRouter key and has no such daily ceiling, but also no streaming support, returning
-   * nothing until the whole clip exists, so a long line waits out its full generation before it can
-   * be heard.
-   */
   enum TtsProvider {
     OPENROUTER("OpenRouter"),
     GOOGLE_AI_STUDIO("Google AI Studio");
@@ -75,15 +59,6 @@ public interface VoicedDialogueConfig extends Config {
     }
   }
 
-  /**
-   * An optional delivery quirk layered onto a spoken line, selected per speaker class (Player vs
-   * NPC). {@link #NONE} (the default) changes nothing; any other value appends its {@link
-   * #phrase()} to the configured spoken language, so the line is routed through the translation
-   * model and rewritten in that register (for example "English" plus Gen Z slang behaves like a
-   * "English Gen Z slang" target). Every value is a register or tone, not a dialect, so it stays
-   * language-agnostic and composes with any spoken language ("French pirate speak", "Japanese Gen Z
-   * slang").
-   */
   enum SpeakingStyle {
     NONE("None", ""),
     GEN_Z("Gen Z Slang", "Gen Z slang"),
@@ -127,16 +102,6 @@ public interface VoicedDialogueConfig extends Config {
     }
   }
 
-  /**
-   * The finite set of languages dialogue can be spoken in: the single source of truth for both the
-   * dropdown options and the BCP-47 {@code language_code} sent to the TTS model. Each constant
-   * carries a natural language name (fed verbatim to the translation model as the target language),
-   * its BCP-47 code (sent so a translated line is pronounced natively rather than mis-read with an
-   * English phoneme set), and a display name shown in the dropdown. The display name defaults to
-   * the natural name but is shortened for regional variants (e.g. {@code Spanish (LatAm)}) so the
-   * combo box does not crowd out the setting label. {@link #ENGLISH} (the default) speaks the
-   * original line directly; every other value routes the line through the translation hop first.
-   */
   enum SpokenLanguage {
     ENGLISH("English", "en-GB"),
     SPANISH("Spanish", "es-ES"),

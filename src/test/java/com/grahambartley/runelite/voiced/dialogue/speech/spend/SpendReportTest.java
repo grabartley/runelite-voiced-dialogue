@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 
-/** How the {@code ::voicedspend} command is recognised and how a session reads back in chat. */
 public class SpendReportTest {
 
   private static ProviderSpend openRouter(long voiced, long prefetched, long characters) {

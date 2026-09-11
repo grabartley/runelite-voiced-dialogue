@@ -6,7 +6,6 @@ import static org.junit.Assert.assertSame;
 import com.google.gson.Gson;
 import org.junit.Test;
 
-/** Reading the token counts Google AI Studio reports for a speech call. */
 public class AiStudioTokenUsageTest {
 
   private final Gson gson = new Gson();

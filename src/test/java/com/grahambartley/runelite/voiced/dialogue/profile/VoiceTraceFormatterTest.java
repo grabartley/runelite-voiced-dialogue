@@ -6,7 +6,6 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import org.junit.Test;
 
-/** The debug voice-resolution trace strings. */
 public class VoiceTraceFormatterTest {
 
   @Test

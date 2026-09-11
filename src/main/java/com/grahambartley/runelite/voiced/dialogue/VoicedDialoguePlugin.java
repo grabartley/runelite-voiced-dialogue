@@ -52,28 +52,18 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import okhttp3.OkHttpClient;
 
-/**
- * RuneLite entry point for Voiced Dialogue. Owns only the plugin lifecycle, the RuneLite event
- * hooks, and dependency injection; all dialogue, synthesis, emotion, cave-echo, prefetch, and
- * notice behaviour lives in focused collaborators wired up in {@link #startUp}.
- */
 @Slf4j
 @PluginDescriptor(name = "Voiced Dialogue")
 public class VoicedDialoguePlugin extends Plugin {
 
-  /** Cache enough recent lines that loops of NPC chatter replay instantly without re-synthesis. */
   private static final int CACHE_SIZE = 64;
 
-  /** Tiny backlog so a burst of dialogue ticks never blocks the game thread on enqueue. */
   private static final int QUEUE_CAPACITY = 4;
 
   @Inject private Client client;
 
   @Inject private VoicedDialogueConfig config;
 
-  /**
-   * Injected per Hub rules: never {@code new OkHttpClient()} / {@code new Gson()} in plugin code.
-   */
   @Inject private OkHttpClient okHttpClient;
 
   @Inject private Gson gson;
@@ -97,21 +87,12 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private PublicChatSpeaker publicChatSpeaker;
 
-  /**
-   * Session-only counters behind {@code ::voicedspend}. Built fresh on every start-up, so the
-   * totals reset with the plugin and nothing is ever persisted.
-   */
   private SpendTracker spendTracker;
 
-  /** Reads what the OpenRouter key has actually spent, so the readout quotes a billed figure. */
   private OpenRouterUsageClient usageClient;
 
   private OpenRouterCreditMeter creditMeter;
 
-  /**
-   * Dedicated daemon thread for the spend readout's balance reads, so a command never touches the
-   * network on the game thread and never queues behind synthesis.
-   */
   private ExecutorService spendExecutor;
 
   @Override
@@ -120,9 +101,6 @@ public class VoicedDialoguePlugin extends Plugin {
     VoiceManager voiceManager = VoiceManager.create(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
-    // Runtime "learn a new NPC" fallback: the learned cache is always consulted (so previously
-    // learned NPCs voice correctly even with the toggle off), while new wiki lookups are gated by
-    // the config toggle. Lookups run on a dedicated daemon thread, never the game thread.
     LearnedNpcStore learnedStore = new LearnedNpcStore(ttsDir.resolve("learned-npcs.json"), gson);
     wikiExecutor =
         Executors.newSingleThreadExecutor(
@@ -148,12 +126,8 @@ public class VoicedDialoguePlugin extends Plugin {
               t.setDaemon(true);
               return t;
             });
-    // Take the session's starting balance now, off the game thread, so the first ::voicedspend has
-    // something to subtract from. A key entered later re-baselines through onConfigChanged.
     captureOpenRouterBaseline();
 
-    // A line the active backend cannot voice is left silent (with a one-time notice) rather than
-    // routed to the other provider.
     OpenRouterTtsBackend openRouterBackend = new OpenRouterTtsBackend(okHttpClient, config, gson);
     openRouterBackend.setNotice(noticeManager::notifyFromBackendThread);
     openRouterBackend.setSpendTracker(spendTracker);
@@ -171,11 +145,7 @@ public class VoicedDialoguePlugin extends Plugin {
             CACHE_SIZE,
             QUEUE_CAPACITY,
             config::volume);
-    // Warm the backend off the game thread so the first line is not the one that pays the cloud
-    // connection handshake, and the game thread never blocks on it.
     audioService.prewarm(backendProvider::warmUpActive);
-    // Speculative prefetch warms the cache for the dialogue options the player can see; it shares
-    // the audio service's dedup and both cache tiers, and runs off the game thread.
     DialoguePrefetcher prefetcher =
         new DialoguePrefetcher(audioService::prefetch, audioService::cancelPrefetch);
 
@@ -262,14 +232,6 @@ public class VoicedDialoguePlugin extends Plugin {
     }
   }
 
-  /**
-   * Answers {@code ::voicedspend} with this session's billable cloud usage: lines voiced, lines
-   * prefetched, characters actually sent, and what it cost (OpenRouter's billed figure, or a
-   * labelled estimate where the provider reports only tokens), one chat line per provider used.
-   * Cache hits cost nothing and are counted nowhere, so a session spent replaying known lines reads
-   * as zero. The handler itself only snapshots counters on the client thread; the balance read runs
-   * on the spend thread, and the readout is queued from there.
-   */
   @Subscribe
   public void onCommandExecuted(CommandExecuted event) {
     if (!SpendReport.matches(event.getCommand())
@@ -281,8 +243,6 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     List<SpendTracker.ProviderSpend> snapshot = spendTracker.snapshot();
     String key = config.openRouterApiKey();
-    // Captured now so the task holds its own references: shutDown nulls the fields, and the task
-    // may still be running when it does.
     OpenRouterUsageClient reader = usageClient;
     OpenRouterCreditMeter meter = creditMeter;
     log.debug(
@@ -290,35 +250,22 @@ public class VoicedDialoguePlugin extends Plugin {
     submitSpendTask(
         () -> {
           try {
-            // OpenRouter states what the key has spent; reading it is a network call, so it happens
-            // off the game thread.
             Double spent = meter.spentSince(key, reader.fetchUsage(key));
             ChatNoticeManager notices = noticeManager;
             if (notices == null) {
               return;
             }
-            // Queued rather than written directly, so the readout needs no hop back to the client
-            // thread: the chat manager's queue is concurrent and Hooks.tick drains it every game
-            // tick.
             List<String> lines = SpendReport.lines(snapshot, spent);
             for (String line : lines) {
               notices.postCommandResponse(line);
             }
             log.debug("[TTS spend] queued {} readout line(s), billedUsd={}", lines.size(), spent);
           } catch (RuntimeException e) {
-            // An executor task that throws dies silently, which would leave the command looking
-            // like it did nothing at all. A readout is never worth breaking the session over, so
-            // the failure is logged and swallowed rather than propagated.
             log.warn("[TTS spend] could not build the spend readout", e);
           }
         });
   }
 
-  /**
-   * Reads the OpenRouter key's current all-time usage off the game thread and banks it as this
-   * session's starting point. A no-op without a key; the {@link OpenRouterCreditMeter} ignores a
-   * repeat for a key it already has a baseline for, so spend already made is never erased.
-   */
   private void captureOpenRouterBaseline() {
     String key = config.openRouterApiKey();
     OpenRouterUsageClient reader = usageClient;
@@ -329,7 +276,6 @@ public class VoicedDialoguePlugin extends Plugin {
     submitSpendTask(() -> meter.recordBaseline(key, reader.fetchUsage(key)));
   }
 
-  /** Runs a spend task on the dedicated thread, dropping it if the plugin is shutting down. */
   private void submitSpendTask(Runnable task) {
     ExecutorService executor = spendExecutor;
     if (executor == null) {
@@ -338,16 +284,9 @@ public class VoicedDialoguePlugin extends Plugin {
     try {
       executor.execute(task);
     } catch (RejectedExecutionException ignored) {
-      // Shutting down; the readout is not worth resurrecting a torn-down session for.
     }
   }
 
-  /**
-   * Records the provider a profile actually holds a key for, so a profile keyed only for OpenRouter
-   * is never left voicing through a provider it cannot reach. Writes at most once per profile: the
-   * write is itself the recorded choice, so {@link ProviderDefaultPolicy} declines to touch it
-   * again.
-   */
   void pinProviderWhenOnlyOpenRouterKeyed() {
     String stored =
         configManager.getConfiguration(
@@ -362,19 +301,8 @@ public class VoicedDialoguePlugin extends Plugin {
     log.info("Pinned this profile to OpenRouter, the provider it holds a key for");
   }
 
-  /**
-   * Reacts to a backend-affecting config key changing at runtime: drops any rate-limit back-off the
-   * old credentials earned, warms up the backend off the game thread, so entering an OpenRouter key
-   * does the cloud connection handshake immediately rather than starting cold on the next line, and
-   * re-baselines the spend meter on an OpenRouter key change. The warm-up decision lives in {@link
-   * BackendWarmUpPolicy}; the work runs on the pipeline thread via {@link
-   * DialogueAudioService#prewarm}. No-ops safely when the plugin is disabled or mid-shutdown.
-   */
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {
-    // An OpenRouter key swapped mid-session starts a different running total, so the old baseline
-    // cannot be subtracted from the new key's usage. Checked ahead of the warm-up gate so the
-    // re-baseline never depends on what happens to trigger a warm-up.
     if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
         && VoicedDialogueConfig.OPENROUTER_API_KEY.equals(event.getKey())
         && creditMeter != null) {
@@ -387,8 +315,6 @@ public class VoicedDialoguePlugin extends Plugin {
     if (audioService == null || backendProvider == null) {
       return;
     }
-    // A 429 window opened under the old key or provider says nothing about the new one, and the
-    // notice that opened it asked for exactly this change.
     backendProvider.clearRateLimits();
     audioService.prewarm(backendProvider::warmUpActive);
   }

@@ -19,7 +19,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/** Request shape, system-prompt stability, content extraction, and graceful failure. */
 public class OpenRouterTranslatorTest {
 
   private MockWebServer server;

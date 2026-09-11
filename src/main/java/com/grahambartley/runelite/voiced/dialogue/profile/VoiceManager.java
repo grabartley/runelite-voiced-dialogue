@@ -10,24 +10,9 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 
-/**
- * Resolves an NPC, the player, or the narrator to a backend-neutral {@link VoiceSpec} and the
- * per-speaker {@link CharacterProfile}. A thin facade over focused collaborators: NPC identity
- * ({@link NpcIdentityResolver}), voice resolution ({@link NpcVoiceResolver}), profile layering
- * ({@link NpcProfileTable}), and trace formatting ({@link VoiceTraceFormatter}).
- *
- * <p>The spec carries the detected race and gender so the cloud backend can map them to its own
- * voice bank, plus a stable per-NPC variety seed so same-race/gender NPCs are spread across a
- * sub-pool and sound distinct.
- */
 @Slf4j
 public class VoiceManager {
 
-  /**
-   * The two selectable player voices, kept deliberately opaque ("Type A" / "Type B") so the config
-   * exposes a simple either/or. Each just fixes the player's gender, which then drives the cloud
-   * voice.
-   */
   public enum PlayerVoice {
     TYPE_A(NpcGender.MALE, "Type A"),
     TYPE_B(NpcGender.FEMALE, "Type B");
@@ -40,7 +25,6 @@ public class VoiceManager {
       this.label = label;
     }
 
-    /** The gender this player voice fixes for cloud voice resolution. */
     public NpcGender getGender() {
       return gender;
     }
@@ -57,7 +41,6 @@ public class VoiceManager {
   private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
 
-  /** Builds a manager over freshly loaded copies of both bundled tables. */
   public static VoiceManager create(VoicedDialogueConfig config, Client client) {
     NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
     demographicAnalyzer.initialize();
@@ -79,27 +62,11 @@ public class VoiceManager {
     this.npcVoiceResolver = new NpcVoiceResolver(config);
   }
 
-  /**
-   * Wires in the runtime "learn a new NPC" fallback: the analyzer consults {@code store} for NPCs
-   * missing from the bundled table, and an unknown NPC triggers a one-off background wiki lookup
-   * via {@code service} that populates {@code store} for subsequent lines.
-   */
   public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
     this.demographicAnalyzer.setLearnedStore(store);
     this.npcVoiceResolver.setLearningService(service);
   }
 
-  /**
-   * Resolves who is speaking a line, once: the NPC behind the name is looked up a single time and
-   * both the voice and the profile are derived from that one result. The player uses the gender of
-   * the configured player voice and their configured profile; an NPC uses its detected race and
-   * gender plus a stable per-NPC variety seed, and the profile built by combining every matching
-   * layer (default, race, ethnicity, every keyword category that matches, and any per-NPC
-   * override).
-   *
-   * <p>The profile is {@code null} when character profiles are switched off, which keeps the
-   * request and its synthesis cache key identical to what a profile-free resolution produces.
-   */
   public ResolvedSpeaker resolve(Speaker speaker, String npcName) {
     boolean withProfile = config.cloudCharacterProfiles();
     if (speaker == Speaker.PLAYER) {
@@ -111,10 +78,6 @@ public class VoiceManager {
     return new ResolvedSpeaker(voice, withProfile ? npcProfile(npcName, identity) : null);
   }
 
-  /**
-   * Resolves the game's own narration voice: one fixed spec and the narrator profile, identical
-   * every call, so narrated lines keep a stable cache key across sessions.
-   */
   public ResolvedSpeaker resolveNarrator() {
     CharacterProfile profile =
         config.cloudCharacterProfiles() ? profileTable.resolveNarrator() : null;
@@ -147,8 +110,6 @@ public class VoiceManager {
     if (attributes != null) {
       race = attributes.getRace();
       ethnicity = attributes.getEthnicity();
-      // The id the analyzer actually matched (active or base), so a bespoke byId profile keyed by
-      // the wiki id resolves even for transformed multiloc NPCs.
       npcId = attributes.getNpcId();
     }
 

@@ -39,10 +39,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * HTTP path, headers, Gemini JSON body, base64 audio decode, SSE streaming, availability gating,
- * cache variant, translation hop, and graceful failure of the direct Google AI Studio backend.
- */
 public class AiStudioTtsBackendTest {
 
   private MockWebServer server;
@@ -70,9 +66,6 @@ public class AiStudioTtsBackendTest {
   }
 
   private AiStudioTtsBackend backend(MutableTestConfig config) {
-    // Point speech and translation at the mock server while keeping the real header, JSON body,
-    // SSE decode, and error logic; millisecond retry budgets so retry paths run without real
-    // waits.
     return new AiStudioTtsBackend(
         client,
         config,
@@ -83,14 +76,12 @@ public class AiStudioTtsBackendTest {
             Duration.ofMillis(500), Duration.ofMillis(500), Duration.ofSeconds(1), 10, 0));
   }
 
-  /** A keyed backend whose one-time notices land in {@link #notices}. */
   private AiStudioTtsBackend noticedBackend() {
     AiStudioTtsBackend backend = backend(keyedConfig());
     backend.setNotice(notices::add);
     return backend;
   }
 
-  /** A backend whose billable calls land in {@link #spend}. */
   private AiStudioTtsBackend costedBackend(MutableTestConfig config) {
     AiStudioTtsBackend backend = backend(config);
     backend.setSpendTracker(spend);
@@ -102,7 +93,6 @@ public class AiStudioTtsBackendTest {
         "Hello & welcome", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
   }
 
-  /** The {@code contents[0].parts[0].text} a request or response document carries. */
   private static String spokenText(JsonObject body) {
     return body.getAsJsonArray("contents")
         .get(0)
@@ -271,7 +261,6 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void theStreamedPathWordsTheQuotaNoticeFromItsRejectionToo() {
-    // The path a live cache-missed line takes.
     AiStudioTtsBackend backend = noticedBackend();
     server.enqueue(AiStudioResponses.quotaRejection());
 
@@ -292,8 +281,6 @@ public class AiStudioTtsBackendTest {
     assertNull(backend.synthesize(req()));
     assertEquals(1, server.getRequestCount());
 
-    // A spare rejection means a line that wrongly escapes fails the count rather than blocking on
-    // an empty queue.
     server.enqueue(AiStudioResponses.quotaRejection());
     assertNull("a line inside the stated wait is not voiced", backend.synthesize(req()));
     assertNull(backend.synthesizeStreaming(req(), (samples, rate) -> {}));
@@ -377,8 +364,6 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void streamingChunkSplitAcrossSamplesIsReassembled() {
-    // One 16-bit sample split across two SSE events: an odd leading byte must be carried, never
-    // dropped or played as a half sample.
     byte[] whole = TestPcm.raw(new short[] {1, 2, 3});
     byte[] head = new byte[3];
     byte[] tail = new byte[3];
@@ -409,7 +394,6 @@ public class AiStudioTtsBackendTest {
   public void incompleteStreamPlaysButIsNotReturnedForCaching() {
     List<byte[]> chunks = new ArrayList<>();
     chunks.add(TestPcm.raw(new short[] {1, 2, 3}));
-    // No STOP finish reason: the stream was cut before the model finished the line.
     server.enqueue(AiStudioResponses.ok(AiStudioResponses.sse(chunks, null)));
 
     List<float[]> sunk = new ArrayList<>();
@@ -639,7 +623,6 @@ public class AiStudioTtsBackendTest {
 
   @Test
   public void aStreamedLineBanksTheRunningTotalFromTheFinalEvent() {
-    // The API reports usageMetadata as a running total, so the last event carries the whole call.
     String first =
         AiStudioResponses.withUsage(
             AiStudioResponses.audioDocument(TestPcm.raw(new short[] {1, 2}), null), 400, 42);

@@ -14,10 +14,6 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * The provider-neutral text rules: the translation-target decision, language/quirk combination, and
- * the shared translator system prompt.
- */
 @RunWith(JUnitParamsRunner.class)
 public class CloudTtsTextTest {
 

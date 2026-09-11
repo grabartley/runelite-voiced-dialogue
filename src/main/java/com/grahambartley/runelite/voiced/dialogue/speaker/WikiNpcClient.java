@@ -14,18 +14,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-/**
- * Looks an NPC's race, gender and ethnicity up on the Old School RuneScape Wiki at runtime, for
- * NPCs missing from the bundled table (typically ones added to the game since the last plugin
- * update). It queries the MediaWiki API for the NPC's page lead wikitext and parses the {@code
- * Infobox NPC} fields, mirroring the offline generator ({@code tools/generate_npc_voices.py}) so a
- * learned NPC sounds the same as a baked-in one.
- *
- * <p>This runs only on a background thread (never the game thread), through the injected {@link
- * OkHttpClient}. Every failure path (network error, missing page, no infobox, unparsable body)
- * returns {@code null} rather than throwing, so a lookup miss simply leaves the NPC on the default
- * voice.
- */
 @Slf4j
 public final class WikiNpcClient {
 
@@ -59,10 +47,6 @@ public final class WikiNpcClient {
     this.api = api;
   }
 
-  /**
-   * Resolves race/gender/ethnicity for an NPC by wiki page name, or {@code null} when it cannot be
-   * found or parsed. The returned attributes carry source {@code "Wiki"}.
-   */
   public NpcAttributes lookup(String npcName) {
     if (npcName == null || npcName.trim().isEmpty()) {
       return null;
@@ -94,7 +78,7 @@ public final class WikiNpcClient {
       }
       String race = bucketForRace(firstField(RACE, wikitext));
       if (race == null) {
-        return null; // no Infobox NPC race -> not a usable NPC page (disambiguation, monster, ...)
+        return null;
       }
       String gender = normaliseGender(firstField(GENDER, wikitext));
       String ethnicity =
@@ -147,11 +131,6 @@ public final class WikiNpcClient {
     return value.trim();
   }
 
-  /**
-   * Maps wiki race text onto the voice bucket name stored in the tables. Anything the shared {@link
-   * RaceBucket} table does not recognise is a person until proven otherwise, so an obscure race
-   * still gets a human voice rather than none.
-   */
   static String bucketForRace(String raceText) {
     if (raceText == null || raceText.isEmpty()) {
       return null;
@@ -173,14 +152,13 @@ public final class WikiNpcClient {
     return "Male";
   }
 
-  /** Maps a single wiki leagueRegion onto an ethnicity accent key; mirrors the generator. */
   static String ethnicityKey(String leagueRegion, String location) {
     if (leagueRegion == null) {
       return null;
     }
     String lr = leagueRegion.trim();
     if (lr.contains(",") || lr.contains("&")) {
-      return null; // documented in several regions -> no single home accent
+      return null;
     }
     switch (lr.toLowerCase(Locale.ROOT)) {
       case "desert":

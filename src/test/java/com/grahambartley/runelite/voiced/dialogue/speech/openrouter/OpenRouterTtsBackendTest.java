@@ -49,9 +49,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * HTTP path, headers, JSON body, decode, availability gating, cache variant, and graceful failure.
- */
 public class OpenRouterTtsBackendTest {
 
   private MockWebServer server;
@@ -67,18 +64,12 @@ public class OpenRouterTtsBackendTest {
 
   @After
   public void tearDown() throws Exception {
-    // The connect-failure test shuts the server down itself; a second shutdown would throw.
     try {
       server.shutdown();
     } catch (Exception ignored) {
-      // already shut down
     }
   }
 
-  /**
-   * Millisecond timeout + backoff so the network-timeout retry path runs without multi-second
-   * waits.
-   */
   private static final RetryTuning FAST_RETRY =
       new RetryTuning(Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofSeconds(1), 10, 0);
 
@@ -89,7 +80,6 @@ public class OpenRouterTtsBackendTest {
   }
 
   private OpenRouterTtsBackend backend(VoicedDialogueConfig config) {
-    // Point the backend at the mock server while keeping the real header/body/decode/error logic.
     return new OpenRouterTtsBackend(
         client, config, gson, server.url("/api/v1/audio/speech").toString());
   }
@@ -149,9 +139,6 @@ public class OpenRouterTtsBackendTest {
     assertEquals("Hello & welcome", inputForEmotion(Emotion.NEUTRAL));
   }
 
-  /**
-   * Synthesizes one line at the given emotion and returns the {@code input} field actually sent.
-   */
   private String inputForEmotion(Emotion emotion) throws Exception {
     enqueuePcm((short) 1);
 
@@ -163,7 +150,6 @@ public class OpenRouterTtsBackendTest {
     return sentBody().get("input").getAsString();
   }
 
-  /** The JSON body of the next request the mock server recorded. */
   private JsonObject sentBody() throws Exception {
     return new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
   }
@@ -371,8 +357,6 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void englishWithNoQuirkBypassesTheTranslationModel() throws Exception {
-    // Default language English, default quirk None: the line must go straight to speech with no
-    // translation hop, so a single enqueued speech response is enough.
     enqueuePcm((short) 1);
 
     assertNotNull(backend(keyedConfig()).synthesize(req()));
@@ -388,7 +372,6 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    // Even with English as the base, the NPC style forces the translation hop; it is served first.
     enqueueChat("no cap, well met");
     enqueuePcm((short) 1);
 
@@ -438,24 +421,18 @@ public class OpenRouterTtsBackendTest {
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
-    // The NPC line: NPC style None -> straight to speech, a single call, no translation hop.
     enqueuePcm((short) 1);
     backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Well met.", voice, Emotion.NEUTRAL, null, false, /* player= */ false));
+        .synthesize(new SynthesisRequest("Well met.", voice, Emotion.NEUTRAL, null, false, false));
     assertEquals("an NPC line with NPC style None skips translation", 1, server.getRequestCount());
     assertTrue(
         "the NPC line's only request is the speech call",
         server.takeRequest().getPath().endsWith("/audio/speech"));
 
-    // The player line: player style Gen Z -> translation hop first, then speech.
     enqueueChat("no cap, well met");
     enqueuePcm((short) 1);
     backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Well met.", voice, Emotion.NEUTRAL, null, false, /* player= */ true));
+        .synthesize(new SynthesisRequest("Well met.", voice, Emotion.NEUTRAL, null, false, true));
     RecordedRequest translation = server.takeRequest();
     assertTrue(
         "the player line routes through translation because the player style is set",
@@ -476,9 +453,9 @@ public class OpenRouterTtsBackendTest {
     OpenRouterTtsBackend backend = backend(config);
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
     SynthesisRequest playerLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, /* player= */ true);
+        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, true);
     SynthesisRequest npcLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, /* player= */ false);
+        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, false);
 
     assertNotEquals(
         "a player-styled and an NPC-styled line of the same text get distinct cache keys",
@@ -494,9 +471,9 @@ public class OpenRouterTtsBackendTest {
     OpenRouterTtsBackend backend = backend(config);
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
     SynthesisRequest playerLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, /* player= */ true);
+        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, true);
     SynthesisRequest npcLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, /* player= */ false);
+        new SynthesisRequest("a", voice, Emotion.NEUTRAL, null, false, false);
 
     assertFalse(
         "the player line, player style None, carries no language fragment so it skips translation",
@@ -527,7 +504,6 @@ public class OpenRouterTtsBackendTest {
   public void nonEnglishTargetTranslatesBeforeVoicingAndSetsLanguageCode() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    // The translator call is served first, then the speech call (same mock server, queue order).
     enqueueChat("Bonjour");
     enqueuePcm((short) 1);
 
@@ -556,7 +532,6 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    // A skip-translation line bypasses the hop entirely, so only the speech call is enqueued.
     enqueuePcm((short) 1);
 
     backend(config)
@@ -709,7 +684,6 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void transientEmptyBodyIsRetriedOnceAndRecovers() {
-    // First call comes back as an empty 200 (the transient glitch); the immediate retry succeeds.
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
     enqueuePcm((short) 1, (short) 2, (short) 3);
 
@@ -736,14 +710,12 @@ public class OpenRouterTtsBackendTest {
     assertEquals("the persistent failure surfaces one notice", 1, notices[0]);
   }
 
-  /** 1.5 s of full-amplitude audio with no trailing silence: a line cut off mid-utterance. */
   private static short[] truncatedAudio() {
     short[] s = new short[36_000];
     Arrays.fill(s, (short) 12_000);
     return s;
   }
 
-  /** 1.5 s of audio that releases into 200 ms of silence: a complete line. */
   private static short[] completeAudio() {
     short[] s = new short[40_800];
     Arrays.fill(s, 0, 36_000, (short) 12_000);
@@ -783,8 +755,8 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void streamingRetriesAnEmptyBodyThenReturnsNull() {
-    server.enqueue(new MockResponse().setResponseCode(HTTP_OK)); // empty body
-    server.enqueue(new MockResponse().setResponseCode(HTTP_OK)); // empty again
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_OK));
 
     List<float[]> fed = new ArrayList<>();
     Pcm result = backend(keyedConfig()).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
@@ -797,7 +769,6 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void streamingPlaysATruncatedLineOnceButDoesNotCacheOrRetryIt() {
-    // Full-amplitude with no trailing silence: heard as it streams, but not cacheable.
     enqueuePcm(truncatedAudio());
 
     List<float[]> fed = new ArrayList<>();
@@ -869,8 +840,6 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void streamingTreatsAnOddLengthBodyAsIncompleteAndDoesNotCacheIt() {
-    // A complete-looking body plus one dangling byte: not a whole number of 16-bit samples, so the
-    // decoder ends with a pending byte and the line must not be cached (played once, re-fetched).
     byte[] even = TestPcm.raw(completeAudio());
     byte[] odd = Arrays.copyOf(even, even.length + 1);
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(new Buffer().write(odd)));
@@ -885,7 +854,6 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void truncatedAudioIsRetriedOnceAndRecovers() {
-    // The first line ends mid-utterance; the immediate retry returns a complete line.
     enqueuePcm(truncatedAudio());
     enqueuePcm(completeAudio());
 
@@ -915,7 +883,6 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void undecodableBodyReturnsNull() {
-    // A 200 whose body is an odd byte count is not whole 16-bit PCM, so it fails to decode.
     server.enqueue(
         new MockResponse()
             .setResponseCode(HTTP_OK)
@@ -927,7 +894,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void unavailableBackendDoesNotCallNetwork() {
-    OpenRouterTtsBackend backend = backend(new MutableTestConfig()); // no key
+    OpenRouterTtsBackend backend = backend(new MutableTestConfig());
 
     String[] last = {null};
     int[] notices = {0};
@@ -946,7 +913,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void missingKeyNoticeFiresOnEveryAttempt() {
-    OpenRouterTtsBackend backend = backend(new MutableTestConfig()); // no key
+    OpenRouterTtsBackend backend = backend(new MutableTestConfig());
 
     int[] notices = {0};
     backend.setNotice(msg -> notices[0]++);
@@ -976,9 +943,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void networkTimeoutIsRetriedOnceAndRecovers() {
-    // First attempt: the server accepts the connection but never replies, so the read times out.
     server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE));
-    // The backed-off retry gets a clean line.
     enqueuePcm((short) 1, (short) 2, (short) 3);
 
     int[] notices = {0};
@@ -1008,7 +973,6 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void unreachableHostFailsFastAndGracefully() throws Exception {
     OpenRouterTtsBackend backend = backendWith(keyedConfig(), FAST_RETRY);
-    // Shut the server down so the connection is refused outright (an offline-style failure).
     server.shutdown();
 
     int[] notices = {0};
@@ -1054,15 +1018,8 @@ public class OpenRouterTtsBackendTest {
     assertEquals(backend.callBudgetFor(0), backend.callBudgetFor(-1));
   }
 
-  /** Warm-up requests the server received, in arrival order, captured by {@link #warmedBackend}. */
   private final List<RecordedRequest> warmUpRequests = new ArrayList<>();
 
-  /**
-   * Warms a backend and blocks until every warm-up request has been received and its connection is
-   * free for the next line to reuse. Warm-up is asynchronous on both counts: a connection joins the
-   * pool before the server finishes recording its request, and stays checked out until its response
-   * body is drained, so waiting on either signal alone leaves a race.
-   */
   private OpenRouterTtsBackend warmedBackend(MutableTestConfig config) throws Exception {
     for (int i = 0; i < WARM_UP_CONNECTIONS; i++) {
       server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody("{}"));

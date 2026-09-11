@@ -14,25 +14,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 
-/**
- * Translates a dialogue line into the configured spoken language before it is voiced, via
- * OpenRouter's chat-completions endpoint and the Gemini Flash Lite model.
- *
- * <p>This is the optional first hop of the cloud pipeline: {@link OpenRouterTtsBackend} calls it
- * only when {@link VoicedDialogueConfig#cloudLanguage()} is not English, so the common case pays no
- * extra request. The system prompt is the shared {@link
- * CloudTtsText#translatorSystemPrompt(String)}: fixed per language (all per-line variance lives in
- * the user message) so the cacheable prefix is byte-identical across calls and the model's implicit
- * prompt cache hits. Every failure path returns {@code null} so the backend fails the line
- * gracefully rather than voicing the wrong language or caching a mistranslation.
- */
 @Slf4j
 final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
 
-  /**
-   * The lightweight model used for the translation hop: fast and cheap relative to the TTS call.
-   * The same Flash Lite model the direct Gemini hop uses, under OpenRouter's namespace.
-   */
   static final String MODEL = GeminiTranslationModel.MODEL_ID;
 
   private final OkHttpClient httpClient;
@@ -40,7 +24,6 @@ final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
   private final Gson gson;
   private final String endpoint;
 
-  /** Test seam: points the translation request at a mock server instead of the live host. */
   OpenRouterTranslator(
       OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
     this.httpClient = httpClient;
@@ -49,11 +32,6 @@ final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
     this.endpoint = endpoint;
   }
 
-  /**
-   * Returns {@code text} translated into {@code language}, or {@code null} on any failure (missing
-   * key, non-2xx, network error, empty/unparseable body). The caller treats {@code null} as a
-   * failed line rather than voicing untranslated text under a target-language cache key.
-   */
   String translate(String text, String language, String apiKey) {
     if (text == null || text.isEmpty()) {
       return text;
@@ -87,7 +65,6 @@ final class OpenRouterTranslator implements CloudTranslatorCall.Ops {
     return message;
   }
 
-  /** Pulls {@code choices[0].message.content} out of a chat-completions response, trimmed. */
   @Override
   public String extractText(String raw) {
     if (raw == null || raw.isEmpty()) {

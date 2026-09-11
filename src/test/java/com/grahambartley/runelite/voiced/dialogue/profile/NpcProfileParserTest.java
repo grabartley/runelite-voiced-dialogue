@@ -9,7 +9,6 @@ import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.CategoryRule;
 import org.junit.Test;
 
-/** Parsing the bundled {@code profiles} section into layers. */
 public class NpcProfileParserTest {
 
   private static NpcProfileLayers parse(String json) {

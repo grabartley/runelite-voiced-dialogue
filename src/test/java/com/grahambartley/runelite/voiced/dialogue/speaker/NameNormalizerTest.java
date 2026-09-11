@@ -7,7 +7,6 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** Tolerant name matching: strips tags, normalises non-breaking spaces, trims. */
 @RunWith(JUnitParamsRunner.class)
 public class NameNormalizerTest {
 

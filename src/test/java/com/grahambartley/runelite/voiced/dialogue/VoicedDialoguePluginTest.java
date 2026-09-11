@@ -21,24 +21,10 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import org.junit.Test;
 
-/**
- * Verifies the plugin's runtime warm-up orchestration: a {@link ConfigChanged} for the plugin group
- * and a backend-affecting key (entering an OpenRouter key) re-runs the backend's off-thread warm-up
- * exactly once, while unrelated groups/keys and a stopped/shutting-down plugin do nothing. The pure
- * decision behind the trigger lives in {@code BackendWarmUpPolicy}.
- *
- * <p>Also covers the startup pin that records the provider a profile actually holds a key for, so a
- * profile is never left voicing through a provider it cannot reach; the decision itself lives in
- * {@code ProviderDefaultPolicy}.
- */
 public class VoicedDialoguePluginTest {
 
   private static final String KEY_TRIGGER = "openRouterApiKey";
 
-  /**
-   * A key change in the plugin group drives the real off-thread pipeline end to end: {@code
-   * prewarm} -> executor -> {@code warmUpActive} -> the backend's {@code warmUp}, exactly once.
-   */
   @Test
   public void backendKeyChangeWarmsActiveBackendOnce() throws Exception {
     AtomicInteger warmCalls = new AtomicInteger();
@@ -50,21 +36,15 @@ public class VoicedDialoguePluginTest {
     assertEquals(1, warmCalls.get());
   }
 
-  /**
-   * A rate-limit window is evidence about the credentials that earned it, so the same key change
-   * drops it: the notice a stated window surfaces asks for exactly this change.
-   */
   @Test
   public void backendKeyChangeDropsTheRateLimitWindow() throws Exception {
     Harness harness = harness(new AtomicInteger());
 
     harness.plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
 
-    // The harness folds both provider slots onto one stub, so the fan-out reaches it twice.
     assertEquals(2, harness.backend.rateLimitClears.get());
   }
 
-  /** Unrelated keys and groups never reach the warm-up path. */
   @Test
   public void unrelatedKeyOrGroupDoesNotWarm() throws Exception {
     AtomicInteger warmCalls = new AtomicInteger();
@@ -77,13 +57,9 @@ public class VoicedDialoguePluginTest {
     assertEquals("nor the rate-limit clear", 0, harness.backend.rateLimitClears.get());
   }
 
-  /**
-   * A config change while the plugin is stopped/shutting down (null collaborators) no-ops safely.
-   */
   @Test
   public void configChangeWhileStoppedDoesNotThrow() {
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
-    // audioService and backendProvider are null (never started / already shut down).
     plugin.onConfigChanged(configChanged("voicedDialogue", KEY_TRIGGER));
   }
 
@@ -130,9 +106,6 @@ public class VoicedDialoguePluginTest {
     verify(configManager, never()).setConfiguration(anyString(), anyString(), any());
   }
 
-  // --- helpers -------------------------------------------------------------
-
-  /** Plugin wired with just the config manager and OpenRouter key the pin decision reads. */
   private static VoicedDialoguePlugin pluginWith(ConfigManager configManager, String openRouterKey)
       throws Exception {
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
@@ -156,7 +129,6 @@ public class VoicedDialoguePluginTest {
     return event;
   }
 
-  /** Plugin wired with a real DialogueAudioService and BackendProvider over a counting stub. */
   private static Harness harness(AtomicInteger warmCalls) throws Exception {
     StubBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
     BackendProvider provider = new BackendProvider(cloud);
@@ -175,7 +147,6 @@ public class VoicedDialoguePluginTest {
     field.set(target, value);
   }
 
-  /** Holds the plugin plus the audio service so a test can await the off-thread warm. */
   private static final class Harness {
     final VoicedDialoguePlugin plugin;
     final AwaitableAudioService audioService;
@@ -188,10 +159,6 @@ public class VoicedDialoguePluginTest {
     }
   }
 
-  /**
-   * Lets a test block until the single-threaded pipeline drains, so the off-thread {@code warmUp}
-   * has run before the assertion. Submits a sentinel {@code prewarm} and waits for it to execute.
-   */
   private static final class AwaitableAudioService {
     private final DialogueAudioService delegate;
 
@@ -208,7 +175,6 @@ public class VoicedDialoguePluginTest {
     }
   }
 
-  /** Counts {@code warmUp} and rate-limit clears so a test can assert what a key change drove. */
   private static final class StubBackend implements SynthesisBackend {
     private final String id;
     private final AtomicInteger warmCalls;

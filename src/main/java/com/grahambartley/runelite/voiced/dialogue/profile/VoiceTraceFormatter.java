@@ -3,14 +3,8 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 
-/**
- * Formats the debug voice-resolution trace strings. Pure string building, so the whole resolution
- * path (world hit/id, table hit/miss, detected race/gender + source) and the chosen per-NPC variety
- * seed are verifiable without a live client or logger.
- */
 public final class VoiceTraceFormatter {
 
-  /** Rendered wherever a field does not apply to the speaker class, or is simply absent. */
   private static final String NOT_APPLICABLE = "-";
 
   private VoiceTraceFormatter() {}
@@ -34,14 +28,6 @@ public final class VoiceTraceFormatter {
         seed);
   }
 
-  /**
-   * One consolidated record of the whole resolved decision for a voiced line, so a single grep over
-   * {@code [TTS line]} gives the emotion and the full voice metadata (race, gender, seed, profile,
-   * accent) actually used for synthesis. The detected npc id and ethnicity stay on the adjacent
-   * {@code [TTS profile]}/{@code [TTS voice]} traces, which this complements rather than replaces.
-   * A null profile (profiles off) renders {@code -}, as does any field that does not apply to the
-   * speaker class: the narrator carries no name, race, gender, life stage, or seed.
-   */
   public static String buildResolvedLine(
       String backendId,
       VoiceSpec voice,

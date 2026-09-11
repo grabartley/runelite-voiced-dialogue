@@ -10,17 +10,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-/**
- * Reads how many credits an OpenRouter key has spent, straight from OpenRouter.
- *
- * <p>{@code GET /api/v1/key} reports the key's all-time {@code usage}, the same figure the account
- * dashboard bills against. Two reads (one at session start, one when the player asks) turn that
- * into a real spend for the session, so the {@code ::voicedspend} readout quotes what OpenRouter
- * actually charged rather than a modelled guess.
- *
- * <p>Every failure path returns {@code null}: an unreadable balance leaves the readout saying so,
- * which is honest, rather than silently substituting an estimate. Runs off the game thread only.
- */
 @Slf4j
 public final class OpenRouterUsageClient {
 
@@ -34,17 +23,12 @@ public final class OpenRouterUsageClient {
     this(httpClient, gson, PRODUCTION_ENDPOINT);
   }
 
-  /** Test seam: points the balance read at a mock server instead of the live host. */
   OpenRouterUsageClient(OkHttpClient httpClient, Gson gson, String endpoint) {
     this.httpClient = httpClient;
     this.gson = gson;
     this.endpoint = endpoint;
   }
 
-  /**
-   * The key's all-time credit usage, or {@code null} when it cannot be read (no key, non-2xx,
-   * network error, or a body without a numeric {@code usage}).
-   */
   public Double fetchUsage(String apiKey) {
     if (!CloudHttp.isNonBlank(apiKey)) {
       return null;
@@ -70,7 +54,6 @@ public final class OpenRouterUsageClient {
     }
   }
 
-  /** Pulls {@code data.usage} out of a key response, or {@code null} when it is absent. */
   Double extractUsage(String raw) {
     if (raw == null || raw.isEmpty()) {
       return null;

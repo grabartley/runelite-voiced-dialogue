@@ -15,21 +15,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 
-/**
- * Translates a dialogue line into the configured spoken language before it is voiced, via the
- * Gemini API's {@code generateContent} endpoint. The direct-to-Google counterpart of {@code
- * OpenRouterTranslator}: same role in the pipeline, same {@link
- * CloudTtsText#translatorSystemPrompt(String)} (kept shared so the two providers rewrite lines
- * identically and their prompt caches key the same way), differing only in the request/response
- * shape and the {@code x-goog-api-key} authentication.
- *
- * <p>Every failure path returns {@code null} so {@link AiStudioTtsBackend} fails the line
- * gracefully rather than voicing the wrong language or caching a mistranslation.
- */
 @Slf4j
 final class AiStudioTranslator implements CloudTranslatorCall.Ops {
 
-  /** The Gemini API name of the Flash Lite translation model, shared with the OpenRouter hop. */
   static final String MODEL = GeminiTranslationModel.GEMINI_MODEL_ID;
 
   static final String PRODUCTION_ENDPOINT =
@@ -40,7 +28,6 @@ final class AiStudioTranslator implements CloudTranslatorCall.Ops {
   private final Gson gson;
   private final String endpoint;
 
-  /** Test seam: points the translation request at a mock server instead of the live host. */
   AiStudioTranslator(
       OkHttpClient httpClient, VoicedDialogueConfig config, Gson gson, String endpoint) {
     this.httpClient = httpClient;
@@ -49,7 +36,6 @@ final class AiStudioTranslator implements CloudTranslatorCall.Ops {
     this.endpoint = endpoint;
   }
 
-  /** A completed translation plus the tokens the API reported metering for it. */
   static final class Translation {
     final String text;
     final AiStudioTokenUsage usage;
@@ -60,15 +46,8 @@ final class AiStudioTranslator implements CloudTranslatorCall.Ops {
     }
   }
 
-  /**
-   * Returns {@code text} translated into {@code language} with the tokens the hop metered, or
-   * {@code null} on any failure (non-2xx, network error, empty/unparseable body). The caller treats
-   * {@code null} as a failed line rather than voicing untranslated text under a target-language
-   * cache key.
-   */
   Translation translate(String text, String language, String apiKey) {
     if (text == null || text.isEmpty()) {
-      // Same shape as the OpenRouter translator's guard: null in, null out; empty in, empty out.
       return text == null ? null : new Translation(text, AiStudioTokenUsage.NONE);
     }
     CloudTranslatorCall.Outcome outcome =
@@ -76,8 +55,6 @@ final class AiStudioTranslator implements CloudTranslatorCall.Ops {
     if (outcome == null) {
       return null;
     }
-    // The hop is its own billable call against its own model, so its metered tokens ride back
-    // with the text rather than being lost to the session's cost.
     return new Translation(outcome.text, AiStudioTokenUsage.forText(gson, outcome.raw));
   }
 
@@ -111,7 +88,6 @@ final class AiStudioTranslator implements CloudTranslatorCall.Ops {
     return parts;
   }
 
-  /** Concatenates {@code candidates[0].content.parts[].text} out of a Gemini response, trimmed. */
   @Override
   public String extractText(String raw) {
     if (raw == null || raw.isEmpty()) {

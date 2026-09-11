@@ -7,19 +7,12 @@ import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.events.ChatMessage;
 
-/**
- * Voices the local player's own public chat (default off). Only the local player's {@code
- * PUBLICCHAT} stream is spoken; other players' public messages, and every other chat type, are
- * ignored. The message is cleaned with the same {@link DialogueTextCleaner} as dialogue and voiced
- * through the player path with translation bypassed. Reads the client only on the game thread.
- */
 public final class PublicChatSpeaker {
 
   private final Client client;
   private final DialogueTextCleaner textCleaner;
   private final SynthesisDispatcher dispatcher;
 
-  /** The feature toggle, read live so flipping it takes effect immediately. */
   private final BooleanSupplier enabled;
 
   public PublicChatSpeaker(

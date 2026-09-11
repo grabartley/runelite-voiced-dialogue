@@ -3,13 +3,6 @@ package com.grahambartley.runelite.voiced.dialogue.cache;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * A tiny bounded LRU cache.
- *
- * <p>Backed by an access-ordered {@link LinkedHashMap}, so reading an entry marks it most-recently
- * used and the least-recently used entry is evicted once {@code maxSize} is exceeded. All access is
- * synchronized because the dialogue pipeline reads and writes it from a background thread.
- */
 public final class LruCache<K, V> {
 
   private final int maxSize;
@@ -29,7 +22,6 @@ public final class LruCache<K, V> {
         };
   }
 
-  /** Returns the cached value (marking it most-recently used) or {@code null} if absent. */
   public synchronized V get(K key) {
     return map.get(key);
   }

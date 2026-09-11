@@ -3,13 +3,6 @@ package com.grahambartley.runelite.voiced.dialogue.speaker;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 
-/**
- * Finds an NPC entity by name in the current game world. Matching is tolerant of presentation
- * differences between the dialogue name widget (which can carry {@code <col=...>} markup,
- * non-breaking spaces, and casing) and the raw composition name: both sides are normalised via
- * {@link NameNormalizer} and compared case-insensitively, so cosmetic markup never forces a false
- * miss and the default voice.
- */
 public final class NpcFinder {
 
   private final Client client;

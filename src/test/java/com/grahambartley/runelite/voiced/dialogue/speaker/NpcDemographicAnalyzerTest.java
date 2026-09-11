@@ -16,11 +16,6 @@ import net.runelite.api.NPCComposition;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * Verifies the static NPC voice table lookup: known ids resolve to the baked-in race/gender,
- * unknown ids fall back deterministically, a transformed NPC falls back to its base id, and no live
- * data source is consulted.
- */
 public class NpcDemographicAnalyzerTest {
 
   private NpcDemographicAnalyzer analyzer;
@@ -38,37 +33,32 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void knownNpcsResolveToCorrectRaceAndGender() {
-    // Real OSRS cache ids (the same ids the live client reports), spanning each
-    // distinctive race bucket, with race/gender taken straight from the wiki.
-    assertAttributes(385, "Human", "Male"); // Man
-    assertAttributes(12, "Goblin", "Male"); // Goblin
-    assertAttributes(14, "Gnome", "Male"); // Gnome
-    assertAttributes(640, "Troll", "Male"); // Troll
-    assertAttributes(1477, "Elf", "Male"); // Elf
-    assertAttributes(229, "Demon", "Male"); // Demon
-    assertAttributes(491, "Undead", "Male"); // Undead
-    assertAttributes(4733, "Dwarf", "Male"); // Thurgo
-    assertAttributes(7746, "Wizard", "Male"); // Wizard Mizgog
+    assertAttributes(385, "Human", "Male");
+    assertAttributes(12, "Goblin", "Male");
+    assertAttributes(14, "Gnome", "Male");
+    assertAttributes(640, "Troll", "Male");
+    assertAttributes(1477, "Elf", "Male");
+    assertAttributes(229, "Demon", "Male");
+    assertAttributes(491, "Undead", "Male");
+    assertAttributes(4733, "Dwarf", "Male");
+    assertAttributes(7746, "Wizard", "Male");
   }
 
   @Test
   public void dialogueNpcsResolveToCorrectGenderAndRace() {
-    // High-traffic peaceful dialogue NPCs, so male and female townsfolk get distinct voices instead
-    // of collapsing to the human-male default. Ids are real cache ids verified against the osrs
-    // data.
-    assertAttributes(3105, "Human", "Male"); // Hans
-    assertAttributes(306, "Human", "Male"); // Lumbridge Guide
-    assertAttributes(225, "Human", "Female"); // Cook (servant), female per the wiki
-    assertAttributes(2812, "Human", "Male"); // Father Aereck
-    assertAttributes(5037, "Human", "Male"); // Romeo
-    assertAttributes(5035, "Human", "Female"); // Juliet
-    assertAttributes(4284, "Human", "Female"); // Aggie
-    assertAttributes(3561, "Human", "Female"); // Veronica
-    assertAttributes(1305, "Human", "Female"); // Hairdresser
-    assertAttributes(11868, "Human", "Female"); // Aris (Gypsy)
-    assertAttributes(3481, "Undead", "Male"); // Count Draynor
-    assertAttributes(3893, "Dwarf", "Male"); // Doric
-    assertAttributes(766, "Human", "Male"); // Banker
+    assertAttributes(3105, "Human", "Male");
+    assertAttributes(306, "Human", "Male");
+    assertAttributes(225, "Human", "Female");
+    assertAttributes(2812, "Human", "Male");
+    assertAttributes(5037, "Human", "Male");
+    assertAttributes(5035, "Human", "Female");
+    assertAttributes(4284, "Human", "Female");
+    assertAttributes(3561, "Human", "Female");
+    assertAttributes(1305, "Human", "Female");
+    assertAttributes(11868, "Human", "Female");
+    assertAttributes(3481, "Undead", "Male");
+    assertAttributes(3893, "Dwarf", "Male");
+    assertAttributes(766, "Human", "Male");
   }
 
   @Test
@@ -81,8 +71,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void everyAraneiFormResolvesToItsOwnRaceRatherThanHuman() {
-    // Sarei is the Mysterious Stranger in every form but the replacement, which is the separate
-    // aranei who takes her post at the Theatre of Blood after Drakan kills her.
     for (int npcId :
         new int[] {
           15749, 15750, 15752, 15754, 15737, 15738, 15762, 16269, 16270, 9639, 9640, 16360
@@ -145,7 +133,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void theAdoptableShelterPuppiesTakeTheirGendersStraightFromTheWiki() {
-    // These carry a gender per breed on the page, so they resolve without an override.
     for (int npcId : new int[] {16512, 16518, 16514, 16520}) {
       assertAttributes(npcId, "Dog", "Female");
     }
@@ -167,7 +154,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void dogsTheWikiLeavesUnlabelledStillResolveAsDogs() {
-    // Their pages carry an Infobox Monster or omit the race field, so the bucket comes from a pin.
     for (int npcId :
         new int[] {112, 113, 114, 131, 7209, 7771, 12992, 12993, 12994, 12995, 12999}) {
       assertAttributes(npcId, "Dog", "Male");
@@ -212,16 +198,16 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void theDogShelterHumanAndGoblinCastResolvesToItsDeliberateRaces() {
-    assertAttributes(16486, "Human", "Female"); // Talia
-    assertAttributes(16487, "Human", "Male"); // Chase
+    assertAttributes(16486, "Human", "Female");
+    assertAttributes(16487, "Human", "Male");
     for (int npcId : new int[] {16493, 16539}) {
-      assertAttributes(npcId, "Human", "Female"); // Guard
+      assertAttributes(npcId, "Human", "Female");
     }
     for (int npcId : new int[] {16523, 16534, 16524}) {
-      assertAttributes(npcId, "Goblin", "Male"); // Picklenose, Toetaller
+      assertAttributes(npcId, "Goblin", "Male");
     }
     for (int npcId : new int[] {16527, 16528}) {
-      assertAttributes(npcId, "Human", "Male"); // Outlaw
+      assertAttributes(npcId, "Human", "Male");
     }
   }
 
@@ -234,7 +220,7 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void varrockTownsfolkAreNotDraggedIntoTheDogBucket() {
-    assertAttributes(7284, "Human", "Female"); // Gertrude
+    assertAttributes(7284, "Human", "Female");
     assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());
   }
 
@@ -269,7 +255,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void theQuestsFishingSpotStaysOffTheCrabRace() {
-    // Floatsam speaks no lines, so it keeps the default rather than the race the island carries.
     for (int npcId : new int[] {16475, 16476, 16477, 16478}) {
       assertAttributes(npcId, "Human", "Male");
     }
@@ -296,17 +281,13 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void anIdTwoWikiPagesBothClaimResolvesToTheOneTheCacheAgreesWith() {
-    // The Hellpuppy page lists 13247 alongside the Civitas illa Fortis squires, so the scan order
-    // alone decided its race, gender and region. The cache names it a female Varlamore squire.
     assertAttributes(13247, "Human", "Female");
   }
 
   @Test
   public void femaleNamedTownsfolkResolveFemale() {
-    // Gender comes straight from the wiki, so townsfolk with no gendered title
-    // (Gertrude, Cassie) still resolve Female instead of defaulting to male.
-    assertAttributes(7284, "Human", "Female"); // Gertrude
-    assertAttributes(3214, "Human", "Female"); // Cassie
+    assertAttributes(7284, "Human", "Female");
+    assertAttributes(3214, "Human", "Female");
   }
 
   @Test
@@ -318,8 +299,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void aTransformedNpcFallsBackToItsBaseId() {
-    // A multiloc NPC reports an active id the table does not know and a base (composition) id it
-    // does, so the base id must still find the entry.
     NpcAttributes attributes = analyze(999_000_001, 3105, "Hans");
     assertEquals(AttributeSource.STATIC_TABLE, attributes.getSource());
     assertEquals(3105, attributes.getNpcId());
@@ -327,8 +306,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void unknownIdFallsBackToUnknownRaceSoFallbackVoiceApplies() {
-    // Race must be Unknown (not Human) so voice resolution routes through the configured fallback
-    // voice rather than silently using the human voice.
     NpcAttributes attributes = analyze(987654321, "Totally Made Up NPC");
     assertNotNull(attributes);
     assertEquals("Unknown", attributes.getRace());
@@ -339,11 +316,8 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void unknownFemaleNamedNpcGetsBestGuessFemaleGender() {
-    // The lone runtime name check: an explicit female word reports a best-guess Female gender for
-    // missing-id NPCs. Race stays Unknown, which voices with the single default voice regardless.
     assertEquals("Female", analyze(987654322, "Mysterious Woman").getGender());
     assertEquals("Female", analyze(987654323, "Lost Princess").getGender());
-    // No female signal stays Male; a substring inside a larger word must not trigger it.
     assertEquals("Male", analyze(987654324, "Old Sailor").getGender());
     assertEquals("Male", analyze(987654325, "Womanizer Larry").getGender());
   }
@@ -384,8 +358,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void lookupWorksWithoutInitializeUsingDefault() {
-    // A fresh analyzer that was never initialized must still resolve safely (empty table ->
-    // default) rather than throwing, so a missing resource can never break voice selection.
     analyzer = new NpcDemographicAnalyzer();
     NpcAttributes attributes = analyze(101, "Goblin");
     assertEquals("Unknown", attributes.getRace());
@@ -395,7 +367,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void markedChildrenCarryTheChildLifeStageFromTheBundledTable() {
-    // Real child NPCs marked via overrides.json: Shilop (Gertrude's son) and Rory (young cyclops).
     assertTrue("Shilop is a child", analyze(3501, null).isChild());
     assertTrue("Rory is a child", analyze(2136, null).isChild());
   }

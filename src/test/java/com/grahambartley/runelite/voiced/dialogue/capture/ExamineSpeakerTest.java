@@ -20,16 +20,6 @@ import net.runelite.api.events.ChatMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * The examine policy: only the client's three examine chat types are voiced, only when the game
- * rather than a plugin wrote the line, never while a dialogue holds the audio channel, and never at
- * all while the toggle is off.
- *
- * <p>The decision is deferred by a client tick, so these tests drive that tick explicitly with
- * {@link #tick()}. That is not ceremony: the client stamps a plugin's line <em>after</em>
- * publishing it, so a test that stamped the node up front would be modelling a client that does not
- * exist. {@link #stampAfterPublishing} reproduces the real order.
- */
 @RunWith(JUnitParamsRunner.class)
 public class ExamineSpeakerTest {
 
@@ -47,7 +37,6 @@ public class ExamineSpeakerTest {
           () -> dialogueOpen,
           deferred::add);
 
-  /** Runs whatever the speaker deferred, standing in for the next client tick. */
   private void tick() {
     while (!deferred.isEmpty()) {
       deferred.poll().run();
@@ -62,11 +51,6 @@ public class ExamineSpeakerTest {
     return event;
   }
 
-  /**
-   * Publishes {@code text} and only then marks the node as plugin-authored, which is the order
-   * {@code ChatMessageManager} uses: it adds the message, and stamps the format message on the
-   * following statement.
-   */
   private void stampAfterPublishing(ChatMessageType type, String text) {
     ChatMessage event = message(type, text);
     speaker.onChatMessage(event);
@@ -119,9 +103,6 @@ public class ExamineSpeakerTest {
 
   @Test
   public void aPluginsPriceLookupCannotTalkOverTheExamineTextItFollows() {
-    // The real sequence: the game prints the examine text, RuneLite's Examine plugin publishes a
-    // price on the same chat type moments later, and only then is that line marked as its own.
-    // Voicing the price would stop the flavour line mid-sentence.
     speaker.onChatMessage(
         message(ChatMessageType.ITEM_EXAMINE, "4 doses of Prayer restore potion."));
     stampAfterPublishing(ChatMessageType.ITEM_EXAMINE, "Price of Prayer potion(4): 9,500 coins");
@@ -141,8 +122,6 @@ public class ExamineSpeakerTest {
 
   @Test
   public void decidingBeforeTheTickWouldVoiceAPluginsLine() {
-    // Pins the reason for the delay by showing what happens without it: an otherwise identical
-    // speaker that decides on arrival, before the client has marked the line, speaks it.
     SynthesisDispatcher undeferredDispatcher = mock(SynthesisDispatcher.class);
     ExamineSpeaker undeferred =
         new ExamineSpeaker(
@@ -206,7 +185,6 @@ public class ExamineSpeakerTest {
 
   @Test
   public void aDialogueOpeningDuringTheDeferralStillWins() {
-    // The gate is checked when the audio channel would be taken, not when the line arrived.
     speaker.onChatMessage(message(ChatMessageType.NPC_EXAMINE, "A gruff dwarf."));
     dialogueOpen = true;
     tick();
@@ -237,8 +215,6 @@ public class ExamineSpeakerTest {
 
   @Test
   public void textThatCleansAwayToNothingIsNotVoiced() {
-    // Not parameterized: JUnitParams trims each row, so a whitespace-only case would arrive here as
-    // the empty string and quietly re-test the case beside it.
     speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, ""));
     speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, "   "));
     speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, "<col=ffffff></col>"));
@@ -262,7 +238,6 @@ public class ExamineSpeakerTest {
     speaker.onChatMessage(message(ChatMessageType.ITEM_EXAMINE, "It's a bucket of milk."));
     tick();
 
-    // The player clicked twice and the second replay is a cache hit, so there is nothing to dedup.
     verify(dispatcher, times(2)).speakNarration("It's a bucket of milk.");
   }
 }

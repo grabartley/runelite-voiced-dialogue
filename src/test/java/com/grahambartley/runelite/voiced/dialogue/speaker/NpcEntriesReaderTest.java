@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 
-/** The reader shared by the bundled voice table and the learned store. */
 public class NpcEntriesReaderTest {
 
   private final List<String> skipped = new ArrayList<>();

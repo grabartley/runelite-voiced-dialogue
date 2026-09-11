@@ -22,16 +22,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * The provider-neutral half of a cloud speech call: how a rejection's stated wait is read from the
- * header and the provider's own body hint, and what the executor sends while that wait is open.
- */
 public class CloudSpeechExecutorTest {
 
   private MockWebServer server;
   private OkHttpClient client;
 
-  /** What the provider's body hint reports, standing in for a parsed {@code RetryInfo}. */
   private long bodyStatedWaitMillis;
 
   @Before
@@ -87,7 +82,6 @@ public class CloudSpeechExecutorTest {
 
   @Test
   public void aHeaderAndABodyHintAreTakenAtWhicheverReachesFurther() {
-    // Only the further of the two can be honoured; the nearer would reopen the call too early.
     bodyStatedWaitMillis = 1;
     CloudSpeechExecutor executor = executor();
     server.enqueue(rejection().setHeader("Retry-After", "60"));
@@ -101,7 +95,6 @@ public class CloudSpeechExecutorTest {
 
   @Test
   public void aStatedWaitReadOffTheStreamedPathClosesTheBackendToo() {
-    // The streaming path reads the rejection body itself, so the hint has to survive that read.
     bodyStatedWaitMillis = 60_000;
     CloudSpeechExecutor executor = executor();
     server.enqueue(rejection());
@@ -149,7 +142,6 @@ public class CloudSpeechExecutorTest {
         "Hello", VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
   }
 
-  /** The smallest provider half that reaches the mock server and reports a stated wait. */
   private final class StubOps implements CloudSpeechExecutor.Ops {
 
     @Override

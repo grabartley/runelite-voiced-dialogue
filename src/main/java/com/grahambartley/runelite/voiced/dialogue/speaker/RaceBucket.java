@@ -3,22 +3,6 @@ package com.grahambartley.runelite.voiced.dialogue.speaker;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/**
- * The single race table both text-to-race stages read: the runtime wiki lookup, which turns an
- * infobox race into the bucket name stored in the NPC tables, and {@link NpcDemographicParser},
- * which turns a stored race string into the {@link NpcRace} that picks the voice. Holding the wiki
- * pattern, the stored-text keywords and the voiced race together keeps the two stages from drifting
- * apart, and makes the Gnome bucket riding on the goblin voice an explicit mapping rather than a
- * side effect of an overlapping keyword.
- *
- * <p>The stages deliberately scan in different orders: wiki race text is checked for the
- * distinctive races before the generic human words, while a stored race string reaches human ahead
- * of elf, dwarf and the rest, so a half-blood ("Half Icyene, half human") stays human. The races
- * whose names no human string can contain sit ahead of both.
- *
- * <p>The wiki keywords mirror {@code RACE_BUCKET_RULES} in {@code tools/generate_npc_voices.py} so
- * an NPC learned at runtime buckets the same way as a baked-in one; keep the two in sync.
- */
 public enum RaceBucket {
   ARCEUUS("Arceuus", NpcRace.ARCEUUS, null, "arceuus"),
   ARANEI("Aranei", NpcRace.ARANEI, "\\baranei\\b", "aranei"),
@@ -66,11 +50,6 @@ public enum RaceBucket {
   TORTUGAN("Tortugan", NpcRace.TORTUGAN, null, "tortugan", "tortuga"),
   ICYENE("Icyene", NpcRace.ICYENE, null, "icyene");
 
-  /**
-   * The order wiki race text is scanned in; buckets the wiki never emits are absent. Dog, crab and
-   * penguin sit behind undead and demon in both scans, so a risen or demonic one keeps its own
-   * bucket.
-   */
   private static final RaceBucket[] WIKI_SCAN = {
     ARANEI, UNDEAD, DEMON, DOG, CRAB, PENGUIN, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD,
     HUMAN
@@ -88,17 +67,14 @@ public enum RaceBucket {
     this.keywords = keywords;
   }
 
-  /** The bucket name stored in the NPC tables and matched against the profile table's races. */
   public String bucketName() {
     return bucketName;
   }
 
-  /** The race this bucket voices as. */
   public NpcRace race() {
     return race;
   }
 
-  /** The bucket a raw wiki race text falls into, or {@code null} when none matches. */
   public static RaceBucket forWikiText(String raceText) {
     String lower = raceText.toLowerCase(Locale.ROOT);
     for (RaceBucket bucket : WIKI_SCAN) {
@@ -109,7 +85,6 @@ public enum RaceBucket {
     return null;
   }
 
-  /** The bucket a stored race string names exactly, or {@code null} when it names none. */
   static RaceBucket forBucketName(String race) {
     for (RaceBucket bucket : values()) {
       if (bucket.bucketName.equalsIgnoreCase(race)) {
@@ -119,7 +94,6 @@ public enum RaceBucket {
     return null;
   }
 
-  /** The bucket whose keyword appears in a stored race string, or {@code null} when none does. */
   static RaceBucket forKeyword(String race) {
     String lower = race.toLowerCase();
     for (RaceBucket bucket : values()) {

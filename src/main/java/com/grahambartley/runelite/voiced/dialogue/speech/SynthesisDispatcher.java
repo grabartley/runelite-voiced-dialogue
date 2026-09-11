@@ -11,12 +11,6 @@ import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Builds {@link SynthesisRequest}s for dialogue, narration, and public-chat lines and hands them to
- * the off-thread synth + playback pipeline. Every speak path shares the same availability guard,
- * speaker resolution, emotion resolution, and cave-echo gate, so this is the single place a line
- * becomes a request. Never blocks the game thread.
- */
 @Slf4j
 public final class SynthesisDispatcher {
 
@@ -42,11 +36,6 @@ public final class SynthesisDispatcher {
     this.audioService = audioService;
   }
 
-  /**
-   * Speaks a dialogue line. The caller passes the speaker's chat-head expression animation id (or
-   * {@link com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader#NO_EXPRESSION}
-   * when there is no head); it is resolved to an {@link Emotion} and ridden into the request.
-   */
   public void speakDialogue(String text, Speaker speaker, String npcName, int headAnimationId) {
     Emotion emotion = emotionResolver.resolve(headAnimationId, config.cloudEmotion());
     if (config.debugMode()) {
@@ -55,68 +44,32 @@ public final class SynthesisDispatcher {
     ResolvedSpeaker resolved = voiceManager.resolve(speaker, npcName);
     boolean player = speaker == Speaker.PLAYER;
     dispatch(
-        new SynthesisRequest(
-            text,
-            resolved.voice(),
-            emotion,
-            resolved.profile(),
-            /* skipTranslation= */ false,
-            player),
+        new SynthesisRequest(text, resolved.voice(), emotion, resolved.profile(), false, player),
         npcName);
   }
 
-  /**
-   * Voices the player's own public chat through the same player voice path as their dialogue lines,
-   * but always neutral (public chat has no chat-head) and with translation/global-quirk bypassed,
-   * so chat is spoken exactly as typed.
-   */
   public void speakPublicChat(String text) {
     ResolvedSpeaker resolved = voiceManager.resolve(Speaker.PLAYER, null);
     dispatch(
         new SynthesisRequest(
-            text,
-            resolved.voice(),
-            Emotion.NEUTRAL,
-            resolved.profile(),
-            /* skipTranslation= */ true,
-            /* player= */ true),
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), true, true),
         null);
   }
 
-  /**
-   * Speaks a narration box (item, double-item, or plain message) in the game's own narrator voice.
-   * Always neutral, since a narration box carries no chat head, and voiced from one fixed spec and
-   * profile so the narrator sounds the same in every session. Translation applies as it does to
-   * dialogue; the Player and NPC speaking styles and the cave echo do not, because narration is the
-   * game speaking rather than a character standing in the room with the player.
-   */
   public void speakNarration(String text) {
     ResolvedSpeaker resolved = voiceManager.resolveNarrator();
     dispatch(
         new SynthesisRequest(
-            text,
-            resolved.voice(),
-            Emotion.NEUTRAL,
-            resolved.profile(),
-            /* skipTranslation= */ false,
-            /* player= */ false),
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
         null);
   }
 
-  /**
-   * Hands a built request to the off-thread synth pipeline, guarded by the availability check every
-   * speak path needs: no-op when the active backend is unavailable. On dispatch (debug mode) it
-   * emits one consolidated {@code [TTS line]} record of the whole resolved decision, so a single
-   * grep gives the backend, emotion, and the full voice metadata used for synthesis.
-   */
   private void dispatch(SynthesisRequest request, String npcName) {
     SynthesisBackend backend = backendProvider.active();
     if (!backend.isAvailable()) {
       return;
     }
     if (config.debugMode()) {
-      // The effective emotion is what the backend will actually voice after the downgrade rule, so
-      // the record reflects the real decision.
       Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
       CharacterProfile profile = request.profile();
       log.info(

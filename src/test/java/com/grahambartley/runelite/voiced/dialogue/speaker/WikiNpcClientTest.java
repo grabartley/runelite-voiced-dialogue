@@ -11,7 +11,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/** The runtime wiki NPC lookup: infobox parsing, race/ethnicity mapping, and graceful misses. */
 public class WikiNpcClientTest {
 
   private MockWebServer server;

@@ -18,25 +18,21 @@ public class PcmCompletenessTest {
 
   @Test
   public void aLineThatReleasesIntoTrailingSilenceIsComplete() {
-    // 2 s of speech ending on 200 ms of silence: well past the 120 ms a complete line carries.
     assertFalse(PcmCompleteness.isTruncated(clip(48_000, 4_800), 1.0));
   }
 
   @Test
   public void aLineThatEndsMidSignalIsTruncated() {
-    // 2 s of full-amplitude audio with no trailing quiet: the cut-off case.
     assertTrue(PcmCompleteness.isTruncated(clip(48_000, 0), 1.0));
   }
 
   @Test
   public void aLineWithTooLittleTrailingSilenceIsTruncated() {
-    // Only 40 ms of trailing silence, under the 120 ms a clean ending carries.
     assertTrue(PcmCompleteness.isTruncated(clip(48_000, 960), 1.0));
   }
 
   @Test
   public void aClipTooShortToJudgeIsLeftAlone() {
-    // A 100 ms reply is too short to carry a reliable trailing-silence tell, so never flagged.
     assertFalse(PcmCompleteness.isTruncated(clip(2_400, 0), 1.0));
   }
 
@@ -52,9 +48,6 @@ public class PcmCompletenessTest {
 
   @Test
   public void aFastLineIsNotFlaggedWhenItsTrailingSilenceScalesWithPace() {
-    // 62.5 ms of trailing silence: short of the 120 ms bar at default pace, but a complete line
-    // spoken at 2x pace only needs ~60 ms, since the natural release is time-compressed with the
-    // speech. The same buffer must flag at 1.0 and not flag at 2.0.
     assertTrue(
         "short trailing silence is a cut at default pace",
         PcmCompleteness.isTruncated(clip(48_000, 1_500), 1.0));
@@ -65,8 +58,6 @@ public class PcmCompletenessTest {
 
   @Test
   public void aSlowLineRequiresProportionallyMoreTrailingSilence() {
-    // 200 ms of trailing silence clears the bar at default pace, but at 0.5x pace a complete line's
-    // release stretches to ~240 ms, so the same buffer is now short and reads as truncated.
     assertFalse(
         "200 ms of quiet is a clean ending at default pace",
         PcmCompleteness.isTruncated(clip(48_000, 4_800), 1.0));
@@ -77,7 +68,6 @@ public class PcmCompletenessTest {
 
   @Test
   public void aNonPositiveSpeedRatioFallsBackToDefaultPace() {
-    // A zero/negative ratio must not divide the window to nothing; it behaves like 1.0.
     assertTrue(PcmCompleteness.isTruncated(clip(48_000, 1_500), 0.0));
     assertFalse(PcmCompleteness.isTruncated(clip(48_000, 4_800), -1.0));
   }

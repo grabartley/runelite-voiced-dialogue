@@ -14,10 +14,6 @@ import net.runelite.api.events.ChatMessage;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * Voicing the player's own public chat: only the local player's {@code PUBLICCHAT} messages are
- * spoken, behind the live feature toggle, and always through the shared text cleaner.
- */
 public class PublicChatSpeakerTest {
 
   private static final String LOCAL_NAME = "Zezima";

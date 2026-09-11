@@ -25,10 +25,6 @@ import org.junit.rules.TemporaryFolder;
 
 public class DiskAudioCacheTest {
 
-  /**
-   * Stamped mtimes start in the past so a freshly written entry, which still carries its real mtime
-   * while eviction runs, always sorts as the newest.
-   */
   private static final long MTIME_BASE = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
 
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
@@ -65,7 +61,6 @@ public class DiskAudioCacheTest {
     new DiskAudioCache(cacheDir())
         .put("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Persist me", stored);
 
-    // A brand new instance over the same directory simulates a new session.
     Pcm read =
         new DiskAudioCache(cacheDir())
             .get("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Persist me");
@@ -87,8 +82,6 @@ public class DiskAudioCacheTest {
 
   @Test
   public void differentBackendDoesNotCollide() {
-    // The backend id is part of the cache key, so two ids never serve each other's audio for an
-    // otherwise-identical (voice, emotion, text) line.
     DiskAudioCache cache = new DiskAudioCache(cacheDir());
     cache.put(
         "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Greetings", pcm(24_000, 0.2f));
@@ -110,7 +103,6 @@ public class DiskAudioCacheTest {
     cache.put(
         "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Boom", pcm(24_000, 0.3f, 0.4f));
 
-    // Overwrite the single stored entry with garbage to simulate corruption / partial write.
     Path entry = onlyEntry(cacheDir());
     Files.write(entry, "not a valid cache file".getBytes(StandardCharsets.UTF_8));
 
@@ -119,7 +111,6 @@ public class DiskAudioCacheTest {
         cache.get("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Boom"));
     assertTrue("the corrupt file should be deleted on miss", Files.notExists(entry));
 
-    // And a fresh synth can rewrite it cleanly.
     cache.put(
         "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Boom", pcm(24_000, 0.3f, 0.4f));
     assertNotNull(cache.get("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Boom"));
@@ -137,25 +128,22 @@ public class DiskAudioCacheTest {
 
     Path entry = onlyEntry(cacheDir());
     byte[] full = Files.readAllBytes(entry);
-    Files.write(entry, java.util.Arrays.copyOf(full, full.length - 4)); // drop one sample's bytes
+    Files.write(entry, java.util.Arrays.copyOf(full, full.length - 4));
 
     assertNull(cache.get("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Cut"));
   }
 
   @Test
   public void evictionKeepsUsageBoundedAndDropsOldest() throws Exception {
-    // A tight cap so a handful of entries trips eviction. Each entry is header(16) + N*4 bytes.
     long cap = 600;
     DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap);
 
-    // ~120 bytes each (16 + 26*4).
     float[] samples = new float[26];
     for (int i = 0; i < 12; i++) {
       putStamped(cache, "npc:HUMAN:MALE", "line-" + i, new Pcm(samples, 24_000), i);
     }
 
     assertTrue("total cache size must stay under the cap", dirSize(cacheDir()) <= cap);
-    // The very first lines should have been evicted; the most recent should remain.
     assertNull(
         "oldest line should be evicted",
         cache.get("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "line-0"));
@@ -166,8 +154,6 @@ public class DiskAudioCacheTest {
 
   @Test
   public void unlimitedCapNeverEvicts() throws Exception {
-    // A non-positive cap opts out of eviction: every clip is kept no matter the total size, where a
-    // tight cap would have dropped the oldest entries.
     DiskAudioCache cache = new DiskAudioCache(cacheDir(), DiskAudioCache.UNLIMITED);
 
     float[] samples = new float[26];
@@ -190,8 +176,6 @@ public class DiskAudioCacheTest {
 
   @Test
   public void readDoesNotRescueAnEntryFromFifoEviction() throws Exception {
-    // ~120 bytes/entry (16 + 26*4), so five entries fit under the cap and a sixth evicts the
-    // oldest. Eviction is FIFO by write time: reading the oldest entry must not save it.
     long cap = 600;
     DiskAudioCache cache = new DiskAudioCache(cacheDir(), cap);
     float[] samples = new float[26];
@@ -215,17 +199,13 @@ public class DiskAudioCacheTest {
 
   @Test
   public void readFailureDoesNotThrowWhenDirIsUnreadable() {
-    // Point at a path whose parent is a file: ensureDir / writes fail, but nothing throws.
     DiskAudioCache cache = new DiskAudioCache(cacheDir());
-    // get on a totally fresh dir is just a miss, never an exception.
     assertNull(cache.get("x", "y", Emotion.NEUTRAL, "z"));
-    // put failures are swallowed too.
     cache.put("x", "y", Emotion.NEUTRAL, "z", new Pcm(new float[] {0f}, 24_000));
   }
 
   @Test
   public void storedBytesAreLittleEndianFloat32AfterTheHeader() throws IOException {
-    // The on-disk layout is the compatibility contract between sessions, so pin the exact bytes.
     DiskAudioCache cache = new DiskAudioCache(cacheDir());
     cache.put(
         "cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Bytes", pcm(24_000, 0.5f, -0.25f));
@@ -241,10 +221,6 @@ public class DiskAudioCacheTest {
     assertEquals(-0.25f, buf.getFloat(), 0f);
   }
 
-  /**
-   * Writes one entry and stamps its mtime, so FIFO eviction ordering is exact rather than hostage
-   * to the filesystem's timestamp granularity.
-   */
   private void putStamped(DiskAudioCache cache, String voiceKey, String text, Pcm pcm, int order)
       throws IOException {
     Set<Path> before = entries(cacheDir());

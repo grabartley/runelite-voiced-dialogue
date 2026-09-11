@@ -7,16 +7,13 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** Maps raw wiki/learned race and gender strings onto the voice enums. */
 @RunWith(JUnitParamsRunner.class)
 public class NpcDemographicParserTest {
 
   private Object[] raceCases() {
     return new Object[] {
-      // Exact enum names map directly.
       new Object[] {"DWARF", NpcRace.DWARF},
       new Object[] {"goblin", NpcRace.GOBLIN},
-      // Keyword variants bucket onto the nearest race.
       new Object[] {"Old man", NpcRace.HUMAN},
       new Object[] {"Elven warrior", NpcRace.ELF},
       new Object[] {"Imcando dwarf", NpcRace.DWARF},
@@ -37,9 +34,7 @@ public class NpcDemographicParserTest {
       new Object[] {"Arceuus", NpcRace.ARCEUUS},
       new Object[] {"Citizen of Arceuus", NpcRace.ARCEUUS},
       new Object[] {"Citizens of Arceuus", NpcRace.ARCEUUS},
-      // A half-blood hits the human keyword arm first and stays HUMAN (Safalaan).
       new Object[] {"Half Icyene, half human", NpcRace.HUMAN},
-      // Unknown or empty falls through to UNKNOWN.
       new Object[] {null, NpcRace.UNKNOWN},
       new Object[] {"", NpcRace.UNKNOWN},
       new Object[] {"Merfolk", NpcRace.UNKNOWN},
@@ -59,7 +54,6 @@ public class NpcDemographicParserTest {
       new Object[] {"Noble lady", NpcGender.FEMALE},
       new Object[] {"Old man", NpcGender.MALE},
       new Object[] {"Lord of the manor", NpcGender.MALE},
-      // Empty is UNKNOWN; an unrecognised non-empty value defaults to MALE.
       new Object[] {null, NpcGender.UNKNOWN},
       new Object[] {"", NpcGender.UNKNOWN},
       new Object[] {"indeterminate", NpcGender.MALE},

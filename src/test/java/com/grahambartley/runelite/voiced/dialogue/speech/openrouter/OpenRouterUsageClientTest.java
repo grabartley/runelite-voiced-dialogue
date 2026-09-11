@@ -14,9 +14,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * Reading an OpenRouter key's all-time credit usage, and failing quietly when it cannot be read.
- */
 public class OpenRouterUsageClientTest {
 
   private static final double TOLERANCE = 1e-9;
