@@ -29,12 +29,7 @@ public final class VoiceTraceFormatter {
   }
 
   public static String buildResolvedLine(
-      String backendId,
-      VoiceSpec voice,
-      String npcName,
-      String emotion,
-      String profileName,
-      String accent) {
+      String backendId, VoiceSpec voice, String npcName, String emotion, CharacterProfile profile) {
     boolean character = !voice.narrator();
     return String.format(
         "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s lifeStage=%s seed=%s"
@@ -47,8 +42,8 @@ public final class VoiceTraceFormatter {
         character ? voice.gender() : NOT_APPLICABLE,
         character ? (voice.child() ? "child" : "adult") : NOT_APPLICABLE,
         voice.hasVoiceSeed() ? Integer.toString(voice.voiceSeed()) : NOT_APPLICABLE,
-        profileName == null ? NOT_APPLICABLE : "'" + profileName + "'",
-        accent == null ? NOT_APPLICABLE : "'" + accent + "'");
+        "'" + profile.name() + "'",
+        "'" + profile.accent() + "'");
   }
 
   private static String kindOf(VoiceSpec voice) {

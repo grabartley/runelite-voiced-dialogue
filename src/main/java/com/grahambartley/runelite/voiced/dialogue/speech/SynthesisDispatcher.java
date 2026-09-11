@@ -2,7 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.CaveEchoPolicy;
-import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
@@ -71,15 +70,9 @@ public final class SynthesisDispatcher {
     }
     if (config.debugMode()) {
       Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
-      CharacterProfile profile = request.profile();
       log.info(
           VoiceTraceFormatter.buildResolvedLine(
-              backend.id(),
-              request.voice(),
-              npcName,
-              effective.name(),
-              profile == null ? null : profile.name(),
-              profile == null ? null : profile.accent()));
+              backend.id(), request.voice(), npcName, effective.name(), request.profile()));
     }
     audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
   }

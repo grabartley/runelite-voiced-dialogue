@@ -8,6 +8,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
+import com.grahambartley.runelite.voiced.dialogue.speech.TestFixtures;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
@@ -23,7 +24,10 @@ public class DialoguePrefetcherTest {
 
   private static SynthesisRequest req(String text) {
     return new SynthesisRequest(
-        text, VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), Emotion.NEUTRAL);
+        text,
+        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
+        Emotion.NEUTRAL,
+        TestFixtures.TROLL_PROFILE);
   }
 
   private static List<SynthesisRequest> options(String... texts) {

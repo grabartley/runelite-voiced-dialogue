@@ -212,10 +212,8 @@ public final class CloudSpeechExecutor {
     }
     String styledInput = model.styleInput(spokenText, request.emotion());
     CharacterProfile profile = request.profile();
-    String input = profile == null ? styledInput : profile.renderPromptBlock() + styledInput;
-    if (profile != null) {
-      ops.profileApplied(profile);
-    }
+    String input = profile.renderPromptBlock() + styledInput;
+    ops.profileApplied(profile);
     int speed = support.speedPercent();
     double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
 
@@ -225,15 +223,11 @@ public final class CloudSpeechExecutor {
           "[TTS voice] cloud emotion {} -> {}",
           request.emotion(),
           tag == null ? "no tag (neutral input)" : "inline tag [" + tag + "]");
-      if (profile == null) {
-        log.info("[TTS cloud] no character profile (plain input)");
-      } else {
-        log.info(
-            "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
-            profile.name(),
-            profile.accent(),
-            profile.cacheKey());
-      }
+      log.info(
+          "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
+          profile.name(),
+          profile.accent(),
+          profile.cacheKey());
       if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
         log.info("[TTS cloud] speed {}", speedRatio);
       }

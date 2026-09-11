@@ -17,9 +17,7 @@ final class CloudCacheKeyBuilder {
     if (speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
       variant.append("|s").append(speedPercent);
     }
-    if (profile != null) {
-      variant.append("|p").append(profile.cacheKey());
-    }
+    variant.append("|p").append(profile.cacheKey());
     if (CloudTtsText.needsTranslation(language) && !skipTranslation) {
       variant.append("|l").append(language.toLowerCase());
     }

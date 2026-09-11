@@ -8,6 +8,10 @@ import org.junit.Test;
 
 public class VoiceTraceFormatterTest {
 
+  private static CharacterProfile profile(String name, String accent) {
+    return new CharacterProfile(name, accent, "Warm.", "Normal.");
+  }
+
   @Test
   public void buildNpcTraceShowsWorldHitSourceAndSeed() {
     String trace =
@@ -39,8 +43,7 @@ public class VoiceTraceFormatterTest {
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 26),
             "Hans",
             "HAPPY",
-            "Hans",
-            "British");
+            profile("Hans", "British"));
     assertTrue(line, line.startsWith("[TTS line]"));
     assertTrue(line, line.contains("backend=cloud-openrouter"));
     assertTrue(line, line.contains("kind=npc"));
@@ -55,15 +58,19 @@ public class VoiceTraceFormatterTest {
   }
 
   @Test
-  public void buildResolvedLineCollapsesAbsentSeedAndProfileToDash() {
+  public void buildResolvedLineCollapsesAbsentNameAndSeedToDashButStillNamesTheProfile() {
     String line =
         VoiceTraceFormatter.buildResolvedLine(
-            "cloud-openrouter", VoiceSpec.player(NpcGender.FEMALE), null, "NEUTRAL", null, null);
+            "cloud-openrouter",
+            VoiceSpec.player(NpcGender.FEMALE),
+            null,
+            "NEUTRAL",
+            profile("Adventurer", "Irish"));
     assertTrue(line, line.contains("kind=player"));
     assertTrue(line, line.contains("name=-"));
     assertTrue(line, line.contains("seed=-"));
-    assertTrue(line, line.contains("profile=-"));
-    assertTrue(line, line.contains("accent=-"));
+    assertTrue(line, line.contains("profile='Adventurer'"));
+    assertTrue(line, line.contains("accent='Irish'"));
   }
 
   @Test
@@ -82,8 +89,7 @@ public class VoiceTraceFormatterTest {
             VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 12, true),
             "Shilop",
             "HAPPY",
-            "Shilop",
-            "British");
+            profile("Shilop", "British"));
     assertTrue(line, line.contains("lifeStage=child"));
   }
 
@@ -91,7 +97,11 @@ public class VoiceTraceFormatterTest {
   public void buildResolvedLineMarksNarrationAsItsOwnKindWithNoCharacterFields() {
     String line =
         VoiceTraceFormatter.buildResolvedLine(
-            "cloud-openrouter", VoiceSpec.NARRATOR, null, "NEUTRAL", "Narrator", "British");
+            "cloud-openrouter",
+            VoiceSpec.NARRATOR,
+            null,
+            "NEUTRAL",
+            profile("Narrator", "British"));
     assertTrue(line, line.contains("kind=narrator"));
     assertTrue("narration must never log a literal null name: " + line, line.contains("name=-"));
     assertTrue(line, line.contains("race=-"));

@@ -136,10 +136,11 @@ speaking style works without an OpenRouter key.
 
 Because synthesis is billed per character, several guards keep cost bounded and latency low:
 
-- **Cache key.** `cacheVariant` folds in the model, the resolved Gemini voice, and (only when not at
-  their defaults) the speaking pace, the character profile, and a non-English spoken language, on
-  top of the shared `(backendId, voiceKey, emotion, text)` identity. A model, voice, pace, profile,
-  or language change therefore never replays the wrong audio, while a plain English line stays on a
+- **Cache key.** `cacheVariant` folds in the model, the resolved Gemini voice, and the character
+  profile, plus (only when not at their defaults) the speaking pace and a non-English spoken
+  language, on top of the shared `(backendId, voiceKey, emotion, text)` identity. Every speaker
+  resolves to a profile, so every key carries its content hash. A model, voice, pace, profile, or
+  language change therefore never replays the wrong audio, while a plain English line stays on a
   stable key so changing a setting that cannot affect it does not force a needless re-bill. Line
   length is not part of the key: every line is sent whole.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only

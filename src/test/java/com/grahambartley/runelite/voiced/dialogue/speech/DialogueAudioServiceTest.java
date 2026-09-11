@@ -181,11 +181,12 @@ public class DialogueAudioServiceTest {
   }
 
   private static SynthesisRequest req(String text, NpcRace race, NpcGender gender) {
-    return new SynthesisRequest(text, VoiceSpec.npc(race, gender), Emotion.NEUTRAL);
+    return new SynthesisRequest(
+        text, VoiceSpec.npc(race, gender), Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE);
   }
 
   private static SynthesisRequest req(String text, NpcRace race, NpcGender gender, Emotion e) {
-    return new SynthesisRequest(text, VoiceSpec.npc(race, gender), e);
+    return new SynthesisRequest(text, VoiceSpec.npc(race, gender), e, TestFixtures.TROLL_PROFILE);
   }
 
   @Test

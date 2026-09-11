@@ -91,10 +91,9 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | British (Cambridge) | Accent for your character's voice. Needs **Character Voices** on. |
-| **Your Persona** | friendly and plucky | Persona and delivery style for your character. Needs **Character Voices** on. |
-| **Your Delivery Pace** | Normal | How your character paces their words. Needs **Character Voices** on. |
-| **Character Voices** | `On` | Gives each speaker their own accent, persona, and pace. Off gives one plain shared delivery, the cheapest option. |
+| **Your Accent** | British (Cambridge) | Accent for your character's voice. |
+| **Your Persona** | friendly and plucky | Persona and delivery style for your character. |
+| **Your Delivery Pace** | Normal | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Their first line still uses the default voice. |
