@@ -4,18 +4,19 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 5917,
-    "count": 13735,
+    "count": 13761,
     "name_matched_ids": 713,
-    "overrides_applied": 1612,
+    "overrides_applied": 1640,
     "race_counts": {
+      "Aranei": 24,
       "Arceuus": 58,
-      "Demon": 776,
+      "Demon": 781,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 368,
       "Gorilla": 11,
-      "Human": 9930,
+      "Human": 9927,
       "Icyene": 9,
       "Monkey": 64,
       "Tortugan": 66,
@@ -24,8 +25,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1932,
-      "Male": 11803
+      "Female": 1944,
+      "Male": 11817
     },
     "ethnicity_counts": {
       "asgarnia": 645,
@@ -37,7 +38,7 @@
       "kourend": 778,
       "menaphite": 132,
       "misthalin": 911,
-      "morytania": 964,
+      "morytania": 977,
       "tirannwn": 317,
       "varlamore": 999,
       "wilderness": 115,
@@ -46,7 +47,7 @@
     "life_stage_counts": {
       "child": 45
     },
-    "profiles_bespoke": 6425
+    "profiles_bespoke": 6431
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -152,6 +153,12 @@
         "accent": "British English, Received Pronunciation, refined and cool, the voice softly resonant as though a faint echo of it arrives from somewhere just beyond the room.",
         "style": "An ascended immortal of Arceuus, a soul lifted out of its mortal body into an incorporeal form sustained by the Dark Altar. Serene, weightless and detached, steeped in the dark arts and centuries past any need for hunger, sleep or death, every word settled and touched with deep arcane learning.",
         "pace": "Slow and floating, unhurried, with long, airy pauses."
+      },
+      "Aranei": {
+        "name": "The Aranei",
+        "accent": "British English, Received Pronunciation, soft-spoken and breathy, every word placed with unhurried care.",
+        "style": "A hooded aranei of House Shadum, devoted past the point of self and never showing a face. Telepathic, carrying the memories of others and of the dead, so every line arrives as something relayed rather than chosen, hushed and serene to the point of being unsettling, with a faint sibilance beneath the calm.",
+        "pace": "Unhurried and even, with a small stillness before each answer."
       }
     },
     "byCategory": [
@@ -10423,6 +10430,18 @@
         "style": "Elegant, supercilious vampyre lady; cool and refined, drawling with bored aristocratic poise."
       },
       "8208": {
+        "name": "Mysterious Stranger",
+        "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
+      },
+      "16269": {
+        "name": "Mysterious Stranger",
+        "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
+      },
+      "16270": {
+        "name": "Mysterious Stranger",
+        "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
+      },
+      "16360": {
         "name": "Mysterious Stranger",
         "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."
       },
@@ -26491,16 +26510,36 @@
         "name": "Sarei",
         "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."
       },
-      "16268": {
-        "name": "Aranei",
-        "style": "A soft, devotional aranei; hushed and serene, gentle and unhurried, with a faint sibilant whisper beneath every word."
-      },
       "16212": {
         "name": "Wyrd",
         "style": "A tormented soul torn between straining human pleading and eruptions of guttural, bestial roaring; hoarse, cracking and monstrous.",
         "accent": "A ragged, inhuman rasp, human words splintering into a beast's snarl."
       },
       "11181": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "15967": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "15968": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "15969": {
+        "name": "Nylocas Queen",
+        "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
+        "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
+        "pace": "Slow and drawn-out, savouring each word like prey."
+      },
+      "16190": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.",
         "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.",
@@ -59138,8 +59177,8 @@
       "ethnicity": "morytania"
     },
     "8208": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Aranei",
+      "gender": "Female"
     },
     "8209": {
       "race": "Undead",
@@ -64688,11 +64727,11 @@
       "gender": "Male"
     },
     "9639": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Male"
     },
     "9640": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Male"
     },
     "9641": {
@@ -69523,16 +69562,16 @@
       "ethnicity": "morytania"
     },
     "10875": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Aranei",
+      "gender": "Female"
     },
     "10876": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Aranei",
+      "gender": "Female"
     },
     "10877": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Aranei",
+      "gender": "Female"
     },
     "10878": {
       "race": "Undead",
@@ -70665,8 +70704,8 @@
       "ethnicity": "kharidian"
     },
     "11162": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Aranei",
+      "gender": "Female"
     },
     "11169": {
       "race": "Human",
@@ -70728,9 +70767,8 @@
       "ethnicity": "morytania"
     },
     "11181": {
-      "race": "Undead",
-      "gender": "Female",
-      "ethnicity": "morytania"
+      "race": "Demon",
+      "gender": "Female"
     },
     "11182": {
       "race": "Human",
@@ -87374,6 +87412,14 @@
       "race": "Demon",
       "gender": "Male"
     },
+    "15737": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
+    "15738": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
     "15740": {
       "race": "Human",
       "gender": "Male",
@@ -87389,6 +87435,26 @@
     },
     "15743": {
       "race": "Human",
+      "gender": "Male"
+    },
+    "15749": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
+    "15750": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
+    "15752": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
+    "15754": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
+    "15762": {
+      "race": "Aranei",
       "gender": "Male"
     },
     "15765": {
@@ -87415,13 +87481,45 @@
       "race": "Human",
       "gender": "Male"
     },
+    "15879": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "15885": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
     "15893": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "morytania"
     },
     "15894": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "15895": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "15896": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "15897": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "15898": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
     },
     "15911": {
       "race": "Undead",
@@ -87463,29 +87561,75 @@
       "gender": "Male",
       "ethnicity": "morytania"
     },
+    "15967": {
+      "race": "Demon",
+      "gender": "Female"
+    },
+    "15968": {
+      "race": "Demon",
+      "gender": "Female"
+    },
+    "15969": {
+      "race": "Demon",
+      "gender": "Female"
+    },
     "16005": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
     },
     "16006": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
     },
     "16007": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
     },
     "16008": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
     },
     "16009": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
+    },
+    "16163": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "16164": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "16165": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "morytania"
+    },
+    "16166": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "morytania"
+    },
+    "16167": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "morytania"
+    },
+    "16168": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "morytania"
     },
     "16175": {
       "race": "Undead",
       "gender": "Male"
+    },
+    "16190": {
+      "race": "Demon",
+      "gender": "Female"
     },
     "16204": {
       "race": "Undead",
@@ -87493,7 +87637,7 @@
       "ethnicity": "morytania"
     },
     "16212": {
-      "race": "Human",
+      "race": "Undead",
       "gender": "Male"
     },
     "16226": {
@@ -87505,12 +87649,20 @@
       "gender": "Male"
     },
     "16242": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
     },
     "16268": {
-      "race": "Human",
+      "race": "Aranei",
       "gender": "Female"
+    },
+    "16269": {
+      "race": "Aranei",
+      "gender": "Male"
+    },
+    "16270": {
+      "race": "Aranei",
+      "gender": "Male"
     },
     "16293": {
       "race": "Human",
@@ -87583,6 +87735,10 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "wyrmscraig"
+    },
+    "16360": {
+      "race": "Aranei",
+      "gender": "Male"
     },
     "17009": {
       "race": "Human",

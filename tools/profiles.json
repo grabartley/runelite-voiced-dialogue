@@ -102,6 +102,12 @@
       "accent": "British English, Received Pronunciation, refined and cool, the voice softly resonant as though a faint echo of it arrives from somewhere just beyond the room.",
       "style": "An ascended immortal of Arceuus, a soul lifted out of its mortal body into an incorporeal form sustained by the Dark Altar. Serene, weightless and detached, steeped in the dark arts and centuries past any need for hunger, sleep or death, every word settled and touched with deep arcane learning.",
       "pace": "Slow and floating, unhurried, with long, airy pauses."
+    },
+    "Aranei": {
+      "name": "The Aranei",
+      "accent": "British English, Received Pronunciation, soft-spoken and breathy, every word placed with unhurried care.",
+      "style": "A hooded aranei of House Shadum, devoted past the point of self and never showing a face. Telepathic, carrying the memories of others and of the dead, so every line arrives as something relayed rather than chosen, hushed and serene to the point of being unsettling, with a faint sibilance beneath the calm.",
+      "pace": "Unhurried and even, with a small stillness before each answer."
     }
   },
   "byCategory": [
@@ -2747,6 +2753,9 @@
     "9689": {"name": "Mort Nightshade", "style": "Smooth, sly vampyre with a merchant's lilt; silky and persuasive, every phrase a quiet appraisal."},
     "9708": {"name": "Mortina Daubenton", "style": "Elegant, supercilious vampyre lady; cool and refined, drawling with bored aristocratic poise."},
     "8208": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
+    "16269": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
+    "16270": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
+    "16360": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
     "10875": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
     "10876": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
     "10877": {"name": "Mysterious Stranger", "style": "Hooded, cryptic figure; low, deliberate and enigmatic, speaking in measured riddling undertones that reveal little."},
@@ -6696,9 +6705,12 @@
     "16008": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
     "16009": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
     "16242": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
-    "16268": {"name": "Aranei", "style": "A soft, devotional aranei; hushed and serene, gentle and unhurried, with a faint sibilant whisper beneath every word."},
     "16212": {"name": "Wyrd", "style": "A tormented soul torn between straining human pleading and eruptions of guttural, bestial roaring; hoarse, cracking and monstrous.", "accent": "A ragged, inhuman rasp, human words splintering into a beast's snarl."},
     "11181": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
+    "15967": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
+    "15968": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
+    "15969": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
+    "16190": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
     "3776": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "3778": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "6161": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},

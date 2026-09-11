@@ -102,6 +102,9 @@ public final class GeminiVoiceMap {
     // Citizen of Arceuus (ascended, incorporeal): the elf pool's refined, clear timbres,
     // which carry the weightless delivery better than the earthier human voices.
     put(NpcRace.ARCEUUS, male("Iapetus", "Rasalgethi"), female("Vindemiatrix", "Erinome"));
+    // Aranei (hushed, telepathic, serenely selfless): breathy paired with clear, so they carry the
+    // undead pool's softness without its cold, and stay a living species by ear.
+    put(NpcRace.ARANEI, male("Enceladus", "Iapetus"), female("Achernar", "Erinome"));
   }
 
   private static String[] male(String... voices) {

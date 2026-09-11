@@ -36,12 +36,14 @@ public class RaceBucketTest {
       new Object[] {"Skeleton", "Undead", NpcRace.UNDEAD},
       new Object[] {"Vampyre", "Undead", NpcRace.UNDEAD},
       new Object[] {"Ghost", "Undead", NpcRace.UNDEAD},
+      new Object[] {"Aranei", "Aranei", NpcRace.ARANEI},
       new Object[] {"Demon", "Demon", NpcRace.DEMON},
       new Object[] {"Dragon", "Demon", NpcRace.DEMON},
       new Object[] {"Imp", "Demon", NpcRace.DEMON},
       // Case and surrounding words do not matter, and the distinctive race wins over "human".
       new Object[] {"GHOST", "Undead", NpcRace.UNDEAD},
       new Object[] {"Human/Elf hybrid", "Elf", NpcRace.ELF},
+      new Object[] {"[[Aranei]]", "Aranei", NpcRace.ARANEI},
     };
   }
 

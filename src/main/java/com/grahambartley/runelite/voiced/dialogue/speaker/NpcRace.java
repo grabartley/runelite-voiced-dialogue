@@ -18,5 +18,6 @@ public enum NpcRace {
   TORTUGAN,
   ICYENE,
   ARCEUUS,
+  ARANEI,
   UNKNOWN
 }

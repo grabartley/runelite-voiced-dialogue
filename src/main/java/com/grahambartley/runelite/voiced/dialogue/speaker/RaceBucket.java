@@ -12,14 +12,16 @@ import java.util.regex.Pattern;
  * side effect of an overlapping keyword.
  *
  * <p>The stages deliberately scan in different orders: wiki race text is checked for the
- * distinctive races before the generic human words, while a stored race string is checked for human
- * first, so a half-blood ("Half Icyene, half human") stays human.
+ * distinctive races before the generic human words, while a stored race string reaches human ahead
+ * of elf, dwarf and the rest, so a half-blood ("Half Icyene, half human") stays human. The races
+ * whose names no human string can contain sit ahead of both.
  *
  * <p>The wiki keywords mirror {@code RACE_BUCKET_RULES} in {@code tools/generate_npc_voices.py} so
  * an NPC learned at runtime buckets the same way as a baked-in one; keep the two in sync.
  */
 public enum RaceBucket {
   ARCEUUS("Arceuus", NpcRace.ARCEUUS, null, "arceuus"),
+  ARANEI("Aranei", NpcRace.ARANEI, "\\baranei\\b", "aranei"),
   HUMAN("Human", NpcRace.HUMAN, "\\bhuman\\b|\\bman\\b|\\bwoman\\b", "human", "man", "person"),
   ELF("Elf", NpcRace.ELF, "\\belf\\b|\\belves\\b|elven", "elf", "elven"),
   DWARF("Dwarf", NpcRace.DWARF, "dwarf|dwarven", "dwarf", "dwarven"),
@@ -60,7 +62,7 @@ public enum RaceBucket {
 
   /** The order wiki race text is scanned in; buckets the wiki never emits are absent. */
   private static final RaceBucket[] WIKI_SCAN = {
-    UNDEAD, DEMON, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
+    ARANEI, UNDEAD, DEMON, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
   };
 
   private final String bucketName;

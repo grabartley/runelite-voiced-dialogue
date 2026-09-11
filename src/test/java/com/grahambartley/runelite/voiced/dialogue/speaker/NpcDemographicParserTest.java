@@ -30,6 +30,8 @@ public class NpcDemographicParserTest {
       new Object[] {"Battle mage", NpcRace.WIZARD},
       new Object[] {"Tortuga elder", NpcRace.TORTUGAN},
       new Object[] {"Icyene queen", NpcRace.ICYENE},
+      new Object[] {"Aranei", NpcRace.ARANEI},
+      new Object[] {"Aranei scout", NpcRace.ARANEI},
       new Object[] {"Arceuus", NpcRace.ARCEUUS},
       new Object[] {"Citizen of Arceuus", NpcRace.ARCEUUS},
       new Object[] {"Citizens of Arceuus", NpcRace.ARCEUUS},
