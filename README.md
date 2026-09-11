@@ -18,8 +18,8 @@ Walk up, talk, and listen. That is the whole setup.
 ## What you get
 
 - **A voice for everyone.** NPCs and the player each get a distinct voice, so a goblin never sounds like a king.
-- **Over 13,700 NPCs, already voiced.** The plugin knows exactly who is speaking and instantly picks the right voice, matched by race and gender. Bump into someone added in a future game update? Flip on **Auto-learn** and the plugin works out who they are all by itself.
-- **Accents and personalities with real craft.** 15 races and 14 regional origins each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **over 6,400 NPCs** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
+- **Over 14,100 NPCs, already voiced.** The plugin knows exactly who is speaking and instantly picks the right voice, matched by race and gender. Bump into someone added in a future game update? Flip on **Auto-learn** and the plugin works out who they are all by itself.
+- **Accents and personalities with real craft.** 16 races and 14 regional origins each map to their own accent: Scottish dwarves, South London trolls, Irish leprechauns, Dracula-esque vampyres, Norse Fremennik raiders, the gothic dread of Morytania, and more. On top of that, **over 6,400 NPCs** get a hand-written personality with its own style and speaking pace, so the icons of Gielinor sound like themselves.
 - **Real emotion.** The plugin reads each speaker's chat-head expression and delivers the line happy, sad, angry, scared, or neutral, so a furious dwarf actually sounds furious.
 - **You star in it too.** Set your own hero's accent, persona, and pace and play the dashing knight, the gruff mercenary, or the chaos goblin of your dreams.
 - **A narrator for the story.** Switch on **Voice Narration** and the message and item boxes quests lean on ("You find a key.", the cutscene beats between conversations) are read aloud by a dedicated narrator voice, so a quest keeps its voice at the moments it is actually about.

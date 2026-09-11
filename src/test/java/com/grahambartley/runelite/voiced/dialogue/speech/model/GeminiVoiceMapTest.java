@@ -38,7 +38,8 @@ public class GeminiVoiceMapTest {
     NpcRace.TORTUGAN,
     NpcRace.ICYENE,
     NpcRace.ARCEUUS,
-    NpcRace.ARANEI
+    NpcRace.ARANEI,
+    NpcRace.DOG
   };
 
   /**
@@ -305,5 +306,26 @@ public class GeminiVoiceMapTest {
     Set<String> overlap = new HashSet<>(male);
     overlap.retainAll(female);
     assertTrue("no aranei voice serves both genders: " + overlap, overlap.isEmpty());
+  }
+
+  @Test
+  public void dogsPairTheExcitableAnchorsWithTheDeepestOnesWithoutIntroducingANewVoice() {
+    Set<String> male = new HashSet<>();
+    Set<String> female = new HashSet<>();
+    for (int seed = 0; seed < 64; seed++) {
+      male.add(map.voiceFor(VoiceSpec.npc(NpcRace.DOG, NpcGender.MALE, seed)));
+      female.add(map.voiceFor(VoiceSpec.npc(NpcRace.DOG, NpcGender.FEMALE, seed)));
+    }
+    assertEquals(
+        "male dogs pair the excitable anchor with the deepest one",
+        new HashSet<>(java.util.Arrays.asList("Fenrir", "Orus")),
+        male);
+    assertEquals(
+        "female dogs pair the bright anchor with the deepest one",
+        new HashSet<>(java.util.Arrays.asList("Pulcherrima", "Gacrux")),
+        female);
+    Set<String> overlap = new HashSet<>(male);
+    overlap.retainAll(female);
+    assertTrue("no dog voice serves both genders: " + overlap, overlap.isEmpty());
   }
 }

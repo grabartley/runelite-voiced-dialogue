@@ -134,6 +134,74 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void theDogShelterCanineCastResolvesAsDogsOfItsStatedGender() {
+    for (int npcId : new int[] {16504, 16505, 16529, 16530, 16495, 16515, 16531, 16517, 16533}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
+    for (int npcId : new int[] {16516, 16532}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void theAdoptableShelterPuppiesTakeTheirGendersStraightFromTheWiki() {
+    // These carry a gender per breed on the page, so they resolve without an override.
+    for (int npcId : new int[] {16512, 16518, 16514, 16520}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
+    for (int npcId : new int[] {16513, 16519}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void theWanderingBreedDogsResolveAsDogsWithoutAnOverride() {
+    for (int npcId :
+        new int[] {
+          16398, 16416, 16400, 16418, 16402, 16420, 16404, 16422, 16406, 16424, 16408, 16426, 16410,
+          16428, 16412, 16430, 16414, 16432
+        }) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void theDogShelterHumanAndGoblinCastResolvesToItsDeliberateRaces() {
+    assertAttributes(16486, "Human", "Female"); // Talia
+    assertAttributes(16487, "Human", "Male"); // Chase
+    for (int npcId : new int[] {16493, 16539}) {
+      assertAttributes(npcId, "Human", "Female"); // Guard
+    }
+    for (int npcId : new int[] {16523, 16534, 16524}) {
+      assertAttributes(npcId, "Goblin", "Male"); // Picklenose, Toetaller
+    }
+    for (int npcId : new int[] {16527, 16528}) {
+      assertAttributes(npcId, "Human", "Male"); // Outlaw
+    }
+  }
+
+  @Test
+  public void theDogShelterHumansCarryTheirMisthalinOrigin() {
+    for (int npcId : new int[] {16486, 16487, 16493, 16539}) {
+      assertEquals("origin for id " + npcId, "misthalin", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void theDogsCarryNoRegionalTint() {
+    for (int npcId : new int[] {16504, 16495, 16515, 16516, 16398}) {
+      assertNull("no origin for id " + npcId, analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void theDogShelterRegularsAreUntouchedByTheCanineReclassification() {
+    assertAttributes(7284, "Human", "Female"); // Gertrude
+    assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());
+    assertAttributes(766, "Human", "Male"); // Banker
+  }
+
+  @Test
   public void femaleNamedTownsfolkResolveFemale() {
     // Gender comes straight from the wiki, so townsfolk with no gendered title
     // (Gertrude, Cassie) still resolve Female instead of defaulting to male.

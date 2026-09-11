@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 public enum RaceBucket {
   ARCEUUS("Arceuus", NpcRace.ARCEUUS, null, "arceuus"),
   ARANEI("Aranei", NpcRace.ARANEI, "\\baranei\\b", "aranei"),
+  DOG("Dog", NpcRace.DOG, "\\bdogs?\\b", "dog"),
   HUMAN("Human", NpcRace.HUMAN, "\\bhuman\\b|\\bman\\b|\\bwoman\\b", "human", "man", "person"),
   ELF("Elf", NpcRace.ELF, "\\belf\\b|\\belves\\b|elven", "elf", "elven"),
   DWARF("Dwarf", NpcRace.DWARF, "dwarf|dwarven", "dwarf", "dwarven"),
@@ -62,7 +63,7 @@ public enum RaceBucket {
 
   /** The order wiki race text is scanned in; buckets the wiki never emits are absent. */
   private static final RaceBucket[] WIKI_SCAN = {
-    ARANEI, UNDEAD, DEMON, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
+    ARANEI, UNDEAD, DEMON, DOG, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
   };
 
   private final String bucketName;

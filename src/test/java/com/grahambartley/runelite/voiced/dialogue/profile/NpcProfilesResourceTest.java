@@ -55,7 +55,8 @@ public class NpcProfilesResourceTest {
           "Tortugan",
           "Icyene",
           "Arceuus",
-          "Aranei"
+          "Aranei",
+          "Dog"
         }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
@@ -102,6 +103,9 @@ public class NpcProfilesResourceTest {
     assertTrue(
         "the aranei sound soft-spoken and breathy",
         resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("breathy"));
+    assertTrue(
+        "dogs vocalise their lines rather than pronouncing them",
+        resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barked"));
   }
 
   @Test

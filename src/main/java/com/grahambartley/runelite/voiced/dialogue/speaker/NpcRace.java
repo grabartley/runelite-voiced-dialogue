@@ -19,5 +19,6 @@ public enum NpcRace {
   ICYENE,
   ARCEUUS,
   ARANEI,
+  DOG,
   UNKNOWN
 }

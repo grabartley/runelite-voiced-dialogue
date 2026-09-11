@@ -105,6 +105,10 @@ public final class GeminiVoiceMap {
     // Aranei (hushed, telepathic, serenely selfless): breathy paired with clear, so they carry the
     // undead pool's softness without its cold, and stay a living species by ear.
     put(NpcRace.ARANEI, male("Enceladus", "Iapetus"), female("Achernar", "Erinome"));
+    // Dog (barks, whines and growls rendered as text): the monkey pool's excitable, bright
+    // timbres paired with the deepest anchors, so a bark lands as a sound with an animal behind
+    // it rather than as a word being read out.
+    put(NpcRace.DOG, male("Fenrir", "Orus"), female("Pulcherrima", "Gacrux"));
   }
 
   private static String[] male(String... voices) {

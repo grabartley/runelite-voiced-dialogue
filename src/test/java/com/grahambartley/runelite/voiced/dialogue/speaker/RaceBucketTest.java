@@ -37,6 +37,8 @@ public class RaceBucketTest {
       new Object[] {"Vampyre", "Undead", NpcRace.UNDEAD},
       new Object[] {"Ghost", "Undead", NpcRace.UNDEAD},
       new Object[] {"Aranei", "Aranei", NpcRace.ARANEI},
+      new Object[] {"Dog", "Dog", NpcRace.DOG},
+      new Object[] {"Dogs", "Dog", NpcRace.DOG},
       new Object[] {"Demon", "Demon", NpcRace.DEMON},
       new Object[] {"Dragon", "Demon", NpcRace.DEMON},
       new Object[] {"Imp", "Demon", NpcRace.DEMON},
@@ -44,6 +46,9 @@ public class RaceBucketTest {
       new Object[] {"GHOST", "Undead", NpcRace.UNDEAD},
       new Object[] {"Human/Elf hybrid", "Elf", NpcRace.ELF},
       new Object[] {"[[Aranei]]", "Aranei", NpcRace.ARANEI},
+      new Object[] {"[[Dog]]", "Dog", NpcRace.DOG},
+      // An undead hound is dragged back from the grave before it is a dog.
+      new Object[] {"Undead dog", "Undead", NpcRace.UNDEAD},
     };
   }
 
