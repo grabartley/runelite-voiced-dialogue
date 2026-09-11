@@ -51,7 +51,7 @@ holds all of them and runs to roughly 137KB. Each quest is one row shaped like:
 The quest name is the `data-rowid` attribute. The cell layout differs by row type, which is the
 one trap here: a quest row carries 7 cells with the number first and the release date last, while
 a miniquest row carries 6 with no number column and the date one in from the end. Reading
-`cells[-1]` for every row silently turns all 19 miniquests into undated rows that sort to the
+`cells[-1]` for every row silently turns every miniquest into an undated row that sorts to the
 bottom of a list meant to be worked top-down. A quick-guide row also slips into the table with
 empty cells and has to be dropped.
 
@@ -90,8 +90,8 @@ for quest in sorted(quests, key=when, reverse=True):
 PY
 ```
 
-Expect 213 rows and `undated=0`. A non-zero `undated` means the table layout moved and the row
-parse needs revisiting, not that those quests are old. Work newest first: gaps cluster hard at
+Expect 210 or more rows and `undated=0`. The `undated` guard is what detects a layout move; the
+row count grows with every release, so treat it as a floor. Work newest first: gaps cluster hard at
 the recent end, because everything older has already been swept by a region profile batch.
 
 ## Stage 2: probe coverage
@@ -179,11 +179,13 @@ def npc_ids(text):
 
 for quest in sys.argv[1:]:
     print("=" * 78, "\n" + quest)
+    undocumented = []
     for title, text in sorted(wikitext(cast(quest)).items()):
         if "Infobox NPC" not in text and "Infobox Monster" not in text:
             continue
         ids = npc_ids(text)
         if not ids:
+            undocumented.append(title)
             continue
         race, gender = shown(field(text, "race")), field(text, "gender")
         voiced = bucket(race) if race else None
@@ -210,7 +212,11 @@ for quest in sys.argv[1:]:
         settled = sorted(races - {"Human", "Unknown"})
         if settled:
             gaps.append("race=" + ",".join(settled))
+        elif not races and voiced and voiced != "Human":
+            gaps.append("race=%s(wiki)" % voiced)
         print("  %-44s ids=%-30s %s" % (title[:42], str(ids)[:28], "; ".join(gaps) or "ok"))
+    if undocumented:
+        print("  NEEDS-MANUAL, infobox but no id, resolve by hand:", ", ".join(undocumented))
 PY
 ```
 
@@ -233,7 +239,7 @@ alone reports a settled NPC as a gap.
 |---|---|
 | `NOT-IN-TABLE:<ids>` | The bundled table does not know the id, so the NPC resolves to the unknown-race default. |
 | `RACE-UNMAPPED:<race>` | The wiki names a race no rule matches, so the NPC voices as a British commoner. |
-| `no-race` | The page carries no race field at all, so the NPC falls to the default. Common on Infobox Monster pages, where the generator falls back to page categories. |
+| `no-race` | The page carries no race field at all, so the NPC falls to the default. Common on Infobox Monster pages, where the generator falls back to page categories. Resolve the race by hand, and settle the origin too when it lands on Human. |
 | `no-origin` | A Human NPC with no usable `leagueRegion`, so they keep the British default instead of their region's accent. |
 
 **Check, not a gap on its own:**
@@ -303,8 +309,9 @@ no em dashes, and issue references rendered as links rather than bare numbers.
 ## Gotchas
 
 - **A `Multi Infobox` page mixes NPC and item ids.** The Stray puppy page carries its NPC ids and
-  its item ids under one title, and the item ids must never reach an override. Split the page at
-  the second infobox block before reading ids.
+  its item ids under one title, and the item ids must never reach an override. The probe splits at
+  `|text2`, the second tab label, which assumes the NPC block comes first. Check that assumption
+  per page, because it inverts when the item tab leads.
 - **Unwrap a piped race link before matching it.** `[[Crab (disambiguation)|Crab]]` has to read
   `Crab`, or the race matches no bucket and a badly linked NPC looks like an unmapped species.
 - **A present `leagueRegion` is not an origin.** `ethnicity_key` returns nothing for `No`,
