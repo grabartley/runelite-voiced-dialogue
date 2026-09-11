@@ -182,8 +182,11 @@ public class NpcProfilesResourceTest {
         "his bespoke Irish accent survives the Undead race layer",
         first.profile().accent().contains("Irish"));
     assertTrue("his skeletal persona reads undead", first.profile().style().contains("skeletal"));
+    assertTrue(
+        "he keeps a brisk Slayer-master delivery over the drawling Undead pace",
+        first.profile().pace().contains("Brisk"));
     assertEquals(
-        "both forms are one character by ear",
+        "both forms resolve the same profile directive",
         first.profile().cacheKey(),
         second.profile().cacheKey());
   }
