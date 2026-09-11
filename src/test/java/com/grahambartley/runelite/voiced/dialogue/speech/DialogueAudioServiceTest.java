@@ -18,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -100,7 +101,7 @@ public class DialogueAudioServiceTest {
     volatile int beginStreamCalls;
     volatile int endStreamCalls;
     volatile int lastStreamVolume = -1;
-    final List<float[]> streamedChunks = new ArrayList<>();
+    final List<float[]> streamedChunks = Collections.synchronizedList(new ArrayList<>());
 
     @Override
     public void stream(float[] samples, int sampleRate, int volumePercent) {
@@ -667,14 +668,18 @@ public class DialogueAudioServiceTest {
       assertTrue("the blocker occupied a worker", blockerEntered.await(2, TimeUnit.SECONDS));
 
       svc.speak(req("Second", NpcRace.HUMAN, NpcGender.MALE));
+      // The blocker opened its stream before parking in synthesize, so beginStreamCalls is
+      // already 1 and cannot distinguish the two lines. Only the second line can close a stream
+      // while the blocker is held, since the blocker's end() waits on releaseBlocker.
       long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-      while (output.beginStreamCalls == 0 && System.nanoTime() < deadline) {
+      while (output.endStreamCalls == 0 && System.nanoTime() < deadline) {
         Thread.onSpinWait();
       }
       assertEquals(
-          "the second line played on the free worker while the first was still blocked",
+          "the second line streamed to completion on the free worker while the first was blocked",
           1,
-          output.beginStreamCalls);
+          output.endStreamCalls);
+      assertEquals("and both lines opened a stream", 2, output.beginStreamCalls);
     } finally {
       releaseBlocker.countDown();
       pool.shutdownNow();

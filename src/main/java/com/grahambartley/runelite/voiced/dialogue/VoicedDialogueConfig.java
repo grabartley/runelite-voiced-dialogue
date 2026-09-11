@@ -24,7 +24,7 @@ public interface VoicedDialogueConfig extends Config {
 
   @ConfigSection(
       name = "General",
-      description = "Provider, API keys, volume, and prefetch.",
+      description = "Provider, API keys, volume, chat, and prefetch.",
       position = 0)
   String generalSection = "general";
 
@@ -222,7 +222,7 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "ttsProvider",
+      keyName = PROVIDER_KEY,
       name = "Voice Provider",
       description =
           "Cloud service that voices dialogue and bills the calls. Google AI Studio is fastest but"
