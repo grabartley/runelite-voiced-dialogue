@@ -1,8 +1,8 @@
 # Voice casting
 
 Which Gemini voice each speaker gets, and why that one.
-[architecture.md](architecture.md) owns the resolution mechanism and this owns the casting, so
-neither repeats the other.
+[architecture.md](architecture.md) owns how a speaker is resolved into a voice spec; this owns
+which voice that spec lands on.
 
 ## The catalog adjectives are not the casting
 
@@ -21,47 +21,85 @@ to it. A voice does not enter a pool on the strength of its catalog entry.
 
 ## The invariants
 
-- **Gender is structural.** A male spec can only resolve to a voice from a male sub-pool, a female
-  spec only from a female one. No race maps two genders onto the same voice.
-- **Every spec resolves.** An unknown gender is voiced as male, an empty adult pool falls back to
-  the neutral default and an empty child pool to the child anchor, so no spec can reach a backend
-  without a voice. `GeminiVoiceMap` also sends an unknown race to the player pool, though nothing
-  reaches it with one: the resolver rewrites an unknown race to human before the map is consulted,
-  so that branch is defence in depth.
+- **Gender is structural.** A male spec resolves to a voice from a male sub-pool and a female spec
+  to one from a female sub-pool. The 14 male and 13 female voices in use are disjoint sets, so no
+  race maps two genders onto the same voice.
 - **Placement within a pool is stable.** A per-NPC seed spreads same-race, same-gender NPCs across
-  their sub-pool, and the same NPC lands on the same voice in every session. Pools hold two voices,
-  so the spread is variety rather than a guarantee that any two NPCs differ. A spec carrying no
-  seed anchors to index 0 of its pool.
+  their sub-pool, and the same NPC lands on the same voice in every session. Adult pools hold two
+  voices, so the spread is variety rather than a guarantee that any two NPCs differ. A spec
+  carrying no seed anchors to index 0.
+- **Every spec resolves.** An unknown gender is voiced as male. Three further fallbacks exist and
+  none is reachable today, so they are defence in depth rather than live behaviour: an unmapped
+  race goes to the player pool, though the resolver rewrites an unknown race to human before the
+  map is consulted; and an empty adult or child pool falls back to Charon or Puck respectively,
+  regardless of the spec's gender, though no pool is empty.
+
+## The pools
+
+Voices are shared heavily: 22 of the 30 appear in more than one pool, and two pairs of races draw
+identical pools. The table is the casting, and rows that share a pool share a line rather than
+being described twice.
+
+| Race | Male | Female |
+|---|---|---|
+| Human | Charon, Iapetus | Despina, Erinome |
+| Elf and Citizen of Arceuus | Iapetus, Rasalgethi | Vindemiatrix, Erinome |
+| Dwarf | Algenib, Alnilam | Gacrux, Kore |
+| Goblin | Puck, Zubenelgenubi | Leda, Laomedeia |
+| Monkey | Fenrir, Sadachbia | Zephyr, Pulcherrima |
+| Gorilla and Troll | Algenib, Orus | Gacrux, Kore |
+| Undead | Enceladus, Schedar | Achernar, Sulafat |
+| Demon | Algenib, Rasalgethi | Gacrux, Despina |
+| Wizard | Sadaltager, Charon | Sulafat, Vindemiatrix |
+| Tortugan | Achird, Iapetus | Sulafat, Vindemiatrix |
+| Icyene | Alnilam, Schedar | Kore, Despina |
+| Aranei | Enceladus, Iapetus | Achernar, Erinome |
+| Dog | Fenrir, Orus | Pulcherrima, Gacrux |
+| Crab | Zubenelgenubi, Sadachbia | Pulcherrima, Laomedeia |
+| Penguin | Puck, Zubenelgenubi | Zephyr, Laomedeia |
+
+The player, children, and the narrator resolve outside the race table:
+
+| Speaker | Male | Female |
+|---|---|---|
+| Player | Achird, Iapetus | Aoede, Autonoe |
+| Child | Puck | Leda, Zephyr |
+| Narrator | Callirrhoe | Callirrhoe |
+
+`NpcRace` is the key, and several in-game species bucket into one of these before the map is
+consulted: gnomes are voiced from the goblin pool, giants and cyclopes from the troll pool, and
+dragons and TzHaar from the demon pool. [npc-voice-tooling.md](npc-voice-tooling.md) owns that
+bucketing.
 
 ## Depth is the organising axis
 
-Voice depth is inferred from the catalog's character adjectives and then confirmed by ear.
-Gravelly (Algenib), firm (Alnilam, Orus), even (Schedar), breathy (Enceladus), informative
-(Charon, Rasalgethi) and knowledgeable (Sadaltager) are the deep, mature end. Upbeat (Puck) and
-casual (Zubenelgenubi) are the bright, light end.
+Depth comes from the catalog's character adjectives, confirmed by ear. Gravelly (Algenib), firm
+(Alnilam, Orus), even (Schedar) and breathy (Enceladus) are the deep end. Upbeat (Puck) and casual
+(Zubenelgenubi) are the bright end. Informative (Charon, Rasalgethi) and knowledgeable
+(Sadaltager) sit between them: they read measured rather than low, and carry weight through
+delivery rather than pitch, which is why Charon anchors both the human pool and the wizards.
 
-Big, imposing races anchor to the deep end so they sound large rather than high-pitched. Small
-races stay deliberately bright, so a scuttling crab never reads as something standing over you.
+Big, imposing races take the deep end so they sound large rather than high-pitched. Small ones
+stay bright, so a scuttling crab never reads as something standing over you. The undead anchor on
+the breathy voice, which reads hollow rather than merely low.
 
-| Race | Casting |
-|---|---|
-| Human | Clear, neutral, mid-depth. The most common case by far |
-| Elf | Refined and clear |
-| Dwarf | Gravelly and firm, deep |
-| Goblin | Bright and light, deliberately high and small |
-| Monkey | Bright, energetic, playful |
-| Gorilla | Gravelly and firm, the deepest anchors |
-| Troll and ogre | Gravelly and firm, the deepest male timbres |
-| Undead | Breathy and even, deep and cold |
-| Demon | Gravelly and informative, the deepest |
-| Wizard | Knowledgeable and informative, weighty |
-| Tortugan | Friendly and warm, relaxed mid-depth |
-| Icyene | Firm and even |
-| Citizen of Arceuus | The elf pool's refined, clear timbres, which carry an incorporeal delivery better than the earthier human voices |
-| Aranei | Breathy paired with clear, so they carry the undead pool's softness without its cold and stay a living species by ear |
-| Dog | The monkey pool's excitable timbres paired with the deepest anchors, so a bark lands as a sound with an animal behind it rather than as a word read aloud |
-| Crab | The bright, light end alongside the goblins |
-| Penguin | Bright and light, paired so the upbeat anchor carries the waddling comedy and the casual one the flat spy deadpan |
+## Where a pool is borrowed
+
+Most races have a pool assembled for them. These take another race's instead, and the borrowing is
+the casting decision:
+
+- **Citizens of Arceuus** take the elf pool unchanged. Its refined, clear timbres carry an
+  incorporeal delivery better than the earthier human voices.
+- **Aranei** keep one undead voice per gender, Enceladus and Achernar, and pair each with a clear
+  one. The breathiness carries their hushed, telepathic delivery; the clear half keeps them
+  sounding like a living species.
+- **Dogs** pair the monkey pool's forward, excitable voices with the deepest anchors, so a bark
+  lands as a sound with an animal behind it rather than as a word read aloud.
+- **Crabs** take one goblin voice and one monkey voice in each gender, which keeps them small and
+  quick without making them sound like goblins outright.
+- **Penguins** take the goblin male pool unchanged, where the upbeat anchor carries the waddling
+  comedy and the casual one the flat spy deadpan. The female pool pairs a monkey voice with a
+  goblin one and is bright rather than deadpan.
 
 ## Children
 
@@ -73,9 +111,9 @@ included.
 The childlike timbre dominates what a player hears. Race and accent still colour the delivery
 through the character profile's directive text, so a troll child sounds young rather than large.
 
-Boys share a single voice deliberately. It is the only male voice that reads as a young boy, and a
-second one that merely reads high is worse than the repetition. Girls have two, both of which read
-young and hold the directed British accent.
+The male child pool holds one voice, deliberately. It is the only male voice that reads as a young
+boy, and a second that merely reads high is worse than the repetition. The female pool holds two,
+both of which read young and hold the directed British accent.
 
 ## The player
 

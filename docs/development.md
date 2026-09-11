@@ -38,7 +38,8 @@ clears that bar drifts towards commentary that restates the code beside it.
 This covers `src/main/java` and `src/test/java` equally. Build scripts, workflow files, property
 files, and the Python tooling under `tools/` keep their comments: `#` appears inside ordinary
 values, and a Python docstring is an expression rather than a comment, so removing one can change
-behaviour. Markdown is content rather than commentary and is unaffected.
+behaviour. Markdown is content rather than commentary. So are the `_comment` keys in
+`src/main/resources/npc-voices.json`, which are data the profile table is authored against.
 
 Two further rules apply to names, log messages, notices, and every markdown file in the repo:
 
@@ -52,6 +53,9 @@ Two further rules apply to names, log messages, notices, and every markdown file
 **Hard limit: 700 lines per class**, main and test alike. A class approaching it holds more than
 one responsibility: extract a collaborator rather than trimming whitespace. Test classes reach it
 when fixtures are copy-pasted between methods; extract a shared fixture helper instead.
+
+Two test classes sit above the limit, `OpenRouterTtsBackendTest` and `DialogueAudioServiceTest`.
+They are the only two, and they are the exceptions rather than the precedent.
 
 ## Package layout
 
