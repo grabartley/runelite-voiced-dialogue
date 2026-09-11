@@ -1,7 +1,8 @@
 # Voice casting
 
-Which Gemini voice each speaker gets, and why that one. [architecture.md](architecture.md) covers
-the mechanism; this covers the casting.
+Which Gemini voice each speaker gets, and why that one.
+[architecture.md](architecture.md) owns the resolution mechanism and this owns the casting, so
+neither repeats the other.
 
 ## The catalog adjectives are not the casting
 
@@ -11,9 +12,9 @@ age metadata, and the adjectives describe delivery rather than timbre.
 
 Every pool below was therefore confirmed by ear from a generated sample pack, rendered through the
 plugin's own prompt so the sample matches what a player hears. Where the adjective and the ear
-disagreed, the ear won. Sadachbia is "Lively" and Fenrir is "Excitable", and both read as adults,
-so neither is a child voice. Laomedeia reads young but drifts off the directed British accent, so
-it is a goblin and a crab rather than a child.
+disagreed, the ear won. Sadachbia is "Lively" and Fenrir is "Excitable", and both read as
+adults, so neither is a child voice. Laomedeia reads young but drifts off the directed British
+accent, so it is a goblin, a crab, and a penguin rather than a child.
 
 A candidate is auditioned by rendering it to audio through the plugin's own prompt and listening
 to it. A voice does not enter a pool on the strength of its catalog entry.
@@ -22,18 +23,22 @@ to it. A voice does not enter a pool on the strength of its catalog entry.
 
 - **Gender is structural.** A male spec can only resolve to a voice from a male sub-pool, a female
   spec only from a female one. No race maps two genders onto the same voice.
-- **Every spec resolves.** An unknown race falls back to the player pool, an unknown gender to
-  male, and an empty pool to the neutral default, so no spec can reach a backend without a voice.
-- **Placement within a pool is stable.** A stable per-NPC seed spreads same-race, same-gender NPCs
-  across their sub-pool, so two guards sound different from each other and the same across
-  sessions. A spec carrying no seed anchors to index 0 of its pool.
+- **Every spec resolves.** An unknown gender is voiced as male, an empty adult pool falls back to
+  the neutral default and an empty child pool to the child anchor, so no spec can reach a backend
+  without a voice. `GeminiVoiceMap` also sends an unknown race to the player pool, though nothing
+  reaches it with one: the resolver rewrites an unknown race to human before the map is consulted,
+  so that branch is defence in depth.
+- **Placement within a pool is stable.** A per-NPC seed spreads same-race, same-gender NPCs across
+  their sub-pool, and the same NPC lands on the same voice in every session. Pools hold two voices,
+  so the spread is variety rather than a guarantee that any two NPCs differ. A spec carrying no
+  seed anchors to index 0 of its pool.
 
 ## Depth is the organising axis
 
 Voice depth is inferred from the catalog's character adjectives and then confirmed by ear.
-Gravelly (Algenib), firm (Alnilam, Orus), even (Schedar), breathy (Enceladus) and informative
-(Charon, Rasalgethi, Sadaltager) are the deep, mature end. Upbeat (Puck) and casual
-(Zubenelgenubi) are the bright, light end.
+Gravelly (Algenib), firm (Alnilam, Orus), even (Schedar), breathy (Enceladus), informative
+(Charon, Rasalgethi) and knowledgeable (Sadaltager) are the deep, mature end. Upbeat (Puck) and
+casual (Zubenelgenubi) are the bright, light end.
 
 Big, imposing races anchor to the deep end so they sound large rather than high-pitched. Small
 races stay deliberately bright, so a scuttling crab never reads as something standing over you.
@@ -60,9 +65,10 @@ races stay deliberately bright, so a scuttling crab never reads as something sta
 
 ## Children
 
-A child spec resolves to a dedicated youthful sub-pool of its gender instead of its adult race
-anchor, for every race and ethnicity alike. Every child voice is drawn from the gender pool it
-already belongs to, so the gender invariant holds with children included.
+Life stage is a third resolution axis alongside race and gender, and
+[architecture.md](architecture.md) covers how a speaker is marked as a child. Every child voice is
+drawn from the gender pool it already belongs to, so the gender invariant holds with children
+included.
 
 The childlike timbre dominates what a player hears. Race and accent still colour the delivery
 through the character profile's directive text, so a troll child sounds young rather than large.
@@ -73,8 +79,9 @@ young and hold the directed British accent.
 
 ## The player
 
-There is one player, so the player pool anchors to the configured voice rather than spreading on a
-seed. The two options are labelled Type A and Type B rather than by gender: the voices are
+The **Player Voice** setting picks a gender pool rather than a voice, and the player always takes
+index 0 of it: there is one player, so nothing needs spreading on a seed. The two options are
+labelled Type A and Type B rather than by gender: the voices are
 recognisably male and female, and the labelling follows the modern convention so the setting does
 not ask a player to pick a gender.
 
