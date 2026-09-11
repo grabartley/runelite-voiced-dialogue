@@ -89,7 +89,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
    * Extra budget per character of input. OpenRouter delivers nothing until generation finishes, so
    * a line's wait grows with its length: measured at roughly 37ms per character, doubled here so a
    * slow-but-valid generation still lands. A line stays bounded by the provider's ceiling in {@link
-   * RetryTuning}, so an uncapped {@code cloudMaxChars} cannot hold a worker forever.
+   * RetryTuning}, so even the longest line cannot hold a worker forever.
    */
   private static final long CALL_BUDGET_MILLIS_PER_CHAR = 75;
 

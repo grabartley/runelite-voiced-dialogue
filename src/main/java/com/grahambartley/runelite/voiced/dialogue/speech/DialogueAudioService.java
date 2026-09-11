@@ -17,7 +17,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 
@@ -71,10 +70,6 @@ public final class DialogueAudioService {
   private final Executor prefetchExecutor;
   private final TieredSynthesisCache cache;
   private final IntSupplier volume;
-  // Read live so toggling "Stream Playback" takes effect on the next line. Only the live speak path
-  // consults it; prefetch always buffers (it never plays), and a cave-echo line always buffers (the
-  // echo needs the whole clip up front).
-  private final BooleanSupplier streamPlayback;
   private final AtomicLong epoch = new AtomicLong();
   // Bumped on dialogue close / NPC change so prefetch tasks queued for the old node drop instead of
   // spending on branches the player has already left. Separate from the playback epoch: a new
@@ -87,8 +82,7 @@ public final class DialogueAudioService {
       DiskAudioCache diskCache,
       int cacheSize,
       int queueCapacity,
-      IntSupplier volume,
-      BooleanSupplier streamPlayback) {
+      IntSupplier volume) {
     this(
         backends,
         output,
@@ -96,8 +90,7 @@ public final class DialogueAudioService {
         buildExecutor(queueCapacity),
         buildWarmExecutor(),
         buildPrefetchExecutor(),
-        volume,
-        streamPlayback);
+        volume);
   }
 
   /** Test seam: every collaborator injected, so behavior is deterministic. */
@@ -108,8 +101,7 @@ public final class DialogueAudioService {
       Executor executor,
       Executor warmExecutor,
       Executor prefetchExecutor,
-      IntSupplier volume,
-      BooleanSupplier streamPlayback) {
+      IntSupplier volume) {
     this.backends = backends;
     this.output = output;
     this.cache = cache;
@@ -117,7 +109,6 @@ public final class DialogueAudioService {
     this.warmExecutor = warmExecutor;
     this.prefetchExecutor = prefetchExecutor;
     this.volume = volume;
-    this.streamPlayback = streamPlayback;
   }
 
   /** Runs a one-off backend warm-up task on the dedicated warm-up thread. */
@@ -265,14 +256,12 @@ public final class DialogueAudioService {
     }
     Pcm pcm = cache.lookup(key);
     if (pcm != null) {
-      // A cache hit always plays buffered and instantly, no matter the streaming setting.
       playBuffered(mine, pcm, applyEcho);
       return;
     }
-    // Both cache tiers missed. Stream the line (start playing as it downloads) when the setting
-    // is on and there is no cave echo, since echo needs the whole clip up front; echo and
-    // streaming-off both synthesize the full buffer first.
-    if (streamPlayback.getAsBoolean() && !applyEcho) {
+    // Both cache tiers missed. Stream the line (start playing as it downloads) unless a cave echo
+    // applies, since the echo needs the whole clip up front and so synthesizes a full buffer first.
+    if (!applyEcho) {
       runStreaming(mine, backend, request, key);
       return;
     }

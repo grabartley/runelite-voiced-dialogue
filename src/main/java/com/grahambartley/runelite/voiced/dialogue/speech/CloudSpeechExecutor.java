@@ -215,8 +215,6 @@ public final class CloudSpeechExecutor {
         cacheModelId,
         model.voiceFor(request.voice()),
         support.speedPercent(),
-        request.text(),
-        config.cloudMaxChars(),
         request.profile(),
         CloudTtsText.effectiveSpokenLanguage(config, request),
         request.skipTranslation());
@@ -258,20 +256,18 @@ public final class CloudSpeechExecutor {
       return null;
     }
     String apiKey = rawKey.trim();
-    String cappedText = CloudTtsText.capLength(request.text(), config.cloudMaxChars());
-    // A non-English target language (or a global quirk) routes the capped line through the
-    // translation model before it is voiced, so the spoken transcript is the transformed text. A
-    // failed translation fails the line rather than voicing the wrong language or caching a
+    String text = request.text();
+    // A non-English target language (or a global quirk) routes the line through the translation
+    // model before it is voiced, so the spoken transcript is the transformed text. A failed
+    // translation fails the line rather than voicing the wrong language or caching a
     // mistranslation under the language key. A skip-translation request (public chat) is voiced
     // exactly as typed, so it bypasses the hop.
     String language = CloudTtsText.effectiveSpokenLanguage(config, request);
     boolean translating =
-        CloudTtsText.needsTranslation(language)
-            && !request.skipTranslation()
-            && !cappedText.isEmpty();
-    String spokenText = cappedText;
+        CloudTtsText.needsTranslation(language) && !request.skipTranslation() && !text.isEmpty();
+    String spokenText = text;
     if (translating) {
-      String translated = ops.translate(cappedText, language.trim(), apiKey);
+      String translated = ops.translate(text, language.trim(), apiKey);
       if (translated == null) {
         support.warnOnce(
             providerName
@@ -307,13 +303,6 @@ public final class CloudSpeechExecutor {
             profile.name(),
             profile.accent(),
             profile.cacheKey());
-      }
-      if (cappedText.length() != request.text().length()) {
-        log.info(
-            "[TTS cloud] line capped {} -> {} chars (cloudMaxChars={})",
-            request.text().length(),
-            cappedText.length(),
-            config.cloudMaxChars());
       }
       if (speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
         log.info("[TTS cloud] speed {}", speedRatio);

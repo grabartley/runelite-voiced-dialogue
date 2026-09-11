@@ -5,16 +5,29 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig.SpokenLanguage;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import net.runelite.client.config.ConfigItem;
 import org.junit.Test;
 
 /**
- * Invariants of the {@link SpokenLanguage} dropdown, the single source of truth for languages, and
- * of the provider tooltip that has to state Google AI Studio's daily ceiling.
+ * Invariants of the {@link SpokenLanguage} dropdown, the single source of truth for languages, of
+ * the provider tooltip that has to state Google AI Studio's daily ceiling, and of the config panel
+ * itself: how long a description may run, and which stored keys may never move.
  */
 public class VoicedDialogueConfigTest {
+
+  private static final int MAX_DESCRIPTION_CHARS = 120;
+
+  /**
+   * Voice Provider is the one tooltip allowed to run long: it carries the daily-ceiling disclosure
+   * {@code docs/architecture.md} requires of player-facing copy, and the billing disclosure {@code
+   * docs/hub-compliance-checklist.md} records as verified.
+   */
+  private static final int DISCLOSURE_CHARS = 200;
 
   @Test
   public void theProviderTooltipStatesTheCeilingAndTheUncappedAlternative() throws Exception {
@@ -30,6 +43,11 @@ public class VoicedDialogueConfigTest {
     assertTrue(
         "and that the other one has none: " + description,
         description.contains("OpenRouter has no daily cap"));
+    assertTrue(
+        "and that the provider bills them, which docs/hub-compliance-checklist.md records as a"
+            + " verified disclosure: "
+            + description,
+        description.contains("bills the calls"));
   }
 
   @Test
@@ -82,5 +100,74 @@ public class VoicedDialogueConfigTest {
     assertEquals("Brazilian Portuguese", SpokenLanguage.BRAZILIAN_PORTUGUESE.label());
     assertEquals("Spanish (LatAm)", SpokenLanguage.LATIN_AMERICAN_SPANISH.toString());
     assertEquals("Latin American Spanish", SpokenLanguage.LATIN_AMERICAN_SPANISH.label());
+  }
+
+  @Test
+  public void noSettingDescriptionRunsLongerThanATooltipComfortablyShows() {
+    List<String> tooLong = new ArrayList<>();
+    for (Method method : VoicedDialogueConfig.class.getMethods()) {
+      ConfigItem item = method.getAnnotation(ConfigItem.class);
+      if (item == null) {
+        continue;
+      }
+      int limit =
+          VoicedDialogueConfig.PROVIDER_KEY.equals(item.keyName())
+              ? DISCLOSURE_CHARS
+              : MAX_DESCRIPTION_CHARS;
+      if (item.description().length() > limit) {
+        tooLong.add(item.name() + " (" + item.description().length() + " > " + limit + ")");
+      }
+    }
+    assertTrue("descriptions longer than a tooltip shows: " + tooLong, tooLong.isEmpty());
+  }
+
+  @Test
+  public void everySettingCarriesANameAndADescription() {
+    for (Method method : VoicedDialogueConfig.class.getMethods()) {
+      ConfigItem item = method.getAnnotation(ConfigItem.class);
+      if (item == null) {
+        continue;
+      }
+      assertFalse("a setting with no name: " + method.getName(), item.name().trim().isEmpty());
+      assertFalse(
+          "a setting with no description: " + item.name(), item.description().trim().isEmpty());
+    }
+  }
+
+  /**
+   * A stored key is live user state on every existing install: renaming one silently resets that
+   * setting, and for a key folded into a character profile it also re-keys cached audio, which
+   * re-bills the player for lines they have already paid to synthesize.
+   */
+  @Test
+  public void profileSteeringKeysKeepTheirStoredNames() throws Exception {
+    assertEquals(
+        "playerAccent",
+        VoicedDialogueConfig.class
+            .getMethod("playerAccent")
+            .getAnnotation(ConfigItem.class)
+            .keyName());
+    assertEquals(
+        "playerPersona",
+        VoicedDialogueConfig.class
+            .getMethod("playerPersona")
+            .getAnnotation(ConfigItem.class)
+            .keyName());
+    assertEquals(
+        "playerPace",
+        VoicedDialogueConfig.class
+            .getMethod("playerPace")
+            .getAnnotation(ConfigItem.class)
+            .keyName());
+  }
+
+  @Test
+  public void yourDeliveryPaceIsLabelledApartFromTheSpeakingPaceSpeedDial() throws Exception {
+    ConfigItem direction =
+        VoicedDialogueConfig.class.getMethod("playerPace").getAnnotation(ConfigItem.class);
+    ConfigItem speed =
+        VoicedDialogueConfig.class.getMethod("speakingPace").getAnnotation(ConfigItem.class);
+    assertEquals("Your Delivery Pace", direction.name());
+    assertEquals("Speaking Pace", speed.name());
   }
 }

@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * The two-tier synthesis cache behind {@code DialogueAudioService}: an in-memory {@link LruCache}
- * in front of an optional persistent {@link DiskAudioCache}, plus the in-flight registry that
- * de-duplicates concurrent synthesis.
+ * in front of a persistent {@link DiskAudioCache}, plus the in-flight registry that de-duplicates
+ * concurrent synthesis. A null disk tier degrades the cache to memory only.
  *
  * <p>Lookup order is memory → disk → the caller's synth, promoting a disk hit into memory and
  * writing a fresh synth through to both tiers, so lines survive across sessions and cloud backends

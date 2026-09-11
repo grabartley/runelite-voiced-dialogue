@@ -18,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -91,15 +92,16 @@ public class DialogueAudioServiceTest {
 
   /** Records playback and interruption so the pipeline's decisions are observable. */
   private static final class FakeOutput implements AudioOutput {
-    int streamCalls;
-    int stopCalls;
-    int lastVolume = -1;
-    float[] lastSamples;
+    // Volatile because a pool thread writes these while the test thread spins on them.
+    volatile int streamCalls;
+    volatile int stopCalls;
+    volatile int lastVolume = -1;
+    volatile float[] lastSamples;
 
-    int beginStreamCalls;
-    int endStreamCalls;
-    int lastStreamVolume = -1;
-    final List<float[]> streamedChunks = new ArrayList<>();
+    volatile int beginStreamCalls;
+    volatile int endStreamCalls;
+    volatile int lastStreamVolume = -1;
+    final List<float[]> streamedChunks = Collections.synchronizedList(new ArrayList<>());
 
     @Override
     public void stream(float[] samples, int sampleRate, int volumePercent) {
@@ -163,8 +165,7 @@ public class DialogueAudioServiceTest {
       DiskAudioCache diskCache,
       Executor executor,
       int cacheSize,
-      int volume,
-      boolean streamPlayback) {
+      int volume) {
     // One executor for synthesis, warm-up and prefetch keeps the tests single-threaded.
     return new DialogueAudioService(
         provider,
@@ -173,23 +174,17 @@ public class DialogueAudioServiceTest {
         executor,
         executor,
         executor,
-        () -> volume,
-        () -> streamPlayback);
+        () -> volume);
   }
 
   private static DialogueAudioService service(
       BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
-    return service(provider, output, null, executor, cacheSize, volume, false);
-  }
-
-  private static DialogueAudioService streamingService(
-      BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
-    return service(provider, output, null, executor, cacheSize, volume, true);
+    return service(provider, output, null, executor, cacheSize, volume);
   }
 
   private static DialogueAudioService diskService(
       BackendProvider provider, AudioOutput output, DiskAudioCache disk, Executor executor) {
-    return service(provider, output, disk, executor, 8, 100, false);
+    return service(provider, output, disk, executor, 8, 100);
   }
 
   private static SynthesisRequest req(String text, NpcRace race, NpcGender gender) {
@@ -213,15 +208,16 @@ public class DialogueAudioServiceTest {
     executor.runAll();
 
     assertEquals("second identical line should hit the cache", 1, backend.requests.size());
-    assertEquals("both lines should still play", 2, output.streamCalls);
+    assertEquals("the live miss streamed", 1, output.beginStreamCalls);
+    assertEquals("the cached repeat played buffered", 1, output.streamCalls);
   }
 
   @Test
-  public void aLiveMissStreamsWhenStreamPlaybackIsOn() {
+  public void aLiveMissStreams() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
     svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -234,25 +230,11 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void aLiveMissBuffersWhenStreamPlaybackIsOff() {
-    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
-    FakeOutput output = new FakeOutput();
-    DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
-
-    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE));
-    executor.runAll();
-
-    assertEquals("the toggle off keeps the buffered path", 1, output.streamCalls);
-    assertEquals("no stream is opened", 0, output.beginStreamCalls);
-  }
-
-  @Test
   public void aStreamedLineIsCachedSoTheRepeatPlaysFromCacheBuffered() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
     svc.speak(req("Encore", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -265,11 +247,11 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void aCaveEchoLineBuffersEvenWhenStreamingIsOn() {
+  public void aCaveEchoLineBuffers() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
     svc.speak(req("Boo", NpcRace.HUMAN, NpcGender.MALE), /* applyEcho= */ true);
     executor.runAll();
@@ -280,11 +262,11 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void prefetchNeverStreamsEvenWhenStreamingIsOn() {
+  public void prefetchNeverStreams() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = streamingService(provider(backend), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
     svc.prefetch(req("Later", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -321,7 +303,7 @@ public class DialogueAudioServiceTest {
             return new Pcm(new float[] {0.1f, 0.2f}, 24_000);
           }
         };
-    DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(streaming), output, executor, 8, 100);
     skipHook[0] = svc::interrupt; // interrupting advances the epoch, like a Continue-click
 
     svc.speak(req("Skipme", NpcRace.HUMAN, NpcGender.MALE));
@@ -361,7 +343,7 @@ public class DialogueAudioServiceTest {
             return null; // played, but too incomplete to cache
           }
         };
-    DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(streaming), output, executor, 8, 100);
 
     svc.speak(req("Clipped", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -399,7 +381,7 @@ public class DialogueAudioServiceTest {
             return new Pcm(new float[] {0.1f, 0.2f, 0.3f}, 24_000);
           }
         };
-    DialogueAudioService svc = streamingService(provider(streaming), output, executor, 8, 100);
+    DialogueAudioService svc = service(provider(streaming), output, executor, 8, 100);
 
     svc.speak(req("ThreeParts", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -465,7 +447,8 @@ public class DialogueAudioServiceTest {
 
     assertEquals("stale first line should never synthesize", 1, backend.requests.size());
     assertTrue(backend.requests.get(0).endsWith("|Second line"));
-    assertEquals("only the live line should play", 1, output.streamCalls);
+    assertEquals("only the live line should play, and it streams", 1, output.beginStreamCalls);
+    assertEquals("nothing plays buffered", 0, output.streamCalls);
   }
 
   @Test
@@ -541,8 +524,14 @@ public class DialogueAudioServiceTest {
 
     svc.speak(req("line", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
+    assertEquals(
+        "the streamed live miss opens its line at the configured volume",
+        42,
+        output.lastStreamVolume);
 
-    assertEquals(42, output.lastVolume);
+    svc.speak(req("line", NpcRace.HUMAN, NpcGender.MALE));
+    executor.runAll();
+    assertEquals("and the buffered cache hit plays at it too", 42, output.lastVolume);
   }
 
   @Test
@@ -561,7 +550,8 @@ public class DialogueAudioServiceTest {
 
     assertEquals("downgraded emotion reuses the neutral cache entry", 1, backend.requests.size());
     assertTrue(backend.requests.get(0).contains("|NEUTRAL|"));
-    assertEquals("both lines still play", 2, output.streamCalls);
+    assertEquals("the first line streamed", 1, output.beginStreamCalls);
+    assertEquals("the downgraded repeat played buffered from cache", 1, output.streamCalls);
   }
 
   @Test
@@ -622,8 +612,7 @@ public class DialogueAudioServiceTest {
           }
         };
     FakeOutput output = new FakeOutput();
-    DialogueAudioService svc =
-        streamingService(provider(blocking), output, new DeferredExecutor(), 8, 100);
+    DialogueAudioService svc = service(provider(blocking), output, new DeferredExecutor(), 8, 100);
     CacheKey key = new CacheKey("cloud-openrouter", "npc:HUMAN:MALE", Emotion.NEUTRAL, "Echo");
     SynthesisRequest request = req("Echo", NpcRace.HUMAN, NpcGender.MALE);
 
@@ -662,7 +651,9 @@ public class DialogueAudioServiceTest {
             if ("Blocker".equals(request.text())) {
               blockerEntered.countDown();
               try {
-                releaseBlocker.await(2, TimeUnit.SECONDS);
+                // Untimed: a timeout here would let the blocker close its stream and race the
+                // endStreamCalls assertion. The finally block always releases it.
+                releaseBlocker.await();
               } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
               }
@@ -679,14 +670,18 @@ public class DialogueAudioServiceTest {
       assertTrue("the blocker occupied a worker", blockerEntered.await(2, TimeUnit.SECONDS));
 
       svc.speak(req("Second", NpcRace.HUMAN, NpcGender.MALE));
+      // The blocker opened its stream before parking in synthesize, so beginStreamCalls is
+      // already 1 and cannot distinguish the two lines. Only the second line can close a stream
+      // while the blocker is held, since the blocker's end() waits on releaseBlocker.
       long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-      while (output.streamCalls == 0 && System.nanoTime() < deadline) {
+      while (output.endStreamCalls == 0 && System.nanoTime() < deadline) {
         Thread.onSpinWait();
       }
       assertEquals(
-          "the second line played on the free worker while the first was still blocked",
+          "the second line streamed to completion on the free worker while the first was blocked",
           1,
-          output.streamCalls);
+          output.endStreamCalls);
+      assertEquals("and both lines opened a stream", 2, output.beginStreamCalls);
     } finally {
       releaseBlocker.countDown();
       pool.shutdownNow();
