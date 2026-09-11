@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'com.diffplug.spotless' version '6.25.0'
+	id 'checkstyle'
 }
 
 repositories {
@@ -15,7 +16,6 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-
 dependencies {
 	// RuneLite provides Gson and OkHttp at runtime; the plugin uses the injected instances (Hub
 	// rules) and only needs them at compile time, so the client dependency covers both.
@@ -33,6 +33,7 @@ dependencies {
 	// version tracks the okhttp the RuneLite client pulls in (3.14.x) so the client and server agree.
 	testImplementation 'com.squareup.okhttp3:mockwebserver:3.14.9'
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
+	testImplementation "com.puppycrawl.tools:checkstyle:${project.checkstyle_version}"
 }
 
 group = 'com.grahambartley.runelite.voiced.dialogue'
@@ -95,6 +96,20 @@ tasks.withType(JavaExec).configureEach {
 	jvmArgs += [
 			"--add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED"
 	]
+}
+
+checkstyle {
+	toolVersion = project.checkstyle_version
+	configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+	maxWarnings = 0
+	maxErrors = 0
+}
+
+test {
+	inputs
+			.file(rootProject.file("config/checkstyle/checkstyle.xml"))
+			.withPropertyName("noCommentsGateConfig")
+			.withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 spotless {

@@ -1,0 +1,27 @@
+package com.grahambartley.runelite.voiced.dialogue;
+
+/** Javadoc on the type. */
+public final class CommentGateFixture {
+
+  // a plain line comment
+  private static final String URL = "https://example.com/a//b";
+
+  private static final String STAR = "/* not a comment */";
+
+  private static final char QUOTE = '"';
+
+  private static final String ESCAPED = "a \" // still a string";
+
+  private static final String TEXT_BLOCK = """
+      a text block holding // and /* and */ inside
+      """;
+
+  private static final int TRAILING = 1; // a trailing comment
+
+  //
+
+  /* a block comment */
+  public int value() {
+    return 42; /* an inline block */
+  }
+}
