@@ -83,7 +83,7 @@ DEFAULT_SUMMARY_URL = (
 )
 
 VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
-               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei"}
+               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei", "Dog"}
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
@@ -100,7 +100,9 @@ RACE_BUCKET_RULES = [
     (r"\baranei\b", "Aranei"),
     (r"vampyre|vampire|\bvyre\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|"
      r"revenant|mummy|banshee|spectre|wraith|ankou|lich|reanimat", "Undead"),
-    (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal", "Demon"),
+    (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal|hellhound", "Demon"),
+    # After the undead and demon rules, so a skeletal hound or a hellhound keeps its own bucket.
+    (r"\bdogs?\b", "Dog"),
     (r"gnome", "Gnome"),
     (r"goblin|hobgoblin", "Goblin"),
     (r"dwarf|dwarven", "Dwarf"),

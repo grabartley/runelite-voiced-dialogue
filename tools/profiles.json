@@ -108,6 +108,12 @@
       "accent": "British English, Received Pronunciation, soft-spoken and breathy, every word placed with unhurried care.",
       "style": "A hooded aranei of House Shadum, devoted past the point of self and never showing a face. Telepathic, carrying the memories of others and of the dead, so every line arrives as something relayed rather than chosen, hushed and serene to the point of being unsettling, with a faint sibilance beneath the calm.",
       "pace": "Unhurried and even, with a small stillness before each answer."
+    },
+    "Dog": {
+      "name": "Dog",
+      "accent": "Voiced purely as dog sounds: every line barked, yipped, whined, growled or snuffled out as the animal itself would make it, the meaning carried by the noise rather than by pronounced words.",
+      "style": "A loyal, wholehearted dog who means every sound it makes. Eager, urgent and openly expressive, swinging between bright excitement, anxious pleading and a low protective rumble.",
+      "pace": "Short, sharp bursts, panting quick between them."
     }
   },
   "byCategory": [
@@ -6718,6 +6724,12 @@
     "16175": {"name": "Mortimer", "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.", "accent": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.", "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."},
     "16294": {"name": "Mortimer", "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.", "accent": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.", "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."},
     "16314": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."},
-    "16315": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."}
+    "16315": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."},
+    "16504": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
+    "16505": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
+    "16529": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
+    "16530": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
+    "16523": {"name": "Picklenose", "style": "A goblin who has appointed himself the world's foremost authority on raising guard dogs and is sure of nothing else whatsoever; swaggering and insistent, doling out confident instruction he has entirely made up."},
+    "16534": {"name": "Picklenose", "style": "A goblin who has appointed himself the world's foremost authority on raising guard dogs and is sure of nothing else whatsoever; swaggering and insistent, doling out confident instruction he has entirely made up."}
   }
 }

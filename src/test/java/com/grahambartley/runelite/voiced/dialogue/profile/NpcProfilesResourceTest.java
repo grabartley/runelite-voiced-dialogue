@@ -55,7 +55,8 @@ public class NpcProfilesResourceTest {
           "Tortugan",
           "Icyene",
           "Arceuus",
-          "Aranei"
+          "Aranei",
+          "Dog"
         }) {
       assertEquals(
           "race " + race + " resolves to its own bucket",
@@ -102,6 +103,16 @@ public class NpcProfilesResourceTest {
     assertTrue(
         "the aranei sound soft-spoken and breathy",
         resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("breathy"));
+    assertTrue(
+        "dogs vocalise their lines rather than pronouncing them",
+        resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barked"));
+  }
+
+  @Test
+  public void dogsKeepTheirVocalisedDeliveryWhereverTheyAreFound() {
+    CharacterProfile p = resolve(null, "Stray dog", "Dog", "morytania").profile();
+    assertTrue("the dog delivery holds over the region", p.accent().contains("barked"));
+    assertFalse("the Morytanian accent does not apply", p.accent().contains("gothic"));
   }
 
   @Test

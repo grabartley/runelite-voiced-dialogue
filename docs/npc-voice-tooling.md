@@ -73,6 +73,14 @@ name still resolves to a documented NPC is covered too.
   including Sarei, the Mysterious Stranger, wherever she appears. The aranei who
   takes her post at the Theatre of Blood after she is killed is a different
   person, and is pinned separately.
+  Dogs are their own `Dog` race, matched after the undead and demon rules so a
+  risen hound keeps its grave, and voiced as vocalisation rather than speech: the
+  barks, whines and growls the game writes into their dialogue boxes are made as
+  sounds rather than read out as words. Dog-like monsters ride along with them
+  (shadow hounds, terror dogs, jackals, wolves), since a growl is a growl and the
+  race buckets pick a voice rather than a species. A hellhound is a `Demon`, and a
+  skeletal, revenant or reanimated one is `Undead`, because the grave outranks the
+  abyss in both scans.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default

@@ -134,6 +134,126 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void theDogShelterCanineCastResolvesAsDogsOfItsStatedGender() {
+    for (int npcId : new int[] {16504, 16505, 16529, 16530, 16495, 16515, 16531, 16517, 16533}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
+    for (int npcId : new int[] {16516, 16532}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void theAdoptableShelterPuppiesTakeTheirGendersStraightFromTheWiki() {
+    // These carry a gender per breed on the page, so they resolve without an override.
+    for (int npcId : new int[] {16512, 16518, 16514, 16520}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
+    for (int npcId : new int[] {16513, 16519}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void theWanderingBreedDogsResolveAsDogsWithoutAnOverride() {
+    for (int npcId :
+        new int[] {
+          16398, 16416, 16400, 16418, 16402, 16420, 16404, 16422, 16406, 16424, 16408, 16426, 16410,
+          16428, 16412, 16430, 16414, 16432
+        }) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void dogsTheWikiLeavesUnlabelledStillResolveAsDogs() {
+    // Their pages carry an Infobox Monster or omit the race field, so the bucket comes from a pin.
+    for (int npcId :
+        new int[] {112, 113, 114, 131, 7209, 7771, 12992, 12993, 12994, 12995, 12999}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+    for (int npcId : new int[] {2802, 10438, 10439, 12998}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
+  }
+
+  @Test
+  public void theWholeHellhoundFamilyResolvesToOneRaceRatherThanToWhicheverPageClaimedIt() {
+    for (int npcId : new int[] {104, 105, 135, 964, 1224, 3099, 3133, 7256, 7877, 12374}) {
+      assertAttributes(npcId, "Demon", "Male");
+    }
+  }
+
+  @Test
+  public void hellhoundsDraggedBackFromTheGraveAreUndeadFirst() {
+    for (int npcId : new int[] {5054, 6326, 6387, 6613, 6614, 7025, 7935, 11463, 12107, 12108}) {
+      assertAttributes(npcId, "Undead", "Male");
+    }
+  }
+
+  @Test
+  public void houndsTheWikiCallsDogLikeVoiceAsDogs() {
+    for (int npcId : new int[] {3449, 4185, 6473, 6474, 11583}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void wolvesVoiceAsDogsRatherThanAsPeople() {
+    for (int npcId :
+        new int[] {
+          106, 107, 108, 109, 110, 115, 116, 117, 231, 232, 645, 646, 647, 710, 711, 712, 713, 714,
+          715, 2490, 2491, 3426, 3912, 4649, 4650, 4651, 9031, 9045, 9181, 10522, 10533, 13812,
+          13813
+        }) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
+  public void theDogShelterHumanAndGoblinCastResolvesToItsDeliberateRaces() {
+    assertAttributes(16486, "Human", "Female"); // Talia
+    assertAttributes(16487, "Human", "Male"); // Chase
+    for (int npcId : new int[] {16493, 16539}) {
+      assertAttributes(npcId, "Human", "Female"); // Guard
+    }
+    for (int npcId : new int[] {16523, 16534, 16524}) {
+      assertAttributes(npcId, "Goblin", "Male"); // Picklenose, Toetaller
+    }
+    for (int npcId : new int[] {16527, 16528}) {
+      assertAttributes(npcId, "Human", "Male"); // Outlaw
+    }
+  }
+
+  @Test
+  public void theDogShelterHumansCarryTheirMisthalinOrigin() {
+    for (int npcId : new int[] {16486, 16487, 16493, 16539}) {
+      assertEquals("origin for id " + npcId, "misthalin", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void varrockTownsfolkAreNotDraggedIntoTheDogBucket() {
+    assertAttributes(7284, "Human", "Female"); // Gertrude
+    assertEquals("Gertrude stays Misthalin", "misthalin", analyze(7284, null).getEthnicity());
+  }
+
+  @Test
+  public void reusedIdsTheNameDumpStillRemembersAsDogsResolveToWhatTheyAreNow() {
+    for (int npcId : new int[] {14154, 14156}) {
+      assertAttributes(npcId, "Human", "Male");
+    }
+    assertAttributes(14158, "Undead", "Male");
+    for (int npcId : new int[] {14162, 14164, 14166}) {
+      assertAttributes(npcId, "Demon", "Male");
+    }
+    assertAttributes(14163, "Dog", "Female");
+    for (int npcId : new int[] {14165, 14167, 14169}) {
+      assertAttributes(npcId, "Dog", "Male");
+    }
+  }
+
+  @Test
   public void femaleNamedTownsfolkResolveFemale() {
     // Gender comes straight from the wiki, so townsfolk with no gendered title
     // (Gertrude, Cassie) still resolve Female instead of defaulting to male.

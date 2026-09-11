@@ -41,14 +41,18 @@ public enum RaceBucket {
       "undead",
       "skeleton",
       "zombie",
-      "ghost"),
+      "ghost",
+      "revenant",
+      "reanimat"),
   DEMON(
       "Demon",
       NpcRace.DEMON,
-      "demon|devil|\\bimp\\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal",
+      "demon|devil|\\bimp\\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal|hellhound",
       "demon",
       "dragon",
-      "devil"),
+      "devil",
+      "hellhound"),
+  DOG("Dog", NpcRace.DOG, "\\bdogs?\\b", "dog"),
   GORILLA("Gorilla", NpcRace.GORILLA, null, "gorilla"),
   MONKEY("Monkey", NpcRace.MONKEY, "monkey|gorilla|primate|baboon|mandril", "monkey", "primate"),
   WIZARD(
@@ -60,9 +64,12 @@ public enum RaceBucket {
   TORTUGAN("Tortugan", NpcRace.TORTUGAN, null, "tortugan", "tortuga"),
   ICYENE("Icyene", NpcRace.ICYENE, null, "icyene");
 
-  /** The order wiki race text is scanned in; buckets the wiki never emits are absent. */
+  /**
+   * The order wiki race text is scanned in; buckets the wiki never emits are absent. Dog sits
+   * behind undead and demon in both scans, so a risen or demonic hound keeps its own bucket.
+   */
   private static final RaceBucket[] WIKI_SCAN = {
-    ARANEI, UNDEAD, DEMON, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
+    ARANEI, UNDEAD, DEMON, DOG, GNOME, GOBLIN, MONKEY, DWARF, ELF, TROLL, WIZARD, HUMAN
   };
 
   private final String bucketName;
