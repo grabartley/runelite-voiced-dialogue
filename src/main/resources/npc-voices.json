@@ -6,18 +6,18 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1702,
+    "overrides_applied": 1715,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
       "Demon": 788,
-      "Dog": 297,
+      "Dog": 310,
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9887,
+      "Human": 9874,
       "Icyene": 11,
       "Monkey": 64,
       "Tortugan": 65,
@@ -27052,11 +27052,11 @@
       "gender": "Male"
     },
     "107": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "108": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "109": {
@@ -27064,7 +27064,7 @@
       "gender": "Male"
     },
     "110": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "111": {
@@ -27522,7 +27522,7 @@
       "ethnicity": "kandarin"
     },
     "231": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "232": {
@@ -29172,15 +29172,15 @@
       "ethnicity": "asgarnia"
     },
     "645": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "646": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "647": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "648": {
@@ -29451,27 +29451,27 @@
       "ethnicity": "asgarnia"
     },
     "710": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "711": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "712": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "713": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "714": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "715": {
-      "race": "Human",
+      "race": "Dog",
       "gender": "Male"
     },
     "717": {

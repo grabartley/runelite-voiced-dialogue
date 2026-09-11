@@ -186,7 +186,6 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void hellhoundsDraggedBackFromTheGraveAreUndeadFirst() {
-    // Skeletal, revenant and reanimated all outrank hellhound in the scan, so the grave wins.
     for (int npcId : new int[] {5054, 6326, 6387, 6613, 6614, 7025, 7935, 11463, 12107, 12108}) {
       assertAttributes(npcId, "Undead", "Male");
     }
@@ -201,7 +200,11 @@ public class NpcDemographicAnalyzerTest {
 
   @Test
   public void wolvesVoiceAsDogsRatherThanAsPeople() {
-    for (int npcId : new int[] {106, 116, 117, 2490, 2491, 3912}) {
+    for (int npcId :
+        new int[] {
+          106, 107, 108, 110, 116, 117, 231, 645, 646, 647, 710, 711, 712, 713, 714, 715, 2490,
+          2491, 3912
+        }) {
       assertAttributes(npcId, "Dog", "Male");
     }
   }

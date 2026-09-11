@@ -61,7 +61,7 @@ CATEGORY_RACE_RULES = [
     ("wight", "Undead"), ("revenant", "Undead"), ("spectre", "Undead"), ("wraith", "Undead"),
     ("banshee", "Undead"), ("mummy", "Undead"), ("ankou", "Undead"),
     ("tzhaar", "Demon"), ("demon", "Demon"), ("dragon", "Demon"), ("devil", "Demon"),
-    ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"), ("hellhound", "Demon"),
+    ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"),
     ("dog", "Dog"),
     ("gnome", "Gnome"),
     ("goblin", "Goblin"), ("hobgoblin", "Goblin"),
