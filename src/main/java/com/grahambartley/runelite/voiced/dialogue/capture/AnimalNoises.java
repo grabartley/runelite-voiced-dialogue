@@ -8,9 +8,9 @@ public final class AnimalNoises {
 
   private static final Pattern NOISE =
       Pattern.compile(
-          "ba+|bah+|maa+|meh+|moo+|mooo+|quack+|cluck+|cock-?a-?doodle-?doo|squeak+|squeal+"
-              + "|woof+|bark+|arf+|yap+|howl+|gr+|grr+|growl+|snarl+|roar+|meow+|miaow+|mew+"
-              + "|purr+|hiss+|s+|oink+|snort+|neigh+|whinny+|bray+|hee-?haw|tweet+|chirp+|caw+"
+          "ba+|bah+|maa+|meh+|moo+|quack+|cluck+|cock-?a-?doodle-?doo|squeak+|squeal+"
+              + "|woof+|bark+|arf+|yap+|howl+|gr+|growl+|snarl+|roar+|meow+|miaow+|mew+"
+              + "|purr+|hiss+|ss+|oink+|snort+|neigh+|whinny+|bray+|hee-?haw|tweet+|chirp+|caw+"
               + "|squawk+|screech+|hoot+|ook+|eek+|ook-?ook|ribbit+|croak+|buzz+|chitter+"
               + "|click+|whistle+|bleat+|trumpet+|bellow+|yowl+|whine+|wuff+|rawr+|grunt+",
           Pattern.CASE_INSENSITIVE);

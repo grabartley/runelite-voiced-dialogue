@@ -1128,6 +1128,15 @@ public class DialogueAudioServiceTest {
     }
   }
 
+  private static void awaitSynthesized(FakeBackend backend, int wanted)
+      throws InterruptedException {
+    for (int i = 0; i < AWAIT_POLLS && backend.requests.size() < wanted; i++) {
+      Thread.sleep(POLL_MILLIS);
+    }
+    assertEquals(
+        "every queued line renders while the first plays", wanted, backend.requests.size());
+  }
+
   private static boolean awaitStop(FakeOutput output) throws InterruptedException {
     for (int i = 0; i < AWAIT_POLLS; i++) {
       if (output.stopCalls > 0) {
@@ -1240,10 +1249,10 @@ public class DialogueAudioServiceTest {
       svc.refreshAmbientVolumes();
       assertEquals("still in earshot, so only re-gained", 0, bark.stopCalls);
 
-      volume.set(DialogueAudioService.AMBIENT_OUT_OF_EARSHOT);
+      volume.set(-1);
       svc.refreshAmbientVolumes();
 
-      assertEquals("walking out of earshot cuts the line", 1, bark.stopCalls);
+      assertEquals("a negative volume cuts the line", 1, bark.stopCalls);
       assertEquals("and pushes no further gain", 1, bark.volumeChanges.size());
       bark.release.countDown();
     } finally {
@@ -1265,8 +1274,9 @@ public class DialogueAudioServiceTest {
 
       LatchedOutput first = awaitOutputs(latched, 1).get(0);
       assertTrue("the first line starts", first.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
-      Thread.sleep(POLL_MILLIS * 4);
-      assertEquals("one speaker is only ever on one audio line", 1, latched.size());
+      awaitSynthesized(backend, 3);
+      assertEquals(
+          "all three rendered, but one speaker is only ever on one audio line", 1, latched.size());
 
       first.release.countDown();
       LatchedOutput second = awaitOutputs(latched, 2).get(1);

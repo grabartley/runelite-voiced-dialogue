@@ -4,6 +4,8 @@ public final class AmbientEarshot {
 
   public static final int EARSHOT_TILES = 16;
 
+  public static final int OUT_OF_EARSHOT = -1;
+
   static final int FAINTEST = 1;
 
   private AmbientEarshot() {}

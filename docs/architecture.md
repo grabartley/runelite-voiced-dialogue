@@ -131,6 +131,9 @@ the cache lookup and, on a miss, the synthesis, which is the part that costs mon
 on how hard it hits the provider; its queue is unbounded, so a busy square delays a bark rather than
 dropping it. Playback then runs on a pool that grows to whatever is sounding at that moment and
 retires idle threads, since the only real limit there is how many audio lines the device will open.
+A bark waiting its turn behind a queued sibling, or waiting on its own synthesis, holds no thread at
+all: the wait is a composed callback rather than a blocked worker, so a crowded square costs threads
+for the lines you can actually hear and nothing for the ones still coming.
 A bark whose line the mixer refuses is logged and lost, which is the one case where a line goes
 unvoiced. Synthesis is skipped outright while the backend is rate-limited, the same discretionary
 guard prefetch uses, so ambient can never starve the line the player actually clicked for.
@@ -143,8 +146,9 @@ dialogue boxes, the option list, and the narration boxes, the last of those aske
 `OverheadTextChanged` arrives while the client is processing a tick and the scan has not run yet,
 because an option list on screen is still being mid-conversation even though no dialogue box is, and
 because a narration box holds the screen whether or not **Voice Narration** is voicing it. Any line
-the player triggered advances the ambient epoch and stops every bark playing, so opening a dialogue
-silences the square. The epoch moves on the client thread and the stopping is handed to a worker,
+the player triggered advances the ambient epoch and stops every bark playing, so a dialogue opening
+on a line silences the square. A narration box that **Voice Narration** is not voicing blocks new
+barks without cutting the ones already sounding, since nothing was spoken to cut them. The epoch moves on the client thread and the stopping is handed to a worker,
 since flushing several audio lines is not work the game thread should do.
 
 One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a

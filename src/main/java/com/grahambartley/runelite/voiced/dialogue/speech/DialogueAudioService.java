@@ -30,8 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class DialogueAudioService {
 
-  public static final int AMBIENT_OUT_OF_EARSHOT = -1;
-
   private static final CompletableFuture<Void> NOTHING_PLAYING =
       CompletableFuture.completedFuture(null);
 
@@ -134,16 +132,18 @@ public final class DialogueAudioService {
       return;
     }
     SynthesisBackend backend = backends.active();
-    if (!backend.isAvailable() || backend.isThrottled()) {
-      return;
-    }
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
     long node = ambientEpoch.get();
     int openingVolume = distanceVolume.getAsInt();
-    CompletableFuture<Pcm> synthesis =
-        CompletableFuture.supplyAsync(
-            () -> synthesizeAmbient(node, backend, effective, key, applyEcho), ambientExecutor);
+    CompletableFuture<Pcm> synthesis;
+    try {
+      synthesis =
+          CompletableFuture.supplyAsync(
+              () -> synthesizeAmbient(node, backend, effective, key, applyEcho), ambientExecutor);
+    } catch (RejectedExecutionException closing) {
+      return;
+    }
     queueAmbientPlayback(speakerId, synthesis, node, openingVolume, distanceVolume);
   }
 
@@ -219,7 +219,7 @@ public final class DialogueAudioService {
     }
     for (Map.Entry<AudioOutput, IntSupplier> live : liveAmbientOutputs.entrySet()) {
       int volumePercent = live.getValue().getAsInt();
-      if (volumePercent == AMBIENT_OUT_OF_EARSHOT) {
+      if (volumePercent < 0) {
         live.getKey().stop();
         continue;
       }

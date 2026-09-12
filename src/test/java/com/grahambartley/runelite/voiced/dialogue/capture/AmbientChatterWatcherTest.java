@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,6 +22,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.OverheadTextChanged;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 public class AmbientChatterWatcherTest {
 
@@ -168,5 +171,84 @@ public class AmbientChatterWatcherTest {
 
   private static OverheadTextChanged overhead(Actor actor, String text) {
     return new OverheadTextChanged(actor, text);
+  }
+
+  @Test
+  public void aQuackOrABaaIsLeftUnvoiced() {
+    watcher.onOverheadTextChanged(overhead(npc(2), "Baa baa"));
+    watcher.onOverheadTextChanged(overhead(npc(2), "Quack!"));
+    watcher.onOverheadTextChanged(overhead(npc(2), "Moooo"));
+
+    verifyNothingSpoken();
+  }
+
+  @Test
+  public void aSentenceThatMerelyMentionsANoiseIsStillVoiced() {
+    NPC farmer = npc(2);
+
+    watcher.onOverheadTextChanged(overhead(farmer, "Baa, said the sheep"));
+
+    verify(dispatcher).speakAmbient(eq("Baa, said the sheep"), eq(farmer), any(IntSupplier.class));
+  }
+
+  @Test
+  public void theVolumeHandedOverFadesWithTheSpeakersDistance() {
+    volume = 100;
+    NPC crier = npc(4);
+
+    watcher.onOverheadTextChanged(overhead(crier, "Hear ye!"));
+
+    assertEquals(
+        "the supplier reports the fade for the current distance",
+        AmbientEarshot.volumeAt(100, 4),
+        capturedVolume().getAsInt());
+  }
+
+  @Test
+  public void theVolumeHandedOverFollowsTheSpeakerAsTheyWalkOff() {
+    volume = 100;
+    NPC crier = npc(2);
+
+    watcher.onOverheadTextChanged(overhead(crier, "Hear ye!"));
+    IntSupplier live = capturedVolume();
+    int near = live.getAsInt();
+    moveTo(crier, 12);
+
+    assertTrue("walking away makes the line quieter", live.getAsInt() < near);
+  }
+
+  @Test
+  public void aSpeakerLeavingEarshotAsksForTheLineToBeCut() {
+    NPC crier = npc(2);
+
+    watcher.onOverheadTextChanged(overhead(crier, "Hear ye!"));
+    IntSupplier live = capturedVolume();
+    moveTo(crier, AmbientEarshot.EARSHOT_TILES + 1);
+
+    assertEquals(AmbientEarshot.OUT_OF_EARSHOT, live.getAsInt());
+  }
+
+  @Test
+  public void aSpeakerThatDespawnsMidLineAsksForTheLineToBeCut() {
+    NPC crier = npc(2);
+
+    watcher.onOverheadTextChanged(overhead(crier, "Hear ye!"));
+    IntSupplier live = capturedVolume();
+    when(client.getLocalPlayer()).thenReturn(null);
+
+    assertEquals(AmbientEarshot.OUT_OF_EARSHOT, live.getAsInt());
+  }
+
+  private IntSupplier capturedVolume() {
+    ArgumentCaptor<IntSupplier> captor = ArgumentCaptor.forClass(IntSupplier.class);
+    verify(dispatcher).speakAmbient(anyString(), any(NPC.class), captor.capture());
+    return captor.getValue();
+  }
+
+  private static void moveTo(NPC npc, int tilesAway) {
+    when(npc.getWorldLocation())
+        .thenReturn(
+            new WorldPoint(
+                PLAYER_TILE.getX() + tilesAway, PLAYER_TILE.getY(), PLAYER_TILE.getPlane()));
   }
 }

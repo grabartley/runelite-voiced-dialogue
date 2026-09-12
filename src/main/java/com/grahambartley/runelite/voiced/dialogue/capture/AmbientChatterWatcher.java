@@ -1,6 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
-import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
@@ -60,7 +59,7 @@ public final class AmbientChatterWatcher {
   private int volumeFor(NPC npc) {
     int distance = distanceTo(npc);
     if (!AmbientEarshot.isWithinEarshot(distance)) {
-      return DialogueAudioService.AMBIENT_OUT_OF_EARSHOT;
+      return AmbientEarshot.OUT_OF_EARSHOT;
     }
     return AmbientEarshot.volumeAt(volume.getAsInt(), distance);
   }
