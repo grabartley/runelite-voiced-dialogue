@@ -17,6 +17,10 @@ public final class DialogueWidgetReader {
     this.client = client;
   }
 
+  static boolean isVisible(Widget widget) {
+    return widget != null && !widget.isHidden();
+  }
+
   int headAnimationId(int headWidgetId) {
     Widget head = client.getWidget(headWidgetId);
     if (head == null) {

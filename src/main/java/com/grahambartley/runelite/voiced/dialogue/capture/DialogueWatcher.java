@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
+import static com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader.isVisible;
+
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
@@ -83,15 +85,10 @@ public final class DialogueWatcher {
   }
 
   public boolean isConversationOnScreen() {
-    return dialogueOpen
-        || isVisible(client.getWidget(InterfaceID.ChatLeft.TEXT))
+    return isVisible(client.getWidget(InterfaceID.ChatLeft.TEXT))
         || isVisible(client.getWidget(InterfaceID.ChatRight.TEXT))
         || isVisible(client.getWidget(InterfaceID.Chatmenu.OPTIONS))
         || narrationWatcher.isOnScreen();
-  }
-
-  private static boolean isVisible(Widget widget) {
-    return widget != null && !widget.isHidden();
   }
 
   private void speakIfNew(

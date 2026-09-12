@@ -272,11 +272,13 @@ public class DialogueWatcherTest {
   }
 
   @Test
-  public void anOpenNarrationBoxKeepsTheLiveReadOpenUntilItCloses() {
+  public void theLiveReadAsksTheNarrationWatcherRatherThanTheSettledFlag() {
     when(narrationWatcher.tick()).thenReturn(true);
     watcher.tick();
+    when(narrationWatcher.isOnScreen()).thenReturn(false);
 
-    assertTrue(
-        "narration holds the channel for the live read too", watcher.isConversationOnScreen());
+    assertTrue("the settled flag still holds the tick's narration", watcher.isDialogueOpen());
+    assertFalse(
+        "a box gone since the scan no longer holds the channel", watcher.isConversationOnScreen());
   }
 }

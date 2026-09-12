@@ -33,8 +33,7 @@ public final class NarrationWatcher {
 
   public boolean isOnScreen() {
     for (int widgetId : TEXT_WIDGETS) {
-      Widget box = client.getWidget(widgetId);
-      if (box != null && !box.isHidden()) {
+      if (DialogueWidgetReader.isVisible(client.getWidget(widgetId))) {
         return true;
       }
     }
@@ -48,7 +47,7 @@ public final class NarrationWatcher {
     boolean open = false;
     for (int i = 0; i < TEXT_WIDGETS.length; i++) {
       Widget box = client.getWidget(TEXT_WIDGETS[i]);
-      if (box == null || box.isHidden()) {
+      if (!DialogueWidgetReader.isVisible(box)) {
         continue;
       }
       open = true;
