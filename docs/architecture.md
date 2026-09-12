@@ -79,10 +79,9 @@ profile through the same path a dialogue line takes, so a dwarf barking in a min
 dwarf. Delivery is Neutral, since an overhead bark carries no chat head.
 
 Two gates decide whether a bark is voiced at all. The speaker must be an `NPC`, so other players and
-your own overhead text never are, and it must be within **Ambient Chatter Range** tiles on your
-plane. The range is a setting rather than a constant because how far away a bark still feels part of
-the scene is a matter of taste and of where you play; **Ambient Chatter Range** defaults to 20 tiles
-and goes to 50.
+your own overhead text never are, and it must be within earshot: 16 tiles, on your plane. That
+number is not a preference, it is where the client stops rendering NPCs, so a speaker past it is one
+you cannot see and would have no reason to hear.
 
 There is deliberately no per-NPC cooldown and no ceiling on how many barks may sound at once. A
 market square where a dozen people talk over each other is the point of the feature, and a rule that
@@ -98,18 +97,20 @@ audio device. Ambient never touches the dialogue epoch and never stops the dialo
 bark can cut another or interrupt a line you clicked for.
 
 A bark is mixed by distance rather than played flat. At the speaker's own tile it uses **Dialogue
-Volume** in full; at the edge of the range it drops to the faintest audible step, interpolated
-linearly across the tiles between, so widening the range stretches the falloff rather than steepening
-it. `AmbientVolume` holds that curve, and because the gain runs through the same decibel conversion
+Volume** in full; at the edge of earshot it drops to the faintest audible step, interpolated linearly
+across the tiles between. `AmbientEarshot` owns both that curve and the 16 tiles it spans, so the
+gate and the fade can never disagree, and because the gain runs through the same decibel conversion
 as every other line, a linear walk across the percent scale already sounds like a natural fade.
 
-The mix also follows the pair while the line plays. Each tick the plugin asks every bark still
-sounding for its speaker's current distance and pushes the new gain onto that bark's audio line, so
-walking away from a crier fades them out mid-sentence and rounding a corner towards one brings them
-up. `SourceDataLine` exposes its master gain as a live control, which is what makes that possible;
-on a mixer that does not offer the control the line simply plays at the volume it opened with. The
-distance is read on the game thread, where NPC positions are safe to read, and the only work done
-there is one coordinate subtraction per bark still playing.
+The mix follows the pair while the line plays. Each tick the plugin asks every bark still sounding
+for its speaker's current distance and pushes the new gain onto that bark's audio line, so walking
+away from a crier fades them out mid-sentence and rounding a corner towards one brings them up. A
+speaker that has left earshot entirely, whether because you walked off or it did, is cut there and
+then rather than faded, since it has stopped being rendered and a voice from an empty tile is worse
+than silence. `SourceDataLine` exposes its master gain as a live control, which is what makes the
+fade possible; on a mixer that does not offer the control the line plays at the volume it opened
+with, and the cut still lands. The distance is read on the game thread, where NPC positions are safe
+to read, and the only work done there is one coordinate subtraction per bark still playing.
 
 That lane is split in two, because the two halves are bounded by different things. Six threads do
 the cache lookup and, on a miss, the synthesis, which is the part that costs money and wants a limit

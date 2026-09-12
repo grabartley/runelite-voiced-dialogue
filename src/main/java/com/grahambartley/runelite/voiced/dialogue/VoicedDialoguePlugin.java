@@ -193,7 +193,6 @@ public class VoicedDialoguePlugin extends Plugin {
             synthesisDispatcher,
             config::voiceAmbientChatter,
             dialogueWatcher::isConversationOnScreen,
-            config::ambientChatterRange,
             config::volume);
 
     log.info("VoicedDialogue started");

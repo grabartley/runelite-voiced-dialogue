@@ -27,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class DialogueAudioService {
 
+  public static final int AMBIENT_OUT_OF_EARSHOT = -1;
+
   private static final int SYNTH_THREADS = 2;
 
   private static final int PREFETCH_THREADS = 2;
@@ -171,7 +173,12 @@ public final class DialogueAudioService {
       return;
     }
     for (Map.Entry<AudioOutput, IntSupplier> live : liveAmbientOutputs.entrySet()) {
-      live.getKey().setVolume(live.getValue().getAsInt());
+      int volumePercent = live.getValue().getAsInt();
+      if (volumePercent == AMBIENT_OUT_OF_EARSHOT) {
+        live.getKey().stop();
+        continue;
+      }
+      live.getKey().setVolume(volumePercent);
     }
   }
 

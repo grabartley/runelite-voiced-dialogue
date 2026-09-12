@@ -30,7 +30,6 @@ public class AmbientChatterWatcherTest {
 
   private boolean enabled = true;
   private boolean conversationOnScreen = false;
-  private int earshotTiles = 20;
   private int volume = 100;
 
   private final AmbientChatterWatcher watcher =
@@ -40,7 +39,6 @@ public class AmbientChatterWatcherTest {
           dispatcher,
           () -> enabled,
           () -> conversationOnScreen,
-          () -> earshotTiles,
           () -> volume);
 
   @Before
@@ -91,28 +89,17 @@ public class AmbientChatterWatcherTest {
   }
 
   @Test
-  public void anNpcBeyondTheConfiguredRangeIsIgnored() {
-    watcher.onOverheadTextChanged(overhead(npc(earshotTiles + 1), "Too far away"));
+  public void anNpcBeyondTheRenderedAreaIsIgnored() {
+    watcher.onOverheadTextChanged(overhead(npc(AmbientEarshot.EARSHOT_TILES + 1), "Too far away"));
 
     verifyNothingSpoken();
   }
 
   @Test
-  public void anNpcExactlyAtTheConfiguredRangeIsSpoken() {
-    watcher.onOverheadTextChanged(overhead(npc(earshotTiles), "Just in range"));
+  public void anNpcExactlyAtTheEdgeOfEarshotIsSpoken() {
+    watcher.onOverheadTextChanged(overhead(npc(AmbientEarshot.EARSHOT_TILES), "Just in range"));
 
     verify(dispatcher).speakAmbient(eq("Just in range"), any(NPC.class), any(IntSupplier.class));
-  }
-
-  @Test
-  public void theRangeIsReadLiveSoWideningItReachesFurtherAtOnce() {
-    NPC distant = npc(35);
-
-    watcher.onOverheadTextChanged(overhead(distant, "Faint shout"));
-    earshotTiles = 50;
-    watcher.onOverheadTextChanged(overhead(distant, "Faint shout"));
-
-    verify(dispatcher, times(1)).speakAmbient(anyString(), any(NPC.class), any(IntSupplier.class));
   }
 
   @Test

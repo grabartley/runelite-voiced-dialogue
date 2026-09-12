@@ -1208,4 +1208,45 @@ public class DialogueAudioServiceTest {
         "a bark that already played takes no more volume updates",
         ambientOutputs.get(0).volumeChanges.isEmpty());
   }
+
+  @Test
+  public void aBarkIsCutShortWhenItsSpeakerLeavesEarshot() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(4);
+    AtomicInteger volume = new AtomicInteger(80);
+    DialogueAudioService svc =
+        new DialogueAudioService(
+            provider(backend),
+            new FakeOutput(),
+            () -> {
+              LatchedOutput ambient = new LatchedOutput();
+              latched.add(ambient);
+              return ambient;
+            },
+            new TieredSynthesisCache(8, null),
+            pool,
+            pool,
+            pool,
+            pool,
+            pool,
+            () -> 100);
+    try {
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, volume::get);
+      LatchedOutput bark = awaitOutputs(latched, 1).get(0);
+      assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+
+      svc.refreshAmbientVolumes();
+      assertEquals("still in earshot, so only re-gained", 0, bark.stopCalls);
+
+      volume.set(DialogueAudioService.AMBIENT_OUT_OF_EARSHOT);
+      svc.refreshAmbientVolumes();
+
+      assertEquals("walking out of earshot cuts the line", 1, bark.stopCalls);
+      assertEquals("and pushes no further gain", 1, bark.volumeChanges.size());
+      bark.release.countDown();
+    } finally {
+      pool.shutdownNow();
+    }
+  }
 }

@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
+import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
@@ -17,7 +18,6 @@ public final class AmbientChatterWatcher {
   private final SynthesisDispatcher dispatcher;
   private final BooleanSupplier enabled;
   private final BooleanSupplier conversationOnScreen;
-  private final IntSupplier earshotTiles;
   private final IntSupplier volume;
 
   public AmbientChatterWatcher(
@@ -26,14 +26,12 @@ public final class AmbientChatterWatcher {
       SynthesisDispatcher dispatcher,
       BooleanSupplier enabled,
       BooleanSupplier conversationOnScreen,
-      IntSupplier earshotTiles,
       IntSupplier volume) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.dispatcher = dispatcher;
     this.enabled = enabled;
     this.conversationOnScreen = conversationOnScreen;
-    this.earshotTiles = earshotTiles;
     this.volume = volume;
   }
 
@@ -47,8 +45,9 @@ public final class AmbientChatterWatcher {
     }
     NPC npc = (NPC) actor;
     String overheadText = event.getOverheadText();
-    int range = earshotTiles.getAsInt();
-    if (overheadText == null || distanceTo(npc) > range || conversationOnScreen.getAsBoolean()) {
+    if (overheadText == null
+        || !AmbientEarshot.isWithinEarshot(distanceTo(npc))
+        || conversationOnScreen.getAsBoolean()) {
       return;
     }
     String cleaned = textCleaner.clean(overheadText);
@@ -59,7 +58,11 @@ public final class AmbientChatterWatcher {
   }
 
   private int volumeFor(NPC npc) {
-    return AmbientVolume.atDistance(volume.getAsInt(), distanceTo(npc), earshotTiles.getAsInt());
+    int distance = distanceTo(npc);
+    if (!AmbientEarshot.isWithinEarshot(distance)) {
+      return DialogueAudioService.AMBIENT_OUT_OF_EARSHOT;
+    }
+    return AmbientEarshot.volumeAt(volume.getAsInt(), distance);
   }
 
   private int distanceTo(NPC npc) {

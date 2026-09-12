@@ -325,21 +325,10 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "ambientChatterRange",
-      name = "Ambient Chatter Range",
-      description = "How far away, in tiles, an NPC can be and still be heard.",
-      position = 7,
-      section = voicesSection)
-  @Range(min = 1, max = 50)
-  default int ambientChatterRange() {
-    return 20;
-  }
-
-  @ConfigItem(
       keyName = "autoLearnNewNpcs",
       name = "Auto-learn New NPCs",
       description = "Look up unknown NPCs on the wiki once, then cache.",
-      position = 8,
+      position = 7,
       section = voicesSection)
   default boolean autoLearnNewNpcs() {
     return false;
