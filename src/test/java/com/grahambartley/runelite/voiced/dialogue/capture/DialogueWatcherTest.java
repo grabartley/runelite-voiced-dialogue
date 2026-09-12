@@ -223,4 +223,38 @@ public class DialogueWatcherTest {
 
     verify(narrationWatcher, times(1)).reset();
   }
+
+  @Test
+  public void aDialogueOpeningBetweenTicksIsAlreadyOnScreenBeforeTheScanCatchesUp() {
+    Widget npc = visibleWidget("Greetings!");
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc);
+
+    assertFalse("the settled state still trails the scan", watcher.isDialogueOpen());
+    assertTrue("the live read sees the box the moment it opens", watcher.isDialogueOpenNow());
+  }
+
+  @Test
+  public void aPlayerDialogueOpeningBetweenTicksIsAlsoSeenLive() {
+    Widget player = visibleWidget("Hello!");
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
+
+    assertTrue(watcher.isDialogueOpenNow());
+  }
+
+  @Test
+  public void aHiddenDialogueBoxIsNotOnScreen() {
+    Widget hidden = mock(Widget.class);
+    when(hidden.isHidden()).thenReturn(true);
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(hidden);
+
+    assertFalse(watcher.isDialogueOpenNow());
+  }
+
+  @Test
+  public void anOpenNarrationBoxKeepsTheLiveReadOpenUntilItCloses() {
+    when(narrationWatcher.tick()).thenReturn(true);
+    watcher.tick();
+
+    assertTrue("narration holds the channel for the live read too", watcher.isDialogueOpenNow());
+  }
 }

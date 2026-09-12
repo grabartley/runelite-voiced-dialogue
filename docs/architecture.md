@@ -85,9 +85,20 @@ flight at a time, so a square of chattering NPCs draws one billable call rather 
 slot is released when `DialogueAudioService` finishes the line, with a 30 second ceiling so a line
 the queue dropped cannot hold it shut.
 
-Dialogue owns the audio channel outright. An ambient line is never started while `DialogueWatcher`
-reports a dialogue open, and a dialogue opening mid-line advances the epoch that `speak` stamped on
+That slot is a single compare-and-set claim rather than a flag plus a deadline, because it is taken
+on the client thread and released from a synthesis worker; the clock behind both the cooldown and
+the ceiling is `System.nanoTime`, so an NTP correction cannot stretch or cut either one.
+
+Dialogue owns the audio channel outright. `DialogueWatcher` is the single owner of that state and
+answers the ambient gate live, reading the dialogue widgets on demand rather than the state its own
+per-tick scan settled on, because `OverheadTextChanged` arrives while the client processes a tick
+and the scan has not run yet. A dialogue opening mid-line advances the epoch that `speak` stamped on
 the ambient task, so the ambient audio stops where any other superseded line would.
+
+Ambient outranks the other non-dialogue surfaces. A bark starting while an examine, a narration box,
+or your own public chat is playing cuts it, because every voiced line stops the one before it, and
+only dialogue is gated against. Those surfaces are opt-in alongside ambient, and the line lost is a
+short one either way.
 
 ## The OpenRouter speech call
 

@@ -191,8 +191,8 @@ public class VoicedDialoguePlugin extends Plugin {
             textCleaner,
             synthesisDispatcher,
             config::voiceAmbientChatter,
-            dialogueWatcher::isDialogueOpen,
-            System::currentTimeMillis);
+            dialogueWatcher::isDialogueOpenNow,
+            System::nanoTime);
 
     log.info("VoicedDialogue started");
   }

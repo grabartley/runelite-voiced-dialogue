@@ -14,8 +14,6 @@ import net.runelite.api.NPC;
 @Slf4j
 public final class SynthesisDispatcher {
 
-  private static final Runnable NOTHING_TO_FINISH = () -> {};
-
   private final VoiceManager voiceManager;
   private final EmotionResolver emotionResolver;
   private final CaveEchoPolicy caveEchoPolicy;
@@ -76,7 +74,7 @@ public final class SynthesisDispatcher {
   }
 
   private void dispatch(SynthesisRequest request, String npcName) {
-    dispatch(request, npcName, NOTHING_TO_FINISH);
+    dispatch(request, npcName, () -> {});
   }
 
   private void dispatch(SynthesisRequest request, String npcName, Runnable onFinished) {

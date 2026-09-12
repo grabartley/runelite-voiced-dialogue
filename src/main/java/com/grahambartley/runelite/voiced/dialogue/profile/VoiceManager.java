@@ -73,16 +73,16 @@ public class VoiceManager {
       return new ResolvedSpeaker(playerVoice(), playerProfile());
     }
 
-    NpcIdentity identity = identityResolver.resolve(npcName);
-    VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
-    return new ResolvedSpeaker(voice, npcProfile(npcName, identity));
+    return npcSpeaker(npcName, identityResolver.resolve(npcName));
   }
 
   public ResolvedSpeaker resolveNpc(NPC npc) {
-    NpcIdentity identity = identityResolver.resolve(npc);
-    String npcName = npc.getName();
-    return new ResolvedSpeaker(
-        npcVoiceResolver.resolve(npcName, identity), npcProfile(npcName, identity));
+    return npcSpeaker(npc.getName(), identityResolver.resolve(npc));
+  }
+
+  private ResolvedSpeaker npcSpeaker(String npcName, NpcIdentity identity) {
+    VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
+    return new ResolvedSpeaker(voice, npcProfile(npcName, identity));
   }
 
   public ResolvedSpeaker resolveNarrator() {

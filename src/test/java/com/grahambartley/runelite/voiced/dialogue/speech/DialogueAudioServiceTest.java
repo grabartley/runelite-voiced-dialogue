@@ -945,7 +945,7 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void aCompletionHookFiresWhenTheQueueRefusesTheLine() {
+  public void aCompletionHookFiresWhenTheExecutorIsShutDown() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     Executor refusing =
         command -> {
@@ -956,6 +956,6 @@ public class DialogueAudioServiceTest {
 
     svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
 
-    assertEquals("a refused line releases its caller", 1, finished.get());
+    assertEquals("a line the executor refuses releases its caller", 1, finished.get());
   }
 }

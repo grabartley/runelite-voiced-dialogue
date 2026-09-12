@@ -159,7 +159,7 @@ public class AmbientChatterWatcherTest {
 
     watcher.onOverheadTextChanged(overhead(hans, "Lovely day!"));
     finishSpeaking();
-    now += AmbientChatterWatcher.NPC_COOLDOWN_MILLIS - 1;
+    now += AmbientChatterWatcher.NPC_COOLDOWN_NANOS - 1;
     watcher.onOverheadTextChanged(overhead(hans, "Still a lovely day!"));
 
     verify(dispatcher, times(1)).speakAmbient(anyString(), any(NPC.class), any(Runnable.class));
@@ -171,7 +171,7 @@ public class AmbientChatterWatcherTest {
 
     watcher.onOverheadTextChanged(overhead(hans, "Lovely day!"));
     finishSpeaking();
-    now += AmbientChatterWatcher.NPC_COOLDOWN_MILLIS;
+    now += AmbientChatterWatcher.NPC_COOLDOWN_NANOS;
     watcher.onOverheadTextChanged(overhead(hans, "Still a lovely day!"));
 
     verify(dispatcher, times(2)).speakAmbient(anyString(), any(NPC.class), any(Runnable.class));
@@ -209,7 +209,7 @@ public class AmbientChatterWatcherTest {
   public void aLineThatNeverReportsFinishingReleasesTheSlotAtTheCeiling() {
     watcher.onOverheadTextChanged(overhead(npc(1, 1), "Lovely day!"));
     completions.clear();
-    now += AmbientChatterWatcher.MAX_SLOT_HOLD_MILLIS;
+    now += AmbientChatterWatcher.MAX_SLOT_HOLD_NANOS;
     watcher.onOverheadTextChanged(overhead(npc(2, 1), "Buying gold"));
 
     verify(dispatcher, times(2)).speakAmbient(anyString(), any(NPC.class), any(Runnable.class));
@@ -219,7 +219,7 @@ public class AmbientChatterWatcherTest {
   public void aStaleCompletionDoesNotFreeTheSlotHeldByALaterLine() {
     watcher.onOverheadTextChanged(overhead(npc(1, 1), "Lovely day!"));
     Runnable stale = completions.remove(0);
-    now += AmbientChatterWatcher.MAX_SLOT_HOLD_MILLIS;
+    now += AmbientChatterWatcher.MAX_SLOT_HOLD_NANOS;
     watcher.onOverheadTextChanged(overhead(npc(2, 1), "Buying gold"));
     stale.run();
     watcher.onOverheadTextChanged(overhead(npc(3, 1), "Fresh bread"));
