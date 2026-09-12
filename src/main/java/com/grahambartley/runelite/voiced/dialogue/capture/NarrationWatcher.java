@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
+import static com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader.isVisible;
+
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
 import java.util.Arrays;
 import java.util.function.BooleanSupplier;
@@ -31,6 +33,15 @@ public final class NarrationWatcher {
     this.enabled = enabled;
   }
 
+  public boolean isOnScreen() {
+    for (int widgetId : TEXT_WIDGETS) {
+      if (isVisible(client.getWidget(widgetId))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public boolean tick() {
     if (!enabled.getAsBoolean()) {
       return false;
@@ -38,7 +49,7 @@ public final class NarrationWatcher {
     boolean open = false;
     for (int i = 0; i < TEXT_WIDGETS.length; i++) {
       Widget box = client.getWidget(TEXT_WIDGETS[i]);
-      if (box == null || box.isHidden()) {
+      if (!isVisible(box)) {
         continue;
       }
       open = true;

@@ -70,6 +70,91 @@ intervening tick still wins it. Like every other voiced line an examine goes thr
 `DialogueAudioService.speak`, which stops current playback and advances the epoch, so a fresh examine
 cuts the one before it exactly as a new dialogue line cuts the line being skipped.
 
+Ambient overhead chatter (`AmbientChatterWatcher`, gated by **Voice Ambient Chatter**, off by
+default) is the one voiced surface the player does not trigger by clicking. The client raises
+`OverheadTextChanged` with the speaking `Actor`, so the NPC arrives with its real id and
+`VoiceManager.resolveNpc` reads identity straight off it; no name lookup through `NpcFinder` is
+involved. Every NPC that speaks overhead resolves its own race, gender, life stage and character
+profile through the same path a dialogue line takes, so a dwarf barking in a mine sounds like that
+dwarf. Delivery is Neutral, since an overhead bark carries no chat head.
+
+Two gates decide whether a bark is voiced at all. The speaker must be an `NPC`, so other players and
+your own overhead text never are, and it must be within earshot: 16 tiles, on your plane. That
+number is not a preference, it is where the client stops rendering NPCs, so a speaker past it is one
+you cannot see and would have no reason to hear.
+
+There is deliberately no per-NPC cooldown and no ceiling on how many barks may sound at once. A
+market square where a dozen people talk over each other is the point of the feature, and a rule that
+voiced some lines and dropped others would read as broken rather than as restrained. Repeats are
+close to free anyway: a bark is short, barks repeat heavily, and the second hearing of one comes off
+the same cache tiers a dialogue line uses.
+
+Overlapping playback is what makes that work, and it needs its own lane. `StreamingAudioPlayer`
+holds one line and one generation counter, so a single instance plays one clip at a time by design,
+which is correct for dialogue where each line supersedes the last. `DialogueAudioService` therefore
+runs ambient separately, with its own epoch, and hands each bark a player of its own, mixing at the
+audio device. Ambient never touches the dialogue epoch and never stops the dialogue output, so no
+bark can cut another or interrupt a line you clicked for.
+
+A bark is mixed by distance rather than played flat. At the speaker's own tile it uses **Dialogue
+Volume** in full; at the edge of earshot it drops to the faintest audible step, interpolated linearly
+across the tiles between. `AmbientEarshot` owns both that curve and the 16 tiles it spans, so the
+gate and the fade can never disagree, and because the gain runs through the same decibel conversion
+as every other line, a linear walk across the percent scale already sounds like a natural fade.
+
+The mix follows the pair while the line plays. Each tick the plugin asks every bark still sounding
+for its speaker's current distance and pushes the new gain onto that bark's audio line, so walking
+away from a crier fades them out mid-sentence and rounding a corner towards one brings them up. A
+speaker that has left earshot entirely, whether because you walked off or it did, is cut there and
+then rather than faded, since it has stopped being rendered and a voice from an empty tile is worse
+than silence. `SourceDataLine` exposes its master gain as a live control, which is what makes the
+fade possible; on a mixer that does not offer the control the line plays at the volume it opened
+with, and the cut still lands. The distance is read on the game thread, where NPC positions are safe
+to read, and the only work done there is one coordinate subtraction per bark still playing.
+
+One speaker is never voiced twice at once. A person cannot say two things at the same time, so a
+bark that arrives while that NPC is still talking waits its turn: barks are chained per NPC index,
+and the chain is built at arrival, so the lines come out in the order the NPC said them even when a
+later one is a cache hit that resolves first. Synthesis is not part of the chain, only playback is,
+so the queued line is already rendered and starts the instant the one before it ends. Different NPCs
+share nothing, which is what keeps a square sounding like a crowd rather than a queue.
+
+Lines that are not speech are dropped before any of that. Sheep, ducks and cows put their noises in
+the same overhead bubble a market crier uses, and a text-to-speech model reads them literally while a
+speaking style is worse still, rewriting "Baa" into whatever that register would say. `AnimalNoises`
+drops a line whose every token is an animal noise, which is the honest test: it keys on the line not
+being speech rather than on the speaker being an animal, so a talking monkey in a quest still gets
+its voice and a sentence that merely mentions a moo is untouched.
+
+That lane is split in two, because the two halves are bounded by different things. Six threads do
+the cache lookup and, on a miss, the synthesis, which is the part that costs money and wants a limit
+on how hard it hits the provider; its queue is unbounded, so a busy square delays a bark rather than
+dropping it. Playback then runs on a pool that grows to whatever is sounding at that moment and
+retires idle threads, since the only real limit there is how many audio lines the device will open.
+A bark waiting its turn behind a queued sibling, or waiting on its own synthesis, holds no thread at
+all: the wait is a composed callback rather than a blocked worker, so a crowded square costs threads
+for the lines you can actually hear and nothing for the ones still coming.
+A bark whose line the mixer refuses is logged and lost, which is the one case where a line goes
+unvoiced. Synthesis is skipped outright while the backend is rate-limited, the same discretionary
+guard prefetch uses, so ambient can never starve the line the player actually clicked for.
+
+Conversation still owns the channel outright. `DialogueWatcher` is the single owner of that state
+and offers two readings of it: `isDialogueOpen`, the state its per-tick scan settled on, which is
+what the click-triggered surfaces need, and `isConversationOnScreen`, a pure live read of the
+dialogue boxes, the option list, and the narration boxes, the last of those asked of
+`NarrationWatcher`, which owns those widget ids. Ambient takes the live one, because
+`OverheadTextChanged` arrives while the client is processing a tick and the scan has not run yet,
+because an option list on screen is still being mid-conversation even though no dialogue box is, and
+because a narration box holds the screen whether or not **Voice Narration** is voicing it. Any line
+the player triggered advances the ambient epoch and stops every bark playing, so a dialogue opening
+on a line silences the square. A narration box that **Voice Narration** is not voicing blocks new
+barks without cutting the ones already sounding, since nothing was spoken to cut them. The epoch moves on the client thread and the stopping is handed to a worker,
+since flushing several audio lines is not work the game thread should do.
+
+One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a
+dialogue line would, so with **Auto-learn New NPCs** on, ambient chatter drives wiki lookups as well
+as dialogue. They are deduped per NPC id and run off the game thread, so the cost stays bounded.
+
 ## The OpenRouter speech call
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It

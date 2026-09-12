@@ -8,7 +8,9 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
+import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NPC;
 
 @Slf4j
 public final class SynthesisDispatcher {
@@ -55,6 +57,19 @@ public final class SynthesisDispatcher {
         null);
   }
 
+  public void speakAmbient(String text, NPC npc, IntSupplier distanceVolume) {
+    SynthesisBackend backend = backendProvider.active();
+    if (!backend.isAvailable() || backend.isThrottled()) {
+      return;
+    }
+    ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
+    SynthesisRequest request =
+        new SynthesisRequest(
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
+    trace(backend, request, npc.getName());
+    audioService.speakAmbient(request, echoFor(request), npc.getIndex(), distanceVolume);
+  }
+
   public void speakNarration(String text) {
     ResolvedSpeaker resolved = voiceManager.resolveNarrator();
     dispatch(
@@ -68,12 +83,21 @@ public final class SynthesisDispatcher {
     if (!backend.isAvailable()) {
       return;
     }
-    if (config.debugMode()) {
-      Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
-      log.info(
-          VoiceTraceFormatter.buildResolvedLine(
-              backend.id(), request.voice(), npcName, effective.name(), request.profile()));
+    trace(backend, request, npcName);
+    audioService.speak(request, echoFor(request));
+  }
+
+  private boolean echoFor(SynthesisRequest request) {
+    return !request.voice().narrator() && caveEchoPolicy.shouldEcho();
+  }
+
+  private void trace(SynthesisBackend backend, SynthesisRequest request, String npcName) {
+    if (!config.debugMode()) {
+      return;
     }
-    audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
+    Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
+    log.info(
+        VoiceTraceFormatter.buildResolvedLine(
+            backend.id(), request.voice(), npcName, effective.name(), request.profile()));
   }
 }

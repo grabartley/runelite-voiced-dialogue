@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
+import static com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader.isVisible;
+
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
@@ -44,9 +46,9 @@ public final class DialogueWatcher {
 
   public void tick() {
     Widget npcDialogue = client.getWidget(InterfaceID.ChatLeft.TEXT);
-    boolean npcVisible = npcDialogue != null && !npcDialogue.isHidden();
+    boolean npcVisible = isVisible(npcDialogue);
     Widget playerDialogue = client.getWidget(InterfaceID.ChatRight.TEXT);
-    boolean playerVisible = playerDialogue != null && !playerDialogue.isHidden();
+    boolean playerVisible = isVisible(playerDialogue);
 
     if (npcVisible) {
       speakIfNew(npcDialogue, InterfaceID.ChatLeft.HEAD, Speaker.NPC, widgetReader::currentNpcName);
@@ -58,7 +60,7 @@ public final class DialogueWatcher {
     boolean narrationVisible = narrationWatcher.tick();
 
     Widget options = client.getWidget(InterfaceID.Chatmenu.OPTIONS);
-    boolean optionsVisible = options != null && !options.isHidden();
+    boolean optionsVisible = isVisible(options);
     if (optionsVisible) {
       prefetchCoordinator.prefetchOptions(options);
     }
@@ -80,6 +82,13 @@ public final class DialogueWatcher {
 
   public boolean isDialogueOpen() {
     return dialogueOpen;
+  }
+
+  public boolean isConversationOnScreen() {
+    return isVisible(client.getWidget(InterfaceID.ChatLeft.TEXT))
+        || isVisible(client.getWidget(InterfaceID.ChatRight.TEXT))
+        || isVisible(client.getWidget(InterfaceID.Chatmenu.OPTIONS))
+        || narrationWatcher.isOnScreen();
   }
 
   private void speakIfNew(

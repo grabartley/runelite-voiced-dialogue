@@ -7,21 +7,31 @@ import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.cache.DiskAudioCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache.CacheKey;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class DialogueAudioService {
+
+  private static final CompletableFuture<Void> NOTHING_PLAYING =
+      CompletableFuture.completedFuture(null);
 
   private static final int SYNTH_THREADS = 2;
 
@@ -31,6 +41,10 @@ public final class DialogueAudioService {
 
   private static final int SHUTDOWN_WAIT_SECONDS = 2;
 
+  private static final int AMBIENT_SYNTH_THREADS = 6;
+
+  private static final int AMBIENT_PLAYBACK_KEEPALIVE_SECONDS = 30;
+
   private final BackendProvider backends;
   private final AudioOutput output;
   private final Executor executor;
@@ -38,12 +52,19 @@ public final class DialogueAudioService {
   private final Executor prefetchExecutor;
   private final TieredSynthesisCache cache;
   private final IntSupplier volume;
+  private final Supplier<AudioOutput> ambientOutputs;
+  private final Executor ambientExecutor;
+  private final Executor ambientPlaybackExecutor;
+  private final Map<AudioOutput, IntSupplier> liveAmbientOutputs = new ConcurrentHashMap<>();
+  private final Map<Integer, CompletableFuture<Void>> ambientChains = new ConcurrentHashMap<>();
   private final AtomicLong epoch = new AtomicLong();
   private final AtomicLong prefetchEpoch = new AtomicLong();
+  private final AtomicLong ambientEpoch = new AtomicLong();
 
   public DialogueAudioService(
       BackendProvider backends,
       AudioOutput output,
+      Supplier<AudioOutput> ambientOutputs,
       DiskAudioCache diskCache,
       int cacheSize,
       int queueCapacity,
@@ -51,27 +72,36 @@ public final class DialogueAudioService {
     this(
         backends,
         output,
+        ambientOutputs,
         new TieredSynthesisCache(cacheSize, diskCache),
         buildExecutor(queueCapacity),
         buildWarmExecutor(),
         buildPrefetchExecutor(),
+        buildAmbientExecutor(),
+        buildAmbientPlaybackExecutor(),
         volume);
   }
 
   DialogueAudioService(
       BackendProvider backends,
       AudioOutput output,
+      Supplier<AudioOutput> ambientOutputs,
       TieredSynthesisCache cache,
       Executor executor,
       Executor warmExecutor,
       Executor prefetchExecutor,
+      Executor ambientExecutor,
+      Executor ambientPlaybackExecutor,
       IntSupplier volume) {
     this.backends = backends;
     this.output = output;
+    this.ambientOutputs = ambientOutputs;
     this.cache = cache;
     this.executor = executor;
     this.warmExecutor = warmExecutor;
     this.prefetchExecutor = prefetchExecutor;
+    this.ambientExecutor = ambientExecutor;
+    this.ambientPlaybackExecutor = ambientPlaybackExecutor;
     this.volume = volume;
   }
 
@@ -89,10 +119,126 @@ public final class DialogueAudioService {
     }
     long mine = epoch.incrementAndGet();
     output.stop();
+    interruptAmbient();
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
     submitQuietly(executor, () -> run(mine, backend, effective, key, applyEcho));
+  }
+
+  public void speakAmbient(
+      SynthesisRequest request, boolean applyEcho, int speakerId, IntSupplier distanceVolume) {
+    if (request == null || request.text() == null || request.text().isEmpty()) {
+      return;
+    }
+    SynthesisBackend backend = backends.active();
+    SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
+    CacheKey key = keyFor(backend, effective);
+    long node = ambientEpoch.get();
+    int openingVolume = distanceVolume.getAsInt();
+    CompletableFuture<Pcm> synthesis;
+    try {
+      synthesis =
+          CompletableFuture.supplyAsync(
+              () -> synthesizeAmbient(node, backend, effective, key, applyEcho), ambientExecutor);
+    } catch (RejectedExecutionException closing) {
+      return;
+    }
+    queueAmbientPlayback(speakerId, synthesis, node, openingVolume, distanceVolume);
+  }
+
+  private Pcm synthesizeAmbient(
+      long node,
+      SynthesisBackend backend,
+      SynthesisRequest request,
+      CacheKey key,
+      boolean applyEcho) {
+    if (ambientEpoch.get() != node) {
+      return null;
+    }
+    Pcm cached = cache.lookup(key);
+    if (cached == null && backend.isThrottled()) {
+      return null;
+    }
+    Pcm pcm = cached != null ? cached : synthesizeDeduped(backend, request, key);
+    if (pcm == null) {
+      return null;
+    }
+    return applyEcho ? CaveEcho.apply(pcm) : pcm;
+  }
+
+  private void queueAmbientPlayback(
+      int speakerId,
+      CompletableFuture<Pcm> synthesis,
+      long node,
+      int openingVolume,
+      IntSupplier distanceVolume) {
+    CompletableFuture<Void> queued =
+        ambientChains.compute(
+            speakerId,
+            (id, playing) ->
+                (playing == null ? NOTHING_PLAYING : playing)
+                    .handleAsync(
+                        (ignored, error) -> {
+                          playWhenSynthesized(synthesis, node, openingVolume, distanceVolume);
+                          return (Void) null;
+                        },
+                        ambientPlaybackExecutor));
+    queued.whenComplete((ignored, error) -> ambientChains.remove(speakerId, queued));
+  }
+
+  private void playWhenSynthesized(
+      CompletableFuture<Pcm> synthesis, long node, int openingVolume, IntSupplier distanceVolume) {
+    Pcm pcm;
+    try {
+      pcm = synthesis.join();
+    } catch (CompletionException | CancellationException e) {
+      return;
+    }
+    if (pcm != null && ambientEpoch.get() == node) {
+      playAmbient(node, pcm, openingVolume, distanceVolume);
+    }
+  }
+
+  private void playAmbient(long node, Pcm pcm, int openingVolume, IntSupplier distanceVolume) {
+    AudioOutput ambient = ambientOutputs.get();
+    liveAmbientOutputs.put(ambient, distanceVolume);
+    try {
+      if (ambientEpoch.get() == node) {
+        ambient.stream(pcm.getSamples(), pcm.getSampleRate(), openingVolume);
+      }
+    } finally {
+      liveAmbientOutputs.remove(ambient);
+      ambient.close();
+    }
+  }
+
+  public void refreshAmbientVolumes() {
+    if (liveAmbientOutputs.isEmpty()) {
+      return;
+    }
+    for (Map.Entry<AudioOutput, IntSupplier> live : liveAmbientOutputs.entrySet()) {
+      int volumePercent = live.getValue().getAsInt();
+      if (volumePercent < 0) {
+        live.getKey().stop();
+        continue;
+      }
+      live.getKey().setVolume(volumePercent);
+    }
+  }
+
+  private void interruptAmbient() {
+    ambientEpoch.incrementAndGet();
+    if (liveAmbientOutputs.isEmpty()) {
+      return;
+    }
+    submitQuietly(ambientPlaybackExecutor, this::stopLiveAmbient);
+  }
+
+  private void stopLiveAmbient() {
+    for (AudioOutput ambient : liveAmbientOutputs.keySet()) {
+      ambient.stop();
+    }
   }
 
   public void prefetch(SynthesisRequest request) {
@@ -144,6 +290,11 @@ public final class DialogueAudioService {
     epoch.incrementAndGet();
     prefetchEpoch.incrementAndGet();
     output.stop();
+    ambientEpoch.incrementAndGet();
+    stopLiveAmbient();
+    ambientChains.clear();
+    shutdown(ambientExecutor);
+    shutdown(ambientPlaybackExecutor);
     shutdown(executor);
     if (warmExecutor != executor) {
       shutdown(warmExecutor);
@@ -284,6 +435,26 @@ public final class DialogueAudioService {
         TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<>(),
         daemonThreadFactory("dialogue-warm"));
+  }
+
+  private static ExecutorService buildAmbientExecutor() {
+    return new ThreadPoolExecutor(
+        AMBIENT_SYNTH_THREADS,
+        AMBIENT_SYNTH_THREADS,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>(),
+        daemonThreadFactory("dialogue-ambient"));
+  }
+
+  private static ExecutorService buildAmbientPlaybackExecutor() {
+    return new ThreadPoolExecutor(
+        0,
+        Integer.MAX_VALUE,
+        AMBIENT_PLAYBACK_KEEPALIVE_SECONDS,
+        TimeUnit.SECONDS,
+        new SynchronousQueue<>(),
+        daemonThreadFactory("dialogue-ambient-play"));
   }
 
   private static ExecutorService buildPrefetchExecutor() {
