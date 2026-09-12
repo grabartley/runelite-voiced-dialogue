@@ -9,9 +9,7 @@ import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache.CacheKey;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -173,31 +171,22 @@ public final class DialogueAudioService {
       long node,
       int openingVolume,
       IntSupplier distanceVolume) {
+    CompletableFuture<Pcm> rendered = synthesis.handle((pcm, error) -> pcm);
     CompletableFuture<Void> queued =
         ambientChains.compute(
             speakerId,
             (id, playing) ->
                 (playing == null ? NOTHING_PLAYING : playing)
-                    .handleAsync(
-                        (ignored, error) -> {
-                          playWhenSynthesized(synthesis, node, openingVolume, distanceVolume);
-                          return (Void) null;
+                    .handle((ignored, error) -> (Void) null)
+                    .thenCombine(rendered, (ignored, pcm) -> pcm)
+                    .thenAcceptAsync(
+                        pcm -> {
+                          if (pcm != null && ambientEpoch.get() == node) {
+                            playAmbient(node, pcm, openingVolume, distanceVolume);
+                          }
                         },
                         ambientPlaybackExecutor));
     queued.whenComplete((ignored, error) -> ambientChains.remove(speakerId, queued));
-  }
-
-  private void playWhenSynthesized(
-      CompletableFuture<Pcm> synthesis, long node, int openingVolume, IntSupplier distanceVolume) {
-    Pcm pcm;
-    try {
-      pcm = synthesis.join();
-    } catch (CompletionException | CancellationException e) {
-      return;
-    }
-    if (pcm != null && ambientEpoch.get() == node) {
-      playAmbient(node, pcm, openingVolume, distanceVolume);
-    }
   }
 
   private void playAmbient(long node, Pcm pcm, int openingVolume, IntSupplier distanceVolume) {
