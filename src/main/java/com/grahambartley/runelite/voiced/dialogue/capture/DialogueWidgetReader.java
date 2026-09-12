@@ -31,7 +31,7 @@ public final class DialogueWidgetReader {
 
   String currentNpcName() {
     Widget npcNameWidget = client.getWidget(InterfaceID.ChatLeft.NAME);
-    if (npcNameWidget != null && !npcNameWidget.isHidden()) {
+    if (isVisible(npcNameWidget)) {
       String npcName = npcNameWidget.getText();
       if (npcName != null && !npcName.isEmpty()) {
         return npcName.trim();

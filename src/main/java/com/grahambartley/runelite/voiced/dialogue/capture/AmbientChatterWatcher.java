@@ -72,12 +72,7 @@ public final class AmbientChatterWatcher {
     spokenAtByNpcIndex.put(npc.getIndex(), now);
     Slot mine = new Slot(now + MAX_SLOT_HOLD_NANOS);
     slot.set(mine);
-    try {
-      dispatcher.speakAmbient(cleaned, npc, () -> slot.compareAndSet(mine, null));
-    } catch (RuntimeException e) {
-      slot.compareAndSet(mine, null);
-      throw e;
-    }
+    dispatcher.speakAmbient(cleaned, npc, () -> slot.compareAndSet(mine, null));
   }
 
   private boolean isSlotHeld(long now) {

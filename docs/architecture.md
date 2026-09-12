@@ -99,8 +99,9 @@ Conversation owns the audio channel outright. `DialogueWatcher` is the single ow
 and offers two readings of it: `isDialogueOpen`, the state its per-tick scan settled on, which is
 what the click-triggered surfaces need, and `isConversationOnScreen`, a pure live read of the
 dialogue boxes, the option list, and the narration boxes, the last of those asked of
-`NarrationWatcher`, which owns those widget ids. Ambient takes the live one, because `OverheadTextChanged` arrives while
-the client is processing a tick and the scan has not run yet, because an option list on screen is
+`NarrationWatcher`, which owns those widget ids. Ambient takes the live one, because
+`OverheadTextChanged` arrives while the client is processing a tick and the scan has not run yet,
+because an option list on screen is
 still being mid-conversation even though no dialogue box is, and because a narration box holds the
 screen whether or not **Voice Narration** is voicing it. A conversation speaking its first line
 advances the epoch that `speakBuffered` stamped on the ambient task, so the ambient audio stops
