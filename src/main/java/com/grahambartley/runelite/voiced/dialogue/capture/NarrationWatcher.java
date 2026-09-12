@@ -31,6 +31,16 @@ public final class NarrationWatcher {
     this.enabled = enabled;
   }
 
+  public boolean isOnScreen() {
+    for (int widgetId : TEXT_WIDGETS) {
+      Widget box = client.getWidget(widgetId);
+      if (box != null && !box.isHidden()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public boolean tick() {
     if (!enabled.getAsBoolean()) {
       return false;

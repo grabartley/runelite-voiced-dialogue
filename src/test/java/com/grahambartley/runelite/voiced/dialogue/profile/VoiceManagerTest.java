@@ -40,10 +40,7 @@ public class VoiceManagerTest {
   private VoiceManager newManager(PlayerVoice playerVoice) {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
-    NpcProfileTable profileTable = new NpcProfileTable();
-    profileTable.initialize();
-    return new VoiceManager(
-        new TestConfig(playerVoice), client, new NpcDemographicAnalyzer(), profileTable);
+    return newManager(client, playerVoice);
   }
 
   private VoiceManager newManager(Client client, PlayerVoice playerVoice) {

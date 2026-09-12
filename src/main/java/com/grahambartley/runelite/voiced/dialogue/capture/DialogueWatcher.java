@@ -86,7 +86,8 @@ public final class DialogueWatcher {
     return dialogueOpen
         || isVisible(client.getWidget(InterfaceID.ChatLeft.TEXT))
         || isVisible(client.getWidget(InterfaceID.ChatRight.TEXT))
-        || isVisible(client.getWidget(InterfaceID.Chatmenu.OPTIONS));
+        || isVisible(client.getWidget(InterfaceID.Chatmenu.OPTIONS))
+        || narrationWatcher.isOnScreen();
   }
 
   private static boolean isVisible(Widget widget) {

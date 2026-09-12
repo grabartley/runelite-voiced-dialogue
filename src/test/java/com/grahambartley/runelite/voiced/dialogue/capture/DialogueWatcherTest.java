@@ -253,6 +253,16 @@ public class DialogueWatcherTest {
   }
 
   @Test
+  public void aNarrationBoxGatesTheLiveReadEvenWithNarrationVoicingOff() {
+    when(narrationWatcher.tick()).thenReturn(false);
+    when(narrationWatcher.isOnScreen()).thenReturn(true);
+    watcher.tick();
+
+    assertFalse("an unvoiced narration box never settles the flag", watcher.isDialogueOpen());
+    assertTrue("but it is still a conversation on screen", watcher.isConversationOnScreen());
+  }
+
+  @Test
   public void aHiddenDialogueBoxIsNotOnScreen() {
     Widget hidden = mock(Widget.class);
     when(hidden.isHidden()).thenReturn(true);

@@ -58,16 +58,11 @@ public final class SynthesisDispatcher {
 
   public void speakAmbient(String text, NPC npc, Runnable onFinished) {
     ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
-    SynthesisRequest request =
+    dispatch(
         new SynthesisRequest(
-            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
-    SynthesisBackend backend = backendProvider.active();
-    if (!backend.isAvailable()) {
-      onFinished.run();
-      return;
-    }
-    trace(backend, request, npc.getName());
-    audioService.speakBuffered(request, caveEchoPolicy.shouldEcho(), onFinished);
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
+        npc.getName(),
+        onFinished);
   }
 
   public void speakNarration(String text) {
@@ -84,7 +79,21 @@ public final class SynthesisDispatcher {
       return;
     }
     trace(backend, request, npcName);
-    audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
+    audioService.speak(request, echoFor(request));
+  }
+
+  private void dispatch(SynthesisRequest request, String npcName, Runnable onFinished) {
+    SynthesisBackend backend = backendProvider.active();
+    if (!backend.isAvailable()) {
+      onFinished.run();
+      return;
+    }
+    trace(backend, request, npcName);
+    audioService.speakBuffered(request, echoFor(request), onFinished);
+  }
+
+  private boolean echoFor(SynthesisRequest request) {
+    return !request.voice().narrator() && caveEchoPolicy.shouldEcho();
   }
 
   private void trace(SynthesisBackend backend, SynthesisRequest request, String npcName) {

@@ -49,7 +49,7 @@ public final class AmbientChatterWatcher {
   }
 
   public void onOverheadTextChanged(OverheadTextChanged event) {
-    if (!enabled.getAsBoolean() || conversationOnScreen.getAsBoolean()) {
+    if (!enabled.getAsBoolean()) {
       return;
     }
     Actor actor = event.getActor();
@@ -58,7 +58,7 @@ public final class AmbientChatterWatcher {
     }
     NPC npc = (NPC) actor;
     String overheadText = event.getOverheadText();
-    if (overheadText == null || !isWithinEarshot(npc)) {
+    if (overheadText == null || !isWithinEarshot(npc) || conversationOnScreen.getAsBoolean()) {
       return;
     }
     long now = clock.getAsLong();

@@ -98,12 +98,13 @@ slot for the same span and neither gets clipped by the next one.
 Conversation owns the audio channel outright. `DialogueWatcher` is the single owner of that state
 and offers two readings of it: `isDialogueOpen`, the state its per-tick scan settled on, which is
 what the click-triggered surfaces need, and `isConversationOnScreen`, which reads the dialogue boxes
-and the option list on demand. Ambient takes the live one, because `OverheadTextChanged` arrives
-while the client is processing a tick and the scan has not run yet, and because an option list on
-screen is still being mid-conversation even though no dialogue box is. Narration boxes are folded
-into the settled flag, so they gate ambient too. A conversation opening mid-line advances the epoch
-that `speak` stamped on the ambient task, so the ambient audio stops where any other superseded line
-would.
+the option list and the narration boxes on demand, the last of those asked of `NarrationWatcher`,
+which owns those widget ids. Ambient takes the live one, because `OverheadTextChanged` arrives while
+the client is processing a tick and the scan has not run yet, because an option list on screen is
+still being mid-conversation even though no dialogue box is, and because a narration box holds the
+screen whether or not **Voice Narration** is voicing it. A conversation speaking its first line
+advances the epoch that `speakBuffered` stamped on the ambient task, so the ambient audio stops
+where any other superseded line would.
 
 Examine text and your own public chat are not gated against: a bark starting while one of those is
 playing cuts it, as every voiced line cuts the one before it. All three are opt-in, and the line
