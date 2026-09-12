@@ -146,6 +146,7 @@ public class VoicedDialoguePlugin extends Plugin {
         new DialogueAudioService(
             backendProvider,
             new StreamingAudioPlayer(),
+            StreamingAudioPlayer::new,
             diskCache,
             CACHE_SIZE,
             QUEUE_CAPACITY,
@@ -192,7 +193,7 @@ public class VoicedDialoguePlugin extends Plugin {
             synthesisDispatcher,
             config::voiceAmbientChatter,
             dialogueWatcher::isConversationOnScreen,
-            System::nanoTime);
+            config::ambientChatterRadius);
 
     log.info("VoicedDialogue started");
   }

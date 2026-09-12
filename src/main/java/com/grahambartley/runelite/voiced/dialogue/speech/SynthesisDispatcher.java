@@ -56,13 +56,17 @@ public final class SynthesisDispatcher {
         null);
   }
 
-  public void speakAmbient(String text, NPC npc, Runnable onFinished) {
+  public void speakAmbient(String text, NPC npc) {
     ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
-    dispatch(
+    SynthesisRequest request =
         new SynthesisRequest(
-            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
-        npc.getName(),
-        onFinished);
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
+    SynthesisBackend backend = backendProvider.active();
+    if (!backend.isAvailable()) {
+      return;
+    }
+    trace(backend, request, npc.getName());
+    audioService.speakAmbient(request, echoFor(request));
   }
 
   public void speakNarration(String text) {
@@ -80,16 +84,6 @@ public final class SynthesisDispatcher {
     }
     trace(backend, request, npcName);
     audioService.speak(request, echoFor(request));
-  }
-
-  private void dispatch(SynthesisRequest request, String npcName, Runnable onFinished) {
-    SynthesisBackend backend = backendProvider.active();
-    if (!backend.isAvailable()) {
-      onFinished.run();
-      return;
-    }
-    trace(backend, request, npcName);
-    audioService.speakBuffered(request, echoFor(request), onFinished);
   }
 
   private boolean echoFor(SynthesisRequest request) {

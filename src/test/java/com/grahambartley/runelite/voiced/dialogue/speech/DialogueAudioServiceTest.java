@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -154,6 +153,9 @@ public class DialogueAudioServiceTest {
     return new BackendProvider(backend);
   }
 
+  private static final List<FakeOutput> ambientOutputs =
+      Collections.synchronizedList(new ArrayList<>());
+
   private static DialogueAudioService service(
       BackendProvider provider,
       AudioOutput output,
@@ -164,7 +166,13 @@ public class DialogueAudioServiceTest {
     return new DialogueAudioService(
         provider,
         output,
+        () -> {
+          FakeOutput ambient = new FakeOutput();
+          ambientOutputs.add(ambient);
+          return ambient;
+        },
         new TieredSynthesisCache(cacheSize, diskCache),
+        executor,
         executor,
         executor,
         executor,
@@ -904,61 +912,91 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void aCompletionHookFiresOnceTheQueuedLineHasRun() {
+  public void everyAmbientLineIsVoicedWithoutStoppingTheOnesAlreadyPlaying() {
+    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput dialogue = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
-    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
-    AtomicInteger finished = new AtomicInteger();
+    DialogueAudioService svc = service(provider(backend), dialogue, executor, 8, 100);
 
-    svc.speakBuffered(
-        req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
-    assertEquals("the hook waits for the queued task", 0, finished.get());
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
+    svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false);
     executor.runAll();
 
-    assertEquals("the hook fires exactly once", 1, finished.get());
+    assertEquals("every bark is synthesized", 3, backend.requests.size());
+    assertEquals("every bark gets its own audio line", 3, ambientOutputs.size());
+    for (FakeOutput ambient : ambientOutputs) {
+      assertEquals("each bark plays", 1, ambient.streamCalls);
+    }
+    assertEquals("a bark never stops the dialogue channel", 0, dialogue.stopCalls);
   }
 
   @Test
-  public void aCompletionHookFiresForALineSupersededBeforeItRan() {
+  public void anAmbientLineNeverCutsAnotherAmbientLine() {
+    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
-    AtomicInteger finished = new AtomicInteger();
 
-    svc.speakBuffered(
-        req("Ambient", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
-    svc.speak(req("Dialogue", NpcRace.HUMAN, NpcGender.MALE));
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+    executor.runAll();
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
     executor.runAll();
 
-    assertEquals("a cut line still releases its caller", 1, finished.get());
+    for (FakeOutput ambient : ambientOutputs) {
+      assertEquals("no bark is ever stopped by a later one", 0, ambient.stopCalls);
+    }
   }
 
   @Test
-  public void aCompletionHookFiresWhenThereIsNothingToSay() {
+  public void aDialogueLineSilencesEveryAmbientLineInFlight() {
+    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
-    AtomicInteger finished = new AtomicInteger();
 
-    svc.speakBuffered(req("", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
+    svc.speak(req("Greetings adventurer", NpcRace.HUMAN, NpcGender.MALE));
+    executor.runAll();
 
-    assertEquals("an empty line releases its caller immediately", 1, finished.get());
-    assertEquals("and never reaches the backend", 0, backend.requests.size());
+    assertEquals("the barks were dropped before synthesis", 1, backend.requests.size());
+    assertEquals("and never reached an audio line", 0, ambientOutputs.size());
   }
 
   @Test
-  public void aCompletionHookFiresWhenTheExecutorIsShutDown() {
+  public void anAmbientRepeatReplaysFromCacheWithoutResynth() {
+    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
-    Executor refusing =
-        command -> {
-          throw new RejectedExecutionException("closed");
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false);
+    executor.runAll();
+    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false);
+    executor.runAll();
+
+    assertEquals("the repeated bark costs nothing", 1, backend.requests.size());
+    assertEquals("but it still plays", 2, ambientOutputs.size());
+  }
+
+  @Test
+  public void anAmbientLineTheBackendCannotVoicePlaysNothing() {
+    ambientOutputs.clear();
+    FakeBackend backend =
+        new FakeBackend(EnumSet.of(Emotion.NEUTRAL)) {
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            return null;
+          }
         };
-    DialogueAudioService svc = service(provider(backend), new FakeOutput(), refusing, 8, 100);
-    AtomicInteger finished = new AtomicInteger();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakBuffered(
-        req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+    executor.runAll();
 
-    assertEquals("a line the executor refuses releases its caller", 1, finished.get());
+    assertEquals("a failed bark opens no audio line", 0, ambientOutputs.size());
   }
 }

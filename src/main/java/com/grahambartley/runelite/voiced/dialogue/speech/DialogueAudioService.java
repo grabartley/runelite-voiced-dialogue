@@ -7,7 +7,9 @@ import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.cache.DiskAudioCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache.CacheKey;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -18,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -31,7 +34,9 @@ public final class DialogueAudioService {
 
   private static final int SHUTDOWN_WAIT_SECONDS = 2;
 
-  private static final Runnable NOTHING_TO_FINISH = () -> {};
+  private static final int AMBIENT_THREADS = 6;
+
+  private static final int AMBIENT_QUEUE_CAPACITY = 16;
 
   private final BackendProvider backends;
   private final AudioOutput output;
@@ -40,12 +45,17 @@ public final class DialogueAudioService {
   private final Executor prefetchExecutor;
   private final TieredSynthesisCache cache;
   private final IntSupplier volume;
+  private final Supplier<AudioOutput> ambientOutputs;
+  private final Executor ambientExecutor;
+  private final Set<AudioOutput> liveAmbientOutputs = ConcurrentHashMap.newKeySet();
   private final AtomicLong epoch = new AtomicLong();
   private final AtomicLong prefetchEpoch = new AtomicLong();
+  private final AtomicLong ambientEpoch = new AtomicLong();
 
   public DialogueAudioService(
       BackendProvider backends,
       AudioOutput output,
+      Supplier<AudioOutput> ambientOutputs,
       DiskAudioCache diskCache,
       int cacheSize,
       int queueCapacity,
@@ -53,27 +63,33 @@ public final class DialogueAudioService {
     this(
         backends,
         output,
+        ambientOutputs,
         new TieredSynthesisCache(cacheSize, diskCache),
         buildExecutor(queueCapacity),
         buildWarmExecutor(),
         buildPrefetchExecutor(),
+        buildAmbientExecutor(),
         volume);
   }
 
   DialogueAudioService(
       BackendProvider backends,
       AudioOutput output,
+      Supplier<AudioOutput> ambientOutputs,
       TieredSynthesisCache cache,
       Executor executor,
       Executor warmExecutor,
       Executor prefetchExecutor,
+      Executor ambientExecutor,
       IntSupplier volume) {
     this.backends = backends;
     this.output = output;
+    this.ambientOutputs = ambientOutputs;
     this.cache = cache;
     this.executor = executor;
     this.warmExecutor = warmExecutor;
     this.prefetchExecutor = prefetchExecutor;
+    this.ambientExecutor = ambientExecutor;
     this.volume = volume;
   }
 
@@ -86,36 +102,58 @@ public final class DialogueAudioService {
   }
 
   public void speak(SynthesisRequest request, boolean applyEcho) {
-    submit(request, applyEcho, false, NOTHING_TO_FINISH);
-  }
-
-  public void speakBuffered(SynthesisRequest request, boolean applyEcho, Runnable onFinished) {
-    submit(request, applyEcho, true, onFinished);
-  }
-
-  private void submit(
-      SynthesisRequest request, boolean applyEcho, boolean buffered, Runnable onFinished) {
     if (request == null || request.text() == null || request.text().isEmpty()) {
-      onFinished.run();
       return;
     }
     long mine = epoch.incrementAndGet();
     output.stop();
+    interruptAmbient();
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
-    boolean accepted =
-        submitQuietly(
-            executor,
-            () -> {
-              try {
-                run(mine, backend, effective, key, applyEcho, buffered);
-              } finally {
-                onFinished.run();
-              }
-            });
-    if (!accepted) {
-      onFinished.run();
+    submitQuietly(executor, () -> run(mine, backend, effective, key, applyEcho));
+  }
+
+  public void speakAmbient(SynthesisRequest request, boolean applyEcho) {
+    if (request == null || request.text() == null || request.text().isEmpty()) {
+      return;
+    }
+    SynthesisBackend backend = backends.active();
+    SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
+    CacheKey key = keyFor(backend, effective);
+    long node = ambientEpoch.get();
+    submitQuietly(
+        ambientExecutor,
+        () -> {
+          if (ambientEpoch.get() != node) {
+            return;
+          }
+          Pcm pcm = cache.lookup(key);
+          if (pcm == null) {
+            pcm = synthesizeDeduped(backend, effective, key);
+          }
+          if (pcm == null || ambientEpoch.get() != node) {
+            return;
+          }
+          playAmbient(applyEcho ? CaveEcho.apply(pcm) : pcm);
+        });
+  }
+
+  private void playAmbient(Pcm pcm) {
+    AudioOutput ambient = ambientOutputs.get();
+    liveAmbientOutputs.add(ambient);
+    try {
+      ambient.stream(pcm.getSamples(), pcm.getSampleRate(), volume.getAsInt());
+    } finally {
+      liveAmbientOutputs.remove(ambient);
+      ambient.close();
+    }
+  }
+
+  private void interruptAmbient() {
+    ambientEpoch.incrementAndGet();
+    for (AudioOutput ambient : liveAmbientOutputs) {
+      ambient.stop();
     }
   }
 
@@ -168,6 +206,8 @@ public final class DialogueAudioService {
     epoch.incrementAndGet();
     prefetchEpoch.incrementAndGet();
     output.stop();
+    interruptAmbient();
+    shutdown(ambientExecutor);
     shutdown(executor);
     if (warmExecutor != executor) {
       shutdown(warmExecutor);
@@ -195,8 +235,7 @@ public final class DialogueAudioService {
       SynthesisBackend backend,
       SynthesisRequest request,
       CacheKey key,
-      boolean applyEcho,
-      boolean buffered) {
+      boolean applyEcho) {
     if (epoch.get() != mine) {
       return;
     }
@@ -205,7 +244,7 @@ public final class DialogueAudioService {
       playBuffered(mine, pcm, applyEcho);
       return;
     }
-    if (!applyEcho && !buffered) {
+    if (!applyEcho) {
       runStreaming(mine, backend, request, key);
       return;
     }
@@ -272,12 +311,10 @@ public final class DialogueAudioService {
                 key.textPreview()));
   }
 
-  private static boolean submitQuietly(Executor exec, Runnable task) {
+  private static void submitQuietly(Executor exec, Runnable task) {
     try {
       exec.execute(task);
-      return true;
     } catch (RejectedExecutionException ignored) {
-      return false;
     }
   }
 
@@ -311,6 +348,17 @@ public final class DialogueAudioService {
         TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<>(),
         daemonThreadFactory("dialogue-warm"));
+  }
+
+  private static ExecutorService buildAmbientExecutor() {
+    return new ThreadPoolExecutor(
+        AMBIENT_THREADS,
+        AMBIENT_THREADS,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new ArrayBlockingQueue<>(AMBIENT_QUEUE_CAPACITY),
+        daemonThreadFactory("dialogue-ambient"),
+        new ThreadPoolExecutor.DiscardOldestPolicy());
   }
 
   private static ExecutorService buildPrefetchExecutor() {

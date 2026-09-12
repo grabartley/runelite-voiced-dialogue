@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
+import com.grahambartley.runelite.voiced.dialogue.audio.StreamingAudioPlayer;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.speech.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
@@ -133,7 +134,7 @@ public class VoicedDialoguePluginTest {
     StubBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
     BackendProvider provider = new BackendProvider(cloud);
     DialogueAudioService audioService =
-        new DialogueAudioService(provider, null, null, 1, 1, () -> 100);
+        new DialogueAudioService(provider, null, StreamingAudioPlayer::new, null, 1, 1, () -> 100);
 
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     setField(plugin, "audioService", audioService);

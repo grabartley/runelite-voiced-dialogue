@@ -74,42 +74,38 @@ Ambient overhead chatter (`AmbientChatterWatcher`, gated by **Voice Ambient Chat
 default) is the one voiced surface the player does not trigger by clicking. The client raises
 `OverheadTextChanged` with the speaking `Actor`, so the NPC arrives with its real id and
 `VoiceManager.resolveNpc` reads identity straight off it; no name lookup through `NpcFinder` is
-involved, and nothing else about the line differs from a dialogue line. It is always Neutral, since
-an overhead bark carries no chat head.
+involved. Every NPC that speaks overhead resolves its own race, gender, life stage and character
+profile through the same path a dialogue line takes, so a dwarf barking in a mine sounds like that
+dwarf. Delivery is Neutral, since an overhead bark carries no chat head.
 
-Four gates bound what that costs. Only an `NPC` is voiced, so other players and your own overhead
-text never are; the speaker must be within 7 tiles and on your plane, the radius at which a bark
-reads as happening near you; an NPC speaks at most one ambient line every 10 seconds, keyed on its
-world index so each instance of a crowd of goblins is counted separately; and one ambient line is in
-flight at a time, so a square of chattering NPCs draws one billable call rather than a dozen. That
-slot is released when `DialogueAudioService` finishes the line, with a 30 second ceiling so a line
-the queue dropped cannot hold it shut.
+Two gates decide whether a bark is voiced at all. The speaker must be an `NPC`, so other players and
+your own overhead text never are, and it must be within **Ambient Chatter Range** tiles on your
+plane. The range is a setting rather than a constant because how far away a bark still feels part of
+the scene is a matter of taste and of where you play; it defaults to 20 tiles and goes to 50.
 
-That slot is a single compare-and-set claim rather than a flag plus a deadline, because it is taken
-on the client thread and released from a synthesis worker; the clock behind both the cooldown and
-the ceiling is `System.nanoTime`, so an NTP correction cannot stretch or cut either one.
+There is deliberately no per-NPC cooldown and no cap on how many barks may be in flight. A market
+square where a dozen people talk over each other is the point of the feature, and a rule that voiced
+some lines and dropped others would read as broken rather than as restrained. Repeats are close to
+free anyway: a bark is short, barks repeat heavily, and the second hearing of one comes off the same
+cache tiers a dialogue line uses.
 
-An ambient line is also the one voiced line that is buffered rather than streamed. Streaming exists
-to cut the wait before a dialogue line the player is standing there for starts speaking; nobody
-waits on a bark. Buffering means the slot is released when the audio has actually finished playing,
-not when the last byte of synthesis arrived, so a cached bark and a freshly synthesized one hold the
-slot for the same span and neither gets clipped by the next one.
+Overlapping playback is what makes that work, and it needs its own lane. `StreamingAudioPlayer`
+holds one line and one generation counter, so a single instance plays one clip at a time by design,
+which is correct for dialogue where each line supersedes the last. `DialogueAudioService` therefore
+runs ambient on a separate pool with its own epoch, and hands each bark a player of its own, mixing
+at the audio device. Ambient never touches the dialogue epoch and never stops the dialogue output,
+so no bark can cut another or interrupt a line you clicked for.
 
-Conversation owns the audio channel outright. `DialogueWatcher` is the single owner of that state
+Conversation still owns the channel outright. `DialogueWatcher` is the single owner of that state
 and offers two readings of it: `isDialogueOpen`, the state its per-tick scan settled on, which is
 what the click-triggered surfaces need, and `isConversationOnScreen`, a pure live read of the
 dialogue boxes, the option list, and the narration boxes, the last of those asked of
 `NarrationWatcher`, which owns those widget ids. Ambient takes the live one, because
 `OverheadTextChanged` arrives while the client is processing a tick and the scan has not run yet,
-because an option list on screen is
-still being mid-conversation even though no dialogue box is, and because a narration box holds the
-screen whether or not **Voice Narration** is voicing it. A conversation speaking its first line
-advances the epoch that `speakBuffered` stamped on the ambient task, so the ambient audio stops
-where any other superseded line would.
-
-Examine text and your own public chat are not gated against: a bark starting while one of those is
-playing cuts it, as every voiced line cuts the one before it. All three are opt-in, and the line
-lost is a short one either way.
+because an option list on screen is still being mid-conversation even though no dialogue box is, and
+because a narration box holds the screen whether or not **Voice Narration** is voicing it. Any line
+the player triggered advances the ambient epoch and stops every bark playing, so opening a dialogue
+silences the square.
 
 One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a
 dialogue line would, so with **Auto-learn New NPCs** on, ambient chatter drives wiki lookups as well

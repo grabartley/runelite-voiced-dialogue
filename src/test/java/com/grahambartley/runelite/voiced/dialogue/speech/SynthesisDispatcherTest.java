@@ -22,7 +22,6 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
-import java.util.concurrent.atomic.AtomicInteger;
 import net.runelite.api.NPC;
 import org.junit.Before;
 import org.junit.Test;
@@ -162,10 +161,10 @@ public class SynthesisDispatcherTest {
     when(voiceManager.resolveNpc(crier)).thenReturn(new ResolvedSpeaker(spec, profile));
     when(caveEchoPolicy.shouldEcho()).thenReturn(false);
 
-    dispatcher.speakAmbient("Hear ye!", crier, () -> {});
+    dispatcher.speakAmbient("Hear ye!", crier);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speakBuffered(req.capture(), eq(false), any(Runnable.class));
+    verify(audioService).speakAmbient(req.capture(), eq(false));
     SynthesisRequest r = req.getValue();
     assertEquals("Hear ye!", r.text());
     assertSame(spec, r.voice());
@@ -178,28 +177,27 @@ public class SynthesisDispatcherTest {
   }
 
   @Test
-  public void ambientChatterBuffersSoItsSlotIsHeldForTheWholeLine() {
+  public void ambientChatterUndergroundCarriesTheCaveEcho() {
     when(backend.isAvailable()).thenReturn(true);
     NPC crier = mock(NPC.class);
     when(voiceManager.resolveNpc(crier))
         .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
     when(caveEchoPolicy.shouldEcho()).thenReturn(true);
 
-    dispatcher.speakAmbient("Hear ye!", crier, () -> {});
+    dispatcher.speakAmbient("Hear ye!", crier);
 
-    verify(audioService).speakBuffered(any(SynthesisRequest.class), eq(true), any(Runnable.class));
+    verify(audioService).speakAmbient(any(SynthesisRequest.class), eq(true));
   }
 
   @Test
-  public void anAmbientLineReleasesItsCallerWhenTheBackendIsUnavailable() {
+  public void nothingIsSpokenAmbientWhenTheBackendIsUnavailable() {
     when(backend.isAvailable()).thenReturn(false);
     NPC crier = mock(NPC.class);
     when(voiceManager.resolveNpc(crier))
         .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
-    AtomicInteger finished = new AtomicInteger();
 
-    dispatcher.speakAmbient("Hear ye!", crier, finished::incrementAndGet);
+    dispatcher.speakAmbient("Hear ye!", crier);
 
-    assertEquals("an unvoiced ambient line must not hold the slot", 1, finished.get());
+    verify(audioService, never()).speakAmbient(any(SynthesisRequest.class), anyBoolean());
   }
 }
