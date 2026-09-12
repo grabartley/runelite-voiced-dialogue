@@ -60,7 +60,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakDialogue("Grr!", Speaker.NPC, "Bob", 614);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(true), any(Runnable.class));
+    verify(audioService).speak(req.capture(), eq(true));
     SynthesisRequest r = req.getValue();
     assertEquals("Grr!", r.text());
     assertSame(spec, r.voice());
@@ -80,7 +80,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakPublicChat("hello world");
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(false), any(Runnable.class));
+    verify(audioService).speak(req.capture(), eq(false));
     SynthesisRequest r = req.getValue();
     assertEquals("hello world", r.text());
     assertEquals(Emotion.NEUTRAL, r.emotion());
@@ -99,7 +99,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakNarration("You find a key.");
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(false), any(Runnable.class));
+    verify(audioService).speak(req.capture(), eq(false));
     SynthesisRequest r = req.getValue();
     assertEquals("You find a key.", r.text());
     assertSame(spec, r.voice());
@@ -117,7 +117,7 @@ public class SynthesisDispatcherTest {
 
     dispatcher.speakNarration("You find a key.");
 
-    verify(audioService).speak(any(SynthesisRequest.class), eq(false), any(Runnable.class));
+    verify(audioService).speak(any(SynthesisRequest.class), eq(false));
   }
 
   @Test
@@ -130,7 +130,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakNarration("You find a key.");
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService, times(2)).speak(req.capture(), anyBoolean(), any(Runnable.class));
+    verify(audioService, times(2)).speak(req.capture(), anyBoolean());
     assertEquals(
         "both narrated lines resolve to the same voice key",
         req.getAllValues().get(0).voice().key(),
@@ -149,8 +149,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakPublicChat("hello");
     dispatcher.speakNarration("You find a key.");
 
-    verify(audioService, never())
-        .speak(any(SynthesisRequest.class), anyBoolean(), any(Runnable.class));
+    verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
   }
 
   @Test
@@ -166,7 +165,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakAmbient("Hear ye!", crier, () -> {});
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(false), any(Runnable.class));
+    verify(audioService).speakBuffered(req.capture(), eq(false), any(Runnable.class));
     SynthesisRequest r = req.getValue();
     assertEquals("Hear ye!", r.text());
     assertSame(spec, r.voice());
@@ -175,6 +174,20 @@ public class SynthesisDispatcherTest {
     assertFalse("ambient chatter is not the player speaking", r.player());
     assertFalse("ambient chatter is translated like dialogue", r.skipTranslation());
     verify(voiceManager, never()).resolve(any(Speaker.class), any(String.class));
+    verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
+  }
+
+  @Test
+  public void ambientChatterBuffersSoItsSlotIsHeldForTheWholeLine() {
+    when(backend.isAvailable()).thenReturn(true);
+    NPC crier = mock(NPC.class);
+    when(voiceManager.resolveNpc(crier))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(true);
+
+    dispatcher.speakAmbient("Hear ye!", crier, () -> {});
+
+    verify(audioService).speakBuffered(any(SynthesisRequest.class), eq(true), any(Runnable.class));
   }
 
   @Test

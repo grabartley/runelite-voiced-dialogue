@@ -89,16 +89,29 @@ That slot is a single compare-and-set claim rather than a flag plus a deadline, 
 on the client thread and released from a synthesis worker; the clock behind both the cooldown and
 the ceiling is `System.nanoTime`, so an NTP correction cannot stretch or cut either one.
 
-Dialogue owns the audio channel outright. `DialogueWatcher` is the single owner of that state and
-answers the ambient gate live, reading the dialogue widgets on demand rather than the state its own
-per-tick scan settled on, because `OverheadTextChanged` arrives while the client processes a tick
-and the scan has not run yet. A dialogue opening mid-line advances the epoch that `speak` stamped on
-the ambient task, so the ambient audio stops where any other superseded line would.
+An ambient line is also the one voiced line that is buffered rather than streamed. Streaming exists
+to cut the wait before a dialogue line the player is standing there for starts speaking; nobody
+waits on a bark. Buffering means the slot is released when the audio has actually finished playing,
+not when the last byte of synthesis arrived, so a cached bark and a freshly synthesized one hold the
+slot for the same span and neither gets clipped by the next one.
 
-Ambient outranks the other non-dialogue surfaces. A bark starting while an examine, a narration box,
-or your own public chat is playing cuts it, because every voiced line stops the one before it, and
-only dialogue is gated against. Those surfaces are opt-in alongside ambient, and the line lost is a
-short one either way.
+Conversation owns the audio channel outright. `DialogueWatcher` is the single owner of that state
+and offers two readings of it: `isDialogueOpen`, the state its per-tick scan settled on, which is
+what the click-triggered surfaces need, and `isConversationOnScreen`, which reads the dialogue boxes
+and the option list on demand. Ambient takes the live one, because `OverheadTextChanged` arrives
+while the client is processing a tick and the scan has not run yet, and because an option list on
+screen is still being mid-conversation even though no dialogue box is. Narration boxes are folded
+into the settled flag, so they gate ambient too. A conversation opening mid-line advances the epoch
+that `speak` stamped on the ambient task, so the ambient audio stops where any other superseded line
+would.
+
+Examine text and your own public chat are not gated against: a bark starting while one of those is
+playing cuts it, as every voiced line cuts the one before it. All three are opt-in, and the line
+lost is a short one either way.
+
+One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a
+dialogue line would, so with **Auto-learn New NPCs** on, ambient chatter drives wiki lookups as well
+as dialogue. They are deduped per NPC id and run off the game thread, so the cost stays bounded.
 
 ## The OpenRouter speech call
 

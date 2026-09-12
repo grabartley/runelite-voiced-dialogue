@@ -904,13 +904,14 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void aCompletionHookFiresOnceTheLineHasPlayed() {
+  public void aCompletionHookFiresOnceTheQueuedLineHasRun() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
     AtomicInteger finished = new AtomicInteger();
 
-    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speakBuffered(
+        req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
     assertEquals("the hook waits for the queued task", 0, finished.get());
     executor.runAll();
 
@@ -924,7 +925,8 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
     AtomicInteger finished = new AtomicInteger();
 
-    svc.speak(req("Ambient", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speakBuffered(
+        req("Ambient", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
     svc.speak(req("Dialogue", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
 
@@ -938,7 +940,7 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
     AtomicInteger finished = new AtomicInteger();
 
-    svc.speak(req("", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speakBuffered(req("", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
 
     assertEquals("an empty line releases its caller immediately", 1, finished.get());
     assertEquals("and never reaches the backend", 0, backend.requests.size());
@@ -954,7 +956,8 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), refusing, 8, 100);
     AtomicInteger finished = new AtomicInteger();
 
-    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speakBuffered(
+        req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
 
     assertEquals("a line the executor refuses releases its caller", 1, finished.get());
   }

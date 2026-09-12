@@ -97,7 +97,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Your Delivery Pace** | Normal | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
-| **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, in their own voices. These play without you clicking a dialogue, so a busy square costs a few calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. One NPC at a time, one line per NPC every 10 seconds, within 7 tiles, and never over an open dialogue. |
+| **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, in their own voices. These play without you clicking a dialogue, so a busy square costs a few calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. One NPC at a time, one line per NPC every 10 seconds, within 7 tiles, and never while you are in a conversation. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Their first line still uses the default voice. |
 
 </details>

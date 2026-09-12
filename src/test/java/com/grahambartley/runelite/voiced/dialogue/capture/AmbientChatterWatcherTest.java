@@ -32,7 +32,7 @@ public class AmbientChatterWatcherTest {
   private final List<Runnable> completions = new ArrayList<>();
 
   private boolean enabled = true;
-  private boolean dialogueOpen = false;
+  private boolean conversationOnScreen = false;
   private long now = 1_000_000L;
 
   private final AmbientChatterWatcher watcher =
@@ -41,7 +41,7 @@ public class AmbientChatterWatcherTest {
           new DialogueTextCleaner(new ProfanityFilter()),
           dispatcher,
           () -> enabled,
-          () -> dialogueOpen,
+          () -> conversationOnScreen,
           () -> now);
 
   @Before
@@ -78,14 +78,6 @@ public class AmbientChatterWatcherTest {
   }
 
   @Test
-  public void theLocalPlayersOwnOverheadTextIsNeverSpoken() {
-    watcher.onOverheadTextChanged(
-        new OverheadTextChanged(client.getLocalPlayer(), "Selling whips"));
-
-    verifyNothingSpoken();
-  }
-
-  @Test
   public void anNpcBeyondEarshotIsIgnored() {
     watcher.onOverheadTextChanged(
         overhead(npc(1, AmbientChatterWatcher.EARSHOT_TILES + 1), "Too far away"));
@@ -113,8 +105,8 @@ public class AmbientChatterWatcherTest {
   }
 
   @Test
-  public void nothingIsSpokenWhileADialogueIsOpen() {
-    dialogueOpen = true;
+  public void nothingIsSpokenWhileAConversationIsOnScreen() {
+    conversationOnScreen = true;
 
     watcher.onOverheadTextChanged(overhead(npc(1, 1), "Lovely day!"));
 

@@ -230,7 +230,7 @@ public class DialogueWatcherTest {
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc);
 
     assertFalse("the settled state still trails the scan", watcher.isDialogueOpen());
-    assertTrue("the live read sees the box the moment it opens", watcher.isDialogueOpenNow());
+    assertTrue("the live read sees the box the moment it opens", watcher.isConversationOnScreen());
   }
 
   @Test
@@ -238,7 +238,18 @@ public class DialogueWatcherTest {
     Widget player = visibleWidget("Hello!");
     when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
 
-    assertTrue(watcher.isDialogueOpenNow());
+    assertTrue(watcher.isConversationOnScreen());
+  }
+
+  @Test
+  public void anOpenOptionListCountsAsAConversationOnScreen() {
+    Widget options = mock(Widget.class);
+    when(options.isHidden()).thenReturn(false);
+    when(client.getWidget(InterfaceID.Chatmenu.OPTIONS)).thenReturn(options);
+
+    assertFalse("the settled state tracks dialogue boxes only", watcher.isDialogueOpen());
+    assertTrue(
+        "picking an option is still being in a conversation", watcher.isConversationOnScreen());
   }
 
   @Test
@@ -247,7 +258,7 @@ public class DialogueWatcherTest {
     when(hidden.isHidden()).thenReturn(true);
     when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(hidden);
 
-    assertFalse(watcher.isDialogueOpenNow());
+    assertFalse(watcher.isConversationOnScreen());
   }
 
   @Test
@@ -255,6 +266,7 @@ public class DialogueWatcherTest {
     when(narrationWatcher.tick()).thenReturn(true);
     watcher.tick();
 
-    assertTrue("narration holds the channel for the live read too", watcher.isDialogueOpenNow());
+    assertTrue(
+        "narration holds the channel for the live read too", watcher.isConversationOnScreen());
   }
 }

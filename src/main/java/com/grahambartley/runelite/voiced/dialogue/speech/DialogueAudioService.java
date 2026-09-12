@@ -86,10 +86,15 @@ public final class DialogueAudioService {
   }
 
   public void speak(SynthesisRequest request, boolean applyEcho) {
-    speak(request, applyEcho, NOTHING_TO_FINISH);
+    submit(request, applyEcho, false, NOTHING_TO_FINISH);
   }
 
-  public void speak(SynthesisRequest request, boolean applyEcho, Runnable onFinished) {
+  public void speakBuffered(SynthesisRequest request, boolean applyEcho, Runnable onFinished) {
+    submit(request, applyEcho, true, onFinished);
+  }
+
+  private void submit(
+      SynthesisRequest request, boolean applyEcho, boolean buffered, Runnable onFinished) {
     if (request == null || request.text() == null || request.text().isEmpty()) {
       onFinished.run();
       return;
@@ -104,7 +109,7 @@ public final class DialogueAudioService {
             executor,
             () -> {
               try {
-                run(mine, backend, effective, key, applyEcho);
+                run(mine, backend, effective, key, applyEcho, buffered);
               } finally {
                 onFinished.run();
               }
@@ -190,7 +195,8 @@ public final class DialogueAudioService {
       SynthesisBackend backend,
       SynthesisRequest request,
       CacheKey key,
-      boolean applyEcho) {
+      boolean applyEcho,
+      boolean buffered) {
     if (epoch.get() != mine) {
       return;
     }
@@ -199,7 +205,7 @@ public final class DialogueAudioService {
       playBuffered(mine, pcm, applyEcho);
       return;
     }
-    if (!applyEcho) {
+    if (!applyEcho && !buffered) {
       runStreaming(mine, backend, request, key);
       return;
     }

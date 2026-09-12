@@ -27,7 +27,7 @@ public final class AmbientChatterWatcher {
   private final DialogueTextCleaner textCleaner;
   private final SynthesisDispatcher dispatcher;
   private final BooleanSupplier enabled;
-  private final BooleanSupplier dialogueOpen;
+  private final BooleanSupplier conversationOnScreen;
   private final LongSupplier clock;
 
   private final LruCache<Integer, Long> spokenAtByNpcIndex = new LruCache<>(TRACKED_NPC_LIMIT);
@@ -38,18 +38,18 @@ public final class AmbientChatterWatcher {
       DialogueTextCleaner textCleaner,
       SynthesisDispatcher dispatcher,
       BooleanSupplier enabled,
-      BooleanSupplier dialogueOpen,
+      BooleanSupplier conversationOnScreen,
       LongSupplier clock) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.dispatcher = dispatcher;
     this.enabled = enabled;
-    this.dialogueOpen = dialogueOpen;
+    this.conversationOnScreen = conversationOnScreen;
     this.clock = clock;
   }
 
   public void onOverheadTextChanged(OverheadTextChanged event) {
-    if (!enabled.getAsBoolean() || dialogueOpen.getAsBoolean()) {
+    if (!enabled.getAsBoolean() || conversationOnScreen.getAsBoolean()) {
       return;
     }
     Actor actor = event.getActor();
@@ -61,18 +61,23 @@ public final class AmbientChatterWatcher {
     if (overheadText == null || !isWithinEarshot(npc)) {
       return;
     }
-    String cleaned = textCleaner.clean(overheadText);
-    if (cleaned.isEmpty()) {
-      return;
-    }
     long now = clock.getAsLong();
     if (isOnCooldown(npc, now) || isSlotHeld(now)) {
+      return;
+    }
+    String cleaned = textCleaner.clean(overheadText);
+    if (cleaned.isEmpty()) {
       return;
     }
     spokenAtByNpcIndex.put(npc.getIndex(), now);
     Slot mine = new Slot(now + MAX_SLOT_HOLD_NANOS);
     slot.set(mine);
-    dispatcher.speakAmbient(cleaned, npc, () -> slot.compareAndSet(mine, null));
+    try {
+      dispatcher.speakAmbient(cleaned, npc, () -> slot.compareAndSet(mine, null));
+    } catch (RuntimeException e) {
+      slot.compareAndSet(mine, null);
+      throw e;
+    }
   }
 
   private boolean isSlotHeld(long now) {

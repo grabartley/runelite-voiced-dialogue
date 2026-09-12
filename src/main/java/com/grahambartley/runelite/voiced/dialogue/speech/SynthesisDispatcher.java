@@ -58,11 +58,16 @@ public final class SynthesisDispatcher {
 
   public void speakAmbient(String text, NPC npc, Runnable onFinished) {
     ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
-    dispatch(
+    SynthesisRequest request =
         new SynthesisRequest(
-            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
-        npc.getName(),
-        onFinished);
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
+    SynthesisBackend backend = backendProvider.active();
+    if (!backend.isAvailable()) {
+      onFinished.run();
+      return;
+    }
+    trace(backend, request, npc.getName());
+    audioService.speakBuffered(request, caveEchoPolicy.shouldEcho(), onFinished);
   }
 
   public void speakNarration(String text) {
@@ -74,22 +79,21 @@ public final class SynthesisDispatcher {
   }
 
   private void dispatch(SynthesisRequest request, String npcName) {
-    dispatch(request, npcName, () -> {});
-  }
-
-  private void dispatch(SynthesisRequest request, String npcName, Runnable onFinished) {
     SynthesisBackend backend = backendProvider.active();
     if (!backend.isAvailable()) {
-      onFinished.run();
       return;
     }
-    if (config.debugMode()) {
-      Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
-      log.info(
-          VoiceTraceFormatter.buildResolvedLine(
-              backend.id(), request.voice(), npcName, effective.name(), request.profile()));
+    trace(backend, request, npcName);
+    audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
+  }
+
+  private void trace(SynthesisBackend backend, SynthesisRequest request, String npcName) {
+    if (!config.debugMode()) {
+      return;
     }
-    audioService.speak(
-        request, !request.voice().narrator() && caveEchoPolicy.shouldEcho(), onFinished);
+    Emotion effective = BackendProvider.downgradeFor(backend, request).emotion();
+    log.info(
+        VoiceTraceFormatter.buildResolvedLine(
+            backend.id(), request.voice(), npcName, effective.name(), request.profile()));
   }
 }

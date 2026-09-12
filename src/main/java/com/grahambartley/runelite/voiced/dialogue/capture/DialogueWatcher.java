@@ -82,10 +82,11 @@ public final class DialogueWatcher {
     return dialogueOpen;
   }
 
-  public boolean isDialogueOpenNow() {
+  public boolean isConversationOnScreen() {
     return dialogueOpen
         || isVisible(client.getWidget(InterfaceID.ChatLeft.TEXT))
-        || isVisible(client.getWidget(InterfaceID.ChatRight.TEXT));
+        || isVisible(client.getWidget(InterfaceID.ChatRight.TEXT))
+        || isVisible(client.getWidget(InterfaceID.Chatmenu.OPTIONS));
   }
 
   private static boolean isVisible(Widget widget) {
