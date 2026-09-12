@@ -67,7 +67,7 @@ public final class SynthesisDispatcher {
         new SynthesisRequest(
             text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
     trace(backend, request, npc.getName());
-    audioService.speakAmbient(request, echoFor(request), distanceVolume);
+    audioService.speakAmbient(request, echoFor(request), npc.getIndex(), distanceVolume);
   }
 
   public void speakNarration(String text) {

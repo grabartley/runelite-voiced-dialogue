@@ -112,6 +112,20 @@ fade possible; on a mixer that does not offer the control the line plays at the 
 with, and the cut still lands. The distance is read on the game thread, where NPC positions are safe
 to read, and the only work done there is one coordinate subtraction per bark still playing.
 
+One speaker is never voiced twice at once. A person cannot say two things at the same time, so a
+bark that arrives while that NPC is still talking waits its turn: barks are chained per NPC index,
+and the chain is built at arrival, so the lines come out in the order the NPC said them even when a
+later one is a cache hit that resolves first. Synthesis is not part of the chain, only playback is,
+so the queued line is already rendered and starts the instant the one before it ends. Different NPCs
+share nothing, which is what keeps a square sounding like a crowd rather than a queue.
+
+Lines that are not speech are dropped before any of that. Sheep, ducks and cows put their noises in
+the same overhead bubble a market crier uses, and a text-to-speech model reads them literally while a
+speaking style is worse still, rewriting "Baa" into whatever that register would say. `AnimalNoises`
+drops a line whose every token is an animal noise, which is the honest test: it keys on the line not
+being speech rather than on the speaker being an animal, so a talking monkey in a quest still gets
+its voice and a sentence that merely mentions a moo is untouched.
+
 That lane is split in two, because the two halves are bounded by different things. Six threads do
 the cache lookup and, on a miss, the synthesis, which is the part that costs money and wants a limit
 on how hard it hits the provider; its queue is unbounded, so a busy square delays a bark rather than

@@ -6,6 +6,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -158,6 +159,7 @@ public class SynthesisDispatcherTest {
     VoiceSpec spec = mock(VoiceSpec.class);
     CharacterProfile profile = mock(CharacterProfile.class);
     NPC crier = mock(NPC.class);
+    when(crier.getIndex()).thenReturn(7);
     when(crier.getName()).thenReturn("Town Crier");
     when(voiceManager.resolveNpc(crier)).thenReturn(new ResolvedSpeaker(spec, profile));
     when(caveEchoPolicy.shouldEcho()).thenReturn(false);
@@ -165,7 +167,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speakAmbient(req.capture(), eq(false), any(IntSupplier.class));
+    verify(audioService).speakAmbient(req.capture(), eq(false), eq(7), any(IntSupplier.class));
     SynthesisRequest r = req.getValue();
     assertEquals("Hear ye!", r.text());
     assertSame(spec, r.voice());
@@ -181,6 +183,7 @@ public class SynthesisDispatcherTest {
   public void ambientChatterUndergroundCarriesTheCaveEcho() {
     when(backend.isAvailable()).thenReturn(true);
     NPC crier = mock(NPC.class);
+    when(crier.getIndex()).thenReturn(7);
     when(voiceManager.resolveNpc(crier))
         .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
     when(caveEchoPolicy.shouldEcho()).thenReturn(true);
@@ -188,19 +191,20 @@ public class SynthesisDispatcherTest {
     dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
 
     verify(audioService)
-        .speakAmbient(any(SynthesisRequest.class), eq(true), any(IntSupplier.class));
+        .speakAmbient(any(SynthesisRequest.class), eq(true), eq(7), any(IntSupplier.class));
   }
 
   @Test
   public void nothingIsSpokenAmbientWhenTheBackendIsUnavailable() {
     when(backend.isAvailable()).thenReturn(false);
     NPC crier = mock(NPC.class);
+    when(crier.getIndex()).thenReturn(7);
     when(voiceManager.resolveNpc(crier))
         .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
 
     dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
 
     verify(audioService, never())
-        .speakAmbient(any(SynthesisRequest.class), anyBoolean(), any(IntSupplier.class));
+        .speakAmbient(any(SynthesisRequest.class), anyBoolean(), anyInt(), any(IntSupplier.class));
   }
 }

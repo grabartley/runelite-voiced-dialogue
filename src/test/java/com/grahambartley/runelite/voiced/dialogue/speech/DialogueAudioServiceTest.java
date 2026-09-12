@@ -951,9 +951,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), dialogue, executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
-    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
-    svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false, () -> 100);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 101, () -> 100);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, 102, () -> 100);
+    svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false, 103, () -> 100);
     executor.drain();
 
     assertEquals("every bark is synthesized", 3, backend.requests.size());
@@ -970,9 +970,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 104, () -> 100);
     executor.drain();
-    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, 105, () -> 100);
     executor.drain();
 
     for (FakeOutput ambient : ambientOutputs) {
@@ -986,8 +986,8 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
-    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 106, () -> 100);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, 107, () -> 100);
     svc.speak(req("Greetings adventurer", NpcRace.HUMAN, NpcGender.MALE));
     executor.drain();
 
@@ -1001,9 +1001,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false, 108, () -> 100);
     executor.drain();
-    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false, 109, () -> 100);
     executor.drain();
 
     assertEquals("the repeated bark costs nothing", 1, backend.requests.size());
@@ -1022,7 +1022,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 110, () -> 100);
     executor.drain();
 
     assertEquals("a failed bark opens no audio line", 0, ambientOutputs.size());
@@ -1066,8 +1066,8 @@ public class DialogueAudioServiceTest {
             pool,
             () -> 100);
     try {
-      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
-      svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 111, () -> 100);
+      svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, 112, () -> 100);
 
       List<LatchedOutput> both = awaitOutputs(latched, 2);
       for (LatchedOutput ambient : both) {
@@ -1105,7 +1105,7 @@ public class DialogueAudioServiceTest {
             pool,
             () -> 100);
     try {
-      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 113, () -> 100);
       LatchedOutput bark = awaitOutputs(latched, 1).get(0);
       assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
 
@@ -1144,7 +1144,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 17);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 114, () -> 17);
     executor.drain();
 
     assertEquals("the opening volume is the distance volume", 17, ambientOutputs.get(0).lastVolume);
@@ -1173,7 +1173,8 @@ public class DialogueAudioServiceTest {
             pool,
             () -> 100);
     try {
-      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, walkingAway::get);
+      svc.speakAmbient(
+          req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 115, walkingAway::get);
       LatchedOutput bark = awaitOutputs(latched, 1).get(0);
       assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
 
@@ -1199,7 +1200,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 50);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 116, () -> 50);
     executor.drain();
     ambientOutputs.get(0).volumeChanges.clear();
     svc.refreshAmbientVolumes();
@@ -1232,7 +1233,7 @@ public class DialogueAudioServiceTest {
             pool,
             () -> 100);
     try {
-      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, volume::get);
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 117, volume::get);
       LatchedOutput bark = awaitOutputs(latched, 1).get(0);
       assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
 
@@ -1248,5 +1249,76 @@ public class DialogueAudioServiceTest {
     } finally {
       pool.shutdownNow();
     }
+  }
+
+  @Test
+  public void oneNpcsLinesQueueBehindEachOtherRatherThanOverlapping() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(6);
+    DialogueAudioService svc = latchedService(backend, latched, pool);
+    try {
+      svc.speakAmbient(req("Join us!", NpcRace.HUMAN, NpcGender.MALE), false, 42, () -> 100);
+      svc.speakAmbient(
+          req("The H.A.M. will win", NpcRace.HUMAN, NpcGender.MALE), false, 42, () -> 100);
+      svc.speakAmbient(req("Down with magic", NpcRace.HUMAN, NpcGender.MALE), false, 42, () -> 100);
+
+      LatchedOutput first = awaitOutputs(latched, 1).get(0);
+      assertTrue("the first line starts", first.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+      Thread.sleep(POLL_MILLIS * 4);
+      assertEquals("one speaker is only ever on one audio line", 1, latched.size());
+
+      first.release.countDown();
+      LatchedOutput second = awaitOutputs(latched, 2).get(1);
+      assertTrue("the queued line follows", second.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+      second.release.countDown();
+      LatchedOutput third = awaitOutputs(latched, 3).get(2);
+      assertTrue("and so does the one after", third.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+      third.release.countDown();
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void differentNpcsStillTalkOverEachOther() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(6);
+    DialogueAudioService svc = latchedService(backend, latched, pool);
+    try {
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, 1, () -> 100);
+      svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, 2, () -> 100);
+      svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false, 3, () -> 100);
+
+      for (LatchedOutput bark : awaitOutputs(latched, 3)) {
+        assertTrue(
+            "every speaker sounds at once", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+      }
+      for (LatchedOutput bark : latched) {
+        bark.release.countDown();
+      }
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  private DialogueAudioService latchedService(
+      FakeBackend backend, List<LatchedOutput> latched, Executor pool) {
+    return new DialogueAudioService(
+        provider(backend),
+        new FakeOutput(),
+        () -> {
+          LatchedOutput ambient = new LatchedOutput();
+          latched.add(ambient);
+          return ambient;
+        },
+        new TieredSynthesisCache(8, null),
+        pool,
+        pool,
+        pool,
+        pool,
+        pool,
+        () -> 100);
   }
 }

@@ -51,7 +51,7 @@ public final class AmbientChatterWatcher {
       return;
     }
     String cleaned = textCleaner.clean(overheadText);
-    if (cleaned.isEmpty()) {
+    if (cleaned.isEmpty() || AnimalNoises.isNothingButNoise(cleaned)) {
       return;
     }
     dispatcher.speakAmbient(cleaned, npc, () -> volumeFor(npc));
