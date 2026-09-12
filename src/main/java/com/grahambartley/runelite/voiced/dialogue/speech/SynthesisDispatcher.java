@@ -9,9 +9,12 @@ import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NPC;
 
 @Slf4j
 public final class SynthesisDispatcher {
+
+  private static final Runnable NOTHING_TO_FINISH = () -> {};
 
   private final VoiceManager voiceManager;
   private final EmotionResolver emotionResolver;
@@ -55,6 +58,15 @@ public final class SynthesisDispatcher {
         null);
   }
 
+  public void speakAmbient(String text, NPC npc, Runnable onFinished) {
+    ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
+    dispatch(
+        new SynthesisRequest(
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
+        npc.getName(),
+        onFinished);
+  }
+
   public void speakNarration(String text) {
     ResolvedSpeaker resolved = voiceManager.resolveNarrator();
     dispatch(
@@ -64,8 +76,13 @@ public final class SynthesisDispatcher {
   }
 
   private void dispatch(SynthesisRequest request, String npcName) {
+    dispatch(request, npcName, NOTHING_TO_FINISH);
+  }
+
+  private void dispatch(SynthesisRequest request, String npcName, Runnable onFinished) {
     SynthesisBackend backend = backendProvider.active();
     if (!backend.isAvailable()) {
+      onFinished.run();
       return;
     }
     if (config.debugMode()) {
@@ -74,6 +91,7 @@ public final class SynthesisDispatcher {
           VoiceTraceFormatter.buildResolvedLine(
               backend.id(), request.voice(), npcName, effective.name(), request.profile()));
     }
-    audioService.speak(request, !request.voice().narrator() && caveEchoPolicy.shouldEcho());
+    audioService.speak(
+        request, !request.voice().narrator() && caveEchoPolicy.shouldEcho(), onFinished);
   }
 }

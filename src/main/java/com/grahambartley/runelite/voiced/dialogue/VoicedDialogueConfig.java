@@ -313,10 +313,22 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "voiceAmbientChatter",
+      name = "Voice Ambient Chatter",
+      description =
+          "Speak nearby NPCs' overhead lines in their own voices. Spends on its own; repeats"
+              + " replay free.",
+      position = 6,
+      section = voicesSection)
+  default boolean voiceAmbientChatter() {
+    return false;
+  }
+
+  @ConfigItem(
       keyName = "autoLearnNewNpcs",
       name = "Auto-learn New NPCs",
       description = "Look up unknown NPCs on the wiki once, then cache.",
-      position = 6,
+      position = 7,
       section = voicesSection)
   default boolean autoLearnNewNpcs() {
     return false;

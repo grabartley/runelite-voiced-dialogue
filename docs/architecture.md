@@ -70,6 +70,25 @@ intervening tick still wins it. Like every other voiced line an examine goes thr
 `DialogueAudioService.speak`, which stops current playback and advances the epoch, so a fresh examine
 cuts the one before it exactly as a new dialogue line cuts the line being skipped.
 
+Ambient overhead chatter (`AmbientChatterWatcher`, gated by **Voice Ambient Chatter**, off by
+default) is the one voiced surface the player does not trigger by clicking. The client raises
+`OverheadTextChanged` with the speaking `Actor`, so the NPC arrives with its real id and
+`VoiceManager.resolveNpc` reads identity straight off it; no name lookup through `NpcFinder` is
+involved, and nothing else about the line differs from a dialogue line. It is always Neutral, since
+an overhead bark carries no chat head.
+
+Four gates bound what that costs. Only an `NPC` is voiced, so other players and your own overhead
+text never are; the speaker must be within 7 tiles and on your plane, the radius at which a bark
+reads as happening near you; an NPC speaks at most one ambient line every 10 seconds, keyed on its
+world index so each instance of a crowd of goblins is counted separately; and one ambient line is in
+flight at a time, so a square of chattering NPCs draws one billable call rather than a dozen. That
+slot is released when `DialogueAudioService` finishes the line, with a 30 second ceiling so a line
+the queue dropped cannot hold it shut.
+
+Dialogue owns the audio channel outright. An ambient line is never started while `DialogueWatcher`
+reports a dialogue open, and a dialogue opening mid-line advances the epoch that `speak` stamped on
+the ambient task, so the ambient audio stops where any other superseded line would.
+
 ## The OpenRouter speech call
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It

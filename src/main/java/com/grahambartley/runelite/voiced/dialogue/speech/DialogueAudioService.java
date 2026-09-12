@@ -31,6 +31,8 @@ public final class DialogueAudioService {
 
   private static final int SHUTDOWN_WAIT_SECONDS = 2;
 
+  private static final Runnable NOTHING_TO_FINISH = () -> {};
+
   private final BackendProvider backends;
   private final AudioOutput output;
   private final Executor executor;
@@ -84,7 +86,12 @@ public final class DialogueAudioService {
   }
 
   public void speak(SynthesisRequest request, boolean applyEcho) {
+    speak(request, applyEcho, NOTHING_TO_FINISH);
+  }
+
+  public void speak(SynthesisRequest request, boolean applyEcho, Runnable onFinished) {
     if (request == null || request.text() == null || request.text().isEmpty()) {
+      onFinished.run();
       return;
     }
     long mine = epoch.incrementAndGet();
@@ -92,7 +99,19 @@ public final class DialogueAudioService {
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
-    submitQuietly(executor, () -> run(mine, backend, effective, key, applyEcho));
+    boolean accepted =
+        submitQuietly(
+            executor,
+            () -> {
+              try {
+                run(mine, backend, effective, key, applyEcho);
+              } finally {
+                onFinished.run();
+              }
+            });
+    if (!accepted) {
+      onFinished.run();
+    }
   }
 
   public void prefetch(SynthesisRequest request) {
@@ -247,10 +266,12 @@ public final class DialogueAudioService {
                 key.textPreview()));
   }
 
-  private static void submitQuietly(Executor exec, Runnable task) {
+  private static boolean submitQuietly(Executor exec, Runnable task) {
     try {
       exec.execute(task);
+      return true;
     } catch (RejectedExecutionException ignored) {
+      return false;
     }
   }
 

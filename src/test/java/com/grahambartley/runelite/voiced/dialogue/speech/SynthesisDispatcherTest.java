@@ -22,6 +22,8 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import java.util.concurrent.atomic.AtomicInteger;
+import net.runelite.api.NPC;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -58,7 +60,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakDialogue("Grr!", Speaker.NPC, "Bob", 614);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(true));
+    verify(audioService).speak(req.capture(), eq(true), any(Runnable.class));
     SynthesisRequest r = req.getValue();
     assertEquals("Grr!", r.text());
     assertSame(spec, r.voice());
@@ -78,7 +80,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakPublicChat("hello world");
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(false));
+    verify(audioService).speak(req.capture(), eq(false), any(Runnable.class));
     SynthesisRequest r = req.getValue();
     assertEquals("hello world", r.text());
     assertEquals(Emotion.NEUTRAL, r.emotion());
@@ -97,7 +99,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakNarration("You find a key.");
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(false));
+    verify(audioService).speak(req.capture(), eq(false), any(Runnable.class));
     SynthesisRequest r = req.getValue();
     assertEquals("You find a key.", r.text());
     assertSame(spec, r.voice());
@@ -115,7 +117,7 @@ public class SynthesisDispatcherTest {
 
     dispatcher.speakNarration("You find a key.");
 
-    verify(audioService).speak(any(SynthesisRequest.class), eq(false));
+    verify(audioService).speak(any(SynthesisRequest.class), eq(false), any(Runnable.class));
   }
 
   @Test
@@ -128,7 +130,7 @@ public class SynthesisDispatcherTest {
     dispatcher.speakNarration("You find a key.");
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService, times(2)).speak(req.capture(), anyBoolean());
+    verify(audioService, times(2)).speak(req.capture(), anyBoolean(), any(Runnable.class));
     assertEquals(
         "both narrated lines resolve to the same voice key",
         req.getAllValues().get(0).voice().key(),
@@ -147,6 +149,44 @@ public class SynthesisDispatcherTest {
     dispatcher.speakPublicChat("hello");
     dispatcher.speakNarration("You find a key.");
 
-    verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
+    verify(audioService, never())
+        .speak(any(SynthesisRequest.class), anyBoolean(), any(Runnable.class));
+  }
+
+  @Test
+  public void ambientChatterIsNeutralNonPlayerAndResolvedFromTheNpcItself() {
+    when(backend.isAvailable()).thenReturn(true);
+    VoiceSpec spec = mock(VoiceSpec.class);
+    CharacterProfile profile = mock(CharacterProfile.class);
+    NPC crier = mock(NPC.class);
+    when(crier.getName()).thenReturn("Town Crier");
+    when(voiceManager.resolveNpc(crier)).thenReturn(new ResolvedSpeaker(spec, profile));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(false);
+
+    dispatcher.speakAmbient("Hear ye!", crier, () -> {});
+
+    ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
+    verify(audioService).speak(req.capture(), eq(false), any(Runnable.class));
+    SynthesisRequest r = req.getValue();
+    assertEquals("Hear ye!", r.text());
+    assertSame(spec, r.voice());
+    assertSame(profile, r.profile());
+    assertEquals("an overhead bark carries no chat head", Emotion.NEUTRAL, r.emotion());
+    assertFalse("ambient chatter is not the player speaking", r.player());
+    assertFalse("ambient chatter is translated like dialogue", r.skipTranslation());
+    verify(voiceManager, never()).resolve(any(Speaker.class), any(String.class));
+  }
+
+  @Test
+  public void anAmbientLineReleasesItsCallerWhenTheBackendIsUnavailable() {
+    when(backend.isAvailable()).thenReturn(false);
+    NPC crier = mock(NPC.class);
+    when(voiceManager.resolveNpc(crier))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+    AtomicInteger finished = new AtomicInteger();
+
+    dispatcher.speakAmbient("Hear ye!", crier, finished::incrementAndGet);
+
+    assertEquals("an unvoiced ambient line must not hold the slot", 1, finished.get());
   }
 }

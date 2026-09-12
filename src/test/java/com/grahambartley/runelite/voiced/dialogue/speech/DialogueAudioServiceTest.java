@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -900,5 +901,61 @@ public class DialogueAudioServiceTest {
     assertEquals("a prefetch of a cached line costs nothing", 0, after.prefetchedLines());
     assertEquals(
         "no extra characters were sent", afterFirst.speechCharacters(), after.speechCharacters());
+  }
+
+  @Test
+  public void aCompletionHookFiresOnceTheLineHasPlayed() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+    AtomicInteger finished = new AtomicInteger();
+
+    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    assertEquals("the hook waits for the queued task", 0, finished.get());
+    executor.runAll();
+
+    assertEquals("the hook fires exactly once", 1, finished.get());
+  }
+
+  @Test
+  public void aCompletionHookFiresForALineSupersededBeforeItRan() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+    AtomicInteger finished = new AtomicInteger();
+
+    svc.speak(req("Ambient", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+    svc.speak(req("Dialogue", NpcRace.HUMAN, NpcGender.MALE));
+    executor.runAll();
+
+    assertEquals("a cut line still releases its caller", 1, finished.get());
+  }
+
+  @Test
+  public void aCompletionHookFiresWhenThereIsNothingToSay() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+    AtomicInteger finished = new AtomicInteger();
+
+    svc.speak(req("", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+
+    assertEquals("an empty line releases its caller immediately", 1, finished.get());
+    assertEquals("and never reaches the backend", 0, backend.requests.size());
+  }
+
+  @Test
+  public void aCompletionHookFiresWhenTheQueueRefusesTheLine() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    Executor refusing =
+        command -> {
+          throw new RejectedExecutionException("closed");
+        };
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), refusing, 8, 100);
+    AtomicInteger finished = new AtomicInteger();
+
+    svc.speak(req("Hello", NpcRace.HUMAN, NpcGender.MALE), false, finished::incrementAndGet);
+
+    assertEquals("a refused line releases its caller", 1, finished.get());
   }
 }

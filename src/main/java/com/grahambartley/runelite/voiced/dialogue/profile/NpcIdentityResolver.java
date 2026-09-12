@@ -27,4 +27,9 @@ final class NpcIdentityResolver {
     }
     return new NpcIdentity(npc.getId(), demographicAnalyzer.analyzeNPC(npc), nameMatch);
   }
+
+  NpcIdentity resolve(NPC npc) {
+    return new NpcIdentity(
+        npc.getId(), demographicAnalyzer.analyzeNPC(npc), profileTable.matchName(npc.getName()));
+  }
 }

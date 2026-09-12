@@ -5,6 +5,7 @@ import com.google.inject.Provides;
 import com.grahambartley.runelite.voiced.dialogue.audio.CaveEchoPolicy;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingAudioPlayer;
 import com.grahambartley.runelite.voiced.dialogue.cache.DiskAudioCache;
+import com.grahambartley.runelite.voiced.dialogue.capture.AmbientChatterWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.ChatNoticeManager;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialoguePrefetchCoordinator;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialoguePrefetcher;
@@ -42,6 +43,7 @@ import net.runelite.api.Client;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.OverheadTextChanged;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
@@ -86,6 +88,8 @@ public class VoicedDialoguePlugin extends Plugin {
   private ExamineSpeaker examineSpeaker;
 
   private PublicChatSpeaker publicChatSpeaker;
+
+  private AmbientChatterWatcher ambientChatterWatcher;
 
   private SpendTracker spendTracker;
 
@@ -181,6 +185,14 @@ public class VoicedDialoguePlugin extends Plugin {
             config::voiceExamineText,
             dialogueWatcher::isDialogueOpen,
             clientThread::invokeLater);
+    ambientChatterWatcher =
+        new AmbientChatterWatcher(
+            client,
+            textCleaner,
+            synthesisDispatcher,
+            config::voiceAmbientChatter,
+            dialogueWatcher::isDialogueOpen,
+            System::currentTimeMillis);
 
     log.info("VoicedDialogue started");
   }
@@ -198,6 +210,7 @@ public class VoicedDialoguePlugin extends Plugin {
     dialogueWatcher = null;
     publicChatSpeaker = null;
     examineSpeaker = null;
+    ambientChatterWatcher = null;
     if (audioService != null) {
       audioService.close();
       audioService = null;
@@ -230,6 +243,13 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     if (examineSpeaker != null) {
       examineSpeaker.onChatMessage(event);
+    }
+  }
+
+  @Subscribe
+  public void onOverheadTextChanged(OverheadTextChanged event) {
+    if (ambientChatterWatcher != null) {
+      ambientChatterWatcher.onOverheadTextChanged(event);
     }
   }
 

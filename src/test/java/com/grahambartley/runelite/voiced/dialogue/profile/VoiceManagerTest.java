@@ -5,6 +5,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
@@ -14,6 +16,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import java.util.Collections;
 import net.runelite.api.Client;
+import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import org.junit.Test;
 
 public class VoiceManagerTest {
@@ -31,6 +35,8 @@ public class VoiceManagerTest {
     }
   }
 
+  private static final int DWARF_ID = 290;
+
   private VoiceManager newManager(PlayerVoice playerVoice) {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
@@ -38,6 +44,14 @@ public class VoiceManagerTest {
     profileTable.initialize();
     return new VoiceManager(
         new TestConfig(playerVoice), client, new NpcDemographicAnalyzer(), profileTable);
+  }
+
+  private VoiceManager newManager(Client client, PlayerVoice playerVoice) {
+    NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
+    demographicAnalyzer.initialize();
+    NpcProfileTable profileTable = new NpcProfileTable();
+    profileTable.initialize();
+    return new VoiceManager(new TestConfig(playerVoice), client, demographicAnalyzer, profileTable);
   }
 
   @Test
@@ -95,5 +109,39 @@ public class VoiceManagerTest {
     assertNotNull(profile);
     assertFalse("the default profile still names a voice", profile.name().trim().isEmpty());
     assertFalse("the default profile still carries an accent", profile.accent().trim().isEmpty());
+  }
+
+  @Test
+  public void anNpcHandedInDirectlyResolvesFromItsOwnIdWithoutAWorldScan() {
+    Client client = mock(Client.class);
+    when(client.getNpcs()).thenReturn(Collections.emptyList());
+    VoiceManager manager = newManager(client, PlayerVoice.TYPE_A);
+
+    VoiceSpec spec = manager.resolveNpc(worldNpc(DWARF_ID, "Dwarf")).voice();
+
+    assertEquals(NpcRace.DWARF, spec.race());
+    assertEquals(NpcGender.MALE, spec.gender());
+    verify(client, never()).getNpcs();
+  }
+
+  @Test
+  public void theDirectNpcPathResolvesExactlyAsTheNameLookupDoes() {
+    NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
+    Client client = mock(Client.class);
+    when(client.getNpcs()).thenReturn(Collections.singletonList(dwarf));
+    VoiceManager manager = newManager(client, PlayerVoice.TYPE_A);
+
+    assertEquals(manager.resolve(Speaker.NPC, "Dwarf"), manager.resolveNpc(dwarf));
+  }
+
+  private static NPC worldNpc(int npcId, String name) {
+    NPCComposition composition = mock(NPCComposition.class);
+    when(composition.getId()).thenReturn(npcId);
+    when(composition.getName()).thenReturn(name);
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(npcId);
+    when(npc.getName()).thenReturn(name);
+    when(npc.getComposition()).thenReturn(composition);
+    return npc;
   }
 }

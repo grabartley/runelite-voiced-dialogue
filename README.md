@@ -19,6 +19,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.0025
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
 - **A narrator for the quest beats.** Turn on **Voice Narration** for the message and item boxes quests lean on, and **Voice Examine Text** to hear anything you examine.
+- **The world talking around you.** Turn on **Voice Ambient Chatter** and the lines NPCs say over their heads, market criers, farm animals, cutscene asides, come through in their own voices.
 - **Any language, any register.** Speak the whole game in Spanish, or run Gielinor as a pirate crew, Gen Z roadmen, or Shakespearean nobles.
 - **Cave echo underground**, so dungeons and sewers sound enclosed.
 - **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
@@ -96,6 +97,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Your Delivery Pace** | Normal | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
+| **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, in their own voices. These play without you clicking a dialogue, so a busy square costs a few calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. One NPC at a time, one line per NPC every 10 seconds, within 7 tiles, and never over an open dialogue. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Their first line still uses the default voice. |
 
 </details>
