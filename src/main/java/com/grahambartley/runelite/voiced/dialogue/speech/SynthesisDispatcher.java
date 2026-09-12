@@ -57,14 +57,14 @@ public final class SynthesisDispatcher {
   }
 
   public void speakAmbient(String text, NPC npc) {
+    SynthesisBackend backend = backendProvider.active();
+    if (!backend.isAvailable() || backend.isThrottled()) {
+      return;
+    }
     ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
     SynthesisRequest request =
         new SynthesisRequest(
             text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
-    SynthesisBackend backend = backendProvider.active();
-    if (!backend.isAvailable()) {
-      return;
-    }
     trace(backend, request, npc.getName());
     audioService.speakAmbient(request, echoFor(request));
   }

@@ -81,20 +81,30 @@ dwarf. Delivery is Neutral, since an overhead bark carries no chat head.
 Two gates decide whether a bark is voiced at all. The speaker must be an `NPC`, so other players and
 your own overhead text never are, and it must be within **Ambient Chatter Range** tiles on your
 plane. The range is a setting rather than a constant because how far away a bark still feels part of
-the scene is a matter of taste and of where you play; it defaults to 20 tiles and goes to 50.
+the scene is a matter of taste and of where you play; **Ambient Chatter Range** defaults to 20 tiles
+and goes to 50.
 
-There is deliberately no per-NPC cooldown and no cap on how many barks may be in flight. A market
-square where a dozen people talk over each other is the point of the feature, and a rule that voiced
-some lines and dropped others would read as broken rather than as restrained. Repeats are close to
-free anyway: a bark is short, barks repeat heavily, and the second hearing of one comes off the same
-cache tiers a dialogue line uses.
+There is deliberately no per-NPC cooldown and no ceiling on how many barks may sound at once. A
+market square where a dozen people talk over each other is the point of the feature, and a rule that
+voiced some lines and dropped others would read as broken rather than as restrained. Repeats are
+close to free anyway: a bark is short, barks repeat heavily, and the second hearing of one comes off
+the same cache tiers a dialogue line uses.
 
 Overlapping playback is what makes that work, and it needs its own lane. `StreamingAudioPlayer`
 holds one line and one generation counter, so a single instance plays one clip at a time by design,
 which is correct for dialogue where each line supersedes the last. `DialogueAudioService` therefore
-runs ambient on a separate pool with its own epoch, and hands each bark a player of its own, mixing
-at the audio device. Ambient never touches the dialogue epoch and never stops the dialogue output,
-so no bark can cut another or interrupt a line you clicked for.
+runs ambient separately, with its own epoch, and hands each bark a player of its own, mixing at the
+audio device. Ambient never touches the dialogue epoch and never stops the dialogue output, so no
+bark can cut another or interrupt a line you clicked for.
+
+That lane is split in two, because the two halves are bounded by different things. Six threads do
+the cache lookup and, on a miss, the synthesis, which is the part that costs money and wants a limit
+on how hard it hits the provider; its queue is unbounded, so a busy square delays a bark rather than
+dropping it. Playback then runs on a pool that grows to whatever is sounding at that moment and
+retires idle threads, since the only real limit there is how many audio lines the device will open.
+A bark whose line the mixer refuses is logged and lost, which is the one case where a line goes
+unvoiced. Synthesis is skipped outright while the backend is rate-limited, the same discretionary
+guard prefetch uses, so ambient can never starve the line the player actually clicked for.
 
 Conversation still owns the channel outright. `DialogueWatcher` is the single owner of that state
 and offers two readings of it: `isDialogueOpen`, the state its per-tick scan settled on, which is
@@ -105,7 +115,8 @@ dialogue boxes, the option list, and the narration boxes, the last of those aske
 because an option list on screen is still being mid-conversation even though no dialogue box is, and
 because a narration box holds the screen whether or not **Voice Narration** is voicing it. Any line
 the player triggered advances the ambient epoch and stops every bark playing, so opening a dialogue
-silences the square.
+silences the square. The epoch moves on the client thread and the stopping is handed to a worker,
+since flushing several audio lines is not work the game thread should do.
 
 One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a
 dialogue line would, so with **Auto-learn New NPCs** on, ambient chatter drives wiki lookups as well

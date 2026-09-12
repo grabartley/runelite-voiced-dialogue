@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,6 +34,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 public class DialogueAudioServiceTest {
+
+  private static final int AWAIT_SECONDS = 5;
+
+  private static final int AWAIT_POLLS = 100;
+
+  private static final int POLL_MILLIS = 25;
 
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
@@ -88,7 +96,7 @@ public class DialogueAudioServiceTest {
     }
   }
 
-  private static final class FakeOutput implements AudioOutput {
+  private static class FakeOutput implements AudioOutput {
     volatile int streamCalls;
     volatile int stopCalls;
     volatile int lastVolume = -1;
@@ -147,20 +155,36 @@ public class DialogueAudioServiceTest {
         r.run();
       }
     }
+
+    void drain() {
+      while (!tasks.isEmpty()) {
+        runAll();
+      }
+    }
   }
 
   private static BackendProvider provider(SynthesisBackend backend) {
     return new BackendProvider(backend);
   }
 
-  private static final List<FakeOutput> ambientOutputs =
-      Collections.synchronizedList(new ArrayList<>());
+  private final List<FakeOutput> ambientOutputs = Collections.synchronizedList(new ArrayList<>());
 
-  private static DialogueAudioService service(
+  private DialogueAudioService service(
       BackendProvider provider,
       AudioOutput output,
       DiskAudioCache diskCache,
       Executor executor,
+      int cacheSize,
+      int volume) {
+    return service(provider, output, diskCache, executor, executor, cacheSize, volume);
+  }
+
+  private DialogueAudioService service(
+      BackendProvider provider,
+      AudioOutput output,
+      DiskAudioCache diskCache,
+      Executor executor,
+      Executor ambientExecutor,
       int cacheSize,
       int volume) {
     return new DialogueAudioService(
@@ -175,16 +199,17 @@ public class DialogueAudioServiceTest {
         executor,
         executor,
         executor,
-        executor,
+        ambientExecutor,
+        ambientExecutor,
         () -> volume);
   }
 
-  private static DialogueAudioService service(
+  private DialogueAudioService service(
       BackendProvider provider, AudioOutput output, Executor executor, int cacheSize, int volume) {
     return service(provider, output, null, executor, cacheSize, volume);
   }
 
-  private static DialogueAudioService diskService(
+  private DialogueAudioService diskService(
       BackendProvider provider, AudioOutput output, DiskAudioCache disk, Executor executor) {
     return service(provider, output, disk, executor, 8, 100);
   }
@@ -913,7 +938,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void everyAmbientLineIsVoicedWithoutStoppingTheOnesAlreadyPlaying() {
-    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput dialogue = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
@@ -922,7 +946,7 @@ public class DialogueAudioServiceTest {
     svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
     svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
     svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false);
-    executor.runAll();
+    executor.drain();
 
     assertEquals("every bark is synthesized", 3, backend.requests.size());
     assertEquals("every bark gets its own audio line", 3, ambientOutputs.size());
@@ -934,15 +958,14 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void anAmbientLineNeverCutsAnotherAmbientLine() {
-    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
     svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
-    executor.runAll();
+    executor.drain();
     svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
-    executor.runAll();
+    executor.drain();
 
     for (FakeOutput ambient : ambientOutputs) {
       assertEquals("no bark is ever stopped by a later one", 0, ambient.stopCalls);
@@ -951,7 +974,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void aDialogueLineSilencesEveryAmbientLineInFlight() {
-    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
@@ -959,7 +981,7 @@ public class DialogueAudioServiceTest {
     svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
     svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
     svc.speak(req("Greetings adventurer", NpcRace.HUMAN, NpcGender.MALE));
-    executor.runAll();
+    executor.drain();
 
     assertEquals("the barks were dropped before synthesis", 1, backend.requests.size());
     assertEquals("and never reached an audio line", 0, ambientOutputs.size());
@@ -967,15 +989,14 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void anAmbientRepeatReplaysFromCacheWithoutResynth() {
-    ambientOutputs.clear();
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
     svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false);
-    executor.runAll();
+    executor.drain();
     svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false);
-    executor.runAll();
+    executor.drain();
 
     assertEquals("the repeated bark costs nothing", 1, backend.requests.size());
     assertEquals("but it still plays", 2, ambientOutputs.size());
@@ -983,7 +1004,6 @@ public class DialogueAudioServiceTest {
 
   @Test
   public void anAmbientLineTheBackendCannotVoicePlaysNothing() {
-    ambientOutputs.clear();
     FakeBackend backend =
         new FakeBackend(EnumSet.of(Emotion.NEUTRAL)) {
           @Override
@@ -995,8 +1015,118 @@ public class DialogueAudioServiceTest {
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
     svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
-    executor.runAll();
+    executor.drain();
 
     assertEquals("a failed bark opens no audio line", 0, ambientOutputs.size());
+  }
+
+  private static final class LatchedOutput extends FakeOutput {
+    final CountDownLatch entered = new CountDownLatch(1);
+    final CountDownLatch release = new CountDownLatch(1);
+
+    @Override
+    public void stream(float[] samples, int sampleRate, int volumePercent) {
+      entered.countDown();
+      try {
+        release.await(AWAIT_SECONDS, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      super.stream(samples, sampleRate, volumePercent);
+    }
+  }
+
+  @Test
+  public void twoBarksAreGenuinelyPlayingAtTheSameMoment() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(4);
+    DialogueAudioService svc =
+        new DialogueAudioService(
+            provider(backend),
+            new FakeOutput(),
+            () -> {
+              LatchedOutput ambient = new LatchedOutput();
+              latched.add(ambient);
+              return ambient;
+            },
+            new TieredSynthesisCache(8, null),
+            pool,
+            pool,
+            pool,
+            pool,
+            pool,
+            () -> 100);
+    try {
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+      svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
+
+      List<LatchedOutput> both = awaitOutputs(latched, 2);
+      for (LatchedOutput ambient : both) {
+        assertTrue(
+            "both barks must be inside playback at once",
+            ambient.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+      }
+      for (LatchedOutput ambient : both) {
+        ambient.release.countDown();
+      }
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void aDialogueLineStopsABarkThatIsAlreadyPlaying() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(4);
+    DialogueAudioService svc =
+        new DialogueAudioService(
+            provider(backend),
+            new FakeOutput(),
+            () -> {
+              LatchedOutput ambient = new LatchedOutput();
+              latched.add(ambient);
+              return ambient;
+            },
+            new TieredSynthesisCache(8, null),
+            pool,
+            pool,
+            pool,
+            pool,
+            pool,
+            () -> 100);
+    try {
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+      LatchedOutput bark = awaitOutputs(latched, 1).get(0);
+      assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+
+      svc.speak(req("Greetings adventurer", NpcRace.HUMAN, NpcGender.MALE));
+
+      assertTrue("the in-flight bark is stopped", awaitStop(bark));
+      bark.release.countDown();
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  private static <T> List<T> awaitOutputs(List<T> outputs, int wanted) throws InterruptedException {
+    for (int i = 0; i < AWAIT_POLLS && outputs.size() < wanted; i++) {
+      Thread.sleep(POLL_MILLIS);
+    }
+    synchronized (outputs) {
+      assertEquals("expected " + wanted + " ambient line(s)", wanted, outputs.size());
+      return new ArrayList<>(outputs);
+    }
+  }
+
+  private static boolean awaitStop(FakeOutput output) throws InterruptedException {
+    for (int i = 0; i < AWAIT_POLLS; i++) {
+      if (output.stopCalls > 0) {
+        return true;
+      }
+      Thread.sleep(POLL_MILLIS);
+    }
+    return false;
   }
 }

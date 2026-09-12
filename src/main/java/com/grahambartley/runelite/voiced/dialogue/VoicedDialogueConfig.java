@@ -325,13 +325,13 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
-      keyName = "ambientChatterRadius",
+      keyName = "ambientChatterRange",
       name = "Ambient Chatter Range",
       description = "How far away, in tiles, an NPC can be and still be heard.",
       position = 7,
       section = voicesSection)
   @Range(min = 1, max = 50)
-  default int ambientChatterRadius() {
+  default int ambientChatterRange() {
     return 20;
   }
 

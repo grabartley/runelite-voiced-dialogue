@@ -98,7 +98,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
 | **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, each in their own voice. Everyone in earshot is voiced, and they overlap, so a market square sounds like a market square. These play without you clicking a dialogue, so a busy area costs real calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. Silent while you are in a conversation. |
-| **Ambient Chatter Range** | `20` | How far away, in tiles, an NPC can be and still be heard. Up to `50`. Wider means more of the world talking, and more spend. |
+| **Ambient Chatter Range** | `20` | How far away, in tiles, an NPC can be and still be heard. Up to `50`. Wider means more of the world talking, and more spend. Takes effect immediately. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Their first line still uses the default voice. |
 
 </details>

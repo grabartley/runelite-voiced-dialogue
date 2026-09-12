@@ -14,6 +14,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -34,9 +35,9 @@ public final class DialogueAudioService {
 
   private static final int SHUTDOWN_WAIT_SECONDS = 2;
 
-  private static final int AMBIENT_THREADS = 6;
+  private static final int AMBIENT_SYNTH_THREADS = 6;
 
-  private static final int AMBIENT_QUEUE_CAPACITY = 16;
+  private static final int AMBIENT_PLAYBACK_KEEPALIVE_SECONDS = 30;
 
   private final BackendProvider backends;
   private final AudioOutput output;
@@ -47,6 +48,7 @@ public final class DialogueAudioService {
   private final IntSupplier volume;
   private final Supplier<AudioOutput> ambientOutputs;
   private final Executor ambientExecutor;
+  private final Executor ambientPlaybackExecutor;
   private final Set<AudioOutput> liveAmbientOutputs = ConcurrentHashMap.newKeySet();
   private final AtomicLong epoch = new AtomicLong();
   private final AtomicLong prefetchEpoch = new AtomicLong();
@@ -69,6 +71,7 @@ public final class DialogueAudioService {
         buildWarmExecutor(),
         buildPrefetchExecutor(),
         buildAmbientExecutor(),
+        buildAmbientPlaybackExecutor(),
         volume);
   }
 
@@ -81,6 +84,7 @@ public final class DialogueAudioService {
       Executor warmExecutor,
       Executor prefetchExecutor,
       Executor ambientExecutor,
+      Executor ambientPlaybackExecutor,
       IntSupplier volume) {
     this.backends = backends;
     this.output = output;
@@ -90,6 +94,7 @@ public final class DialogueAudioService {
     this.warmExecutor = warmExecutor;
     this.prefetchExecutor = prefetchExecutor;
     this.ambientExecutor = ambientExecutor;
+    this.ambientPlaybackExecutor = ambientPlaybackExecutor;
     this.volume = volume;
   }
 
@@ -119,6 +124,9 @@ public final class DialogueAudioService {
       return;
     }
     SynthesisBackend backend = backends.active();
+    if (!backend.isAvailable() || backend.isThrottled()) {
+      return;
+    }
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
     long node = ambientEpoch.get();
@@ -128,22 +136,26 @@ public final class DialogueAudioService {
           if (ambientEpoch.get() != node) {
             return;
           }
-          Pcm pcm = cache.lookup(key);
-          if (pcm == null) {
-            pcm = synthesizeDeduped(backend, effective, key);
+          Pcm cached = cache.lookup(key);
+          if (cached == null && backend.isThrottled()) {
+            return;
           }
+          Pcm pcm = cached != null ? cached : synthesizeDeduped(backend, effective, key);
           if (pcm == null || ambientEpoch.get() != node) {
             return;
           }
-          playAmbient(applyEcho ? CaveEcho.apply(pcm) : pcm);
+          Pcm toPlay = applyEcho ? CaveEcho.apply(pcm) : pcm;
+          submitQuietly(ambientPlaybackExecutor, () -> playAmbient(node, toPlay));
         });
   }
 
-  private void playAmbient(Pcm pcm) {
+  private void playAmbient(long node, Pcm pcm) {
     AudioOutput ambient = ambientOutputs.get();
     liveAmbientOutputs.add(ambient);
     try {
-      ambient.stream(pcm.getSamples(), pcm.getSampleRate(), volume.getAsInt());
+      if (ambientEpoch.get() == node) {
+        ambient.stream(pcm.getSamples(), pcm.getSampleRate(), volume.getAsInt());
+      }
     } finally {
       liveAmbientOutputs.remove(ambient);
       ambient.close();
@@ -152,6 +164,13 @@ public final class DialogueAudioService {
 
   private void interruptAmbient() {
     ambientEpoch.incrementAndGet();
+    if (liveAmbientOutputs.isEmpty()) {
+      return;
+    }
+    submitQuietly(ambientPlaybackExecutor, this::stopLiveAmbient);
+  }
+
+  private void stopLiveAmbient() {
     for (AudioOutput ambient : liveAmbientOutputs) {
       ambient.stop();
     }
@@ -206,8 +225,10 @@ public final class DialogueAudioService {
     epoch.incrementAndGet();
     prefetchEpoch.incrementAndGet();
     output.stop();
-    interruptAmbient();
+    ambientEpoch.incrementAndGet();
+    stopLiveAmbient();
     shutdown(ambientExecutor);
+    shutdown(ambientPlaybackExecutor);
     shutdown(executor);
     if (warmExecutor != executor) {
       shutdown(warmExecutor);
@@ -352,13 +373,22 @@ public final class DialogueAudioService {
 
   private static ExecutorService buildAmbientExecutor() {
     return new ThreadPoolExecutor(
-        AMBIENT_THREADS,
-        AMBIENT_THREADS,
+        AMBIENT_SYNTH_THREADS,
+        AMBIENT_SYNTH_THREADS,
         0L,
         TimeUnit.MILLISECONDS,
-        new ArrayBlockingQueue<>(AMBIENT_QUEUE_CAPACITY),
-        daemonThreadFactory("dialogue-ambient"),
-        new ThreadPoolExecutor.DiscardOldestPolicy());
+        new LinkedBlockingQueue<>(),
+        daemonThreadFactory("dialogue-ambient"));
+  }
+
+  private static ExecutorService buildAmbientPlaybackExecutor() {
+    return new ThreadPoolExecutor(
+        0,
+        Integer.MAX_VALUE,
+        AMBIENT_PLAYBACK_KEEPALIVE_SECONDS,
+        TimeUnit.SECONDS,
+        new SynchronousQueue<>(),
+        daemonThreadFactory("dialogue-ambient-play"));
   }
 
   private static ExecutorService buildPrefetchExecutor() {
