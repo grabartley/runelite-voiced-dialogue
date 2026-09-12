@@ -7,7 +7,7 @@ import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.cache.DiskAudioCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache.CacheKey;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -49,7 +49,7 @@ public final class DialogueAudioService {
   private final Supplier<AudioOutput> ambientOutputs;
   private final Executor ambientExecutor;
   private final Executor ambientPlaybackExecutor;
-  private final Set<AudioOutput> liveAmbientOutputs = ConcurrentHashMap.newKeySet();
+  private final Map<AudioOutput, IntSupplier> liveAmbientOutputs = new ConcurrentHashMap<>();
   private final AtomicLong epoch = new AtomicLong();
   private final AtomicLong prefetchEpoch = new AtomicLong();
   private final AtomicLong ambientEpoch = new AtomicLong();
@@ -119,7 +119,8 @@ public final class DialogueAudioService {
     submitQuietly(executor, () -> run(mine, backend, effective, key, applyEcho));
   }
 
-  public void speakAmbient(SynthesisRequest request, boolean applyEcho) {
+  public void speakAmbient(
+      SynthesisRequest request, boolean applyEcho, IntSupplier distanceVolume) {
     if (request == null || request.text() == null || request.text().isEmpty()) {
       return;
     }
@@ -130,6 +131,7 @@ public final class DialogueAudioService {
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
     long node = ambientEpoch.get();
+    int openingVolume = distanceVolume.getAsInt();
     submitQuietly(
         ambientExecutor,
         () -> {
@@ -145,20 +147,31 @@ public final class DialogueAudioService {
             return;
           }
           Pcm toPlay = applyEcho ? CaveEcho.apply(pcm) : pcm;
-          submitQuietly(ambientPlaybackExecutor, () -> playAmbient(node, toPlay));
+          submitQuietly(
+              ambientPlaybackExecutor,
+              () -> playAmbient(node, toPlay, openingVolume, distanceVolume));
         });
   }
 
-  private void playAmbient(long node, Pcm pcm) {
+  private void playAmbient(long node, Pcm pcm, int openingVolume, IntSupplier distanceVolume) {
     AudioOutput ambient = ambientOutputs.get();
-    liveAmbientOutputs.add(ambient);
+    liveAmbientOutputs.put(ambient, distanceVolume);
     try {
       if (ambientEpoch.get() == node) {
-        ambient.stream(pcm.getSamples(), pcm.getSampleRate(), volume.getAsInt());
+        ambient.stream(pcm.getSamples(), pcm.getSampleRate(), openingVolume);
       }
     } finally {
       liveAmbientOutputs.remove(ambient);
       ambient.close();
+    }
+  }
+
+  public void refreshAmbientVolumes() {
+    if (liveAmbientOutputs.isEmpty()) {
+      return;
+    }
+    for (Map.Entry<AudioOutput, IntSupplier> live : liveAmbientOutputs.entrySet()) {
+      live.getKey().setVolume(live.getValue().getAsInt());
     }
   }
 
@@ -171,7 +184,7 @@ public final class DialogueAudioService {
   }
 
   private void stopLiveAmbient() {
-    for (AudioOutput ambient : liveAmbientOutputs) {
+    for (AudioOutput ambient : liveAmbientOutputs.keySet()) {
       ambient.stop();
     }
   }

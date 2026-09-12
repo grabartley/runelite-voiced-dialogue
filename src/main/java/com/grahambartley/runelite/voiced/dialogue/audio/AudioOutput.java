@@ -6,6 +6,8 @@ public interface AudioOutput {
 
   AudioStream beginStream(int volumePercent);
 
+  void setVolume(int volumePercent);
+
   void stop();
 
   void close();

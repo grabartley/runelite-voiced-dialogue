@@ -193,7 +193,8 @@ public class VoicedDialoguePlugin extends Plugin {
             synthesisDispatcher,
             config::voiceAmbientChatter,
             dialogueWatcher::isConversationOnScreen,
-            config::ambientChatterRange);
+            config::ambientChatterRange,
+            config::volume);
 
     log.info("VoicedDialogue started");
   }
@@ -229,12 +230,16 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onGameTick(final GameTick tick) {
-    if (noticeManager == null || backendProvider == null || dialogueWatcher == null) {
+    if (noticeManager == null
+        || backendProvider == null
+        || dialogueWatcher == null
+        || audioService == null) {
       return;
     }
     noticeManager.maybeShowOnboarding();
     noticeManager.maybeWarnMissingCloudKey(backendProvider.active());
     dialogueWatcher.tick();
+    audioService.refreshAmbientVolumes();
   }
 
   @Subscribe

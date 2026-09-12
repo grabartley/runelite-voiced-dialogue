@@ -18,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -107,11 +108,18 @@ public class DialogueAudioServiceTest {
     volatile int lastStreamVolume = -1;
     final List<float[]> streamedChunks = Collections.synchronizedList(new ArrayList<>());
 
+    final List<Integer> volumeChanges = Collections.synchronizedList(new ArrayList<>());
+
     @Override
     public void stream(float[] samples, int sampleRate, int volumePercent) {
       streamCalls++;
       lastVolume = volumePercent;
       lastSamples = samples;
+    }
+
+    @Override
+    public void setVolume(int volumePercent) {
+      volumeChanges.add(volumePercent);
     }
 
     @Override
@@ -943,9 +951,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), dialogue, executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
-    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
-    svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Lovely day", NpcRace.ELF, NpcGender.FEMALE), false, () -> 100);
     executor.drain();
 
     assertEquals("every bark is synthesized", 3, backend.requests.size());
@@ -962,9 +970,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
     executor.drain();
-    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
     executor.drain();
 
     for (FakeOutput ambient : ambientOutputs) {
@@ -978,8 +986,8 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
-    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+    svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
     svc.speak(req("Greetings adventurer", NpcRace.HUMAN, NpcGender.MALE));
     executor.drain();
 
@@ -993,9 +1001,9 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false);
+    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
     executor.drain();
-    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false);
+    svc.speakAmbient(req("Hear ye!", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
     executor.drain();
 
     assertEquals("the repeated bark costs nothing", 1, backend.requests.size());
@@ -1014,7 +1022,7 @@ public class DialogueAudioServiceTest {
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
 
-    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
     executor.drain();
 
     assertEquals("a failed bark opens no audio line", 0, ambientOutputs.size());
@@ -1058,8 +1066,8 @@ public class DialogueAudioServiceTest {
             pool,
             () -> 100);
     try {
-      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
-      svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false);
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
+      svc.speakAmbient(req("Buying gold", NpcRace.DWARF, NpcGender.MALE), false, () -> 100);
 
       List<LatchedOutput> both = awaitOutputs(latched, 2);
       for (LatchedOutput ambient : both) {
@@ -1097,7 +1105,7 @@ public class DialogueAudioServiceTest {
             pool,
             () -> 100);
     try {
-      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false);
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 100);
       LatchedOutput bark = awaitOutputs(latched, 1).get(0);
       assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
 
@@ -1128,5 +1136,76 @@ public class DialogueAudioServiceTest {
       Thread.sleep(POLL_MILLIS);
     }
     return false;
+  }
+
+  @Test
+  public void aBarkOpensAtTheVolumeItsDistanceEarns() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 17);
+    executor.drain();
+
+    assertEquals("the opening volume is the distance volume", 17, ambientOutputs.get(0).lastVolume);
+  }
+
+  @Test
+  public void everyPlayingBarkTracksItsSpeakerAsThePlayerWalks() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(4);
+    AtomicInteger walkingAway = new AtomicInteger(90);
+    DialogueAudioService svc =
+        new DialogueAudioService(
+            provider(backend),
+            new FakeOutput(),
+            () -> {
+              LatchedOutput ambient = new LatchedOutput();
+              latched.add(ambient);
+              return ambient;
+            },
+            new TieredSynthesisCache(8, null),
+            pool,
+            pool,
+            pool,
+            pool,
+            pool,
+            () -> 100);
+    try {
+      svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, walkingAway::get);
+      LatchedOutput bark = awaitOutputs(latched, 1).get(0);
+      assertTrue("the bark reached playback", bark.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+
+      svc.refreshAmbientVolumes();
+      walkingAway.set(40);
+      svc.refreshAmbientVolumes();
+      walkingAway.set(1);
+      svc.refreshAmbientVolumes();
+
+      assertEquals(
+          "each tick pushes the current distance volume",
+          Arrays.asList(90, 40, 1),
+          bark.volumeChanges);
+      bark.release.countDown();
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void aBarkThatHasFinishedIsNoLongerTracked() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), new FakeOutput(), executor, 8, 100);
+
+    svc.speakAmbient(req("Fresh bread", NpcRace.HUMAN, NpcGender.MALE), false, () -> 50);
+    executor.drain();
+    ambientOutputs.get(0).volumeChanges.clear();
+    svc.refreshAmbientVolumes();
+
+    assertTrue(
+        "a bark that already played takes no more volume updates",
+        ambientOutputs.get(0).volumeChanges.isEmpty());
   }
 }

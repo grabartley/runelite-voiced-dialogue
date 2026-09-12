@@ -64,6 +64,18 @@ public class StreamingAudioPlayer implements AudioOutput {
   }
 
   @Override
+  public void setVolume(int volumePercent) {
+    SourceDataLine current = this.line;
+    if (current == null) {
+      return;
+    }
+    try {
+      applyVolume(current, volumePercent);
+    } catch (Exception ignored) {
+    }
+  }
+
+  @Override
   public void stop() {
     generation.incrementAndGet();
     SourceDataLine current = this.line;

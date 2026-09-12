@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
+import java.util.function.IntSupplier;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -30,6 +31,7 @@ public class AmbientChatterWatcherTest {
   private boolean enabled = true;
   private boolean conversationOnScreen = false;
   private int earshotTiles = 20;
+  private int volume = 100;
 
   private final AmbientChatterWatcher watcher =
       new AmbientChatterWatcher(
@@ -38,7 +40,8 @@ public class AmbientChatterWatcherTest {
           dispatcher,
           () -> enabled,
           () -> conversationOnScreen,
-          () -> earshotTiles);
+          () -> earshotTiles,
+          () -> volume);
 
   @Before
   public void setUp() {
@@ -53,7 +56,7 @@ public class AmbientChatterWatcherTest {
 
     watcher.onOverheadTextChanged(overhead(hans, "<col=ff0000>Lovely day!"));
 
-    verify(dispatcher).speakAmbient("Lovely day!", hans);
+    verify(dispatcher).speakAmbient(eq("Lovely day!"), eq(hans), any(IntSupplier.class));
   }
 
   @Test
@@ -62,7 +65,7 @@ public class AmbientChatterWatcherTest {
       watcher.onOverheadTextChanged(overhead(npc(tilesAway), "Line " + tilesAway));
     }
 
-    verify(dispatcher, times(12)).speakAmbient(anyString(), any(NPC.class));
+    verify(dispatcher, times(12)).speakAmbient(anyString(), any(NPC.class), any(IntSupplier.class));
   }
 
   @Test
@@ -73,8 +76,8 @@ public class AmbientChatterWatcherTest {
     watcher.onOverheadTextChanged(overhead(crier, "Hear ye!"));
     watcher.onOverheadTextChanged(overhead(crier, "Come one, come all!"));
 
-    verify(dispatcher, times(2)).speakAmbient(eq("Hear ye!"), eq(crier));
-    verify(dispatcher).speakAmbient("Come one, come all!", crier);
+    verify(dispatcher, times(2)).speakAmbient(eq("Hear ye!"), eq(crier), any(IntSupplier.class));
+    verify(dispatcher).speakAmbient(eq("Come one, come all!"), eq(crier), any(IntSupplier.class));
   }
 
   @Test
@@ -98,7 +101,7 @@ public class AmbientChatterWatcherTest {
   public void anNpcExactlyAtTheConfiguredRangeIsSpoken() {
     watcher.onOverheadTextChanged(overhead(npc(earshotTiles), "Just in range"));
 
-    verify(dispatcher).speakAmbient(eq("Just in range"), any(NPC.class));
+    verify(dispatcher).speakAmbient(eq("Just in range"), any(NPC.class), any(IntSupplier.class));
   }
 
   @Test
@@ -109,7 +112,7 @@ public class AmbientChatterWatcherTest {
     earshotTiles = 50;
     watcher.onOverheadTextChanged(overhead(distant, "Faint shout"));
 
-    verify(dispatcher, times(1)).speakAmbient(anyString(), any(NPC.class));
+    verify(dispatcher, times(1)).speakAmbient(anyString(), any(NPC.class), any(IntSupplier.class));
   }
 
   @Test
@@ -164,7 +167,7 @@ public class AmbientChatterWatcherTest {
   }
 
   private void verifyNothingSpoken() {
-    verify(dispatcher, never()).speakAmbient(anyString(), any(NPC.class));
+    verify(dispatcher, never()).speakAmbient(anyString(), any(NPC.class), any(IntSupplier.class));
   }
 
   private static NPC npc(int tilesAway) {

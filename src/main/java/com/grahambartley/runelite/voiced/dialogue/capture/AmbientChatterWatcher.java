@@ -18,6 +18,7 @@ public final class AmbientChatterWatcher {
   private final BooleanSupplier enabled;
   private final BooleanSupplier conversationOnScreen;
   private final IntSupplier earshotTiles;
+  private final IntSupplier volume;
 
   public AmbientChatterWatcher(
       Client client,
@@ -25,13 +26,15 @@ public final class AmbientChatterWatcher {
       SynthesisDispatcher dispatcher,
       BooleanSupplier enabled,
       BooleanSupplier conversationOnScreen,
-      IntSupplier earshotTiles) {
+      IntSupplier earshotTiles,
+      IntSupplier volume) {
     this.client = client;
     this.textCleaner = textCleaner;
     this.dispatcher = dispatcher;
     this.enabled = enabled;
     this.conversationOnScreen = conversationOnScreen;
     this.earshotTiles = earshotTiles;
+    this.volume = volume;
   }
 
   public void onOverheadTextChanged(OverheadTextChanged event) {
@@ -44,25 +47,31 @@ public final class AmbientChatterWatcher {
     }
     NPC npc = (NPC) actor;
     String overheadText = event.getOverheadText();
-    if (overheadText == null || !isWithinEarshot(npc) || conversationOnScreen.getAsBoolean()) {
+    int range = earshotTiles.getAsInt();
+    if (overheadText == null || distanceTo(npc) > range || conversationOnScreen.getAsBoolean()) {
       return;
     }
     String cleaned = textCleaner.clean(overheadText);
     if (cleaned.isEmpty()) {
       return;
     }
-    dispatcher.speakAmbient(cleaned, npc);
+    dispatcher.speakAmbient(cleaned, npc, () -> volumeFor(npc));
   }
 
-  private boolean isWithinEarshot(NPC npc) {
+  private int volumeFor(NPC npc) {
+    return AmbientVolume.atDistance(volume.getAsInt(), distanceTo(npc), earshotTiles.getAsInt());
+  }
+
+  private int distanceTo(NPC npc) {
     Player local = client.getLocalPlayer();
     if (local == null) {
-      return false;
+      return Integer.MAX_VALUE;
     }
     WorldPoint listener = local.getWorldLocation();
     WorldPoint speaker = npc.getWorldLocation();
-    return listener != null
-        && speaker != null
-        && listener.distanceTo(speaker) <= earshotTiles.getAsInt();
+    if (listener == null || speaker == null) {
+      return Integer.MAX_VALUE;
+    }
+    return listener.distanceTo(speaker);
   }
 }

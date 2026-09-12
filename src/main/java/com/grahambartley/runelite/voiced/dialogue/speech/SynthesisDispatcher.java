@@ -8,6 +8,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
+import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NPC;
 
@@ -56,7 +57,7 @@ public final class SynthesisDispatcher {
         null);
   }
 
-  public void speakAmbient(String text, NPC npc) {
+  public void speakAmbient(String text, NPC npc, IntSupplier distanceVolume) {
     SynthesisBackend backend = backendProvider.active();
     if (!backend.isAvailable() || backend.isThrottled()) {
       return;
@@ -66,7 +67,7 @@ public final class SynthesisDispatcher {
         new SynthesisRequest(
             text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
     trace(backend, request, npc.getName());
-    audioService.speakAmbient(request, echoFor(request));
+    audioService.speakAmbient(request, echoFor(request), distanceVolume);
   }
 
   public void speakNarration(String text) {

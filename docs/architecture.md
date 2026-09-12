@@ -97,6 +97,20 @@ runs ambient separately, with its own epoch, and hands each bark a player of its
 audio device. Ambient never touches the dialogue epoch and never stops the dialogue output, so no
 bark can cut another or interrupt a line you clicked for.
 
+A bark is mixed by distance rather than played flat. At the speaker's own tile it uses **Dialogue
+Volume** in full; at the edge of the range it drops to the faintest audible step, interpolated
+linearly across the tiles between, so widening the range stretches the falloff rather than steepening
+it. `AmbientVolume` holds that curve, and because the gain runs through the same decibel conversion
+as every other line, a linear walk across the percent scale already sounds like a natural fade.
+
+The mix also follows the pair while the line plays. Each tick the plugin asks every bark still
+sounding for its speaker's current distance and pushes the new gain onto that bark's audio line, so
+walking away from a crier fades them out mid-sentence and rounding a corner towards one brings them
+up. `SourceDataLine` exposes its master gain as a live control, which is what makes that possible;
+on a mixer that does not offer the control the line simply plays at the volume it opened with. The
+distance is read on the game thread, where NPC positions are safe to read, and the only work done
+there is one coordinate subtraction per bark still playing.
+
 That lane is split in two, because the two halves are bounded by different things. Six threads do
 the cache lookup and, on a miss, the synthesis, which is the part that costs money and wants a limit
 on how hard it hits the provider; its queue is unbounded, so a busy square delays a bark rather than

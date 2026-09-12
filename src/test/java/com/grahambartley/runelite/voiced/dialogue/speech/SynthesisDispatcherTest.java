@@ -22,6 +22,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import java.util.function.IntSupplier;
 import net.runelite.api.NPC;
 import org.junit.Before;
 import org.junit.Test;
@@ -161,10 +162,10 @@ public class SynthesisDispatcherTest {
     when(voiceManager.resolveNpc(crier)).thenReturn(new ResolvedSpeaker(spec, profile));
     when(caveEchoPolicy.shouldEcho()).thenReturn(false);
 
-    dispatcher.speakAmbient("Hear ye!", crier);
+    dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speakAmbient(req.capture(), eq(false));
+    verify(audioService).speakAmbient(req.capture(), eq(false), any(IntSupplier.class));
     SynthesisRequest r = req.getValue();
     assertEquals("Hear ye!", r.text());
     assertSame(spec, r.voice());
@@ -184,9 +185,10 @@ public class SynthesisDispatcherTest {
         .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
     when(caveEchoPolicy.shouldEcho()).thenReturn(true);
 
-    dispatcher.speakAmbient("Hear ye!", crier);
+    dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
 
-    verify(audioService).speakAmbient(any(SynthesisRequest.class), eq(true));
+    verify(audioService)
+        .speakAmbient(any(SynthesisRequest.class), eq(true), any(IntSupplier.class));
   }
 
   @Test
@@ -196,8 +198,9 @@ public class SynthesisDispatcherTest {
     when(voiceManager.resolveNpc(crier))
         .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
 
-    dispatcher.speakAmbient("Hear ye!", crier);
+    dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
 
-    verify(audioService, never()).speakAmbient(any(SynthesisRequest.class), anyBoolean());
+    verify(audioService, never())
+        .speakAmbient(any(SynthesisRequest.class), anyBoolean(), any(IntSupplier.class));
   }
 }
