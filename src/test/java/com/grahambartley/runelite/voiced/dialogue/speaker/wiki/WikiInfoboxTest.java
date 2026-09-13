@@ -98,6 +98,13 @@ public class WikiInfoboxTest {
   }
 
   @Test
+  public void aStrayCloseEndsTheValueRatherThanSwallowingTheNextParameter() {
+    WikiInfobox infobox = WikiInfobox.parse("{{Infobox NPC|race=Dog]]|gender=Female|id=1}}", null);
+    assertEquals(Collections.singletonList("Dog"), infobox.raceReadings());
+    assertEquals("Female", infobox.genderForVersion(1));
+  }
+
+  @Test
   public void categoriesRideAlongWithTheInfobox() {
     assertEquals(
         Collections.singletonList("Category:Trolls"),

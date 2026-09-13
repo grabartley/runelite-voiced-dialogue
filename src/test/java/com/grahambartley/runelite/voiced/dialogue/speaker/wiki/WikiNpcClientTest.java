@@ -114,6 +114,14 @@ public class WikiNpcClientTest {
   }
 
   @Test
+  public void aRaceLinkedThroughADisambiguationPageStillBucketsOnItsDisplayText() {
+    enqueue("{{Infobox NPC\n|race=[[Dog_(disambiguation)|Dog]]\n|gender=Female\n|id=10439\n}}");
+    NpcAttributes attributes = client.lookup(10439, "Sheepdog").attributes();
+    assertEquals("Dog", attributes.getRace());
+    assertEquals("Female", attributes.getGender());
+  }
+
+  @Test
   public void aPageThatIsNotAnNpcIsUndocumented() {
     enqueue("{{Infobox Item\n|name = Bucket\n}}");
 

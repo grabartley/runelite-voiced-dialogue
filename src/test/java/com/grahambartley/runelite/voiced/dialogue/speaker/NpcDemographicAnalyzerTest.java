@@ -150,6 +150,9 @@ public class NpcDemographicAnalyzerTest {
         }) {
       assertAttributes(npcId, "Dog", "Male");
     }
+    for (int npcId : new int[] {10438, 10439}) {
+      assertAttributes(npcId, "Dog", "Female");
+    }
   }
 
   @Test
@@ -158,7 +161,7 @@ public class NpcDemographicAnalyzerTest {
         new int[] {112, 113, 114, 131, 7209, 7771, 12992, 12993, 12994, 12995, 12999}) {
       assertAttributes(npcId, "Dog", "Male");
     }
-    for (int npcId : new int[] {2802, 10438, 10439, 12998}) {
+    for (int npcId : new int[] {2802, 12998}) {
       assertAttributes(npcId, "Dog", "Female");
     }
   }

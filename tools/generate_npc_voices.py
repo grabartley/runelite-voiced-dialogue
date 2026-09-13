@@ -201,7 +201,8 @@ LINK_RE = re.compile(r"\[\[([^\[\]]*)\]\]")
 def field_text(value):
     """The one field out of a captured line. FIELD_RE captures to end of line so a piped link
     survives, so the next parameter on a single-line infobox is cut here instead, at the first
-    "|" or template close that sits outside a link or a nested template."""
+    "|", or at a link or template close that has nothing open, outside a link or a nested
+    template."""
     depth = 0
     i = 0
     while i < len(value):
@@ -210,7 +211,7 @@ def field_text(value):
             depth += 1
             i += 2
         elif token in ("]]", "}}"):
-            if token == "}}" and depth == 0:
+            if depth == 0:
                 return value[:i]
             depth -= 1
             i += 2

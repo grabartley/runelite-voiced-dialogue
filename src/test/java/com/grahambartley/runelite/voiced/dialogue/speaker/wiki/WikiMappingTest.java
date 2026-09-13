@@ -71,7 +71,6 @@ public class WikiMappingTest {
 
   @Test
   public void anAbsentRaceFieldHasNoBucketSoCategoriesCanAnswer() {
-    assertNull(mapping.raceForWikiText(null));
     assertNull(mapping.raceForWikiText(Collections.<String>emptyList()));
     assertNull(mapping.raceForWikiText(readings("{{plink|Human}}")));
   }

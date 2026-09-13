@@ -84,7 +84,7 @@ final class WikiMapping {
   }
 
   String raceForWikiText(List<String> raceReadings) {
-    if (raceReadings == null || raceReadings.isEmpty()) {
+    if (raceReadings.isEmpty()) {
       return null;
     }
     for (String reading : raceReadings) {

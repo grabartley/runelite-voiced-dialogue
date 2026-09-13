@@ -256,6 +256,9 @@ class PipedLinkFieldTest(unittest.TestCase):
     def test_a_nested_template_value_is_not_cut_at_its_closing_braces(self):
         self.assertEqual(gen.field_text("{{A|{{B|x}}}} tail"), "{{A|{{B|x}}}} tail")
 
+    def test_a_stray_close_ends_the_value_rather_than_swallowing_the_next_parameter(self):
+        self.assertEqual(gen.field_text("Dog]] |gender=Female"), "Dog")
+
     def test_a_race_field_that_cleans_away_falls_back_to_the_categories(self):
         self.assertIsNone(gen.bucket_for_race("{{plink|Human}}"))
 

@@ -153,7 +153,7 @@ final class WikiInfobox {
         depth++;
         index += 2;
       } else if ("]]".equals(token) || "}}".equals(token)) {
-        if ("}}".equals(token) && depth == 0) {
+        if (depth == 0) {
           return value.substring(0, index);
         }
         depth--;
@@ -194,7 +194,7 @@ final class WikiInfobox {
 
   private static String resolveLinks(String value, UnaryOperator<String> side) {
     Matcher matcher = LINK.matcher(value);
-    StringBuffer out = new StringBuffer();
+    StringBuilder out = new StringBuilder();
     while (matcher.find()) {
       matcher.appendReplacement(out, Matcher.quoteReplacement(side.apply(matcher.group(1))));
     }
