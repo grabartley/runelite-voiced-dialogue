@@ -106,7 +106,14 @@ public final class DialogueAudioService {
   }
 
   public void prewarm(Runnable warm) {
-    warmExecutor.execute(warm);
+    long mine = epoch.get();
+    submitQuietly(
+        warmExecutor,
+        () -> {
+          if (epoch.get() == mine) {
+            warm.run();
+          }
+        });
   }
 
   public void speak(SynthesisRequest request) {

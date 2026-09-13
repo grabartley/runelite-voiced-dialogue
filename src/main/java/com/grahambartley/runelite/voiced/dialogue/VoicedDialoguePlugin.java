@@ -220,6 +220,10 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Override
   protected void shutDown() {
+    if (learningService != null) {
+      learningService.close();
+      learningService = null;
+    }
     noticeManager = null;
     spendTracker = null;
     usageClient = null;
@@ -242,10 +246,6 @@ public class VoicedDialoguePlugin extends Plugin {
       backendProvider = null;
     }
     voiceManager = null;
-    if (learningService != null) {
-      learningService.close();
-      learningService = null;
-    }
     if (wikiExecutor != null) {
       wikiExecutor.shutdown();
       wikiExecutor = null;

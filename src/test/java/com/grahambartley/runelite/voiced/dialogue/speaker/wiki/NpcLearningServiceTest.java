@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.IntPredicate;
 import okhttp3.OkHttpClient;
+import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,11 +59,14 @@ public class NpcLearningServiceTest {
   }
 
   private void enqueueNpc() {
-    server.enqueue(
-        new MockResponse()
-            .setBody(
-                "{\"query\":{\"pages\":[{\"revisions\":[{\"slots\":{\"main\":{\"content\":"
-                    + "\"{{Infobox NPC\\n|race=[[Troll]]\\n|gender=Male\\n|id=1\\n}}\"}}}]}]}}"));
+    server.enqueue(npcResponse());
+  }
+
+  private static MockResponse npcResponse() {
+    return new MockResponse()
+        .setBody(
+            "{\"query\":{\"pages\":[{\"revisions\":[{\"slots\":{\"main\":{\"content\":"
+                + "\"{{Infobox NPC\\n|race=[[Troll]]\\n|gender=Male\\n|id=1\\n}}\"}}}]}]}}");
   }
 
   private void enqueueMiss() {
@@ -185,6 +190,43 @@ public class NpcLearningServiceTest {
 
     assertEquals("a lookup queued at close makes no wiki call", 0, server.getRequestCount());
     assertNull("a lookup queued at close learns nothing", store.get(1));
+  }
+
+  @Test
+  public void aLookupAnsweredAfterTheServiceClosesNeverWritesToTheStore() {
+    NpcLearningService[] holder = new NpcLearningService[1];
+    server.setDispatcher(
+        new Dispatcher() {
+          @Override
+          public MockResponse dispatch(RecordedRequest request) {
+            holder[0].close();
+            return npcResponse();
+          }
+        });
+    NpcLearningService service =
+        new NpcLearningService(client, store, INLINE, () -> true, npcId -> false, UNTHROTTLED);
+    holder[0] = service;
+
+    service.considerLearning(1, "Troll");
+
+    assertEquals("the lookup still went out", 1, server.getRequestCount());
+    assertNull("a lookup answered after close is discarded", store.get(1));
+  }
+
+  @Test
+  public void aServiceClosedDuringItsThrottleWaitNeverCallsTheWiki() {
+    DeferredExecutor executor = new DeferredExecutor();
+    WikiCallThrottle throttle = new WikiCallThrottle(50);
+    throttle.awaitTurn();
+    NpcLearningService service =
+        new NpcLearningService(client, store, executor, () -> true, npcId -> false, throttle);
+
+    service.considerLearning(1, "Troll");
+    service.close();
+    executor.runAll();
+
+    assertEquals("a service closed mid-wait makes no wiki call", 0, server.getRequestCount());
+    assertNull("and learns nothing", store.get(1));
   }
 
   private static final class DeferredExecutor implements Executor {

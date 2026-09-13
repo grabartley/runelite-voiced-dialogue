@@ -86,6 +86,10 @@ public final class NpcLearningService {
             return;
           }
           WikiLookup lookup = client.lookup(npcId, npcName);
+          if (closed) {
+            attempted.remove(npcId);
+            return;
+          }
           if (lookup.isUnreachable()) {
             attempted.remove(npcId);
             if (consecutiveFailures.incrementAndGet() >= FAILURES_BEFORE_QUIET) {

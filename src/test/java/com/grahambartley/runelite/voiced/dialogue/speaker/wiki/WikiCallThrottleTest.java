@@ -41,7 +41,7 @@ public class WikiCallThrottleTest {
     }
 
     assertTrue(
-        "a zero interval never waits", System.nanoTime() - before < TimeUnit.SECONDS.toNanos(30));
+        "a zero interval never waits", System.nanoTime() - before < TimeUnit.SECONDS.toNanos(1));
   }
 
   @Test
@@ -50,16 +50,19 @@ public class WikiCallThrottleTest {
     throttle.awaitTurn();
 
     AtomicBoolean tookTurn = new AtomicBoolean();
+    CountDownLatch waiting = new CountDownLatch(1);
     CountDownLatch done = new CountDownLatch(1);
     Thread waiter =
         new Thread(
             () -> {
+              waiting.countDown();
               throttle.awaitTurn();
               tookTurn.set(true);
               done.countDown();
             });
 
     waiter.start();
+    assertTrue("the waiter reached its turn", waiting.await(5, TimeUnit.SECONDS));
     waiter.interrupt();
 
     assertTrue("the waiter completes its turn", done.await(5, TimeUnit.SECONDS));

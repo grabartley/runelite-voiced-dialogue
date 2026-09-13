@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.grahambartley.runelite.voiced.dialogue.audio.AudioOutput;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingAudioPlayer;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
@@ -16,7 +17,12 @@ import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -107,6 +113,122 @@ public class VoicedDialoguePluginTest {
     verify(configManager, never()).setConfiguration(anyString(), anyString(), any());
   }
 
+  @Test
+  public void aSpendTaskQueuedBeforeShutdownNeverRuns() throws Exception {
+    Harness harness = harness(new AtomicInteger());
+    DeferredExecutorService spendExecutor = new DeferredExecutorService();
+    setField(harness.plugin, "spendExecutor", spendExecutor);
+    AtomicInteger spendRuns = new AtomicInteger();
+
+    submitSpendTask(harness.plugin, spendRuns::incrementAndGet);
+    harness.plugin.shutDown();
+    spendExecutor.runAll();
+
+    assertEquals("a spend task queued at shutdown never runs", 0, spendRuns.get());
+  }
+
+  @Test
+  public void aSpendTaskQueuedWhileRunningStillRuns() throws Exception {
+    Harness harness = harness(new AtomicInteger());
+    DeferredExecutorService spendExecutor = new DeferredExecutorService();
+    setField(harness.plugin, "spendExecutor", spendExecutor);
+    AtomicInteger spendRuns = new AtomicInteger();
+
+    submitSpendTask(harness.plugin, spendRuns::incrementAndGet);
+    spendExecutor.runAll();
+
+    assertEquals("a spend task queued while running is run", 1, spendRuns.get());
+  }
+
+  @Test
+  public void aWarmQueuedBeforeCloseNeverTouchesTheBackend() throws Exception {
+    AtomicInteger warmCalls = new AtomicInteger();
+    Harness harness = harness(warmCalls);
+    AtomicInteger warmRuns = new AtomicInteger();
+
+    harness.plugin.shutDown();
+    harness.audioService.delegate.prewarm(warmRuns::incrementAndGet);
+
+    assertEquals("a warm queued at close never reaches the backend", 0, warmRuns.get());
+    assertEquals("and never warms it", 0, warmCalls.get());
+  }
+
+  private static void submitSpendTask(VoicedDialoguePlugin plugin, Runnable task) throws Exception {
+    Method method = VoicedDialoguePlugin.class.getDeclaredMethod("submitSpendTask", Runnable.class);
+    method.setAccessible(true);
+    method.invoke(plugin, task);
+  }
+
+  private static final class SilentOutput implements AudioOutput {
+
+    @Override
+    public void stream(float[] samples, int sampleRate, int volumePercent) {}
+
+    @Override
+    public AudioStream beginStream(int volumePercent) {
+      return new AudioStream() {
+        @Override
+        public void write(float[] samples, int sampleRate) {}
+
+        @Override
+        public void end() {}
+      };
+    }
+
+    @Override
+    public void setVolume(int volumePercent) {}
+
+    @Override
+    public void stop() {}
+
+    @Override
+    public void close() {}
+  }
+
+  private static final class DeferredExecutorService extends AbstractExecutorService {
+    private final List<Runnable> tasks = new ArrayList<>();
+    private volatile boolean shutdown;
+
+    @Override
+    public void execute(Runnable command) {
+      tasks.add(command);
+    }
+
+    void runAll() {
+      List<Runnable> snapshot = new ArrayList<>(tasks);
+      tasks.clear();
+      for (Runnable task : snapshot) {
+        task.run();
+      }
+    }
+
+    @Override
+    public void shutdown() {
+      shutdown = true;
+    }
+
+    @Override
+    public List<Runnable> shutdownNow() {
+      shutdown = true;
+      return new ArrayList<>();
+    }
+
+    @Override
+    public boolean isShutdown() {
+      return shutdown;
+    }
+
+    @Override
+    public boolean isTerminated() {
+      return shutdown;
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) {
+      return shutdown;
+    }
+  }
+
   private static VoicedDialoguePlugin pluginWith(ConfigManager configManager, String openRouterKey)
       throws Exception {
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
@@ -134,7 +256,8 @@ public class VoicedDialoguePluginTest {
     StubBackend cloud = new StubBackend("cloud-openrouter", warmCalls);
     BackendProvider provider = new BackendProvider(cloud);
     DialogueAudioService audioService =
-        new DialogueAudioService(provider, null, StreamingAudioPlayer::new, null, 1, 1, () -> 100);
+        new DialogueAudioService(
+            provider, new SilentOutput(), StreamingAudioPlayer::new, null, 1, 1, () -> 100);
 
     VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
     setField(plugin, "audioService", audioService);
@@ -161,7 +284,7 @@ public class VoicedDialoguePluginTest {
   }
 
   private static final class AwaitableAudioService {
-    private final DialogueAudioService delegate;
+    final DialogueAudioService delegate;
 
     AwaitableAudioService(DialogueAudioService delegate) {
       this.delegate = delegate;

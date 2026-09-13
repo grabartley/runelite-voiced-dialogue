@@ -79,7 +79,7 @@ disk, or the audio line:
 |---|---|
 | Synthesis, warm, prefetch | `epoch` generation counter in `DialogueAudioService` |
 | Ambient synthesis and playback | `ambientEpoch` generation counter in `DialogueAudioService` |
-| `tts-wiki-learn` | `NpcLearningService.close()`, checked either side of the throttle wait |
+| `tts-wiki-learn` | `NpcLearningService.close()`, checked either side of the throttle wait and again once the wiki answers |
 | `tts-spend` | `spendEpoch` generation counter in `VoicedDialoguePlugin` |
 
 Cutting a line already playing is `DialogueAudioService.cutPlayback()`, which bumps the `epoch`
