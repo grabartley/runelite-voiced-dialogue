@@ -152,4 +152,42 @@ public class NarrationWatcherTest {
 
     verify(dispatcher, times(1)).speakNarration("The door creaks open.");
   }
+
+  @Test
+  public void everyNarrationBoxKindCountsAsOnScreen() {
+    assertFalse("no box is showing yet", watcher.isOnScreen());
+
+    for (int widgetId :
+        new int[] {
+          InterfaceID.Objectbox.TEXT, InterfaceID.ObjectboxDouble.TEXT, InterfaceID.Messagebox.TEXT
+        }) {
+      Client freshClient = mock(Client.class);
+      NarrationWatcher fresh =
+          new NarrationWatcher(
+              freshClient, new DialogueTextCleaner(new ProfanityFilter()), dispatcher, () -> true);
+      Widget box = visibleWidget("Something happens.");
+      when(freshClient.getWidget(widgetId)).thenReturn(box);
+
+      assertTrue("widget " + widgetId + " should read as on screen", fresh.isOnScreen());
+    }
+  }
+
+  @Test
+  public void aHiddenNarrationBoxIsNotOnScreen() {
+    Widget hidden = mock(Widget.class);
+    when(hidden.isHidden()).thenReturn(true);
+    when(client.getWidget(InterfaceID.Objectbox.TEXT)).thenReturn(hidden);
+
+    assertFalse(watcher.isOnScreen());
+  }
+
+  @Test
+  public void aBoxHoldsTheScreenEvenWhenNarrationVoicingIsOff() {
+    enabled = false;
+    showing(InterfaceID.Messagebox.TEXT, "The door creaks open.");
+
+    assertFalse("an unvoiced box is never narrated", watcher.tick());
+    assertTrue("but it is still on screen", watcher.isOnScreen());
+    verifyNoInteractions(dispatcher);
+  }
 }

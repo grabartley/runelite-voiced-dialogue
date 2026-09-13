@@ -223,4 +223,62 @@ public class DialogueWatcherTest {
 
     verify(narrationWatcher, times(1)).reset();
   }
+
+  @Test
+  public void aDialogueOpeningBetweenTicksIsAlreadyOnScreenBeforeTheScanCatchesUp() {
+    Widget npc = visibleWidget("Greetings!");
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(npc);
+
+    assertFalse("the settled state still trails the scan", watcher.isDialogueOpen());
+    assertTrue("the live read sees the box the moment it opens", watcher.isConversationOnScreen());
+  }
+
+  @Test
+  public void aPlayerDialogueOpeningBetweenTicksIsAlsoSeenLive() {
+    Widget player = visibleWidget("Hello!");
+    when(client.getWidget(InterfaceID.ChatRight.TEXT)).thenReturn(player);
+
+    assertTrue(watcher.isConversationOnScreen());
+  }
+
+  @Test
+  public void anOpenOptionListCountsAsAConversationOnScreen() {
+    Widget options = mock(Widget.class);
+    when(options.isHidden()).thenReturn(false);
+    when(client.getWidget(InterfaceID.Chatmenu.OPTIONS)).thenReturn(options);
+
+    assertFalse("the settled state tracks dialogue boxes only", watcher.isDialogueOpen());
+    assertTrue(
+        "picking an option is still being in a conversation", watcher.isConversationOnScreen());
+  }
+
+  @Test
+  public void aNarrationBoxGatesTheLiveReadEvenWithNarrationVoicingOff() {
+    when(narrationWatcher.tick()).thenReturn(false);
+    when(narrationWatcher.isOnScreen()).thenReturn(true);
+    watcher.tick();
+
+    assertFalse("an unvoiced narration box never settles the flag", watcher.isDialogueOpen());
+    assertTrue("but it is still a conversation on screen", watcher.isConversationOnScreen());
+  }
+
+  @Test
+  public void aHiddenDialogueBoxIsNotOnScreen() {
+    Widget hidden = mock(Widget.class);
+    when(hidden.isHidden()).thenReturn(true);
+    when(client.getWidget(InterfaceID.ChatLeft.TEXT)).thenReturn(hidden);
+
+    assertFalse(watcher.isConversationOnScreen());
+  }
+
+  @Test
+  public void theLiveReadAsksTheNarrationWatcherRatherThanTheSettledFlag() {
+    when(narrationWatcher.tick()).thenReturn(true);
+    watcher.tick();
+    when(narrationWatcher.isOnScreen()).thenReturn(false);
+
+    assertTrue("the settled flag still holds the tick's narration", watcher.isDialogueOpen());
+    assertFalse(
+        "a box gone since the scan no longer holds the channel", watcher.isConversationOnScreen());
+  }
 }

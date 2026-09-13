@@ -17,6 +17,10 @@ public final class DialogueWidgetReader {
     this.client = client;
   }
 
+  static boolean isVisible(Widget widget) {
+    return widget != null && !widget.isHidden();
+  }
+
   int headAnimationId(int headWidgetId) {
     Widget head = client.getWidget(headWidgetId);
     if (head == null) {
@@ -27,7 +31,7 @@ public final class DialogueWidgetReader {
 
   String currentNpcName() {
     Widget npcNameWidget = client.getWidget(InterfaceID.ChatLeft.NAME);
-    if (npcNameWidget != null && !npcNameWidget.isHidden()) {
+    if (isVisible(npcNameWidget)) {
       String npcName = npcNameWidget.getText();
       if (npcName != null && !npcName.isEmpty()) {
         return npcName.trim();

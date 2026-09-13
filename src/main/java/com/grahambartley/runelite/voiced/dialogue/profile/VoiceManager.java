@@ -9,6 +9,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.NPC;
 
 @Slf4j
 public class VoiceManager {
@@ -72,7 +73,14 @@ public class VoiceManager {
       return new ResolvedSpeaker(playerVoice(), playerProfile());
     }
 
-    NpcIdentity identity = identityResolver.resolve(npcName);
+    return npcSpeaker(npcName, identityResolver.resolve(npcName));
+  }
+
+  public ResolvedSpeaker resolveNpc(NPC npc) {
+    return npcSpeaker(npc.getName(), identityResolver.resolve(npc));
+  }
+
+  private ResolvedSpeaker npcSpeaker(String npcName, NpcIdentity identity) {
     VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
     return new ResolvedSpeaker(voice, npcProfile(npcName, identity));
   }
