@@ -70,10 +70,11 @@ thread: the cloud retry backoff in `CloudBackendSupport`, and the 500 ms rate li
 `WikiCallThrottle` puts between wiki lookups. `CompletableFuture.join()` needs no
 `InterruptedException` handling.
 
-The one interruptible wait in `src/main` is in `DialogueAudioService.close()`, which gives an
-already-running worker a bounded two seconds per pool to finish before it stops waiting. It never
-interrupts that worker, and it runs on the client thread only while the player is disabling the
-plugin.
+Two waits in `src/main` are interruptible, and nothing interrupts either. `DialogueAudioService`
+gives an already-running worker a bounded two seconds per pool to finish while closing, on the
+client thread only while the player is disabling the plugin. The playback thread in
+`StreamingAudioPlayer` polls its chunk queue with a timeout, on its own thread, so a stream that
+ends mid-flight releases it rather than parking forever.
 
 Every executor is closed with `ExecutorService.shutdown()`, so a worker already running finishes on
 its own and none is ever interrupted. `shutdown()` still lets a queued task start, so each pool
