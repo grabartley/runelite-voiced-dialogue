@@ -20,6 +20,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
+import com.grahambartley.runelite.voiced.dialogue.speaker.WikiCallThrottle;
 import com.grahambartley.runelite.voiced.dialogue.speaker.WikiNpcClient;
 import com.grahambartley.runelite.voiced.dialogue.speech.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.speech.BackendWarmUpPolicy;
@@ -40,9 +41,11 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.NPC;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.OverheadTextChanged;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -61,6 +64,8 @@ public class VoicedDialoguePlugin extends Plugin {
   private static final int CACHE_SIZE = 64;
 
   private static final int QUEUE_CAPACITY = 4;
+
+  private static final long WIKI_CALL_INTERVAL_MILLIS = 500;
 
   @Inject private Client client;
 
@@ -81,6 +86,8 @@ public class VoicedDialoguePlugin extends Plugin {
   private DialogueAudioService audioService;
 
   private ExecutorService wikiExecutor;
+
+  private NpcLearningService learningService;
 
   private ChatNoticeManager noticeManager;
 
@@ -113,9 +120,13 @@ public class VoicedDialoguePlugin extends Plugin {
               t.setDaemon(true);
               return t;
             });
-    NpcLearningService learningService =
+    learningService =
         new NpcLearningService(
-            new WikiNpcClient(okHttpClient), learnedStore, wikiExecutor, config::autoLearnNewNpcs);
+            new WikiNpcClient(okHttpClient),
+            learnedStore,
+            wikiExecutor,
+            config::autoLearnNewNpcs,
+            new WikiCallThrottle(WIKI_CALL_INTERVAL_MILLIS));
     voiceManager.enableLearning(learnedStore, learningService);
 
     noticeManager = new ChatNoticeManager(client, configManager, clientThread, chatMessageManager);
@@ -220,6 +231,7 @@ public class VoicedDialoguePlugin extends Plugin {
       backendProvider.close();
       backendProvider = null;
     }
+    learningService = null;
     if (wikiExecutor != null) {
       wikiExecutor.shutdownNow();
       wikiExecutor = null;
@@ -248,6 +260,17 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     if (examineSpeaker != null) {
       examineSpeaker.onChatMessage(event);
+    }
+  }
+
+  @Subscribe
+  public void onMenuOptionClicked(MenuOptionClicked event) {
+    if (learningService == null || !NpcLearningService.isDialogueOption(event.getMenuOption())) {
+      return;
+    }
+    NPC npc = event.getMenuEntry().getNpc();
+    if (npc != null) {
+      learningService.considerLearning(npc.getId(), npc.getName());
     }
   }
 

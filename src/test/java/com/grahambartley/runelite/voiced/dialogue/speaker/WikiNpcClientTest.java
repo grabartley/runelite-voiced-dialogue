@@ -28,84 +28,116 @@ public class WikiNpcClientTest {
     server.shutdown();
   }
 
-  private static String pageBody(String infobox) {
+  private static String pageBody(String infobox, String... categories) {
     String content = infobox.replace("\n", "\\n").replace("\"", "\\\"");
-    return "{\"query\":{\"pages\":[{\"title\":\"X\",\"revisions\":[{\"slots\":{\"main\":{\"content\":\""
+    StringBuilder categoryJson = new StringBuilder();
+    for (String category : categories) {
+      categoryJson.append(categoryJson.length() == 0 ? "" : ",");
+      categoryJson.append("{\"title\":\"").append(category).append("\"}");
+    }
+    return "{\"query\":{\"pages\":[{\"title\":\"X\",\"categories\":["
+        + categoryJson
+        + "],\"revisions\":[{\"slots\":{\"main\":{\"content\":\""
         + content
         + "\"}}}]}]}}";
   }
 
-  @Test
-  public void parsesRaceGenderAndDesertEthnicity() {
-    server.enqueue(
-        new MockResponse()
-            .setBody(
-                pageBody(
-                    "{{Infobox NPC\n|race = [[Human]]\n|gender = Female\n|leagueRegion = Desert\n"
-                        + "|location = Pollnivneach\n|id = 123\n}}")));
-
-    NpcAttributes a = client.lookup("Some Trader");
-    assertEquals("Human", a.getRace());
-    assertEquals("Female", a.getGender());
-    assertEquals("kharidian", a.getEthnicity());
-    assertEquals(AttributeSource.WIKI, a.getSource());
+  private void enqueue(String infobox, String... categories) {
+    server.enqueue(new MockResponse().setBody(pageBody(infobox, categories)));
   }
 
   @Test
-  public void menaphiteLocationMapsToEgyptianEthnicity() {
-    server.enqueue(
-        new MockResponse()
-            .setBody(
-                pageBody(
-                    "{{Infobox NPC\n|race=[[Human]]\n|gender=Male\n|leagueRegion=Desert\n"
-                        + "|location=Sophanem\n|id=1\n}}")));
-    assertEquals("menaphite", client.lookup("Sophanem Guard").getEthnicity());
+  public void parsesRaceGenderAndDesertEthnicity() {
+    enqueue(
+        "{{Infobox NPC\n|race = [[Human]]\n|gender = Female\n|leagueRegion = Desert\n"
+            + "|location = Pollnivneach\n|id = 123\n}}");
+
+    NpcAttributes attributes = client.lookup(123, "Some Trader");
+    assertEquals("Human", attributes.getRace());
+    assertEquals("Female", attributes.getGender());
+    assertEquals("kharidian", attributes.getEthnicity());
+    assertEquals(AttributeSource.WIKI, attributes.getSource());
+    assertEquals(123, attributes.getNpcId());
+  }
+
+  @Test
+  public void eachVersionOfASwitchInfoboxLearnsItsOwnGender() {
+    enqueue(
+        "{{Infobox NPC\n|race = [[Human]]\n|gender1 = Male\n|gender2 = Female\n"
+            + "|id1 = 3010\n|id2 = 3012\n|leagueRegion = Asgarnia\n}}");
+
+    assertEquals("Female", client.lookup(3012, "Guard").getGender());
+  }
+
+  @Test
+  public void menaphiteCategoryMapsToTheEgyptianEthnicity() {
+    enqueue(
+        "{{Infobox NPC\n|race=[[Human]]\n|gender=Male\n|leagueRegion=Desert\n|id=1\n}}",
+        "Category:Menaphites");
+
+    assertEquals("menaphite", client.lookup(1, "Menaphite Thug").getEthnicity());
+  }
+
+  @Test
+  public void aMonsterPageTakesItsRaceFromTheCategories() {
+    enqueue(
+        "{{Infobox Monster\n|gender = Female\n|leagueRegion = Fremennik\n|id = 55\n}}",
+        "Category:Trolls");
+
+    NpcAttributes attributes = client.lookup(55, "Kob");
+    assertEquals("Troll", attributes.getRace());
+    assertEquals("Female", attributes.getGender());
+    assertEquals("fremennik", attributes.getEthnicity());
+  }
+
+  @Test
+  public void aPageWithNoRaceAnywhereStillLearnsGenderAndEthnicity() {
+    enqueue("{{Infobox NPC\n|gender = Female\n|leagueRegion = Kandarin\n|id = 7\n}}");
+
+    NpcAttributes attributes = client.lookup(7, "Someone");
+    assertEquals("Human", attributes.getRace());
+    assertEquals("Female", attributes.getGender());
+    assertEquals("kandarin", attributes.getEthnicity());
   }
 
   @Test
   public void mapsLoreRaceOntoVoiceBucket() {
-    server.enqueue(
-        new MockResponse()
-            .setBody(pageBody("{{Infobox NPC\n|race=[[Ogre]]\n|gender=Male\n|id=1\n}}")));
-    assertEquals("an ogre voices from the Troll bucket", "Troll", client.lookup("Ogre").getRace());
-  }
-
-  @Test
-  public void gnomesAreTheirOwnRace() {
-    server.enqueue(
-        new MockResponse()
-            .setBody(pageBody("{{Infobox NPC\n|race=[[Gnome]]\n|gender=Male\n|id=1\n}}")));
+    enqueue("{{Infobox NPC\n|race=[[Ogre]]\n|gender=Male\n|id=1\n}}");
     assertEquals(
-        "gnomes get their own race so they can sound Irish",
-        "Gnome",
-        client.lookup("Gnome").getRace());
+        "an ogre voices from the Troll bucket", "Troll", client.lookup(1, "Ogre").getRace());
   }
 
   @Test
-  public void aPageWithoutAnInfoboxRaceIsAMiss() {
+  public void aPageThatIsNotAnNpcIsAMiss() {
+    enqueue("{{Infobox Item\n|name = Bucket\n}}");
+    assertNull(client.lookup(1, "Bucket"));
+  }
+
+  @Test
+  public void aMissingPageIsAMiss() {
     server.enqueue(new MockResponse().setBody("{\"query\":{\"pages\":[{\"missing\":true}]}}"));
-    assertNull(client.lookup("Not An NPC"));
+    assertNull(client.lookup(1, "Not An NPC"));
   }
 
   @Test
   public void nonSuccessIsAMiss() {
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
-    assertNull(client.lookup("Anything"));
+    assertNull(client.lookup(1, "Anything"));
   }
 
   @Test
-  public void multiRegionNpcCarriesNoSingleEthnicity() {
-    assertNull(WikiNpcClient.ethnicityKey("Desert, Misthalin", null));
-    assertNull(WikiNpcClient.ethnicityKey("No", null));
-    assertEquals("fremennik", WikiNpcClient.ethnicityKey("Fremennik", null));
-    assertEquals("varlamore", WikiNpcClient.ethnicityKey("Varlamore", null));
+  public void aBlankNameIsNotLookedUp() {
+    assertNull(client.lookup(1, " "));
+    assertNull(client.lookup(1, null));
+    assertEquals(0, server.getRequestCount());
   }
 
   @Test
-  public void raceBucketMappingMirrorsTheGenerator() {
-    assertEquals("Undead", WikiNpcClient.bucketForRace("Vampyre"));
-    assertEquals("Demon", WikiNpcClient.bucketForRace("Dragon"));
-    assertEquals("Troll", WikiNpcClient.bucketForRace("Ogre"));
-    assertEquals("Human", WikiNpcClient.bucketForRace("Something unknown"));
+  public void theCategoriesAreRequestedAlongsideTheRevision() throws Exception {
+    enqueue("{{Infobox NPC\n|race=Human\n|gender=Male\n|id=1\n}}");
+    client.lookup(1, "Someone");
+
+    String path = server.takeRequest().getPath();
+    assertEquals("categories are requested", true, path.contains("revisions%7Ccategories"));
   }
 }

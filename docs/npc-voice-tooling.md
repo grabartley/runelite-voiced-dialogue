@@ -53,6 +53,11 @@ name still resolves to a documented NPC is covered too.
 
 ## Mapping rules
 
+The race rules, the category race rules and the league region to ethnicity map live in
+`src/main/resources/wiki-mapping.json`. The generator reads it and so does the plugin's
+runtime auto-learn lookup, so a race keyword means the same thing in the bundled table and in a
+learned entry. Editing a rule there changes both, and the table needs regenerating to pick it up.
+
 - **Race.** The wiki race text is mapped onto a voice bucket. Buckets are
   voice-categorical, not lore-accurate: ogre/cyclops -> Troll, vampyre -> Undead,
   dragon/TzHaar -> Demon. Gnomes are kept as their own `Gnome` race (so they can

@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.gson.Gson;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 public class LearnedNpcStoreTest {
@@ -43,6 +44,37 @@ public class LearnedNpcStoreTest {
     assertEquals("Male", a.getGender());
     assertNull("a null ethnicity is not persisted", a.getEthnicity());
     assertEquals(1, reloaded.size());
+  }
+
+  @Test
+  public void aMissIsRememberedUntilItsRetryWindowPasses() throws Exception {
+    Path file = Files.createTempDirectory("learned").resolve("learned-npcs.json");
+    LearnedNpcStore store = new LearnedNpcStore(file, gson);
+    long now = System.currentTimeMillis();
+
+    assertTrue("an unseen id is worth looking up", store.isWorthLooking(11, now));
+
+    store.missed(11, now);
+    assertFalse("a fresh miss is not repeated", store.isWorthLooking(11, now));
+    assertFalse(
+        "a fresh miss survives a restart", new LearnedNpcStore(file, gson).isWorthLooking(11, now));
+    assertTrue(
+        "a stale miss is retried", store.isWorthLooking(11, now + TimeUnit.DAYS.toMillis(31)));
+  }
+
+  @Test
+  public void learningAnIdClearsItsMiss() throws Exception {
+    Path file = Files.createTempDirectory("learned").resolve("learned-npcs.json");
+    LearnedNpcStore store = new LearnedNpcStore(file, gson);
+    long now = System.currentTimeMillis();
+
+    store.missed(22, now);
+    store.learn(22, "Human", "Female", "kandarin");
+
+    assertFalse("a learned id is never looked up again", store.isWorthLooking(22, now));
+    LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
+    assertEquals("Female", reloaded.get(22).getGender());
+    assertFalse(reloaded.isWorthLooking(22, now + TimeUnit.DAYS.toMillis(365)));
   }
 
   @Test

@@ -1,12 +1,12 @@
 package com.grahambartley.runelite.voiced.dialogue.speaker;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.time.Duration;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -20,23 +20,11 @@ public final class WikiNpcClient {
   private static final String PRODUCTION_API = "https://oldschool.runescape.wiki/api.php";
   private static final String USER_AGENT = "runelite-voiced-dialogue";
   private static final Duration CALL_TIMEOUT = Duration.ofSeconds(8);
-
-  private static final Pattern RACE = field("race");
-  private static final Pattern GENDER = field("gender");
-  private static final Pattern LEAGUE_REGION = field("leagueRegion");
-  private static final Pattern LOCATION = field("location");
-  private static final Pattern MENAPHITE =
-      Pattern.compile("sophanem|menaphos|menaphite|necropolis", Pattern.CASE_INSENSITIVE);
-  private static final Pattern REF_TAG = Pattern.compile("<ref[^>]*>.*?</ref>");
-  private static final Pattern HTML_TAG = Pattern.compile("<[^>]+>");
-  private static final Pattern TEMPLATE = Pattern.compile("\\{\\{[^}]*\\}\\}");
-
-  private static Pattern field(String key) {
-    return Pattern.compile("\\|\\s*" + key + "\\d*\\s*=\\s*([^\\n|]+)", Pattern.CASE_INSENSITIVE);
-  }
+  private static final String CATEGORY_LIMIT = "500";
 
   private final OkHttpClient httpClient;
   private final String api;
+  private final WikiMapping mapping = WikiMapping.get();
 
   public WikiNpcClient(OkHttpClient httpClient) {
     this(httpClient, PRODUCTION_API);
@@ -47,7 +35,7 @@ public final class WikiNpcClient {
     this.api = api;
   }
 
-  public NpcAttributes lookup(String npcName) {
+  public NpcAttributes lookup(int npcId, String npcName) {
     if (npcName == null || npcName.trim().isEmpty()) {
       return null;
     }
@@ -55,10 +43,11 @@ public final class WikiNpcClient {
         HttpUrl.get(api)
             .newBuilder()
             .addQueryParameter("action", "query")
-            .addQueryParameter("prop", "revisions")
+            .addQueryParameter("prop", "revisions|categories")
             .addQueryParameter("rvprop", "content")
             .addQueryParameter("rvslots", "main")
             .addQueryParameter("rvsection", "0")
+            .addQueryParameter("cllimit", CATEGORY_LIMIT)
             .addQueryParameter("redirects", "1")
             .addQueryParameter("format", "json")
             .addQueryParameter("formatversion", "2")
@@ -72,40 +61,60 @@ public final class WikiNpcClient {
         return null;
       }
       ResponseBody body = response.body();
-      String wikitext = extractWikitext(body == null ? null : body.string());
-      if (wikitext == null) {
+      JsonObject page = firstPage(body == null ? null : body.string());
+      if (page == null) {
         return null;
       }
-      String race = bucketForRace(firstField(RACE, wikitext));
-      if (race == null) {
+      String wikitext = wikitextOf(page);
+      if (wikitext == null || !WikiInfobox.isNpcPage(wikitext)) {
         return null;
       }
-      String gender = normaliseGender(firstField(GENDER, wikitext));
-      String ethnicity =
-          ethnicityKey(firstField(LEAGUE_REGION, wikitext), firstField(LOCATION, wikitext));
-      NpcAttributes attributes = new NpcAttributes(race, gender, AttributeSource.WIKI);
-      attributes.setEthnicity(ethnicity);
-      return attributes;
+      return attributesFrom(npcId, WikiInfobox.parse(wikitext, categoriesOf(page)));
     } catch (Exception e) {
       log.debug("Wiki lookup for '{}' failed: {}", npcName, e.getMessage());
       return null;
     }
   }
 
-  private String extractWikitext(String json) {
+  private NpcAttributes attributesFrom(int npcId, WikiInfobox infobox) {
+    String race = mapping.raceForWikiText(infobox.race());
+    if (race == null) {
+      race = mapping.raceForCategories(infobox.categories());
+    }
+    if (race == null) {
+      race = mapping.defaultRace();
+    }
+    NpcAttributes attributes =
+        new NpcAttributes(race, gender(npcId, infobox), AttributeSource.WIKI);
+    attributes.setNpcId(npcId);
+    attributes.setEthnicity(
+        mapping.ethnicityKey(infobox.leagueRegion(), infobox.location(), infobox.categories()));
+    return attributes;
+  }
+
+  private String gender(int npcId, WikiInfobox infobox) {
+    return mapping.genderForWikiText(infobox.genderForVersion(npcId));
+  }
+
+  private static JsonObject firstPage(String json) {
     if (json == null) {
       return null;
     }
     try {
-      JsonObject root = new JsonParser().parse(json).getAsJsonObject();
-      JsonArray pages = root.getAsJsonObject("query").getAsJsonArray("pages");
-      if (pages.size() == 0) {
-        return null;
-      }
-      JsonObject page = pages.get(0).getAsJsonObject();
-      if (!page.has("revisions")) {
-        return null;
-      }
+      JsonArray pages =
+          new JsonParser()
+              .parse(json)
+              .getAsJsonObject()
+              .getAsJsonObject("query")
+              .getAsJsonArray("pages");
+      return pages.size() == 0 ? null : pages.get(0).getAsJsonObject();
+    } catch (RuntimeException e) {
+      return null;
+    }
+  }
+
+  private static String wikitextOf(JsonObject page) {
+    try {
       return page.getAsJsonArray("revisions")
           .get(0)
           .getAsJsonObject()
@@ -118,73 +127,17 @@ public final class WikiNpcClient {
     }
   }
 
-  private static String firstField(Pattern pattern, String wikitext) {
-    Matcher m = pattern.matcher(wikitext);
-    if (!m.find()) {
-      return null;
+  private static List<String> categoriesOf(JsonObject page) {
+    List<String> categories = new ArrayList<>();
+    if (!page.has("categories") || !page.get("categories").isJsonArray()) {
+      return categories;
     }
-    String value = m.group(1);
-    value = REF_TAG.matcher(value).replaceAll("");
-    value = HTML_TAG.matcher(value).replaceAll("");
-    value = value.replace("[[", "").replace("]]", "");
-    value = TEMPLATE.matcher(value).replaceAll("");
-    return value.trim();
-  }
-
-  static String bucketForRace(String raceText) {
-    if (raceText == null || raceText.isEmpty()) {
-      return null;
-    }
-    RaceBucket bucket = RaceBucket.forWikiText(raceText);
-    return bucket == null ? RaceBucket.HUMAN.bucketName() : bucket.bucketName();
-  }
-
-  private static String normaliseGender(String genderText) {
-    if (genderText != null) {
-      String g = genderText.trim().toLowerCase(Locale.ROOT);
-      if (g.startsWith("f")) {
-        return "Female";
-      }
-      if (g.startsWith("m")) {
-        return "Male";
+    for (JsonElement element : page.getAsJsonArray("categories")) {
+      JsonObject category = element.getAsJsonObject();
+      if (category.has("title")) {
+        categories.add(category.get("title").getAsString());
       }
     }
-    return "Male";
-  }
-
-  static String ethnicityKey(String leagueRegion, String location) {
-    if (leagueRegion == null) {
-      return null;
-    }
-    String lr = leagueRegion.trim();
-    if (lr.contains(",") || lr.contains("&")) {
-      return null;
-    }
-    switch (lr.toLowerCase(Locale.ROOT)) {
-      case "desert":
-        return location != null && MENAPHITE.matcher(location).find() ? "menaphite" : "kharidian";
-      case "misthalin":
-        return "misthalin";
-      case "asgarnia":
-        return "asgarnia";
-      case "kandarin":
-        return "kandarin";
-      case "kourend":
-        return "kourend";
-      case "wilderness":
-        return "wilderness";
-      case "tirannwn":
-        return "tirannwn";
-      case "varlamore":
-        return "varlamore";
-      case "karamja":
-        return "karamja";
-      case "morytania":
-        return "morytania";
-      case "fremennik":
-        return "fremennik";
-      default:
-        return null;
-    }
+    return categories;
   }
 }

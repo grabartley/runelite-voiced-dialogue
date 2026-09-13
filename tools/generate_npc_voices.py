@@ -51,30 +51,15 @@ USER_AGENT = "runelite-voiced-dialogue NPC table generator (contact: grabartley@
 # Monster (carries none of those), so for Monster pages race comes from the page's categories.
 INFOBOX_TEMPLATES = ["Template:Infobox NPC", "Template:Infobox Monster"]
 
+MAPPING_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "main",
+                            "resources", "wiki-mapping.json")
+
+with open(MAPPING_PATH, encoding="utf-8") as _mapping_file:
+    MAPPING = json.load(_mapping_file)
+
 # Wiki page-category substring -> voice bucket, checked in order, first match wins. This is how
 # Infobox Monster NPCs (trolls like Kob, ghosts, TzHaar, ...) get a race the infobox does not carry.
-CATEGORY_RACE_RULES = [
-    ("citizens of arceuus", "Arceuus"),
-    ("aranei", "Aranei"),
-    ("vampyre", "Undead"), ("vyre", "Undead"), ("ghost", "Undead"), ("skeleton", "Undead"),
-    ("zombie", "Undead"), ("ghoul", "Undead"), ("undead", "Undead"), ("shade", "Undead"),
-    ("wight", "Undead"), ("revenant", "Undead"), ("spectre", "Undead"), ("wraith", "Undead"),
-    ("banshee", "Undead"), ("mummy", "Undead"), ("ankou", "Undead"),
-    ("tzhaar", "Demon"), ("demon", "Demon"), ("dragon", "Demon"), ("devil", "Demon"),
-    ("imp", "Demon"), ("abyssal", "Demon"), ("wyvern", "Demon"),
-    ("gnome", "Gnome"),
-    ("goblin", "Goblin"), ("hobgoblin", "Goblin"),
-    ("dwarf", "Dwarf"), ("dwarves", "Dwarf"),
-    ("elves", "Elf"), ("elf", "Elf"),
-    ("troll", "Troll"), ("ogre", "Troll"), ("cyclop", "Troll"), ("giant", "Troll"),
-    ("wizard", "Wizard"), ("sorcerer", "Wizard"),
-    ("tortugan", "Tortugan"), ("tortuga", "Tortugan"),
-    # Penguin has a species category; crab deliberately has none, because the only wiki categories
-    # whose names contain "crab" are a quest and a cave that also hold a human and a snake.
-    ("penguin", "Penguin"),
-    ("icyene", "Icyene"),
-    ("human", "Human"),
-]
+CATEGORY_RACE_RULES = [(r["keyword"], r["race"]) for r in MAPPING["categoryRaceRules"]]
 
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
@@ -85,66 +70,21 @@ DEFAULT_SUMMARY_URL = (
     "https://raw.githubusercontent.com/0xNeffarion/osrsreboxed-db/master/docs/npcs-summary.json"
 )
 
-VALID_RACES = {"Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
-               "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei", "Dog", "Crab",
-               "Penguin"}
+VALID_RACES = ({r["race"] for r in MAPPING["raceRules"]}
+               | {r["race"] for r in MAPPING["categoryRaceRules"]})
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
-# Wiki race text -> the voice buckets (VoiceProfile). Buckets are
-# voice-categorical, not lore-accurate: lore-distinct creatures map to the
-# closest available voice (gnome -> Goblin, ogre/cyclops -> Troll, vampyre ->
-# Undead, dragon/TzHaar -> Demon). Checked in order, first hit wins, so gorilla
-# is matched before monkey to keep apes off the chattery island voice.
-RACE_BUCKET_RULES = [
-    # First: the Citizens of Arceuus are ascended humans, so the human bucket would
-    # otherwise claim them wherever the wiki spells the race out longhand.
-    (r"citizens? of arceuus", "Arceuus"),
-    (r"\baranei\b", "Aranei"),
-    (r"vampyre|vampire|\bvyre\b|zombie|skeleton|ghost|ghoul|undead|wight|shade|"
-     r"revenant|mummy|banshee|spectre|wraith|ankou|lich|reanimat", "Undead"),
-    (r"demon|devil|\bimp\b|abyssal|dragon|wyvern|wyrm|drake|tzhaar|tztok|tzkal|hellhound", "Demon"),
-    # After the undead and demon rules, so a skeletal hound or a hellhound keeps its own bucket.
-    (r"\bdogs?\b", "Dog"),
-    (r"\bcrabs?\b", "Crab"),
-    (r"\bpenguins?\b", "Penguin"),
-    (r"gnome", "Gnome"),
-    (r"goblin|hobgoblin", "Goblin"),
-    (r"dwarf|dwarven", "Dwarf"),
-    (r"\belf\b|\belves\b|elven|gnome elf", "Elf"),
-    (r"troll|\bgiant\b|cyclops|ogre|\bent\b|\bgolem\b|\bhuman.*giant", "Troll"),
-    (r"gorilla", "Gorilla"),
-    (r"monkey|primate|baboon|mandril", "Monkey"),
-    # "Half Icyene" (Safalaan) is excluded: a half-blood reads as human, not angelic.
-    (r"(?<!half )(?<!half-)icyene", "Icyene"),
-    (r"tortugan|tortuga", "Tortugan"),
-    (r"\bhuman\b|\bman\b|\bwoman\b|\bgnome child\b", "Human"),
-]
-RACE_BUCKET_RULES = [(re.compile(p, re.IGNORECASE), b) for p, b in RACE_BUCKET_RULES]
+# Wiki race text -> the voice buckets (VoiceProfile), ordered, first hit wins. The rules, the
+# category rules above and the league region map below are shared with the plugin's auto-learn
+# lookup, which reads the same resource.
+RACE_BUCKET_RULES = [(re.compile(r["pattern"], re.IGNORECASE), r["race"])
+                     for r in MAPPING["raceRules"]]
 
-# Sophanem/Menaphos are split out of the Desert league region into the Menaphite
-# (Egyptian) ethnicity by matching the NPC's location text or wiki categories.
-MENAPHITE_HINT = re.compile(r"sophanem|menaphos|menaphite|necropolis", re.IGNORECASE)
-
-# Single wiki leagueRegion -> ethnicity accent key in tools/profiles.json byEthnicity.
-# leagueRegion (where an NPC is found) is the default proxy for ethnicity (where they
-# are from); a foreigner is corrected in overrides.json. "Desert" is split into
-# kharidian/menaphite by location. Values not listed here (No, General, N/A, ...) and
-# any NPC documented across several regions (comma- or &-separated) carry no single
-# ethnicity and keep the British default.
-SINGLE_ETHNICITY = {
-    "misthalin": "misthalin",
-    "asgarnia": "asgarnia",
-    "kandarin": "kandarin",
-    "kourend": "kourend",
-    "wilderness": "wilderness",
-    "tirannwn": "tirannwn",
-    "varlamore": "varlamore",
-    "karamja": "karamja",
-    "morytania": "morytania",
-    "fremennik": "fremennik",
-}
+DESERT = MAPPING["desert"]
+MENAPHITE_HINT = re.compile(DESERT["hint"], re.IGNORECASE)
+SINGLE_ETHNICITY = MAPPING["leagueRegionEthnicity"]
 
 
 def ethnicity_key(league_region, location, categories=None):
@@ -154,11 +94,11 @@ def ethnicity_key(league_region, location, categories=None):
     if "," in lr or "&" in lr:
         return None  # documented in several regions -> no single ethnicity
     key = lr.lower()
-    if key == "desert":
+    if key == DESERT["leagueRegion"]:
         # Split the Egyptian Menaphite cities (Sophanem/Menaphos) out of the desert, by the NPC's
         # location text or its wiki categories (e.g. Category:Menaphites, Category:Sophanem).
         hint = " ".join([location or ""] + (categories or []))
-        return "menaphite" if MENAPHITE_HINT.search(hint) else "kharidian"
+        return DESERT["hinted"] if MENAPHITE_HINT.search(hint) else DESERT["default"]
     return SINGLE_ETHNICITY.get(key)
 
 
@@ -175,10 +115,10 @@ def normalise_gender(gender_text):
     if gender_text:
         g = gender_text.strip().lower()
         if g.startswith("f"):
-            return "Female"
+            return MAPPING["femaleGender"]
         if g.startswith("m"):
-            return "Male"
-    return "Male"
+            return MAPPING["defaultGender"]
+    return MAPPING["defaultGender"]
 
 
 def api_get(params):
@@ -348,7 +288,7 @@ def build_table_from_wiki(limit=None):
         race = bucket_for_race(first_field(wikitext, "race"))
         if race is None:
             race = bucket_from_categories(categories)
-        race = race or "Human"
+        race = race or MAPPING["defaultRace"]
         ethnicity = ethnicity_key(
             first_field(wikitext, "leagueRegion"), first_field(wikitext, "location"), categories)
 
@@ -361,7 +301,7 @@ def build_table_from_wiki(limit=None):
         # Gender can vary per version (e.g. male/female guard variants). When the page lists one
         # gender per id group, pair them; otherwise fall back to the first gender for every id.
         aligned = len(genders) == len(groups) and groups
-        default_gender = genders[0] if genders else "Male"
+        default_gender = genders[0] if genders else MAPPING["defaultGender"]
 
         # First page to claim a name wins, so the canonical NPC page beats a stray transclusion.
         key = normalize_name(title)
