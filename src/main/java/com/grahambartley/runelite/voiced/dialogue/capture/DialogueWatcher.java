@@ -66,8 +66,8 @@ public final class DialogueWatcher {
     }
 
     boolean open = npcVisible || playerVisible || narrationVisible;
-    if (shouldInterruptOnClose(open, dialogueOpen)) {
-      audioService.interrupt();
+    if (shouldCutOnClose(open, dialogueOpen)) {
+      audioService.cutPlayback();
       lastSpokenBySpeaker.clear();
       narrationWatcher.reset();
     }
@@ -105,7 +105,7 @@ public final class DialogueWatcher {
         widgetReader.headAnimationId(headWidgetId));
   }
 
-  static boolean shouldInterruptOnClose(boolean dialogueOpen, boolean wasDialogueOpen) {
+  static boolean shouldCutOnClose(boolean dialogueOpen, boolean wasDialogueOpen) {
     return wasDialogueOpen && !dialogueOpen;
   }
 }

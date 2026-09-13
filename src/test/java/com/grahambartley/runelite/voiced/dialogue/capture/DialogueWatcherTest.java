@@ -58,7 +58,7 @@ public class DialogueWatcherTest {
     return widget;
   }
 
-  private Object[] interruptOnCloseCases() {
+  private Object[] cutOnCloseCases() {
     return new Object[] {
       new Object[] {false, true, true},
       new Object[] {false, false, false},
@@ -68,10 +68,10 @@ public class DialogueWatcherTest {
   }
 
   @Test
-  @Parameters(method = "interruptOnCloseCases")
-  public void interruptDecisionFiresOnlyOnTheOpenToClosedTransition(
+  @Parameters(method = "cutOnCloseCases")
+  public void cutDecisionFiresOnlyOnTheOpenToClosedTransition(
       boolean dialogueOpen, boolean wasDialogueOpen, boolean expected) {
-    assertEquals(expected, DialogueWatcher.shouldInterruptOnClose(dialogueOpen, wasDialogueOpen));
+    assertEquals(expected, DialogueWatcher.shouldCutOnClose(dialogueOpen, wasDialogueOpen));
   }
 
   @Test
@@ -165,7 +165,7 @@ public class DialogueWatcherTest {
     watcher.tick();
     watcher.tick();
 
-    verify(audioService, times(1)).interrupt();
+    verify(audioService, times(1)).cutPlayback();
     verify(prefetchCoordinator, times(1)).reset();
   }
 
@@ -198,7 +198,7 @@ public class DialogueWatcherTest {
     assertTrue("narration holds the audio channel too", watcher.isDialogueOpen());
     watcher.tick();
 
-    verify(audioService, never()).interrupt();
+    verify(audioService, never()).cutPlayback();
     verify(prefetchCoordinator, never()).reset();
   }
 
@@ -209,7 +209,7 @@ public class DialogueWatcherTest {
     watcher.tick();
     watcher.tick();
 
-    verify(audioService, times(1)).interrupt();
+    verify(audioService, times(1)).cutPlayback();
     verify(narrationWatcher, times(1)).reset();
   }
 

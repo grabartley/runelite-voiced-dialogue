@@ -38,12 +38,12 @@ public class WikiCallThrottleTest {
   }
 
   @Test
-  public void anInterruptedWaitGivesUpItsTurn() throws Exception {
+  public void anInterruptedWaitGivesUpItsTurnAndClearsTheFlag() throws Exception {
     WikiCallThrottle throttle = new WikiCallThrottle(60_000);
     throttle.awaitTurn();
 
     AtomicBoolean tookTurn = new AtomicBoolean(true);
-    AtomicBoolean stayedInterrupted = new AtomicBoolean(false);
+    AtomicBoolean stayedInterrupted = new AtomicBoolean(true);
     CountDownLatch done = new CountDownLatch(1);
     Thread waiter =
         new Thread(
@@ -59,6 +59,7 @@ public class WikiCallThrottleTest {
 
     assertTrue("the waiter gives up rather than hanging", done.await(5, TimeUnit.SECONDS));
     assertFalse("an interrupted call never reaches the wiki", tookTurn.get());
-    assertTrue("the interrupt is left for the executor to see", stayedInterrupted.get());
+    assertFalse(
+        "the waiter thread is handed back without an interrupt flag", stayedInterrupted.get());
   }
 }

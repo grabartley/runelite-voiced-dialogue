@@ -220,7 +220,7 @@ public class VoicedDialoguePlugin extends Plugin {
     usageClient = null;
     creditMeter = null;
     if (spendExecutor != null) {
-      spendExecutor.shutdownNow();
+      spendExecutor.shutdown();
       spendExecutor = null;
     }
     dialogueWatcher = null;
@@ -237,7 +237,7 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     voiceManager = null;
     if (wikiExecutor != null) {
-      wikiExecutor.shutdownNow();
+      wikiExecutor.shutdown();
       wikiExecutor = null;
     }
     log.info("VoicedDialogue stopped");

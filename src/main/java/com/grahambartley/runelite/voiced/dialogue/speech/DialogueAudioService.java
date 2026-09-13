@@ -119,7 +119,7 @@ public final class DialogueAudioService {
     }
     long mine = epoch.incrementAndGet();
     output.stop();
-    interruptAmbient();
+    cutAmbient();
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
@@ -233,7 +233,7 @@ public final class DialogueAudioService {
     return volumePercent < 0;
   }
 
-  private void interruptAmbient() {
+  private void cutAmbient() {
     ambientEpoch.incrementAndGet();
     if (ambientLines.isEmpty()) {
       return;
@@ -301,7 +301,7 @@ public final class DialogueAudioService {
     return new CacheKey(backend.id(), voiceKey, effective.emotion(), effective.text());
   }
 
-  public void interrupt() {
+  public void cutPlayback() {
     epoch.incrementAndGet();
     output.stop();
   }
@@ -328,14 +328,14 @@ public final class DialogueAudioService {
 
   private static void abandon(Executor exec) {
     if (exec instanceof ExecutorService) {
-      ((ExecutorService) exec).shutdownNow();
+      ((ExecutorService) exec).shutdown();
     }
   }
 
   private static void shutdown(Executor exec) {
     if (exec instanceof ExecutorService) {
       ExecutorService es = (ExecutorService) exec;
-      es.shutdownNow();
+      es.shutdown();
       try {
         es.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
       } catch (InterruptedException e) {

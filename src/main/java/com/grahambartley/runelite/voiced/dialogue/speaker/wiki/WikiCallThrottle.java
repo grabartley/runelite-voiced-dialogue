@@ -30,7 +30,6 @@ public final class WikiCallThrottle {
       try {
         TimeUnit.NANOSECONDS.sleep(waitNanos);
       } catch (InterruptedException interrupted) {
-        Thread.currentThread().interrupt();
         return false;
       }
     }

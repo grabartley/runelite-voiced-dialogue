@@ -62,11 +62,14 @@ call, reads the disk cache, or blocks on synthesis.
 
 **Verified.** `src/main` spawns no external process (`grep -rn "ProcessBuilder\|Runtime.*exec"
 src/main` returns nothing), calls no `Thread.sleep` (`grep -rn "Thread.sleep(" src/main`
-returns nothing), and never interrupts a thread (`grep -rn "Thread.currentThread\|\.interrupt("
-src/main` returns nothing but the unrelated `DialogueAudioService.interrupt()` playback method).
-The cloud retry backoff waits on a delayed `CompletableFuture` joined to completion rather than
-a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which needs no
-`InterruptedException` handling and never re-raises the interrupt flag).
+returns nothing), and never interrupts a thread (`grep -rn "Thread.currentThread\|\.interrupt(\|shutdownNow"
+src/main` returns nothing). Every executor is closed with `ExecutorService.shutdown()`, so a worker
+already running is left to finish on its own; work that has not started yet is dropped by the
+`epoch` and `ambientEpoch` generation counters rather than by interruption. Cutting a line in
+progress is `DialogueAudioService.cutPlayback()`, which bumps the generation counter and stops the
+audio line. The cloud retry backoff waits on a delayed `CompletableFuture` joined to completion
+rather than a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which needs
+no `InterruptedException` handling and never re-raises the interrupt flag).
 
 ### API keys are secrets, never logged, sent only to their own provider
 
