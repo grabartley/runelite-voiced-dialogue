@@ -529,7 +529,7 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void closeLetsAnInFlightLineFinishWithoutInterruptingItsWorker() throws Exception {
+  public void closeNeverInterruptsAnInFlightWorker() throws Exception {
     CountDownLatch entered = new CountDownLatch(1);
     CountDownLatch release = new CountDownLatch(1);
     AtomicBoolean sawInterrupt = new AtomicBoolean();

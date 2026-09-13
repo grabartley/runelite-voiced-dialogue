@@ -32,6 +32,8 @@ public final class NpcLearningService {
 
   private volatile long quietUntilMillis;
 
+  private volatile boolean closed;
+
   public NpcLearningService(
       WikiNpcClient client,
       LearnedNpcStore store,
@@ -47,6 +49,10 @@ public final class NpcLearningService {
     this.throttle = throttle;
   }
 
+  public void close() {
+    closed = true;
+  }
+
   public boolean isEnabled() {
     return enabled.getAsBoolean();
   }
@@ -58,7 +64,7 @@ public final class NpcLearningService {
   }
 
   public void considerLearning(int npcId, String npcName) {
-    if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty()) {
+    if (closed || !enabled.getAsBoolean() || npcName == null || npcName.isEmpty()) {
       return;
     }
     long now = System.currentTimeMillis();
@@ -70,7 +76,12 @@ public final class NpcLearningService {
     }
     executor.execute(
         () -> {
-          if (!throttle.awaitTurn()) {
+          if (closed) {
+            attempted.remove(npcId);
+            return;
+          }
+          throttle.awaitTurn();
+          if (closed) {
             attempted.remove(npcId);
             return;
           }

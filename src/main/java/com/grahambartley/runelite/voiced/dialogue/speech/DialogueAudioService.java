@@ -314,25 +314,25 @@ public final class DialogueAudioService {
     stopLiveAmbient();
     ambientChains.clear();
     ambientLines.clear();
-    abandon(ambientExecutor);
-    abandon(ambientPlaybackExecutor);
-    shutdown(executor);
+    stopAccepting(ambientExecutor);
+    stopAccepting(ambientPlaybackExecutor);
+    stopAndAwait(executor);
     if (warmExecutor != executor) {
-      shutdown(warmExecutor);
+      stopAndAwait(warmExecutor);
     }
     if (prefetchExecutor != executor && prefetchExecutor != warmExecutor) {
-      shutdown(prefetchExecutor);
+      stopAndAwait(prefetchExecutor);
     }
     output.close();
   }
 
-  private static void abandon(Executor exec) {
+  private static void stopAccepting(Executor exec) {
     if (exec instanceof ExecutorService) {
       ((ExecutorService) exec).shutdown();
     }
   }
 
-  private static void shutdown(Executor exec) {
+  private static void stopAndAwait(Executor exec) {
     if (exec instanceof ExecutorService) {
       ExecutorService es = (ExecutorService) exec;
       es.shutdown();

@@ -11,6 +11,8 @@ import com.google.gson.Gson;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.IntPredicate;
 import okhttp3.OkHttpClient;
@@ -158,5 +160,47 @@ public class NpcLearningServiceTest {
 
     assertEquals("the bundled table wins, so nothing is asked", 0, server.getRequestCount());
     assertNull(store.get(1100));
+  }
+
+  @Test
+  public void aClosedServiceNeverQueuesAnotherLookup() {
+    NpcLearningService service = service(true);
+    service.close();
+
+    service.considerLearning(1, "Troll");
+
+    assertEquals("a closed service makes no wiki call", 0, server.getRequestCount());
+    assertNull("a closed service learns nothing", store.get(1));
+  }
+
+  @Test
+  public void aQueuedLookupIsDroppedWhenTheServiceClosesBeforeItRuns() {
+    DeferredExecutor executor = new DeferredExecutor();
+    NpcLearningService service =
+        new NpcLearningService(client, store, executor, () -> true, npcId -> false, UNTHROTTLED);
+
+    service.considerLearning(1, "Troll");
+    service.close();
+    executor.runAll();
+
+    assertEquals("a lookup queued at close makes no wiki call", 0, server.getRequestCount());
+    assertNull("a lookup queued at close learns nothing", store.get(1));
+  }
+
+  private static final class DeferredExecutor implements Executor {
+    private final List<Runnable> tasks = new ArrayList<>();
+
+    @Override
+    public void execute(Runnable command) {
+      tasks.add(command);
+    }
+
+    void runAll() {
+      List<Runnable> snapshot = new ArrayList<>(tasks);
+      tasks.clear();
+      for (Runnable task : snapshot) {
+        task.run();
+      }
+    }
   }
 }

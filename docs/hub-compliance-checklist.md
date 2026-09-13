@@ -61,15 +61,29 @@ call, reads the disk cache, or blocks on synthesis.
 ### No subprocess, no `Thread.sleep`, no thread interrupt
 
 **Verified.** `src/main` spawns no external process (`grep -rn "ProcessBuilder\|Runtime.*exec"
-src/main` returns nothing), calls no `Thread.sleep` (`grep -rn "Thread.sleep(" src/main`
-returns nothing), and never interrupts a thread (`grep -rn "Thread.currentThread\|\.interrupt(\|shutdownNow"
-src/main` returns nothing). Every executor is closed with `ExecutorService.shutdown()`, so a worker
-already running is left to finish on its own; work that has not started yet is dropped by the
-`epoch` and `ambientEpoch` generation counters rather than by interruption. Cutting a line in
-progress is `DialogueAudioService.cutPlayback()`, which bumps the generation counter and stops the
-audio line. The cloud retry backoff waits on a delayed `CompletableFuture` joined to completion
-rather than a sleeping pool thread, and blocking waits use `CompletableFuture.join()` (which needs
-no `InterruptedException` handling and never re-raises the interrupt flag).
+src/main` returns nothing), never sleeps a thread (`grep -rn "sleep(" src/main` returns nothing),
+and never interrupts one (`grep -rn "Thread.currentThread\|\.interrupt(\|shutdownNow" src/main`
+returns nothing).
+
+Every wait is a delayed `CompletableFuture` joined to completion rather than a sleeping thread: the
+cloud retry backoff in `CloudBackendSupport`, and the 500 ms rate limit `WikiCallThrottle` puts
+between wiki lookups. Blocking waits use `CompletableFuture.join()`, which needs no
+`InterruptedException` handling.
+
+Every executor is closed with `ExecutorService.shutdown()`, so a worker already running finishes on
+its own and none is ever interrupted. `shutdown()` still lets a queued task start, so each pool
+carries its own guard that makes an abandoned task a no-op before it can reach the network, the
+disk, or the audio line:
+
+| Pool | Guard checked before any work |
+|---|---|
+| Synthesis, warm, prefetch | `epoch` generation counter in `DialogueAudioService` |
+| Ambient synthesis and playback | `ambientEpoch` generation counter in `DialogueAudioService` |
+| `tts-wiki-learn` | `NpcLearningService.close()`, checked either side of the throttle wait |
+| `tts-spend` | `spendEpoch` generation counter in `VoicedDialoguePlugin` |
+
+Cutting a line already playing is `DialogueAudioService.cutPlayback()`, which bumps the `epoch`
+counter and stops the audio line.
 
 ### API keys are secrets, never logged, sent only to their own provider
 
