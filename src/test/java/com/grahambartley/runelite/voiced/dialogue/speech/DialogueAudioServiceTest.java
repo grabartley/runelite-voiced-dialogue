@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
@@ -29,6 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Rule;
 import org.junit.Test;
@@ -342,7 +344,7 @@ public class DialogueAudioServiceTest {
           }
         };
     DialogueAudioService svc = service(provider(streaming), output, executor, 8, 100);
-    skipHook[0] = svc::interrupt;
+    skipHook[0] = svc::cutPlayback;
 
     svc.speak(req("Skipme", NpcRace.HUMAN, NpcGender.MALE));
     executor.runAll();
@@ -496,19 +498,72 @@ public class DialogueAudioServiceTest {
   }
 
   @Test
-  public void interruptStopsPlaybackAndDropsQueuedLine() {
+  public void cutPlaybackStopsPlaybackAndDropsQueuedLine() {
     FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
     FakeOutput output = new FakeOutput();
     DeferredExecutor executor = new DeferredExecutor();
     DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
 
     svc.speak(req("Queued line", NpcRace.HUMAN, NpcGender.MALE));
-    svc.interrupt();
+    svc.cutPlayback();
     executor.runAll();
 
-    assertTrue("interrupt should stop current audio", output.stopCalls >= 1);
+    assertTrue("cutting playback should stop current audio", output.stopCalls >= 1);
     assertEquals("queued stale line should not synthesize", 0, backend.requests.size());
     assertEquals("queued stale line should not play", 0, output.streamCalls);
+  }
+
+  @Test
+  public void closeDropsQueuedLinesWithoutPlayingThem() {
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    FakeOutput output = new FakeOutput();
+    DeferredExecutor executor = new DeferredExecutor();
+    DialogueAudioService svc = service(provider(backend), output, executor, 8, 100);
+
+    svc.speak(req("Queued line", NpcRace.HUMAN, NpcGender.MALE));
+    svc.close();
+    executor.runAll();
+
+    assertEquals("a line queued at close should not synthesize", 0, backend.requests.size());
+    assertEquals("a line queued at close should not play", 0, output.streamCalls);
+  }
+
+  @Test
+  public void closeNeverInterruptsAnInFlightWorker() throws Exception {
+    CountDownLatch entered = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    AtomicBoolean sawInterrupt = new AtomicBoolean();
+    Pcm canned = new Pcm(new float[] {0.3f, -0.3f}, 24_000);
+    SynthesisBackend blocking =
+        new TestBackend() {
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            entered.countDown();
+            try {
+              release.await();
+            } catch (InterruptedException e) {
+              sawInterrupt.set(true);
+            }
+            return canned;
+          }
+        };
+    ThreadPoolExecutor pool =
+        new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(4));
+    FakeOutput output = new FakeOutput();
+    DialogueAudioService svc = service(provider(blocking), output, pool, 8, 100);
+    try {
+      svc.speak(req("In flight", NpcRace.HUMAN, NpcGender.MALE));
+      assertTrue("the line reached the backend", entered.await(2, TimeUnit.SECONDS));
+
+      svc.close();
+
+      assertFalse("closing never interrupts a worker", sawInterrupt.get());
+      assertTrue("closing stops the pool from taking new work", pool.isShutdown());
+    } finally {
+      release.countDown();
+      pool.shutdown();
+      pool.awaitTermination(5, TimeUnit.SECONDS);
+    }
   }
 
   @Test
@@ -711,7 +766,7 @@ public class DialogueAudioServiceTest {
         new TestBackend() {
           @Override
           public Pcm synthesize(SynthesisRequest request) {
-            holder[0].interrupt();
+            holder[0].cutPlayback();
             return new Pcm(new float[] {0.1f, -0.1f}, 24_000);
           }
         };

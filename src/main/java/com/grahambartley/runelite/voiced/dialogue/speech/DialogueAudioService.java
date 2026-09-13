@@ -58,6 +58,8 @@ public final class DialogueAudioService {
   private final Set<AmbientLine> ambientLines = ConcurrentHashMap.newKeySet();
   private final Map<Integer, CompletableFuture<Void>> ambientChains = new ConcurrentHashMap<>();
   private final AtomicLong epoch = new AtomicLong();
+
+  private volatile boolean closed;
   private final AtomicLong prefetchEpoch = new AtomicLong();
   private final AtomicLong ambientEpoch = new AtomicLong();
 
@@ -106,7 +108,13 @@ public final class DialogueAudioService {
   }
 
   public void prewarm(Runnable warm) {
-    warmExecutor.execute(warm);
+    submitQuietly(
+        warmExecutor,
+        () -> {
+          if (!closed) {
+            warm.run();
+          }
+        });
   }
 
   public void speak(SynthesisRequest request) {
@@ -119,7 +127,7 @@ public final class DialogueAudioService {
     }
     long mine = epoch.incrementAndGet();
     output.stop();
-    interruptAmbient();
+    cutAmbient();
     SynthesisBackend backend = backends.active();
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
@@ -233,7 +241,7 @@ public final class DialogueAudioService {
     return volumePercent < 0;
   }
 
-  private void interruptAmbient() {
+  private void cutAmbient() {
     ambientEpoch.incrementAndGet();
     if (ambientLines.isEmpty()) {
       return;
@@ -301,12 +309,13 @@ public final class DialogueAudioService {
     return new CacheKey(backend.id(), voiceKey, effective.emotion(), effective.text());
   }
 
-  public void interrupt() {
+  public void cutPlayback() {
     epoch.incrementAndGet();
     output.stop();
   }
 
   public void close() {
+    closed = true;
     epoch.incrementAndGet();
     prefetchEpoch.incrementAndGet();
     output.stop();
@@ -314,30 +323,32 @@ public final class DialogueAudioService {
     stopLiveAmbient();
     ambientChains.clear();
     ambientLines.clear();
-    abandon(ambientExecutor);
-    abandon(ambientPlaybackExecutor);
-    shutdown(executor);
+    stopAccepting(ambientExecutor);
+    stopAccepting(ambientPlaybackExecutor);
+    stopAndAwait(executor);
     if (warmExecutor != executor) {
-      shutdown(warmExecutor);
+      stopAndAwait(warmExecutor);
     }
     if (prefetchExecutor != executor && prefetchExecutor != warmExecutor) {
-      shutdown(prefetchExecutor);
+      stopAndAwait(prefetchExecutor);
     }
     output.close();
   }
 
-  private static void abandon(Executor exec) {
+  private static void stopAccepting(Executor exec) {
     if (exec instanceof ExecutorService) {
-      ((ExecutorService) exec).shutdownNow();
+      ((ExecutorService) exec).shutdown();
     }
   }
 
-  private static void shutdown(Executor exec) {
+  private static void stopAndAwait(Executor exec) {
     if (exec instanceof ExecutorService) {
       ExecutorService es = (ExecutorService) exec;
-      es.shutdownNow();
+      es.shutdown();
       try {
-        es.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
+        if (!es.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS)) {
+          log.debug("A worker was still running after {}s, leaving it be", SHUTDOWN_WAIT_SECONDS);
+        }
       } catch (InterruptedException e) {
         log.debug("Interrupted while awaiting executor shutdown");
       }

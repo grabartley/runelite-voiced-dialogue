@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public final class WikiCallThrottle {
@@ -14,7 +15,7 @@ public final class WikiCallThrottle {
     this.intervalNanos = TimeUnit.MILLISECONDS.toNanos(intervalMillis);
   }
 
-  public boolean awaitTurn() {
+  public void awaitTurn() {
     long waitNanos;
     synchronized (this) {
       long now = System.nanoTime();
@@ -26,14 +27,11 @@ public final class WikiCallThrottle {
       lastCallAt = turnAt;
       started = true;
     }
-    if (waitNanos > 0) {
-      try {
-        TimeUnit.NANOSECONDS.sleep(waitNanos);
-      } catch (InterruptedException interrupted) {
-        Thread.currentThread().interrupt();
-        return false;
-      }
+    if (waitNanos <= 0) {
+      return;
     }
-    return true;
+    CompletableFuture.runAsync(
+            () -> {}, CompletableFuture.delayedExecutor(waitNanos, TimeUnit.NANOSECONDS))
+        .join();
   }
 }

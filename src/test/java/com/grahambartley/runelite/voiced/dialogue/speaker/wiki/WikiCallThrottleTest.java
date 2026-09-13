@@ -1,6 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.CountDownLatch;
@@ -12,7 +11,11 @@ public class WikiCallThrottleTest {
 
   @Test
   public void theFirstTurnIsTakenImmediately() {
-    assertTrue(new WikiCallThrottle(60_000).awaitTurn());
+    long before = System.nanoTime();
+    new WikiCallThrottle(60_000).awaitTurn();
+
+    assertTrue(
+        "the first call never waits", System.nanoTime() - before < TimeUnit.SECONDS.toNanos(30));
   }
 
   @Test
@@ -21,8 +24,8 @@ public class WikiCallThrottleTest {
     WikiCallThrottle throttle = new WikiCallThrottle(interval);
 
     long before = System.nanoTime();
-    assertTrue(throttle.awaitTurn());
-    assertTrue(throttle.awaitTurn());
+    throttle.awaitTurn();
+    throttle.awaitTurn();
 
     assertTrue(
         "a second call waits at least the interval",
@@ -32,33 +35,37 @@ public class WikiCallThrottleTest {
   @Test
   public void aZeroIntervalNeverWaits() {
     WikiCallThrottle throttle = new WikiCallThrottle(0);
+    long before = System.nanoTime();
     for (int call = 0; call < 5; call++) {
-      assertTrue(throttle.awaitTurn());
+      throttle.awaitTurn();
     }
+
+    assertTrue(
+        "a zero interval never waits", System.nanoTime() - before < TimeUnit.SECONDS.toNanos(1));
   }
 
   @Test
-  public void anInterruptedWaitGivesUpItsTurn() throws Exception {
-    WikiCallThrottle throttle = new WikiCallThrottle(60_000);
+  public void aWaitingTurnIgnoresAnInterruptAndStillTakesItsTurn() throws Exception {
+    WikiCallThrottle throttle = new WikiCallThrottle(200);
     throttle.awaitTurn();
 
-    AtomicBoolean tookTurn = new AtomicBoolean(true);
-    AtomicBoolean stayedInterrupted = new AtomicBoolean(false);
+    AtomicBoolean tookTurn = new AtomicBoolean();
+    CountDownLatch waiting = new CountDownLatch(1);
     CountDownLatch done = new CountDownLatch(1);
     Thread waiter =
         new Thread(
             () -> {
-              tookTurn.set(throttle.awaitTurn());
-              stayedInterrupted.set(Thread.currentThread().isInterrupted());
+              waiting.countDown();
+              throttle.awaitTurn();
+              tookTurn.set(true);
               done.countDown();
             });
 
     waiter.start();
-    Thread.sleep(50);
+    assertTrue("the waiter reached its turn", waiting.await(5, TimeUnit.SECONDS));
     waiter.interrupt();
 
-    assertTrue("the waiter gives up rather than hanging", done.await(5, TimeUnit.SECONDS));
-    assertFalse("an interrupted call never reaches the wiki", tookTurn.get());
-    assertTrue("the interrupt is left for the executor to see", stayedInterrupted.get());
+    assertTrue("the waiter completes its turn", done.await(5, TimeUnit.SECONDS));
+    assertTrue("an interrupt never makes a waiting call skip the wiki", tookTurn.get());
   }
 }

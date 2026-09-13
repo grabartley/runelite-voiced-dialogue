@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -105,6 +106,10 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private ExecutorService spendExecutor;
 
+  private NpcLearningService learningService;
+
+  private final AtomicLong spendEpoch = new AtomicLong();
+
   @Override
   protected void startUp() {
     pinProviderWhenOnlyOpenRouterKeyed();
@@ -120,7 +125,7 @@ public class VoicedDialoguePlugin extends Plugin {
                 t.setDaemon(true);
                 return t;
               });
-      NpcLearningService learningService =
+      learningService =
           new NpcLearningService(
               new WikiNpcClient(okHttpClient),
               learnedStore,
@@ -215,12 +220,17 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Override
   protected void shutDown() {
+    if (learningService != null) {
+      learningService.close();
+      learningService = null;
+    }
     noticeManager = null;
     spendTracker = null;
     usageClient = null;
     creditMeter = null;
+    spendEpoch.incrementAndGet();
     if (spendExecutor != null) {
-      spendExecutor.shutdownNow();
+      spendExecutor.shutdown();
       spendExecutor = null;
     }
     dialogueWatcher = null;
@@ -237,7 +247,7 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     voiceManager = null;
     if (wikiExecutor != null) {
-      wikiExecutor.shutdownNow();
+      wikiExecutor.shutdown();
       wikiExecutor = null;
     }
     log.info("VoicedDialogue stopped");
@@ -330,8 +340,14 @@ public class VoicedDialoguePlugin extends Plugin {
     if (executor == null) {
       return;
     }
+    long mine = spendEpoch.get();
     try {
-      executor.execute(task);
+      executor.execute(
+          () -> {
+            if (spendEpoch.get() == mine) {
+              task.run();
+            }
+          });
     } catch (RejectedExecutionException ignored) {
     }
   }
