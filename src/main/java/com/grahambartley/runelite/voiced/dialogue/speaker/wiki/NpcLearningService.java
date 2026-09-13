@@ -58,8 +58,11 @@ public final class NpcLearningService {
   }
 
   public void considerLearning(int npcId, String npcName) {
+    if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty()) {
+      return;
+    }
     long now = System.currentTimeMillis();
-    if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty() || now < quietUntilMillis) {
+    if (now < quietUntilMillis) {
       return;
     }
     if (voiced.test(npcId) || !store.isPastMissWindow(npcId, now) || !attempted.add(npcId)) {

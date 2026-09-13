@@ -51,6 +51,10 @@ public class WikiMappingTest {
       new Object[] {"Tortugan", "Tortugan"},
       new Object[] {"Icyene", "Icyene"},
       new Object[] {"Half Icyene", "Human"},
+      new Object[] {"Skeleton Hellhound", "Undead"},
+      new Object[] {"Human/Elf hybrid", "Elf"},
+      new Object[] {"Imp", "Demon"},
+      new Object[] {"[[Crab (disambiguation)|Crab]]", "Crab"},
       new Object[] {"Merfolk", "Human"},
     };
   }

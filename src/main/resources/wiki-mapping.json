@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source for the wiki-text mappings shared by tools/generate_npc_voices.py and the runtime auto-learn lookup. Race rules are ordered, first match wins, and are matched case-insensitively against the infobox race field. Category rules are ordered substring matches against a page's joined category titles, used when the infobox carries no race. Buckets are voice-categorical, not lore-accurate: gnome -> Gnome, ogre/cyclops -> Troll, vampyre -> Undead, dragon/TzHaar -> Demon.",
+  "_comment": "Single source for the wiki-text mappings shared by tools/generate_npc_voices.py and the runtime auto-learn lookup. Race rules are ordered, first match wins, and are matched case-insensitively against the infobox race field. Category rules are ordered substring matches against a page's joined category titles, used when the infobox carries no race. Buckets are voice-categorical, not lore-accurate: ogre/cyclops -> Troll, vampyre -> Undead, dragon/TzHaar -> Demon.",
   "infoboxTemplates": ["Template:Infobox NPC", "Template:Infobox Monster"],
   "races": ["Human", "Elf", "Dwarf", "Goblin", "Gnome", "Monkey", "Gorilla", "Troll", "Undead",
             "Demon", "Wizard", "Tortugan", "Icyene", "Arceuus", "Aranei", "Dog", "Crab",

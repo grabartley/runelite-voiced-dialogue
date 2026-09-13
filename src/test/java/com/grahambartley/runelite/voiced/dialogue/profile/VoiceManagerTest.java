@@ -167,6 +167,7 @@ public class VoiceManagerTest {
   @Test
   public void aClickThatStartsNoConversationIsNotOffered() {
     NpcLearningService learning = mock(NpcLearningService.class);
+    when(learning.isEnabled()).thenReturn(true);
     when(learning.startsConversation("Attack")).thenReturn(false);
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);

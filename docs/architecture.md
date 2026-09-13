@@ -187,7 +187,10 @@ too, so the bundled table and a learned entry can never disagree about what a ra
 
 `LearnedNpcStore` writes what came back to `learned-npcs.json`, and writes what did not: a page the
 wiki does not document is remembered as a miss for 30 days, so a session does not re-ask questions
-the last session already answered. The bundled table always wins over a learned entry.
+the last session already answered. A wiki that cannot answer is a different thing from an NPC it does
+not document, and is never written down; after three unreachable answers in a row the lookups go
+quiet for two minutes rather than queueing behind an outage. The bundled table always wins over a
+learned entry.
 
 ## The OpenRouter speech call
 
