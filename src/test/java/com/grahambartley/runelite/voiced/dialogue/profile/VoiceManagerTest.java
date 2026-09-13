@@ -137,11 +137,12 @@ public class VoiceManagerTest {
   }
 
   @Test
-  public void aTransformedNpcVoicedByItsBaseIdIsNeverOfferedToLearning() {
+  public void aTransformedNpcIsOfferedUnderTheIdItIsVoicedUnder() {
     NpcLearningService learning = mock(NpcLearningService.class);
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
+    when(learning.isEnabled()).thenReturn(true);
     when(learning.startsConversation("Talk-to")).thenReturn(true);
 
     manager.offerToLearning("Talk-to", transformedNpc(999_000_001, DWARF_ID, "Dwarf"));
@@ -155,6 +156,7 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
+    when(learning.isEnabled()).thenReturn(true);
     when(learning.startsConversation("Talk-to")).thenReturn(true);
 
     manager.offerToLearning("Talk-to", worldNpc(999_000_002, "Nobody"));

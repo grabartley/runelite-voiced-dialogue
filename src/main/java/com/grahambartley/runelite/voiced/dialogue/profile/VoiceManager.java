@@ -70,7 +70,10 @@ public class VoiceManager {
   }
 
   public void offerToLearning(String menuOption, NPC npc) {
-    if (learningService == null || npc == null || !learningService.startsConversation(menuOption)) {
+    if (learningService == null
+        || npc == null
+        || !learningService.isEnabled()
+        || !learningService.startsConversation(menuOption)) {
       return;
     }
     NpcAttributes attributes = demographicAnalyzer.analyzeNPC(npc);

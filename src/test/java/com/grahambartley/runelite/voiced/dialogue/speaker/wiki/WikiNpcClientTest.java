@@ -158,10 +158,19 @@ public class WikiNpcClientTest {
   }
 
   @Test
-  public void aSuccessfulResponseTheApiCouldNotAnswerIsUndocumented() {
+  public void aResponseThatIsNotWikiJsonLeavesTheNpcUnanswered() {
     server.enqueue(new MockResponse().setBody("{\"error\":{\"code\":\"invalidtitle\"}}"));
+    assertTrue("an api error is worth retrying", client.lookup(1, "?").isUnreachable());
 
-    assertTrue(client.lookup(1, "?").isUndocumented());
+    server.enqueue(new MockResponse().setBody("<html>captive portal</html>"));
+    assertTrue("a portal page is not an answer", client.lookup(1, "Hans").isUnreachable());
+  }
+
+  @Test
+  public void aQueryThatHoldsNoPagesIsUndocumented() {
+    server.enqueue(new MockResponse().setBody("{\"query\":{\"pages\":[]}}"));
+
+    assertTrue(client.lookup(1, "Nobody").isUndocumented());
   }
 
   @Test

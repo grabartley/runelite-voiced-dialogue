@@ -29,6 +29,8 @@ public class LearnedNpcStoreTest {
     assertEquals(AttributeSource.LEARNED, a.getSource());
     assertEquals(123, a.getNpcId());
     assertNull("an unlearned id is absent", store.get(999));
+    assertTrue("a learned id is present", store.contains(123));
+    assertFalse("an unlearned id is absent", store.contains(999));
   }
 
   @Test

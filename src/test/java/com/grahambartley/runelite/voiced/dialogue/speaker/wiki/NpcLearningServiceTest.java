@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -122,6 +123,22 @@ public class NpcLearningServiceTest {
         .considerLearning(900, "New Troll");
     assertEquals(2, server.getRequestCount());
     assertEquals("Troll", reloaded.get(900).getRace());
+  }
+
+  @Test
+  public void aRunOfUnreachableAnswersStopsAskingForAWhile() {
+    for (int call = 0; call < 3; call++) {
+      server.enqueue(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
+    }
+    NpcLearningService service = service(true);
+
+    service.considerLearning(1200, "Someone");
+    service.considerLearning(1201, "Someone Else");
+    service.considerLearning(1202, "A Third");
+    assertEquals(3, server.getRequestCount());
+
+    service.considerLearning(1203, "A Fourth");
+    assertEquals("a wiki that keeps failing is left alone", 3, server.getRequestCount());
   }
 
   @Test

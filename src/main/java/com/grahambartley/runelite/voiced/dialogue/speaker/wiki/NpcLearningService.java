@@ -5,6 +5,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntPredicate;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,10 @@ public final class NpcLearningService {
 
   private static final String DIALOGUE_OPTION_PREFIX = "talk";
 
+  private static final int FAILURES_BEFORE_QUIET = 3;
+
+  private static final long QUIET_MILLIS = TimeUnit.MINUTES.toMillis(2);
+
   private final WikiNpcClient client;
   private final LearnedNpcStore store;
   private final Executor executor;
@@ -21,6 +27,10 @@ public final class NpcLearningService {
   private final IntPredicate voiced;
   private final WikiCallThrottle throttle;
   private final Set<Integer> attempted = ConcurrentHashMap.newKeySet();
+
+  private final AtomicInteger consecutiveFailures = new AtomicInteger();
+
+  private volatile long quietUntilMillis;
 
   public NpcLearningService(
       WikiNpcClient client,
@@ -37,6 +47,10 @@ public final class NpcLearningService {
     this.throttle = throttle;
   }
 
+  public boolean isEnabled() {
+    return enabled.getAsBoolean();
+  }
+
   public boolean startsConversation(String menuOption) {
     return menuOption != null
         && menuOption.regionMatches(
@@ -44,12 +58,11 @@ public final class NpcLearningService {
   }
 
   public void considerLearning(int npcId, String npcName) {
-    if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty()) {
+    long now = System.currentTimeMillis();
+    if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty() || now < quietUntilMillis) {
       return;
     }
-    if (voiced.test(npcId)
-        || !store.isPastMissWindow(npcId, System.currentTimeMillis())
-        || !attempted.add(npcId)) {
+    if (voiced.test(npcId) || !store.isPastMissWindow(npcId, now) || !attempted.add(npcId)) {
       return;
     }
     executor.execute(
@@ -61,9 +74,13 @@ public final class NpcLearningService {
           WikiLookup lookup = client.lookup(npcId, npcName);
           if (lookup.isUnreachable()) {
             attempted.remove(npcId);
+            if (consecutiveFailures.incrementAndGet() >= FAILURES_BEFORE_QUIET) {
+              quietUntilMillis = System.currentTimeMillis() + QUIET_MILLIS;
+            }
             log.debug("[TTS learn] wiki was unreachable for '{}' (id {})", npcName, npcId);
             return;
           }
+          consecutiveFailures.set(0);
           if (lookup.isUndocumented()) {
             store.missed(npcId, System.currentTimeMillis());
             log.debug("[TTS learn] wiki had no usable entry for '{}' (id {})", npcName, npcId);

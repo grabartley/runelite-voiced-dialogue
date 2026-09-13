@@ -73,7 +73,12 @@ public final class WikiNpcClient {
       return WikiLookup.unreachable();
     }
 
-    JsonObject page = firstPage(body);
+    JsonObject query = queryOf(body);
+    if (query == null) {
+      log.debug("Wiki lookup for '{}' answered something other than wiki json", title);
+      return WikiLookup.unreachable();
+    }
+    JsonObject page = firstPage(query);
     if (page == null) {
       return WikiLookup.undocumented();
     }
@@ -104,17 +109,24 @@ public final class WikiNpcClient {
     return mapping.genderForWikiText(infobox.genderForVersion(npcId));
   }
 
-  private static JsonObject firstPage(String json) {
+  private static JsonObject queryOf(String json) {
     if (json == null) {
       return null;
     }
     try {
-      JsonArray pages =
-          new JsonParser()
-              .parse(json)
-              .getAsJsonObject()
-              .getAsJsonObject("query")
-              .getAsJsonArray("pages");
+      JsonElement root = new JsonParser().parse(json);
+      if (!root.isJsonObject() || !root.getAsJsonObject().has("query")) {
+        return null;
+      }
+      return root.getAsJsonObject().getAsJsonObject("query");
+    } catch (RuntimeException e) {
+      return null;
+    }
+  }
+
+  private static JsonObject firstPage(JsonObject query) {
+    try {
+      JsonArray pages = query.getAsJsonArray("pages");
       return pages.size() == 0 ? null : pages.get(0).getAsJsonObject();
     } catch (RuntimeException e) {
       return null;

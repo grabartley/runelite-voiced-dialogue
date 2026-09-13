@@ -357,6 +357,26 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void anAlreadyVoicedNpcIsKnownToTheLearningGate() throws Exception {
+    assertTrue("a bundled id is voiced", analyzer.isVoiced(3105));
+    assertFalse("an unknown id is not", analyzer.isVoiced(987002));
+
+    Path file = Files.createTempDirectory("learned").resolve("l.json");
+    LearnedNpcStore store = new LearnedNpcStore(file, new Gson());
+    store.learn(987002, "Elf", "Female", "tirannwn");
+    analyzer.setLearnedStore(store);
+
+    assertTrue("a learned id is voiced", analyzer.isVoiced(987002));
+    assertFalse("an id neither table holds is not", analyzer.isVoiced(987003));
+  }
+
+  @Test
+  public void withoutALearnedStoreOnlyTheBundledTableAnswersTheGate() {
+    assertTrue(analyzer.isVoiced(3105));
+    assertFalse(analyzer.isVoiced(987004));
+  }
+
+  @Test
   public void lookupWorksWithoutInitializeUsingDefault() {
     analyzer = new NpcDemographicAnalyzer();
     NpcAttributes attributes = analyze(101, "Goblin");
