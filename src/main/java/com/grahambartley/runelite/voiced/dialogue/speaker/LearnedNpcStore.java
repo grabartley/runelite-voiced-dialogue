@@ -29,6 +29,10 @@ public final class LearnedNpcStore {
     load();
   }
 
+  public boolean contains(int npcId) {
+    return learned.containsKey(npcId);
+  }
+
   public NpcAttributes get(int npcId) {
     NpcAttributes stored = learned.get(npcId);
     if (stored == null) {

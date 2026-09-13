@@ -109,7 +109,7 @@ def bucket_for_race(race_text):
     for regex, bucket in RACE_BUCKET_RULES:
         if regex.search(race_text):
             return bucket
-    return "Human"
+    return MAPPING["defaultRace"]
 
 
 def normalise_gender(gender_text):

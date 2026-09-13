@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.speaker.AttributeSource;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NameNormalizer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -38,7 +39,8 @@ public final class WikiNpcClient {
   }
 
   public WikiLookup lookup(int npcId, String npcName) {
-    if (npcName == null || npcName.trim().isEmpty()) {
+    String title = NameNormalizer.normalize(npcName);
+    if (title.isEmpty()) {
       return WikiLookup.undocumented();
     }
     HttpUrl url =
@@ -53,30 +55,33 @@ public final class WikiNpcClient {
             .addQueryParameter("redirects", "1")
             .addQueryParameter("format", "json")
             .addQueryParameter("formatversion", "2")
-            .addQueryParameter("titles", npcName.trim())
+            .addQueryParameter("titles", title)
             .build();
     Request request =
         new Request.Builder().url(url).addHeader("User-Agent", USER_AGENT).get().build();
 
+    String body;
     try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
-        log.debug("Wiki lookup for '{}' answered {}", npcName, response.code());
+        log.debug("Wiki lookup for '{}' answered {}", title, response.code());
         return WikiLookup.unreachable();
       }
-      ResponseBody body = response.body();
-      JsonObject page = firstPage(body == null ? null : body.string());
-      if (page == null) {
-        return WikiLookup.unreachable();
-      }
-      String wikitext = wikitextOf(page);
-      if (wikitext == null || !mapping.isNpcPage(wikitext)) {
-        return WikiLookup.undocumented();
-      }
-      return WikiLookup.of(attributesFrom(npcId, WikiInfobox.parse(wikitext, categoriesOf(page))));
+      ResponseBody payload = response.body();
+      body = payload == null ? null : payload.string();
     } catch (Exception e) {
-      log.debug("Wiki lookup for '{}' failed: {}", npcName, e.getMessage());
+      log.debug("Wiki lookup for '{}' failed: {}", title, e.getMessage());
       return WikiLookup.unreachable();
     }
+
+    JsonObject page = firstPage(body);
+    if (page == null) {
+      return WikiLookup.undocumented();
+    }
+    String wikitext = wikitextOf(page);
+    if (wikitext == null || !mapping.isNpcPage(wikitext)) {
+      return WikiLookup.undocumented();
+    }
+    return WikiLookup.of(attributesFrom(npcId, WikiInfobox.parse(wikitext, categoriesOf(page))));
   }
 
   private NpcAttributes attributesFrom(int npcId, WikiInfobox infobox) {

@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -140,9 +142,11 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
+    when(learning.startsConversation("Talk-to")).thenReturn(true);
+
     manager.offerToLearning("Talk-to", transformedNpc(999_000_001, DWARF_ID, "Dwarf"));
 
-    verify(learning).onMenuOption("Talk-to", DWARF_ID, "Dwarf");
+    verify(learning).considerLearning(DWARF_ID, "Dwarf");
   }
 
   @Test
@@ -151,14 +155,23 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
+    when(learning.startsConversation("Talk-to")).thenReturn(true);
+
     manager.offerToLearning("Talk-to", worldNpc(999_000_002, "Nobody"));
 
-    verify(learning).onMenuOption("Talk-to", 999_000_002, "Nobody");
+    verify(learning).considerLearning(999_000_002, "Nobody");
   }
 
   @Test
-  public void aClickWithNoLearningWiredUpIsIgnored() {
-    newManager(PlayerVoice.TYPE_A).offerToLearning("Talk-to", worldNpc(DWARF_ID, "Dwarf"));
+  public void aClickThatStartsNoConversationIsNotOffered() {
+    NpcLearningService learning = mock(NpcLearningService.class);
+    when(learning.startsConversation("Attack")).thenReturn(false);
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
+
+    manager.offerToLearning("Attack", worldNpc(DWARF_ID, "Dwarf"));
+
+    verify(learning, never()).considerLearning(anyInt(), any());
   }
 
   private static NPC transformedNpc(int activeId, int baseId, String name) {

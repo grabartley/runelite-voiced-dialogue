@@ -142,7 +142,26 @@ public class WikiNpcClientTest {
   public void aBlankNameIsNotLookedUp() {
     assertTrue(client.lookup(1, " ").isUndocumented());
     assertTrue(client.lookup(1, null).isUndocumented());
+    assertTrue(client.lookup(1, "<col=00ffff></col>").isUndocumented());
     assertEquals(0, server.getRequestCount());
+  }
+
+  @Test
+  public void theNameIsNormalisedBeforeItReachesTheWiki() throws Exception {
+    enqueue("{{Infobox NPC\n|race=Human\n|gender=Male\n|id=1\n}}");
+
+    client.lookup(1, "<col=00ffff>Hans</col> ");
+
+    assertTrue(
+        "markup and padding never reach the query",
+        server.takeRequest().getPath().contains("titles=Hans"));
+  }
+
+  @Test
+  public void aSuccessfulResponseTheApiCouldNotAnswerIsUndocumented() {
+    server.enqueue(new MockResponse().setBody("{\"error\":{\"code\":\"invalidtitle\"}}"));
+
+    assertTrue(client.lookup(1, "?").isUndocumented());
   }
 
   @Test

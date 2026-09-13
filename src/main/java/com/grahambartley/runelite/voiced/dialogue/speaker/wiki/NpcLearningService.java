@@ -37,12 +37,10 @@ public final class NpcLearningService {
     this.throttle = throttle;
   }
 
-  public void onMenuOption(String menuOption, int npcId, String npcName) {
-    if (menuOption != null
+  public boolean startsConversation(String menuOption) {
+    return menuOption != null
         && menuOption.regionMatches(
-            true, 0, DIALOGUE_OPTION_PREFIX, 0, DIALOGUE_OPTION_PREFIX.length())) {
-      considerLearning(npcId, npcName);
-    }
+            true, 0, DIALOGUE_OPTION_PREFIX, 0, DIALOGUE_OPTION_PREFIX.length());
   }
 
   public void considerLearning(int npcId, String npcName) {

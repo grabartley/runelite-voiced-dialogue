@@ -125,26 +125,19 @@ public class NpcLearningServiceTest {
   }
 
   @Test
-  public void onlyDialogueMenuOptionsStartALookup() {
+  public void onlyDialogueMenuOptionsStartAConversation() {
     NpcLearningService service = service(true);
 
-    service.onMenuOption("Attack", 1000, "Someone");
-    service.onMenuOption("Examine", 1001, "Someone");
-    service.onMenuOption(null, 1002, "Someone");
-    assertEquals("a click that starts no conversation asks nothing", 0, server.getRequestCount());
-
-    enqueueNpc();
-    service.onMenuOption("Talk-to", 1003, "New Troll");
-    assertEquals(1, server.getRequestCount());
-    assertEquals("Troll", store.get(1003).getRace());
+    assertTrue(service.startsConversation("Talk-to"));
+    assertTrue(service.startsConversation("talk to"));
+    assertFalse(service.startsConversation("Attack"));
+    assertFalse(service.startsConversation("Examine"));
+    assertFalse(service.startsConversation(null));
   }
 
   @Test
   public void anNpcTheBundledTableAlreadyVoicesIsNeverLookedUp() {
-    NpcLearningService service = service(true, npcId -> npcId == 1100);
-
-    service.considerLearning(1100, "Bundled NPC");
-    service.onMenuOption("Talk-to", 1100, "Bundled NPC");
+    service(true, npcId -> npcId == 1100).considerLearning(1100, "Bundled NPC");
 
     assertEquals("the bundled table wins, so nothing is asked", 0, server.getRequestCount());
     assertNull(store.get(1100));

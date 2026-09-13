@@ -111,23 +111,27 @@ public class VoicedDialoguePlugin extends Plugin {
     voiceManager = VoiceManager.create(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
-    LearnedNpcStore learnedStore = new LearnedNpcStore(ttsDir.resolve("learned-npcs.json"), gson);
-    wikiExecutor =
-        Executors.newSingleThreadExecutor(
-            r -> {
-              Thread t = new Thread(r, "tts-wiki-learn");
-              t.setDaemon(true);
-              return t;
-            });
-    NpcLearningService learningService =
-        new NpcLearningService(
-            new WikiNpcClient(okHttpClient),
-            learnedStore,
-            wikiExecutor,
-            config::autoLearnNewNpcs,
-            voiceManager::isVoiced,
-            new WikiCallThrottle(WIKI_CALL_INTERVAL_MILLIS));
-    voiceManager.enableLearning(learnedStore, learningService);
+    try {
+      LearnedNpcStore learnedStore = new LearnedNpcStore(ttsDir.resolve("learned-npcs.json"), gson);
+      wikiExecutor =
+          Executors.newSingleThreadExecutor(
+              r -> {
+                Thread t = new Thread(r, "tts-wiki-learn");
+                t.setDaemon(true);
+                return t;
+              });
+      NpcLearningService learningService =
+          new NpcLearningService(
+              new WikiNpcClient(okHttpClient),
+              learnedStore,
+              wikiExecutor,
+              config::autoLearnNewNpcs,
+              voiceManager::isVoiced,
+              new WikiCallThrottle(WIKI_CALL_INTERVAL_MILLIS));
+      voiceManager.enableLearning(learnedStore, learningService);
+    } catch (RuntimeException | LinkageError e) {
+      log.warn("Auto-learn is unavailable: {}", e.getMessage());
+    }
 
     noticeManager = new ChatNoticeManager(client, configManager, clientThread, chatMessageManager);
 

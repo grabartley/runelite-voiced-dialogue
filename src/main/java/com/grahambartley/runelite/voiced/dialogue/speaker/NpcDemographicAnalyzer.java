@@ -63,7 +63,7 @@ public class NpcDemographicAnalyzer {
   }
 
   public boolean isVoiced(int npcId) {
-    return lookupKnown(npcId) != null;
+    return voiceTable.containsKey(npcId) || (learnedStore != null && learnedStore.contains(npcId));
   }
 
   public int getTableSize() {

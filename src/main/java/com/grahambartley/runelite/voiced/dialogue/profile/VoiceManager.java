@@ -70,12 +70,12 @@ public class VoiceManager {
   }
 
   public void offerToLearning(String menuOption, NPC npc) {
-    if (learningService == null || npc == null) {
+    if (learningService == null || npc == null || !learningService.startsConversation(menuOption)) {
       return;
     }
     NpcAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
     if (attributes != null) {
-      learningService.onMenuOption(menuOption, attributes.getNpcId(), npc.getName());
+      learningService.considerLearning(attributes.getNpcId(), npc.getName());
     }
   }
 
