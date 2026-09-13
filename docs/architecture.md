@@ -155,9 +155,42 @@ on a line silences the square. A narration box that **Voice Narration** is not v
 barks without cutting the ones already sounding, since nothing was spoken to cut them. The epoch moves on the client thread and the stopping is handed to a worker,
 since flushing several audio lines is not work the game thread should do.
 
-One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a
-dialogue line would, so with **Auto-learn New NPCs** on, ambient chatter drives wiki lookups as well
-as dialogue. They are deduped per NPC id and run off the game thread, so the cost stays bounded.
+One knock-on is worth naming: an NPC barking nearby reaches the same resolver a dialogue line would,
+so with **Auto-learn New NPCs** on, ambient chatter offers unknown speakers to the wiki as well as
+dialogue does. Only an NPC the bundled table and the learned store both miss is looked up, once per
+id and off the game thread, so the cost stays bounded.
+
+## Auto-learn
+
+**Auto-learn New NPCs** covers whoever the bundled table misses: it reads the NPC's wiki page and
+answers the same three questions `tools/generate_npc_voices.py` answers when the table is built, so
+a learned NPC sounds like a bundled one rather than like a fallback.
+
+The lookup fires when the player clicks a **Talk-to** style option on an NPC, which is early enough
+that the answer is usually stored before the dialogue widget opens. Voice resolution is the backstop
+for dialogue that starts some other way, and it is what covers ambient chatter. Either path only
+queues the id; the request itself runs on a daemon worker, at most one every 500 ms, so the game
+thread never waits and the wiki never sees a burst.
+
+`WikiInfobox` reads the page's lead wikitext and `WikiMapping` decides from it:
+
+- **Race** from the infobox `race` field, else from the page's categories (how an `Infobox Monster`
+  talker gets one at all), else `Human`. A page carrying neither infobox is not an NPC page and is
+  left alone.
+- **Gender** per version. A switch infobox lists its ids and its genders as parallel lines, so the
+  id that was looked up takes the gender of its own version rather than the page's first.
+- **Ethnicity** from `leagueRegion`, with the desert split into Kharidian and Menaphite by the
+  location text and the categories.
+
+The rules behind all three live in `src/main/resources/wiki-mapping.json`, which the generator reads
+too, so the bundled table and a learned entry can never disagree about what a race keyword means.
+
+`LearnedNpcStore` writes what came back to `learned-npcs.json`, and writes what did not: a page the
+wiki does not document is remembered as a miss for 30 days, so a session does not re-ask questions
+the last session already answered. A wiki that cannot answer is a different thing from an NPC it does
+not document, and is never written down; after three unreachable answers in a row the lookups go
+quiet for two minutes rather than queueing behind an outage. The bundled table always wins over a
+learned entry.
 
 ## The OpenRouter speech call
 

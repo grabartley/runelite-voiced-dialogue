@@ -13,7 +13,11 @@ final class NpcEntriesReader {
 
   static Map<Integer, NpcAttributes> read(
       Reader reader, String source, BiConsumer<String, RuntimeException> onSkippedEntry) {
-    JsonObject root = new JsonParser().parse(reader).getAsJsonObject();
+    return read(new JsonParser().parse(reader).getAsJsonObject(), source, onSkippedEntry);
+  }
+
+  static Map<Integer, NpcAttributes> read(
+      JsonObject root, String source, BiConsumer<String, RuntimeException> onSkippedEntry) {
     if (!root.has("npcs") || !root.get("npcs").isJsonObject()) {
       return null;
     }

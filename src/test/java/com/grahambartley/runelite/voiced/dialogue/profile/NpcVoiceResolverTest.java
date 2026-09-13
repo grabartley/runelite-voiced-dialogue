@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,8 +12,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.AttributeSource;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LifeStage;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
 import org.junit.Test;
 
 public class NpcVoiceResolverTest {
@@ -50,7 +49,18 @@ public class NpcVoiceResolverTest {
     assertEquals(NpcRace.GOBLIN, spec.race());
     assertEquals(NpcGender.MALE, spec.gender());
     assertFalse(spec.player());
-    verify(learning, never()).considerLearning(101, "Goblin");
+    verify(learning).considerLearning(101, "Goblin");
+  }
+
+  @Test
+  public void everyNpcIsOfferedToLearningWhichOwnsTheGate() {
+    NpcLearningService learning = mock(NpcLearningService.class);
+    resolver.setLearningService(learning);
+
+    resolver.resolve(
+        "Goblin", identity(303, attributes("Goblin", "Male", AttributeSource.STATIC_TABLE), false));
+
+    verify(learning).considerLearning(303, "Goblin");
   }
 
   @Test
@@ -128,6 +138,9 @@ public class NpcVoiceResolverTest {
   private static NpcIdentity identity(Integer worldId, NpcAttributes attributes, boolean child) {
     NpcProfileTable.NameMatch nameMatch = mock(NpcProfileTable.NameMatch.class);
     when(nameMatch.child()).thenReturn(child);
+    if (attributes != null && worldId != null) {
+      attributes.setNpcId(worldId);
+    }
     return new NpcIdentity(worldId, attributes, nameMatch);
   }
 

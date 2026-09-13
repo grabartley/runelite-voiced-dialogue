@@ -6,7 +6,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
+import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -42,6 +42,8 @@ public class VoiceManager {
   private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
 
+  private NpcLearningService learningService;
+
   public static VoiceManager create(VoicedDialogueConfig config, Client client) {
     NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
     demographicAnalyzer.initialize();
@@ -63,7 +65,25 @@ public class VoiceManager {
     this.npcVoiceResolver = new NpcVoiceResolver(config);
   }
 
+  public boolean isVoiced(int npcId) {
+    return demographicAnalyzer.isVoiced(npcId);
+  }
+
+  public void offerToLearning(String menuOption, NPC npc) {
+    if (learningService == null
+        || npc == null
+        || !learningService.isEnabled()
+        || !learningService.startsConversation(menuOption)) {
+      return;
+    }
+    NpcAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
+    if (attributes != null) {
+      learningService.considerLearning(attributes.getNpcId(), npc.getName());
+    }
+  }
+
   public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
+    this.learningService = service;
     this.demographicAnalyzer.setLearnedStore(store);
     this.npcVoiceResolver.setLearningService(service);
   }

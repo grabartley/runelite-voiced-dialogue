@@ -7,6 +7,7 @@ must still end up with both race and gender.
 Run: python3 -m unittest tools.test_generate_npc_voices  (or python3 tools/test_generate_npc_voices.py)
 """
 
+import json
 import os
 import sys
 import unittest
@@ -181,6 +182,24 @@ class RaceBucketTest(unittest.TestCase):
 
     def test_a_penguin_page_with_no_race_field_buckets_from_its_category(self):
         self.assertEqual(gen.bucket_from_categories(["Category:Penguins"]), "Penguin")
+
+    def test_the_rules_come_from_the_shared_mapping_resource(self):
+        with open(gen.MAPPING_PATH, encoding="utf-8") as mapping_file:
+            mapping = json.load(mapping_file)
+        self.assertEqual(len(gen.RACE_BUCKET_RULES), len(mapping["raceRules"]))
+        self.assertEqual(len(gen.CATEGORY_RACE_RULES), len(mapping["categoryRaceRules"]))
+        self.assertEqual(gen.SINGLE_ETHNICITY, mapping["leagueRegionEthnicity"])
+        self.assertEqual(gen.VALID_RACES, set(mapping["races"]))
+        for rules in ("raceRules", "categoryRaceRules"):
+            for rule in mapping[rules]:
+                self.assertIn(rule["race"], gen.VALID_RACES)
+        self.assertEqual(gen.bucket_for_race("nothing the rules know"), mapping["defaultRace"])
+        self.assertEqual(gen.normalise_gender(None), mapping["defaultGender"])
+        self.assertEqual(gen.normalise_gender("female"), mapping["femaleGender"])
+
+    def test_the_desert_splits_on_categories_as_well_as_location(self):
+        self.assertEqual(gen.ethnicity_key("Desert", None, ["Category:Menaphites"]), "menaphite")
+        self.assertEqual(gen.ethnicity_key("Desert", None, ["Category:Bandits"]), "kharidian")
 
 
 if __name__ == "__main__":
