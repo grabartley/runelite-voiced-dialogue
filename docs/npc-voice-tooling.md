@@ -38,7 +38,9 @@ outside a link or a template, so a piped link such as `[[Dwarf (race)|Dwarves]]`
 reaches the bucket rules whole. Race buckets on the link target first and its
 display text second, which keeps `[[Dwarf (race)|Dwarves]]` a Dwarf while letting
 a target the rules cannot read, such as `[[Dog_(disambiguation)|Dog]]`, resolve
-from the display text instead of falling to the `Human` default.
+from the display text instead of falling to the `Human` default. The auto-learn
+lookup reads a live wiki page by the same rules, so a learned NPC buckets exactly
+as a bundled one does.
 
 Because race and gender come straight from the wiki, townsfolk get the correct
 gender (e.g. Cecilia is Female) and newly released NPCs (Varlamore, etc.) are

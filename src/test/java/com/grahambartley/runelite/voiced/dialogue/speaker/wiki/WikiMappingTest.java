@@ -55,6 +55,9 @@ public class WikiMappingTest {
       new Object[] {"Human/Elf hybrid", "Elf"},
       new Object[] {"Imp", "Demon"},
       new Object[] {"[[Crab (disambiguation)|Crab]]", "Crab"},
+      new Object[] {"[[Dog_(disambiguation)|Dog]]", "Dog"},
+      new Object[] {"[[Dwarf (race)|Dwarves]]", "Dwarf"},
+      new Object[] {"[[Abyss (disambiguation)#Monsters|Abyssal monsters]]", "Demon"},
       new Object[] {"Merfolk", "Human"},
     };
   }
@@ -62,18 +65,20 @@ public class WikiMappingTest {
   @Test
   @Parameters(method = "wikiRaceCases")
   public void wikiRaceTextBucketsTheSameWayTheGeneratorDoes(String wikiText, String bucket) {
-    assertEquals("bucket for '" + wikiText + "'", bucket, mapping.raceForWikiText(wikiText));
+    assertEquals(
+        "bucket for '" + wikiText + "'", bucket, mapping.raceForWikiText(readings(wikiText)));
   }
 
   @Test
   public void anAbsentRaceFieldHasNoBucketSoCategoriesCanAnswer() {
     assertNull(mapping.raceForWikiText(null));
-    assertNull(mapping.raceForWikiText(""));
+    assertNull(mapping.raceForWikiText(Collections.<String>emptyList()));
+    assertNull(mapping.raceForWikiText(readings("{{plink|Human}}")));
   }
 
   @Test
   public void gorillaBeatsMonkeySoApesStayOffTheIslandVoice() {
-    assertEquals("Gorilla", mapping.raceForWikiText("Gorilla"));
+    assertEquals("Gorilla", mapping.raceForWikiText(readings("Gorilla")));
   }
 
   private Object[] categoryCases() {
@@ -166,8 +171,12 @@ public class WikiMappingTest {
         assertTrue("'" + race + "' is a declared race", declared.contains(race));
       }
     }
-    assertTrue(declared.contains(mapping.raceForWikiText("Ogre")));
+    assertTrue(declared.contains(mapping.raceForWikiText(readings("Ogre"))));
     assertTrue(declared.contains(mapping.raceForCategories(singletonList("Category:Wizards"))));
+  }
+
+  private static List<String> readings(String wikiText) {
+    return WikiInfobox.parse("{{Infobox NPC\n|race = " + wikiText + "\n}}", null).raceReadings();
   }
 
   private static JsonObject mappingResource() {

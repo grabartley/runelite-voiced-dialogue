@@ -221,30 +221,43 @@ class PipedLinkFieldTest(unittest.TestCase):
 
     def test_a_piped_link_survives_the_field_capture(self):
         wikitext = "{{Infobox NPC\n|race = [[Dog_(disambiguation)|Dog]]\n|gender = Female\n}}"
-        self.assertEqual(gen.bucket_for_race(gen.first_field(wikitext, "race")), "Dog")
+        self.assertEqual(gen.bucket_for_race(gen.raw_field(wikitext, "race")), "Dog")
         self.assertEqual(gen.parse_genders(wikitext), ["Female"])
 
     def test_a_single_line_infobox_still_cuts_at_the_next_parameter(self):
         wikitext = "{{Infobox NPC|name=Rosie|race=[[Dog_(disambiguation)|Dog]]|gender=Female|id=10438}}"
-        self.assertEqual(gen.bucket_for_race(gen.first_field(wikitext, "race")), "Dog")
+        self.assertEqual(gen.bucket_for_race(gen.raw_field(wikitext, "race")), "Dog")
         self.assertEqual(gen.parse_genders(wikitext), ["Female"])
         self.assertEqual(gen.parse_id_groups(wikitext), [[10438]])
 
     def test_a_piped_league_region_and_location_read_their_targets(self):
         wikitext = ("{{Infobox NPC\n|leagueRegion = [[Kandarin|the Kandarin region]]\n"
                     "|location = [[Ardougne|East Ardougne]]\n}}")
-        self.assertEqual(gen.clean_value(gen.first_field(wikitext, "leagueRegion")), "Kandarin")
-        self.assertEqual(gen.clean_value(gen.first_field(wikitext, "location")), "Ardougne")
+        self.assertEqual(gen.field_value(wikitext, "leagueRegion"), "Kandarin")
+        self.assertEqual(gen.field_value(wikitext, "location"), "Ardougne")
 
     def test_a_templated_field_value_is_not_cut_at_its_inner_pipe(self):
         wikitext = "{{Infobox NPC\n|location = {{plink|Lumbridge}} and [[Draynor|the village]]\n}}"
-        self.assertEqual(gen.clean_value(gen.first_field(wikitext, "location")), "and Draynor")
+        self.assertEqual(gen.field_value(wikitext, "location"), "and Draynor")
 
     def test_switch_infobox_genders_stay_parallel_to_their_id_groups(self):
         wikitext = ("{{Infobox NPC\n|id1 = 10438\n|gender1 = Female\n"
                     "|id2 = 10439\n|gender2 = Female\n}}")
         self.assertEqual(gen.parse_id_groups(wikitext), [[10438], [10439]])
         self.assertEqual(gen.parse_genders(wikitext), ["Female", "Female"])
+
+    def test_a_single_line_switch_infobox_keeps_every_version(self):
+        wikitext = ("{{Infobox NPC|id1=10438|gender1=Male|id2=10439|gender2=Female"
+                    "|race1=[[Dog]]|race2=[[Dog_(disambiguation)|Dog]]}}")
+        self.assertEqual(gen.parse_id_groups(wikitext), [[10438], [10439]])
+        self.assertEqual(gen.parse_genders(wikitext), ["Male", "Female"])
+        self.assertEqual(gen.bucket_for_race(gen.raw_field(wikitext, "race")), "Dog")
+
+    def test_a_nested_template_value_is_not_cut_at_its_closing_braces(self):
+        self.assertEqual(gen.field_text("{{A|{{B|x}}}} tail"), "{{A|{{B|x}}}} tail")
+
+    def test_a_race_field_that_cleans_away_falls_back_to_the_categories(self):
+        self.assertIsNone(gen.bucket_for_race("{{plink|Human}}"))
 
 
 if __name__ == "__main__":
