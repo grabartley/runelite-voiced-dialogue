@@ -33,6 +33,13 @@ none of those, so their race comes from the page's categories. The generator:
    marker from the overrides), deriving race from the
    page categories when the infobox does not carry it.
 
+A field value is read to the end of its line and cut at the first `|` that sits
+outside a link or a template, so a piped link such as `[[Dwarf (race)|Dwarves]]`
+reaches the bucket rules whole. Race buckets on the link target first and its
+display text second, which keeps `[[Dwarf (race)|Dwarves]]` a Dwarf while letting
+a target the rules cannot read, such as `[[Dog_(disambiguation)|Dog]]`, resolve
+from the display text instead of falling to the `Human` default.
+
 Because race and gender come straight from the wiki, townsfolk get the correct
 gender (e.g. Cecilia is Female) and newly released NPCs (Varlamore, etc.) are
 covered as soon as the wiki documents them. The ids are real cache ids the live

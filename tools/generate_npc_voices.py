@@ -104,11 +104,15 @@ def ethnicity_key(league_region, location, categories=None):
 
 
 def bucket_for_race(race_text):
+    """Bucket a raw infobox race value. A piped link is tried target first, then display text,
+    so "[[Dwarf (race)|Dwarves]]" keeps bucketing on the target while a target the rules cannot
+    read, such as "[[Dog_(disambiguation)|Dog]]", falls through to the display text."""
     if not race_text:
         return None  # no infobox race field; caller falls back to categories
-    for regex, bucket in RACE_BUCKET_RULES:
-        if regex.search(race_text):
-            return bucket
+    for candidate in link_readings(race_text):
+        for regex, bucket in RACE_BUCKET_RULES:
+            if regex.search(candidate):
+                return bucket
     return MAPPING["defaultRace"]
 
 
@@ -182,29 +186,59 @@ def bucket_from_categories(categories):
 
 
 FIELD_RE = {
-    "race": re.compile(r"\|\s*race\d*\s*=\s*([^\n|]+)", re.IGNORECASE),
-    "gender": re.compile(r"\|\s*gender\d*\s*=\s*([^\n|]+)", re.IGNORECASE),
-    "leagueRegion": re.compile(r"\|\s*leagueRegion\s*=\s*([^\n|]+)", re.IGNORECASE),
-    "location": re.compile(r"\|\s*location\s*=\s*([^\n|]+)", re.IGNORECASE),
+    "race": re.compile(r"\|\s*race\d*\s*=\s*([^\n]+)", re.IGNORECASE),
+    "gender": re.compile(r"\|\s*gender\d*\s*=\s*([^\n]+)", re.IGNORECASE),
+    "leagueRegion": re.compile(r"\|\s*leagueRegion\s*=\s*([^\n]+)", re.IGNORECASE),
+    "location": re.compile(r"\|\s*location\s*=\s*([^\n]+)", re.IGNORECASE),
 }
-ID_RE = re.compile(r"\|\s*id\d*\s*=\s*([^\n|]+)", re.IGNORECASE)
+ID_RE = re.compile(r"\|\s*id\d*\s*=\s*([^\n]+)", re.IGNORECASE)
+LINK_RE = re.compile(r"\[\[([^\[\]]*)\]\]")
 
 
-def clean_value(value):
-    # Strip wiki markup, refs and templates so "[[Human]]" -> "Human".
+def field_text(value):
+    """The one field out of a captured line. FIELD_RE captures to end of line so a piped link
+    survives, so the next parameter on a single-line infobox is cut here instead, at the first
+    "|" that sits outside a link or a template."""
+    depth = 0
+    for i, ch in enumerate(value):
+        if value.startswith("[[", i) or value.startswith("{{", i):
+            depth += 1
+        elif value.startswith("}}", i) and depth == 0:
+            return value[:i]
+        elif value.startswith("]]", i) or value.startswith("}}", i):
+            depth = max(0, depth - 1)
+        elif ch == "|" and depth == 0:
+            return value[:i]
+    return value
+
+
+def clean_value(value, link_side=0):
+    # Strip wiki markup, refs and templates so "[[Human]]" -> "Human". A piped link keeps the
+    # side named by link_side: 0 is the link target, 1 the display text.
     value = re.sub(r"<ref[^>]*>.*?</ref>", "", value, flags=re.IGNORECASE | re.DOTALL)
     value = re.sub(r"<[^>]+>", "", value)
+    value = LINK_RE.sub(lambda m: link_side_of(m.group(1), link_side), value)
     value = value.replace("[[", "").replace("]]", "")
     value = re.sub(r"\{\{[^}]*\}\}", "", value)
     return value.strip()
 
 
+def link_side_of(link_body, link_side):
+    parts = link_body.split("|")
+    return parts[min(link_side, len(parts) - 1)]
+
+
+def link_readings(value):
+    """The readings of a value in the order they should be tried: link targets, then display
+    text when the two differ."""
+    target = clean_value(value)
+    display = clean_value(value, link_side=1)
+    return [target] if display == target else [target, display]
+
+
 def first_field(wikitext, key):
     m = FIELD_RE[key].search(wikitext)
-    return clean_value(m.group(1)) if m else None
-
-
-GENDER_LINE_RE = re.compile(r"\|\s*gender\d*\s*=\s*([^\n|]+)", re.IGNORECASE)
+    return field_text(m.group(1)) if m else None
 
 
 def parse_id_groups(wikitext):
@@ -212,14 +246,15 @@ def parse_id_groups(wikitext):
     genders as parallel per-version lines, so the i-th id group pairs with the i-th gender."""
     groups = []
     for raw in ID_RE.findall(wikitext):
-        ids = [int(t) for t in re.split(r"[,\s]+", clean_value(raw)) if t.isdigit()]
+        ids = [int(t) for t in re.split(r"[,\s]+", clean_value(field_text(raw))) if t.isdigit()]
         if ids:
             groups.append(ids)
     return groups
 
 
 def parse_genders(wikitext):
-    return [normalise_gender(clean_value(g)) for g in GENDER_LINE_RE.findall(wikitext)]
+    return [normalise_gender(clean_value(field_text(g)))
+            for g in FIELD_RE["gender"].findall(wikitext)]
 
 
 def fetch_infoboxes(titles, batch=30):
@@ -291,7 +326,8 @@ def build_table_from_wiki(limit=None):
             race = bucket_from_categories(categories)
         race = race or MAPPING["defaultRace"]
         ethnicity = ethnicity_key(
-            first_field(wikitext, "leagueRegion"), first_field(wikitext, "location"), categories)
+            clean_value(first_field(wikitext, "leagueRegion") or ""),
+            clean_value(first_field(wikitext, "location") or ""), categories)
 
         def build_entry(gender):
             entry = {"race": race, "gender": gender}
