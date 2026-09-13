@@ -41,7 +41,6 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.NPC;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
@@ -87,7 +86,7 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private ExecutorService wikiExecutor;
 
-  private NpcLearningService learningService;
+  private VoiceManager voiceManager;
 
   private ChatNoticeManager noticeManager;
 
@@ -109,7 +108,7 @@ public class VoicedDialoguePlugin extends Plugin {
   @Override
   protected void startUp() {
     pinProviderWhenOnlyOpenRouterKeyed();
-    VoiceManager voiceManager = VoiceManager.create(config, client);
+    voiceManager = VoiceManager.create(config, client);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
     LearnedNpcStore learnedStore = new LearnedNpcStore(ttsDir.resolve("learned-npcs.json"), gson);
@@ -120,7 +119,7 @@ public class VoicedDialoguePlugin extends Plugin {
               t.setDaemon(true);
               return t;
             });
-    learningService =
+    NpcLearningService learningService =
         new NpcLearningService(
             new WikiNpcClient(okHttpClient),
             learnedStore,
@@ -232,7 +231,7 @@ public class VoicedDialoguePlugin extends Plugin {
       backendProvider.close();
       backendProvider = null;
     }
-    learningService = null;
+    voiceManager = null;
     if (wikiExecutor != null) {
       wikiExecutor.shutdownNow();
       wikiExecutor = null;
@@ -266,12 +265,8 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onMenuOptionClicked(MenuOptionClicked event) {
-    if (learningService == null) {
-      return;
-    }
-    NPC npc = event.getMenuEntry().getNpc();
-    if (npc != null) {
-      learningService.onMenuOption(event.getMenuOption(), npc.getId(), npc.getName());
+    if (voiceManager != null) {
+      voiceManager.offerToLearning(event.getMenuOption(), event.getMenuEntry().getNpc());
     }
   }
 

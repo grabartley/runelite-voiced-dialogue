@@ -2,7 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
 import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
-import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -40,7 +39,8 @@ public final class NpcLearningService {
 
   public void onMenuOption(String menuOption, int npcId, String npcName) {
     if (menuOption != null
-        && menuOption.trim().toLowerCase(Locale.ROOT).startsWith(DIALOGUE_OPTION_PREFIX)) {
+        && menuOption.regionMatches(
+            true, 0, DIALOGUE_OPTION_PREFIX, 0, DIALOGUE_OPTION_PREFIX.length())) {
       considerLearning(npcId, npcName);
     }
   }
@@ -50,7 +50,7 @@ public final class NpcLearningService {
       return;
     }
     if (voiced.test(npcId)
-        || !store.isWorthLooking(npcId, System.currentTimeMillis())
+        || !store.isPastMissWindow(npcId, System.currentTimeMillis())
         || !attempted.add(npcId)) {
       return;
     }

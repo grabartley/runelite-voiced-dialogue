@@ -43,7 +43,7 @@ final class NpcVoiceResolver {
         AttributeSource.STATIC_TABLE.equals(attributes.getSource()) ? "table-hit" : "table-miss";
 
     if (learningService != null) {
-      learningService.considerLearning(identity.worldId(), npcName);
+      learningService.considerLearning(attributes.getNpcId(), npcName);
     }
 
     NpcRace voiceRace = race == NpcRace.UNKNOWN ? NpcRace.HUMAN : race;

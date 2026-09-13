@@ -6,6 +6,8 @@ public final class WikiCallThrottle {
 
   private final long intervalNanos;
 
+  private boolean started;
+
   private long lastCallAt;
 
   public WikiCallThrottle(long intervalMillis) {
@@ -16,12 +18,13 @@ public final class WikiCallThrottle {
     long waitNanos;
     synchronized (this) {
       long now = System.nanoTime();
-      long turnAt = lastCallAt == 0 ? now : lastCallAt + intervalNanos;
+      long turnAt = started ? lastCallAt + intervalNanos : now;
       if (turnAt < now) {
         turnAt = now;
       }
       waitNanos = turnAt - now;
-      lastCallAt = turnAt == 0 ? 1 : turnAt;
+      lastCallAt = turnAt;
+      started = true;
     }
     if (waitNanos > 0) {
       try {

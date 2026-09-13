@@ -155,9 +155,10 @@ on a line silences the square. A narration box that **Voice Narration** is not v
 barks without cutting the ones already sounding, since nothing was spoken to cut them. The epoch moves on the client thread and the stopping is handed to a worker,
 since flushing several audio lines is not work the game thread should do.
 
-One knock-on is worth naming: an unknown-race NPC barking nearby reaches the same resolver a
-dialogue line would, so with **Auto-learn New NPCs** on, ambient chatter drives wiki lookups as well
-as dialogue. They are deduped per NPC id and run off the game thread, so the cost stays bounded.
+One knock-on is worth naming: an NPC barking nearby reaches the same resolver a dialogue line would,
+so with **Auto-learn New NPCs** on, ambient chatter offers unknown speakers to the wiki as well as
+dialogue does. Only an NPC the bundled table and the learned store both miss is looked up, once per
+id and off the game thread, so the cost stays bounded.
 
 ## Auto-learn
 

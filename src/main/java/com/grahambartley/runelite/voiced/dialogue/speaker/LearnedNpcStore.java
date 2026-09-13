@@ -48,10 +48,7 @@ public final class LearnedNpcStore {
     persist();
   }
 
-  public boolean isWorthLooking(int npcId, long nowMillis) {
-    if (learned.containsKey(npcId)) {
-      return false;
-    }
+  public boolean isPastMissWindow(int npcId, long nowMillis) {
     Long missedAt = misses.get(npcId);
     return missedAt == null || nowMillis - missedAt >= MISS_RETRY_MILLIS;
   }
@@ -134,12 +131,11 @@ public final class LearnedNpcStore {
         }
         npcs.add(String.valueOf(e.getKey()), entry);
       }
-      JsonObject storedMisses = new JsonObject();
       long now = System.currentTimeMillis();
+      misses.values().removeIf(missedAt -> now - missedAt >= MISS_RETRY_MILLIS);
+      JsonObject storedMisses = new JsonObject();
       for (Map.Entry<Integer, Long> e : misses.entrySet()) {
-        if (now - e.getValue() < MISS_RETRY_MILLIS) {
-          storedMisses.addProperty(String.valueOf(e.getKey()), e.getValue());
-        }
+        storedMisses.addProperty(String.valueOf(e.getKey()), e.getValue());
       }
       JsonObject root = new JsonObject();
       root.add("npcs", npcs);

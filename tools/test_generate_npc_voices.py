@@ -7,9 +7,9 @@ must still end up with both race and gender.
 Run: python3 -m unittest tools.test_generate_npc_voices  (or python3 tools/test_generate_npc_voices.py)
 """
 
+import json
 import os
 import sys
-import json
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -189,10 +189,10 @@ class RaceBucketTest(unittest.TestCase):
         self.assertEqual(len(gen.RACE_BUCKET_RULES), len(mapping["raceRules"]))
         self.assertEqual(len(gen.CATEGORY_RACE_RULES), len(mapping["categoryRaceRules"]))
         self.assertEqual(gen.SINGLE_ETHNICITY, mapping["leagueRegionEthnicity"])
-        self.assertEqual(
-            gen.VALID_RACES,
-            {r["race"] for r in mapping["raceRules"]} | {r["race"] for r in mapping["categoryRaceRules"]},
-        )
+        self.assertEqual(gen.VALID_RACES, set(mapping["races"]))
+        for rules in ("raceRules", "categoryRaceRules"):
+            for rule in mapping[rules]:
+                self.assertIn(rule["race"], gen.VALID_RACES)
         self.assertEqual(gen.bucket_for_race("nothing the rules know"), mapping["defaultRace"])
         self.assertEqual(gen.normalise_gender(None), mapping["defaultGender"])
         self.assertEqual(gen.normalise_gender("female"), mapping["femaleGender"])

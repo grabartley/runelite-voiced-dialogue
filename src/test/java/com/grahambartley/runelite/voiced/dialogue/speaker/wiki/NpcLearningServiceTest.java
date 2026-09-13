@@ -89,7 +89,7 @@ public class NpcLearningServiceTest {
   @Test
   public void alreadyLearnedIdIsNotRefetched() {
     store.learn(700, "Human", "Female", null);
-    service(true).considerLearning(700, "Known");
+    service(true, npcId -> store.get(npcId) != null).considerLearning(700, "Known");
     assertEquals(0, server.getRequestCount());
   }
 
@@ -100,7 +100,7 @@ public class NpcLearningServiceTest {
     assertEquals(1, server.getRequestCount());
 
     LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
-    assertFalse(reloaded.isWorthLooking(800, System.currentTimeMillis()));
+    assertFalse(reloaded.isPastMissWindow(800, System.currentTimeMillis()));
     new NpcLearningService(client, reloaded, INLINE, () -> true, npcId -> false, UNTHROTTLED)
         .considerLearning(800, "Nobody");
     assertEquals("a remembered miss is not queried again", 1, server.getRequestCount());
@@ -116,7 +116,7 @@ public class NpcLearningServiceTest {
     Files.write(file, aged.getBytes("UTF-8"));
 
     LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
-    assertTrue(reloaded.isWorthLooking(900, System.currentTimeMillis()));
+    assertTrue(reloaded.isPastMissWindow(900, System.currentTimeMillis()));
     enqueueNpc();
     new NpcLearningService(client, reloaded, INLINE, () -> true, npcId -> false, UNTHROTTLED)
         .considerLearning(900, "New Troll");

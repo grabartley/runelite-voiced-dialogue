@@ -42,6 +42,8 @@ public class VoiceManager {
   private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
 
+  private NpcLearningService learningService;
+
   public static VoiceManager create(VoicedDialogueConfig config, Client client) {
     NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
     demographicAnalyzer.initialize();
@@ -67,7 +69,18 @@ public class VoiceManager {
     return demographicAnalyzer.isVoiced(npcId);
   }
 
+  public void offerToLearning(String menuOption, NPC npc) {
+    if (learningService == null || npc == null) {
+      return;
+    }
+    NpcAttributes attributes = demographicAnalyzer.analyzeNPC(npc);
+    if (attributes != null) {
+      learningService.onMenuOption(menuOption, attributes.getNpcId(), npc.getName());
+    }
+  }
+
   public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
+    this.learningService = service;
     this.demographicAnalyzer.setLearnedStore(store);
     this.npcVoiceResolver.setLearningService(service);
   }

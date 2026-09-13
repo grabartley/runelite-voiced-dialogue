@@ -138,6 +138,9 @@ public class NpcVoiceResolverTest {
   private static NpcIdentity identity(Integer worldId, NpcAttributes attributes, boolean child) {
     NpcProfileTable.NameMatch nameMatch = mock(NpcProfileTable.NameMatch.class);
     when(nameMatch.child()).thenReturn(child);
+    if (attributes != null && worldId != null) {
+      attributes.setNpcId(worldId);
+    }
     return new NpcIdentity(worldId, attributes, nameMatch);
   }
 

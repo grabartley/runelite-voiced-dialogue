@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,7 +23,6 @@ final class WikiMapping {
   private final List<RacePattern> raceRules;
   private final List<CategoryRule> categoryRules;
   private final Map<String, String> leagueRegionEthnicity;
-  private final List<String> races;
   private final Pattern infoboxTemplates;
   private final String defaultRace;
   private final String defaultGender;
@@ -55,10 +53,6 @@ final class WikiMapping {
     JsonObject regions = root.getAsJsonObject("leagueRegionEthnicity");
     for (String region : regions.keySet()) {
       leagueRegionEthnicity.put(region.toLowerCase(Locale.ROOT), regions.get(region).getAsString());
-    }
-    races = new ArrayList<>();
-    for (JsonElement element : root.getAsJsonArray("races")) {
-      races.add(element.getAsString());
     }
     infoboxTemplates = infoboxPattern(root.getAsJsonArray("infoboxTemplates"));
     defaultRace = root.get("defaultRace").getAsString();
@@ -133,21 +127,6 @@ final class WikiMapping {
       return menaphiteHint.matcher(hint).find() ? menaphiteEthnicity : desertEthnicity;
     }
     return leagueRegionEthnicity.get(key);
-  }
-
-  List<String> ruleRaces() {
-    List<String> ruleRaces = new ArrayList<>();
-    for (RacePattern rule : raceRules) {
-      ruleRaces.add(rule.race);
-    }
-    for (CategoryRule rule : categoryRules) {
-      ruleRaces.add(rule.race);
-    }
-    return ruleRaces;
-  }
-
-  List<String> races() {
-    return Collections.unmodifiableList(races);
   }
 
   boolean isNpcPage(String wikitext) {

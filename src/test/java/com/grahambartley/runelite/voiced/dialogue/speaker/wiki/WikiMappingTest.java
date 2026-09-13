@@ -7,10 +7,17 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicParser;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Test;
@@ -133,22 +140,38 @@ public class WikiMappingTest {
   }
 
   @Test
-  public void everyMappedRaceVoicesFromTheRuntimeTables() {
-    for (String race : mapping.races()) {
+  public void everyDeclaredRaceVoicesFromTheRuntimeTables() {
+    for (JsonElement race : mappingResource().getAsJsonArray("races")) {
       assertNotEquals(
-          "voice race for mapped race '" + race + "'",
+          "voice race for declared race '" + race.getAsString() + "'",
           NpcRace.UNKNOWN,
-          NpcDemographicParser.toRace(race));
+          NpcDemographicParser.toRace(race.getAsString()));
     }
   }
 
   @Test
   public void everyRuleAnswersWithARaceTheOverridesAccept() {
-    for (String race : mapping.ruleRaces()) {
-      assertTrue("'" + race + "' is a declared race", mapping.races().contains(race));
+    JsonObject resource = mappingResource();
+    List<String> declared = new ArrayList<>();
+    for (JsonElement race : resource.getAsJsonArray("races")) {
+      declared.add(race.getAsString());
     }
-    assertTrue(mapping.ruleRaces().contains(mapping.raceForWikiText("Ogre")));
-    assertTrue(
-        mapping.ruleRaces().contains(mapping.raceForCategories(singletonList("Category:Wizards"))));
+    for (String rules : new String[] {"raceRules", "categoryRaceRules"}) {
+      for (JsonElement rule : resource.getAsJsonArray(rules)) {
+        String race = rule.getAsJsonObject().get("race").getAsString();
+        assertTrue("'" + race + "' is a declared race", declared.contains(race));
+      }
+    }
+    assertTrue(declared.contains(mapping.raceForWikiText("Ogre")));
+    assertTrue(declared.contains(mapping.raceForCategories(singletonList("Category:Wizards"))));
+  }
+
+  private static JsonObject mappingResource() {
+    return new JsonParser()
+        .parse(
+            new InputStreamReader(
+                WikiMapping.class.getResourceAsStream("/wiki-mapping.json"),
+                StandardCharsets.UTF_8))
+        .getAsJsonObject();
   }
 }

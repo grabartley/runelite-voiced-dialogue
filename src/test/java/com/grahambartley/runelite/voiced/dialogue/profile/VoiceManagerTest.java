@@ -9,11 +9,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.gson.Gson;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager.PlayerVoice;
+import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
 import java.util.Collections;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -129,6 +132,44 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(client, PlayerVoice.TYPE_A);
 
     assertEquals(manager.resolve(Speaker.NPC, "Dwarf"), manager.resolveNpc(dwarf));
+  }
+
+  @Test
+  public void aTransformedNpcVoicedByItsBaseIdIsNeverOfferedToLearning() {
+    NpcLearningService learning = mock(NpcLearningService.class);
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
+
+    manager.offerToLearning("Talk-to", transformedNpc(999_000_001, DWARF_ID, "Dwarf"));
+
+    verify(learning).onMenuOption("Talk-to", DWARF_ID, "Dwarf");
+  }
+
+  @Test
+  public void anUnvoicedNpcIsOfferedUnderItsOwnId() {
+    NpcLearningService learning = mock(NpcLearningService.class);
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
+
+    manager.offerToLearning("Talk-to", worldNpc(999_000_002, "Nobody"));
+
+    verify(learning).onMenuOption("Talk-to", 999_000_002, "Nobody");
+  }
+
+  @Test
+  public void aClickWithNoLearningWiredUpIsIgnored() {
+    newManager(PlayerVoice.TYPE_A).offerToLearning("Talk-to", worldNpc(DWARF_ID, "Dwarf"));
+  }
+
+  private static NPC transformedNpc(int activeId, int baseId, String name) {
+    NPCComposition composition = mock(NPCComposition.class);
+    when(composition.getId()).thenReturn(baseId);
+    when(composition.getName()).thenReturn(name);
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(activeId);
+    when(npc.getName()).thenReturn(name);
+    when(npc.getComposition()).thenReturn(composition);
+    return npc;
   }
 
   private static NPC worldNpc(int npcId, String name) {

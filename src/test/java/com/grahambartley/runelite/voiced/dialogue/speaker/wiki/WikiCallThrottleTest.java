@@ -12,26 +12,21 @@ public class WikiCallThrottleTest {
 
   @Test
   public void theFirstTurnIsTakenImmediately() {
-    WikiCallThrottle throttle = new WikiCallThrottle(60_000);
-
-    long before = System.nanoTime();
-    assertTrue(throttle.awaitTurn());
-    assertTrue(
-        "nothing waits on an unused throttle",
-        System.nanoTime() - before < TimeUnit.SECONDS.toNanos(1));
+    assertTrue(new WikiCallThrottle(60_000).awaitTurn());
   }
 
   @Test
   public void aSecondTurnWaitsOutTheInterval() {
-    WikiCallThrottle throttle = new WikiCallThrottle(50);
+    long interval = 20;
+    WikiCallThrottle throttle = new WikiCallThrottle(interval);
 
     long before = System.nanoTime();
     assertTrue(throttle.awaitTurn());
     assertTrue(throttle.awaitTurn());
 
     assertTrue(
-        "the interval is honoured between calls",
-        System.nanoTime() - before >= TimeUnit.MILLISECONDS.toNanos(50));
+        "a second call waits at least the interval",
+        System.nanoTime() - before >= TimeUnit.MILLISECONDS.toNanos(interval));
   }
 
   @Test

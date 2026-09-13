@@ -50,14 +50,15 @@ public class LearnedNpcStoreTest {
     LearnedNpcStore store = new LearnedNpcStore(file, gson);
     long now = System.currentTimeMillis();
 
-    assertTrue("an unseen id is worth looking up", store.isWorthLooking(11, now));
+    assertTrue("an unseen id is worth looking up", store.isPastMissWindow(11, now));
 
     store.missed(11, now);
-    assertFalse("a fresh miss is not repeated", store.isWorthLooking(11, now));
+    assertFalse("a fresh miss is not repeated", store.isPastMissWindow(11, now));
     assertFalse(
-        "a fresh miss survives a restart", new LearnedNpcStore(file, gson).isWorthLooking(11, now));
+        "a fresh miss survives a restart",
+        new LearnedNpcStore(file, gson).isPastMissWindow(11, now));
     assertTrue(
-        "a stale miss is retried", store.isWorthLooking(11, now + TimeUnit.DAYS.toMillis(31)));
+        "a stale miss is retried", store.isPastMissWindow(11, now + TimeUnit.DAYS.toMillis(31)));
   }
 
   @Test
@@ -69,10 +70,10 @@ public class LearnedNpcStoreTest {
     store.missed(22, now);
     store.learn(22, "Human", "Female", "kandarin");
 
-    assertFalse("a learned id is never looked up again", store.isWorthLooking(22, now));
+    assertTrue("learning clears the miss", store.isPastMissWindow(22, now));
     LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
     assertEquals("Female", reloaded.get(22).getGender());
-    assertFalse(reloaded.isWorthLooking(22, now + TimeUnit.DAYS.toMillis(365)));
+    assertTrue(reloaded.isPastMissWindow(22, now));
   }
 
   @Test
