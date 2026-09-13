@@ -1331,4 +1331,31 @@ public class DialogueAudioServiceTest {
         pool,
         () -> 100);
   }
+
+  @Test
+  public void aQueuedBarkWhoseSpeakerLeavesEarshotNeverOpensALine() throws Exception {
+    List<LatchedOutput> latched = Collections.synchronizedList(new ArrayList<>());
+    FakeBackend backend = new FakeBackend(EnumSet.of(Emotion.NEUTRAL));
+    ExecutorService pool = Executors.newFixedThreadPool(6);
+    AtomicInteger secondVolume = new AtomicInteger(90);
+    DialogueAudioService svc = latchedService(backend, latched, pool);
+    try {
+      svc.speakAmbient(req("Join us!", NpcRace.HUMAN, NpcGender.MALE), false, 42, () -> 90);
+      svc.speakAmbient(
+          req("The H.A.M. will win", NpcRace.HUMAN, NpcGender.MALE), false, 42, secondVolume::get);
+
+      LatchedOutput first = awaitOutputs(latched, 1).get(0);
+      assertTrue("the first line starts", first.entered.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+      awaitSynthesized(backend, 2);
+
+      secondVolume.set(-1);
+      svc.refreshAmbientVolumes();
+      first.release.countDown();
+
+      Thread.sleep(POLL_MILLIS * 4);
+      assertEquals("the queued bark is dropped rather than played", 1, latched.size());
+    } finally {
+      pool.shutdownNow();
+    }
+  }
 }

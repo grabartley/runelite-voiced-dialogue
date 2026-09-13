@@ -8,6 +8,7 @@ import com.grahambartley.runelite.voiced.dialogue.cache.DiskAudioCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache;
 import com.grahambartley.runelite.voiced.dialogue.cache.TieredSynthesisCache.CacheKey;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +21,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -53,7 +55,7 @@ public final class DialogueAudioService {
   private final Supplier<AudioOutput> ambientOutputs;
   private final Executor ambientExecutor;
   private final Executor ambientPlaybackExecutor;
-  private final Map<AudioOutput, IntSupplier> liveAmbientOutputs = new ConcurrentHashMap<>();
+  private final Set<AmbientLine> ambientLines = ConcurrentHashMap.newKeySet();
   private final Map<Integer, CompletableFuture<Void>> ambientChains = new ConcurrentHashMap<>();
   private final AtomicLong epoch = new AtomicLong();
   private final AtomicLong prefetchEpoch = new AtomicLong();
@@ -133,16 +135,18 @@ public final class DialogueAudioService {
     SynthesisRequest effective = BackendProvider.downgradeFor(backend, request);
     CacheKey key = keyFor(backend, effective);
     long node = ambientEpoch.get();
-    int openingVolume = distanceVolume.getAsInt();
-    CompletableFuture<Pcm> synthesis;
+    AmbientLine line = new AmbientLine(distanceVolume);
+    ambientLines.add(line);
     try {
-      synthesis =
+      queueAmbientPlayback(
+          speakerId,
           CompletableFuture.supplyAsync(
-              () -> synthesizeAmbient(node, backend, effective, key, applyEcho), ambientExecutor);
+              () -> synthesizeAmbient(node, backend, effective, key, applyEcho), ambientExecutor),
+          node,
+          line);
     } catch (RejectedExecutionException closing) {
-      return;
+      ambientLines.remove(line);
     }
-    queueAmbientPlayback(speakerId, synthesis, node, openingVolume, distanceVolume);
   }
 
   private Pcm synthesizeAmbient(
@@ -166,11 +170,7 @@ public final class DialogueAudioService {
   }
 
   private void queueAmbientPlayback(
-      int speakerId,
-      CompletableFuture<Pcm> synthesis,
-      long node,
-      int openingVolume,
-      IntSupplier distanceVolume) {
+      int speakerId, CompletableFuture<Pcm> synthesis, long node, AmbientLine line) {
     CompletableFuture<Pcm> rendered = synthesis.handle((pcm, error) -> pcm);
     CompletableFuture<Void> queued =
         ambientChains.compute(
@@ -182,51 +182,82 @@ public final class DialogueAudioService {
                     .thenAcceptAsync(
                         pcm -> {
                           if (pcm != null && ambientEpoch.get() == node) {
-                            playAmbient(node, pcm, openingVolume, distanceVolume);
+                            playAmbient(node, pcm, line);
                           }
                         },
                         ambientPlaybackExecutor));
-    queued.whenComplete((ignored, error) -> ambientChains.remove(speakerId, queued));
+    queued.whenComplete(
+        (ignored, error) -> {
+          ambientLines.remove(line);
+          ambientChains.remove(speakerId, queued);
+        });
   }
 
-  private void playAmbient(long node, Pcm pcm, int openingVolume, IntSupplier distanceVolume) {
+  private void playAmbient(long node, Pcm pcm, AmbientLine line) {
+    int openingVolume = line.volumePercent.get();
+    if (cutRequested(openingVolume)) {
+      return;
+    }
     AudioOutput ambient = ambientOutputs.get();
-    liveAmbientOutputs.put(ambient, distanceVolume);
+    line.output = ambient;
     try {
       if (ambientEpoch.get() == node) {
         ambient.stream(pcm.getSamples(), pcm.getSampleRate(), openingVolume);
       }
     } finally {
-      liveAmbientOutputs.remove(ambient);
+      line.output = null;
       ambient.close();
     }
   }
 
   public void refreshAmbientVolumes() {
-    if (liveAmbientOutputs.isEmpty()) {
+    if (ambientLines.isEmpty()) {
       return;
     }
-    for (Map.Entry<AudioOutput, IntSupplier> live : liveAmbientOutputs.entrySet()) {
-      int volumePercent = live.getValue().getAsInt();
-      if (volumePercent < 0) {
-        live.getKey().stop();
+    for (AmbientLine line : ambientLines) {
+      int volumePercent = line.distanceVolume.getAsInt();
+      line.volumePercent.set(volumePercent);
+      AudioOutput sounding = line.output;
+      if (sounding == null) {
         continue;
       }
-      live.getKey().setVolume(volumePercent);
+      if (cutRequested(volumePercent)) {
+        sounding.stop();
+        continue;
+      }
+      sounding.setVolume(volumePercent);
     }
+  }
+
+  private static boolean cutRequested(int volumePercent) {
+    return volumePercent < 0;
   }
 
   private void interruptAmbient() {
     ambientEpoch.incrementAndGet();
-    if (liveAmbientOutputs.isEmpty()) {
+    if (ambientLines.isEmpty()) {
       return;
     }
     submitQuietly(ambientPlaybackExecutor, this::stopLiveAmbient);
   }
 
   private void stopLiveAmbient() {
-    for (AudioOutput ambient : liveAmbientOutputs.keySet()) {
-      ambient.stop();
+    for (AmbientLine line : ambientLines) {
+      AudioOutput sounding = line.output;
+      if (sounding != null) {
+        sounding.stop();
+      }
+    }
+  }
+
+  private static final class AmbientLine {
+    private final IntSupplier distanceVolume;
+    private final AtomicInteger volumePercent;
+    private volatile AudioOutput output;
+
+    private AmbientLine(IntSupplier distanceVolume) {
+      this.distanceVolume = distanceVolume;
+      this.volumePercent = new AtomicInteger(distanceVolume.getAsInt());
     }
   }
 
@@ -282,8 +313,9 @@ public final class DialogueAudioService {
     ambientEpoch.incrementAndGet();
     stopLiveAmbient();
     ambientChains.clear();
-    shutdown(ambientExecutor);
-    shutdown(ambientPlaybackExecutor);
+    ambientLines.clear();
+    abandon(ambientExecutor);
+    abandon(ambientPlaybackExecutor);
     shutdown(executor);
     if (warmExecutor != executor) {
       shutdown(warmExecutor);
@@ -292,6 +324,12 @@ public final class DialogueAudioService {
       shutdown(prefetchExecutor);
     }
     output.close();
+  }
+
+  private static void abandon(Executor exec) {
+    if (exec instanceof ExecutorService) {
+      ((ExecutorService) exec).shutdownNow();
+    }
   }
 
   private static void shutdown(Executor exec) {

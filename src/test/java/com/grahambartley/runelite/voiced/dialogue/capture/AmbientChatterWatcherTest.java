@@ -229,7 +229,7 @@ public class AmbientChatterWatcherTest {
   }
 
   @Test
-  public void aSpeakerThatDespawnsMidLineAsksForTheLineToBeCut() {
+  public void aLineInFlightWhenThePlayerLogsOutAsksToBeCut() {
     NPC crier = npc(2);
 
     watcher.onOverheadTextChanged(overhead(crier, "Hear ye!"));

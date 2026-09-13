@@ -102,6 +102,10 @@ across the tiles between. `AmbientEarshot` owns both that curve and the 16 tiles
 gate and the fade can never disagree, and because the gain runs through the same decibel conversion
 as every other line, a linear walk across the percent scale already sounds like a natural fade.
 
+The mix is tracked from the moment a bark is accepted, not from the moment it starts playing, so a
+bark that waits its turn behind a sibling and whose speaker walks off in the meantime is dropped
+before it ever opens an audio line.
+
 The mix follows the pair while the line plays. Each tick the plugin asks every bark still sounding
 for its speaker's current distance and pushes the new gain onto that bark's audio line, so walking
 away from a crier fades them out mid-sentence and rounding a corner towards one brings them up. A

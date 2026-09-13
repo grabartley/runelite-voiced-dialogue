@@ -195,6 +195,22 @@ public class SynthesisDispatcherTest {
   }
 
   @Test
+  public void nothingIsSpokenAmbientWhileTheBackendIsRateLimited() {
+    when(backend.isAvailable()).thenReturn(true);
+    when(backend.isThrottled()).thenReturn(true);
+    NPC crier = mock(NPC.class);
+    when(crier.getIndex()).thenReturn(7);
+    when(voiceManager.resolveNpc(crier))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+
+    dispatcher.speakAmbient("Hear ye!", crier, () -> 100);
+
+    verify(audioService, never())
+        .speakAmbient(any(SynthesisRequest.class), anyBoolean(), anyInt(), any(IntSupplier.class));
+    verify(voiceManager, never()).resolveNpc(any(NPC.class));
+  }
+
+  @Test
   public void nothingIsSpokenAmbientWhenTheBackendIsUnavailable() {
     when(backend.isAvailable()).thenReturn(false);
     NPC crier = mock(NPC.class);

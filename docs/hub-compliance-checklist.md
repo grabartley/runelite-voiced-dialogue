@@ -35,9 +35,22 @@ pool, derives from it via `newBuilder()` (allowed):
 
 ### All network and synthesis stays off the game thread
 
-**Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors (a 2-thread
-bounded synthesis pool, a warm-up thread for the cloud connection handshake, and a 2-thread
-prefetch pool); the cloud HTTP calls for both providers execute on those threads. Disk cache
+**Verified.** `DialogueAudioService` runs synthesis on dedicated daemon executors: a 2-thread
+bounded synthesis pool, a warm-up thread for the cloud connection handshake, a 2-thread prefetch
+pool, and, for ambient chatter, a 6-thread synthesis pool and a playback pool. The cloud HTTP calls
+for both providers execute on those threads.
+
+The two ambient pools are the only ones not bounded by a fixed size and queue, so they are worth
+stating plainly. The ambient synthesis queue is unbounded because ambient chatter must not silently
+drop a speaker, and it is fed only by nearby NPCs talking on screen while the feature is switched
+on, which is off by default. The playback pool has no configured maximum because its real limit is
+how many audio lines the mixer will open; it starts at zero threads, takes one thread per bark
+actually sounding rather than per bark queued, and retires idle threads after 30 seconds. Both are
+daemon pools, both are shut down in `close()`, and a bark holds no thread at all while it waits on
+its turn or on its own synthesis.
+
+Ambient chatter also reads NPC positions on the game thread, once per tick per sounding bark, which
+is a coordinate subtraction and no more. Nothing else about the feature touches the game thread. Disk cache
 I/O also stays on those pool threads: the prefetch fast-path checks only the in-memory tier,
 so the game thread never reads the on-disk cache. NPC auto-learn lookups run on their own
 `tts-wiki-learn` daemon thread, and the `::voicedspend` balance read runs on a dedicated
