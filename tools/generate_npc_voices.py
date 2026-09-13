@@ -104,11 +104,18 @@ def ethnicity_key(league_region, location, categories=None):
 
 
 def bucket_for_race(race_text):
+    """Bucket a raw infobox race value. A piped link is tried target first, then display text,
+    so "[[Dwarf (race)|Dwarves]]" keeps bucketing on the target while a target the rules cannot
+    read, such as "[[Dog_(disambiguation)|Dog]]", falls through to the display text."""
     if not race_text:
         return None  # no infobox race field; caller falls back to categories
-    for regex, bucket in RACE_BUCKET_RULES:
-        if regex.search(race_text):
-            return bucket
+    readings = link_readings(race_text)
+    if not readings:
+        return None  # the field cleaned away to nothing; caller falls back to categories
+    for reading in readings:
+        for regex, bucket in RACE_BUCKET_RULES:
+            if regex.search(reading):
+                return bucket
     return MAPPING["defaultRace"]
 
 
@@ -182,36 +189,97 @@ def bucket_from_categories(categories):
 
 
 FIELD_RE = {
-    "race": re.compile(r"\|\s*race\d*\s*=\s*([^\n|]+)", re.IGNORECASE),
-    "gender": re.compile(r"\|\s*gender\d*\s*=\s*([^\n|]+)", re.IGNORECASE),
-    "leagueRegion": re.compile(r"\|\s*leagueRegion\s*=\s*([^\n|]+)", re.IGNORECASE),
-    "location": re.compile(r"\|\s*location\s*=\s*([^\n|]+)", re.IGNORECASE),
+    "race": re.compile(r"\|\s*race\d*\s*=\s*([^\n]+)", re.IGNORECASE),
+    "gender": re.compile(r"\|\s*gender\d*\s*=\s*([^\n]+)", re.IGNORECASE),
+    "leagueRegion": re.compile(r"\|\s*leagueRegion\s*=\s*([^\n]+)", re.IGNORECASE),
+    "location": re.compile(r"\|\s*location\s*=\s*([^\n]+)", re.IGNORECASE),
 }
-ID_RE = re.compile(r"\|\s*id\d*\s*=\s*([^\n|]+)", re.IGNORECASE)
+ID_RE = re.compile(r"\|\s*id\d*\s*=\s*([^\n]+)", re.IGNORECASE)
+LINK_RE = re.compile(r"\[\[([^\[\]]*)\]\]")
 
 
-def clean_value(value):
-    # Strip wiki markup, refs and templates so "[[Human]]" -> "Human".
+def field_text(value):
+    """The one field out of a captured line. FIELD_RE captures to end of line so a piped link
+    survives, so the next parameter on a single-line infobox is cut here instead, at the first
+    "|", or at a link or template close that has nothing open, outside a link or a nested
+    template."""
+    depth = 0
+    i = 0
+    while i < len(value):
+        token = value[i:i + 2]
+        if token in ("[[", "{{"):
+            depth += 1
+            i += 2
+        elif token in ("]]", "}}"):
+            if depth == 0:
+                return value[:i]
+            depth -= 1
+            i += 2
+        elif value[i] == "|" and depth == 0:
+            return value[:i]
+        else:
+            i += 1
+    return value
+
+
+def link_target(link_body):
+    return link_body.split("|")[0]
+
+
+def link_display(link_body):
+    return link_body.split("|")[-1]
+
+
+def clean_value(value, link=link_target):
+    # Strip wiki markup, refs and templates so "[[Human]]" -> "Human", resolving each link to
+    # the side the caller asks for.
     value = re.sub(r"<ref[^>]*>.*?</ref>", "", value, flags=re.IGNORECASE | re.DOTALL)
     value = re.sub(r"<[^>]+>", "", value)
+    value = LINK_RE.sub(lambda m: link(m.group(1)), value)
     value = value.replace("[[", "").replace("]]", "")
     value = re.sub(r"\{\{[^}]*\}\}", "", value)
     return value.strip()
 
 
-def first_field(wikitext, key):
-    m = FIELD_RE[key].search(wikitext)
-    return clean_value(m.group(1)) if m else None
+def link_readings(value):
+    """The readings of a value in the order they should be tried: link targets, then display
+    text when the two differ. Empty readings drop out, so a value that cleans away entirely
+    leaves nothing to match."""
+    target = clean_value(value)
+    display = clean_value(value, link=link_display)
+    readings = [target] if display == target else [target, display]
+    return [reading for reading in readings if reading]
 
 
-GENDER_LINE_RE = re.compile(r"\|\s*gender\d*\s*=\s*([^\n|]+)", re.IGNORECASE)
+def field_texts(wikitext, pattern):
+    """Every value of one field, in page order. The scan resumes at the end of the cut value
+    rather than the end of the line, so a single-line infobox still yields every version."""
+    values = []
+    pos = 0
+    while True:
+        match = pattern.search(wikitext, pos)
+        if not match:
+            return values
+        text = field_text(match.group(1))
+        values.append(text)
+        pos = match.start(1) + len(text)
+
+
+def raw_field(wikitext, key):
+    texts = field_texts(wikitext, FIELD_RE[key])
+    return texts[0] if texts else None
+
+
+def field_value(wikitext, key):
+    raw = raw_field(wikitext, key)
+    return clean_value(raw) if raw is not None else None
 
 
 def parse_id_groups(wikitext):
     """One group of ids per |idN= line, preserving order. A switch-infobox page lists ids and
     genders as parallel per-version lines, so the i-th id group pairs with the i-th gender."""
     groups = []
-    for raw in ID_RE.findall(wikitext):
+    for raw in field_texts(wikitext, ID_RE):
         ids = [int(t) for t in re.split(r"[,\s]+", clean_value(raw)) if t.isdigit()]
         if ids:
             groups.append(ids)
@@ -219,7 +287,8 @@ def parse_id_groups(wikitext):
 
 
 def parse_genders(wikitext):
-    return [normalise_gender(clean_value(g)) for g in GENDER_LINE_RE.findall(wikitext)]
+    return [normalise_gender(clean_value(g))
+            for g in field_texts(wikitext, FIELD_RE["gender"])]
 
 
 def fetch_infoboxes(titles, batch=30):
@@ -286,12 +355,12 @@ def build_table_from_wiki(limit=None):
         groups = parse_id_groups(wikitext)
         genders = parse_genders(wikitext)
         # Infobox race when present (NPC pages); otherwise the page's categories (Monster pages).
-        race = bucket_for_race(first_field(wikitext, "race"))
+        race = bucket_for_race(raw_field(wikitext, "race"))
         if race is None:
             race = bucket_from_categories(categories)
         race = race or MAPPING["defaultRace"]
         ethnicity = ethnicity_key(
-            first_field(wikitext, "leagueRegion"), first_field(wikitext, "location"), categories)
+            field_value(wikitext, "leagueRegion"), field_value(wikitext, "location"), categories)
 
         def build_entry(gender):
             entry = {"race": race, "gender": gender}

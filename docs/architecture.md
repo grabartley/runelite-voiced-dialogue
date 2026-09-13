@@ -175,10 +175,11 @@ thread never waits and the wiki never sees a burst.
 `WikiInfobox` reads the page's lead wikitext and `WikiMapping` decides from it:
 
 - **Race** from the infobox `race` field, else from the page's categories (how an `Infobox Monster`
-  talker gets one at all), else `Human`. A page carrying neither infobox is not an NPC page and is
-  left alone.
-- **Gender** per version. A switch infobox lists its ids and its genders as parallel lines, so the
-  id that was looked up takes the gender of its own version rather than the page's first.
+  talker gets one at all), else `Human`. A piped link is read target first and display text second.
+  A page carrying neither infobox is not an NPC page and is left alone.
+- **Gender** per version. A switch infobox lists its ids and its genders as parallel values, on
+  their own lines or side by side on one, so the id that was looked up takes the gender of its own
+  version rather than the page's first.
 - **Ethnicity** from `leagueRegion`, with the desert split into Kharidian and Menaphite by the
   location text and the categories.
 

@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collections;
 import org.junit.Test;
 
@@ -25,7 +26,7 @@ public class WikiInfoboxTest {
         WikiInfobox.parse(
             "{{Infobox NPC\n|race = [[Dwarf (race)]]<ref>a ref</ref>\n|location = ''Keldagrim''\n}}",
             null);
-    assertEquals("Dwarf (race)", infobox.race());
+    assertEquals(Collections.singletonList("Dwarf (race)"), infobox.raceReadings());
     assertEquals("''Keldagrim''", infobox.location());
   }
 
@@ -53,6 +54,54 @@ public class WikiInfoboxTest {
   @Test
   public void aPageWithoutAGenderFieldAnswersNothing() {
     assertNull(WikiInfobox.parse("{{Infobox NPC\n|race = Human\n}}", null).genderForVersion(1));
+  }
+
+  @Test
+  public void aPipedRaceReadsItsTargetBeforeItsDisplayText() {
+    assertEquals(
+        Arrays.asList("Dog_(disambiguation)", "Dog"),
+        WikiInfobox.parse("{{Infobox NPC\n|race = [[Dog_(disambiguation)|Dog]]\n}}", null)
+            .raceReadings());
+  }
+
+  @Test
+  public void aPipedLeagueRegionAndLocationReadTheirTargets() {
+    WikiInfobox infobox =
+        WikiInfobox.parse(
+            "{{Infobox NPC\n|leagueRegion = [[Kandarin|the Kandarin region]]\n"
+                + "|location = [[Ardougne|East Ardougne]]\n}}",
+            null);
+    assertEquals("Kandarin", infobox.leagueRegion());
+    assertEquals("Ardougne", infobox.location());
+  }
+
+  @Test
+  public void aSingleLineSwitchInfoboxKeepsEveryVersion() {
+    WikiInfobox infobox =
+        WikiInfobox.parse(
+            "{{Infobox NPC|id1=10438|gender1=Male|id2=10439|gender2=Female"
+                + "|race=[[Dog_(disambiguation)|Dog]]}}",
+            null);
+    assertEquals("Male", infobox.genderForVersion(10438));
+    assertEquals("Female", infobox.genderForVersion(10439));
+    assertEquals(Arrays.asList("Dog_(disambiguation)", "Dog"), infobox.raceReadings());
+  }
+
+  @Test
+  public void aTemplatedValueIsNotCutAtItsInnerPipe() {
+    assertEquals(
+        "and Draynor",
+        WikiInfobox.parse(
+                "{{Infobox NPC\n|location = {{plink|Lumbridge}} and [[Draynor|the village]]\n}}",
+                null)
+            .location());
+  }
+
+  @Test
+  public void aStrayCloseEndsTheValueRatherThanSwallowingTheNextParameter() {
+    WikiInfobox infobox = WikiInfobox.parse("{{Infobox NPC|race=Dog]]|gender=Female|id=1}}", null);
+    assertEquals(Collections.singletonList("Dog"), infobox.raceReadings());
+    assertEquals("Female", infobox.genderForVersion(1));
   }
 
   @Test

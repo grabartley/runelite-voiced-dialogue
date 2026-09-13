@@ -83,13 +83,15 @@ final class WikiMapping {
     return defaultGender;
   }
 
-  String raceForWikiText(String raceText) {
-    if (raceText == null || raceText.isEmpty()) {
+  String raceForWikiText(List<String> raceReadings) {
+    if (raceReadings.isEmpty()) {
       return null;
     }
-    for (RacePattern rule : raceRules) {
-      if (rule.pattern.matcher(raceText).find()) {
-        return rule.race;
+    for (String reading : raceReadings) {
+      for (RacePattern rule : raceRules) {
+        if (rule.pattern.matcher(reading).find()) {
+          return rule.race;
+        }
       }
     }
     return defaultRace;

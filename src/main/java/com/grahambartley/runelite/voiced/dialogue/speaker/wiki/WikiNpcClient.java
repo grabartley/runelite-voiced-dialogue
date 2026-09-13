@@ -90,7 +90,7 @@ public final class WikiNpcClient {
   }
 
   private NpcAttributes attributesFrom(int npcId, WikiInfobox infobox) {
-    String race = mapping.raceForWikiText(infobox.race());
+    String race = mapping.raceForWikiText(infobox.raceReadings());
     if (race == null) {
       race = mapping.raceForCategories(infobox.categories());
     }
