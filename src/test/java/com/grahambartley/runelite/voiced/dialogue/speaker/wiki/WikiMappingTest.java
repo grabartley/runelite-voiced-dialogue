@@ -1,9 +1,15 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicParser;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import java.util.Arrays;
 import java.util.Collections;
 import junitparams.JUnitParamsRunner;
@@ -74,12 +80,12 @@ public class WikiMappingTest {
   @Test
   @Parameters(method = "categoryCases")
   public void categoriesCarryTheRaceWhenTheInfoboxDoesNot(String category, String bucket) {
-    assertEquals(bucket, mapping.raceForCategories(Collections.singletonList(category)));
+    assertEquals(bucket, mapping.raceForCategories(singletonList(category)));
   }
 
   @Test
   public void categoriesWithNoRaceKeywordAnswerNothing() {
-    assertNull(mapping.raceForCategories(Collections.singletonList("Category:Quest NPCs")));
+    assertNull(mapping.raceForCategories(singletonList("Category:Quest NPCs")));
     assertNull(mapping.raceForCategories(Collections.<String>emptyList()));
     assertNull(mapping.raceForCategories(null));
   }
@@ -111,6 +117,15 @@ public class WikiMappingTest {
   }
 
   @Test
+  public void onlyNpcAndMonsterPagesAreWorthReading() {
+    assertTrue(mapping.isNpcPage("{{Infobox NPC\n|race=Human\n}}"));
+    assertTrue(mapping.isNpcPage("{{infobox_monster\n}}"));
+    assertTrue(mapping.isNpcPage("{{Multi Infobox\n|item1={{Infobox NPC\n}}\n}}"));
+    assertFalse(mapping.isNpcPage("{{Infobox Item\n|name=Bucket\n}}"));
+    assertFalse(mapping.isNpcPage(null));
+  }
+
+  @Test
   public void genderTextNormalisesToTheStoredValues() {
     assertEquals("Female", mapping.genderForWikiText("female"));
     assertEquals("Male", mapping.genderForWikiText("Male"));
@@ -121,11 +136,20 @@ public class WikiMappingTest {
   @Test
   public void everyMappedRaceVoicesFromTheRuntimeTables() {
     for (String race : mapping.races()) {
-      assertNotNull("bucket for mapped race '" + race + "'", RaceBucket.forBucketName(race));
-      assertEquals(
-          "race for mapped race '" + race + "'",
-          RaceBucket.forBucketName(race).race(),
+      assertNotEquals(
+          "voice race for mapped race '" + race + "'",
+          NpcRace.UNKNOWN,
           NpcDemographicParser.toRace(race));
     }
+  }
+
+  @Test
+  public void everyRuleAnswersWithAMappedRace() {
+    for (String race : mapping.races()) {
+      assertNotNull(race);
+    }
+    assertTrue(mapping.races().contains(mapping.raceForWikiText("Ogre")));
+    assertTrue(
+        mapping.races().contains(mapping.raceForCategories(singletonList("Category:Wizards"))));
   }
 }

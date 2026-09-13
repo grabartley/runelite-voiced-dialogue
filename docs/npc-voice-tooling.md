@@ -58,6 +58,10 @@ The race rules, the category race rules and the league region to ethnicity map l
 runtime auto-learn lookup, so a race keyword means the same thing in the bundled table and in a
 learned entry. Editing a rule there changes both, and the table needs regenerating to pick it up.
 
+Rule order is load-bearing: the list is scanned top to bottom and the first match wins. Arceuus sits
+ahead of the human fallback, dog behind undead and demon, and gorilla ahead of monkey, each for the
+reason written up below. Re-sorting the list would change what thousands of NPCs sound like.
+
 - **Race.** The wiki race text is mapped onto a voice bucket. Buckets are
   voice-categorical, not lore-accurate: ogre/cyclops -> Troll, vampyre -> Undead,
   dragon/TzHaar -> Demon. Gnomes are kept as their own `Gnome` race (so they can

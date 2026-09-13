@@ -1,5 +1,7 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
+import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,13 +48,22 @@ public final class NpcLearningService {
     }
     executor.execute(
         () -> {
-          throttle.awaitTurn();
-          NpcAttributes attributes = client.lookup(npcId, npcName);
-          if (attributes == null) {
+          if (!throttle.awaitTurn()) {
+            attempted.remove(npcId);
+            return;
+          }
+          WikiLookup lookup = client.lookup(npcId, npcName);
+          if (lookup.isUnreachable()) {
+            attempted.remove(npcId);
+            log.debug("[TTS learn] wiki was unreachable for '{}' (id {})", npcName, npcId);
+            return;
+          }
+          if (lookup.isUndocumented()) {
             store.missed(npcId, System.currentTimeMillis());
             log.debug("[TTS learn] wiki had no usable entry for '{}' (id {})", npcName, npcId);
             return;
           }
+          NpcAttributes attributes = lookup.attributes();
           store.learn(
               npcId, attributes.getRace(), attributes.getGender(), attributes.getEthnicity());
           log.info(

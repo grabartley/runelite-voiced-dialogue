@@ -1,9 +1,11 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.speaker.AttributeSource;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +37,9 @@ public final class WikiNpcClient {
     this.api = api;
   }
 
-  public NpcAttributes lookup(int npcId, String npcName) {
+  public WikiLookup lookup(int npcId, String npcName) {
     if (npcName == null || npcName.trim().isEmpty()) {
-      return null;
+      return WikiLookup.undocumented();
     }
     HttpUrl url =
         HttpUrl.get(api)
@@ -58,21 +60,22 @@ public final class WikiNpcClient {
 
     try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
-        return null;
+        log.debug("Wiki lookup for '{}' answered {}", npcName, response.code());
+        return WikiLookup.unreachable();
       }
       ResponseBody body = response.body();
       JsonObject page = firstPage(body == null ? null : body.string());
       if (page == null) {
-        return null;
+        return WikiLookup.unreachable();
       }
       String wikitext = wikitextOf(page);
-      if (wikitext == null || !WikiInfobox.isNpcPage(wikitext)) {
-        return null;
+      if (wikitext == null || !mapping.isNpcPage(wikitext)) {
+        return WikiLookup.undocumented();
       }
-      return attributesFrom(npcId, WikiInfobox.parse(wikitext, categoriesOf(page)));
+      return WikiLookup.of(attributesFrom(npcId, WikiInfobox.parse(wikitext, categoriesOf(page))));
     } catch (Exception e) {
       log.debug("Wiki lookup for '{}' failed: {}", npcName, e.getMessage());
-      return null;
+      return WikiLookup.unreachable();
     }
   }
 

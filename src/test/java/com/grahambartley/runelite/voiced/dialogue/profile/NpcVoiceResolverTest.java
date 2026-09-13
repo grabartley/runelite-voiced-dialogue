@@ -13,8 +13,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.AttributeSource;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LifeStage;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
 import org.junit.Test;
 
 public class NpcVoiceResolverTest {

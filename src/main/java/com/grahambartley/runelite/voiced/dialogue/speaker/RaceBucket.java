@@ -30,10 +30,6 @@ public enum RaceBucket {
     this.keywords = keywords;
   }
 
-  public String bucketName() {
-    return bucketName;
-  }
-
   public NpcRace race() {
     return race;
   }

@@ -1,7 +1,6 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -63,14 +62,5 @@ public class WikiInfoboxTest {
         WikiInfobox.parse("{{Infobox Monster\n}}", Collections.singletonList("Category:Trolls"))
             .categories());
     assertTrue(WikiInfobox.parse("{{Infobox Monster\n}}", null).categories().isEmpty());
-  }
-
-  @Test
-  public void onlyNpcAndMonsterPagesAreWorthReading() {
-    assertTrue(WikiInfobox.isNpcPage("{{Infobox NPC\n|race=Human\n}}"));
-    assertTrue(WikiInfobox.isNpcPage("{{infobox monster\n}}"));
-    assertTrue(WikiInfobox.isNpcPage("{{Multi Infobox\n|item1={{Infobox NPC\n}}\n}}"));
-    assertFalse(WikiInfobox.isNpcPage("{{Infobox Item\n|name=Bucket\n}}"));
-    assertFalse(WikiInfobox.isNpcPage(null));
   }
 }

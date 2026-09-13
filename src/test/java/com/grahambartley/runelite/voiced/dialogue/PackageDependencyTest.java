@@ -29,14 +29,15 @@ public class PackageDependencyTest {
   private static final Map<String, Integer> TIER = new HashMap<>();
 
   static {
-    TIER.put("", 7);
-    TIER.put("capture", 6);
-    TIER.put("speech.openrouter", 6);
-    TIER.put("speech.aistudio", 6);
-    TIER.put("speech", 5);
-    TIER.put("cache", 4);
-    TIER.put("speech.model", 4);
-    TIER.put("profile", 3);
+    TIER.put("", 8);
+    TIER.put("capture", 7);
+    TIER.put("speech.openrouter", 7);
+    TIER.put("speech.aistudio", 7);
+    TIER.put("speech", 6);
+    TIER.put("cache", 5);
+    TIER.put("speech.model", 5);
+    TIER.put("profile", 4);
+    TIER.put("speaker.wiki", 3);
     TIER.put("speaker", 2);
     TIER.put("audio", 1);
     TIER.put("speech.spend", 1);

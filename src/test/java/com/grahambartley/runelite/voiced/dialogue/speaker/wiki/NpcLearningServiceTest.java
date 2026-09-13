@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.gson.Gson;
+import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Executor;

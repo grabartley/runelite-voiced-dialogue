@@ -6,7 +6,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
+import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;

@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,10 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class LearnedNpcStore {
 
-  private final Path file;
-  private final Gson gson;
   private static final long MISS_RETRY_MILLIS = TimeUnit.DAYS.toMillis(30);
 
+  private final Path file;
+  private final Gson gson;
   private final Map<Integer, NpcAttributes> learned = new ConcurrentHashMap<>();
   private final Map<Integer, Long> misses = new ConcurrentHashMap<>();
 
@@ -28,10 +27,6 @@ public final class LearnedNpcStore {
     this.file = file;
     this.gson = gson;
     load();
-  }
-
-  public boolean contains(int npcId) {
-    return learned.containsKey(npcId);
   }
 
   public NpcAttributes get(int npcId) {
@@ -77,51 +72,49 @@ public final class LearnedNpcStore {
     if (file == null || !Files.exists(file)) {
       return;
     }
-    String json;
+    JsonObject root;
     try {
-      json = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+      root =
+          new JsonParser()
+              .parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8))
+              .getAsJsonObject();
     } catch (Exception e) {
       log.debug("Could not read learned NPC store {}: {}", file, e.getMessage());
       return;
     }
-    loadLearned(json);
-    loadMisses(json);
+    loadLearned(root);
+    loadMisses(root);
   }
 
-  private void loadLearned(String json) {
-    try {
-      Map<Integer, NpcAttributes> entries =
-          NpcEntriesReader.read(
-              new StringReader(json),
-              AttributeSource.LEARNED,
-              (key, e) ->
-                  log.debug("Skipping malformed learned NPC entry {}: {}", key, e.getMessage()));
-      if (entries == null) {
-        return;
-      }
-      learned.putAll(entries);
-      log.info("Loaded {} learned NPC entries from {}", learned.size(), file);
-    } catch (RuntimeException e) {
-      log.debug("Could not read learned NPC entries {}: {}", file, e.getMessage());
+  private void loadLearned(JsonObject root) {
+    Map<Integer, NpcAttributes> entries =
+        NpcEntriesReader.read(
+            root,
+            AttributeSource.LEARNED,
+            (key, e) ->
+                log.debug("Skipping malformed learned NPC entry {}: {}", key, e.getMessage()));
+    if (entries == null) {
+      return;
     }
+    learned.putAll(entries);
+    log.info("Loaded {} learned NPC entries from {}", learned.size(), file);
   }
 
-  private void loadMisses(String json) {
-    try {
-      JsonObject root = new JsonParser().parse(json).getAsJsonObject();
-      if (!root.has("misses") || !root.get("misses").isJsonObject()) {
-        return;
-      }
-      JsonObject stored = root.getAsJsonObject("misses");
-      for (String key : stored.keySet()) {
-        try {
-          misses.put(Integer.valueOf(key), stored.get(key).getAsLong());
-        } catch (RuntimeException e) {
-          log.debug("Skipping malformed learned NPC miss {}: {}", key, e.getMessage());
+  private void loadMisses(JsonObject root) {
+    if (!root.has("misses") || !root.get("misses").isJsonObject()) {
+      return;
+    }
+    JsonObject stored = root.getAsJsonObject("misses");
+    long now = System.currentTimeMillis();
+    for (String key : stored.keySet()) {
+      try {
+        long missedAt = stored.get(key).getAsLong();
+        if (now - missedAt < MISS_RETRY_MILLIS) {
+          misses.put(Integer.valueOf(key), missedAt);
         }
+      } catch (RuntimeException e) {
+        log.debug("Skipping malformed learned NPC miss {}: {}", key, e.getMessage());
       }
-    } catch (RuntimeException e) {
-      log.debug("Could not read learned NPC misses {}: {}", file, e.getMessage());
     }
   }
 

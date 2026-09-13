@@ -47,15 +47,17 @@ import urllib.request
 
 WIKI_API = "https://oldschool.runescape.wiki/api.php"
 USER_AGENT = "runelite-voiced-dialogue NPC table generator (contact: grabartley@gmail.com)"
-# Talkable NPCs use Infobox NPC (carries race/gender/leagueRegion); talkable creatures use Infobox
-# Monster (carries none of those), so for Monster pages race comes from the page's categories.
-INFOBOX_TEMPLATES = ["Template:Infobox NPC", "Template:Infobox Monster"]
+
 
 MAPPING_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "main",
                             "resources", "wiki-mapping.json")
 
 with open(MAPPING_PATH, encoding="utf-8") as _mapping_file:
     MAPPING = json.load(_mapping_file)
+
+# Talkable NPCs use Infobox NPC (carries race/gender/leagueRegion); talkable creatures use Infobox
+# Monster (carries none of those), so for Monster pages race comes from the page's categories.
+INFOBOX_TEMPLATES = MAPPING["infoboxTemplates"]
 
 # Wiki page-category substring -> voice bucket, checked in order, first match wins. This is how
 # Infobox Monster NPCs (trolls like Kob, ghosts, TzHaar, ...) get a race the infobox does not carry.
@@ -70,8 +72,7 @@ DEFAULT_SUMMARY_URL = (
     "https://raw.githubusercontent.com/0xNeffarion/osrsreboxed-db/master/docs/npcs-summary.json"
 )
 
-VALID_RACES = ({r["race"] for r in MAPPING["raceRules"]}
-               | {r["race"] for r in MAPPING["categoryRaceRules"]})
+VALID_RACES = set(MAPPING["races"])
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}

@@ -1,4 +1,4 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,20 +8,23 @@ import java.util.regex.Pattern;
 
 final class WikiInfobox {
 
-  private static final Pattern RACE = field("race");
-  private static final Pattern GENDER = field("gender");
+  private static final Pattern RACE = versionedField("race");
+  private static final Pattern GENDER = versionedField("gender");
+  private static final Pattern ID = versionedField("id");
   private static final Pattern LEAGUE_REGION = field("leagueRegion");
   private static final Pattern LOCATION = field("location");
-  private static final Pattern ID = field("id");
-  private static final Pattern NPC_INFOBOX =
-      Pattern.compile("\\{\\{\\s*infobox[ _]+(npc|monster)", Pattern.CASE_INSENSITIVE);
   private static final Pattern ID_SEPARATOR = Pattern.compile("[,\\s]+");
-  private static final Pattern REF_TAG = Pattern.compile("<ref[^>]*>.*?</ref>", Pattern.DOTALL);
+  private static final Pattern REF_TAG =
+      Pattern.compile("<ref[^>]*>.*?</ref>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
   private static final Pattern HTML_TAG = Pattern.compile("<[^>]+>");
   private static final Pattern TEMPLATE = Pattern.compile("\\{\\{[^}]*\\}\\}");
 
+  private static Pattern versionedField(String key) {
+    return field(key + "\\d*");
+  }
+
   private static Pattern field(String key) {
-    return Pattern.compile("\\|\\s*" + key + "\\d*\\s*=\\s*([^\\n|]+)", Pattern.CASE_INSENSITIVE);
+    return Pattern.compile("\\|\\s*" + key + "\\s*=\\s*([^\\n|]+)", Pattern.CASE_INSENSITIVE);
   }
 
   private final String race;
@@ -44,10 +47,6 @@ final class WikiInfobox {
     this.genders = genders;
     this.idGroups = idGroups;
     this.categories = categories;
-  }
-
-  static boolean isNpcPage(String wikitext) {
-    return wikitext != null && NPC_INFOBOX.matcher(wikitext).find();
   }
 
   static WikiInfobox parse(String wikitext, List<String> categories) {
@@ -74,10 +73,6 @@ final class WikiInfobox {
 
   List<String> categories() {
     return categories;
-  }
-
-  List<String> genders() {
-    return genders;
   }
 
   String genderForVersion(int npcId) {

@@ -6,8 +6,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NameNormalizer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicParser;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcLearningService;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

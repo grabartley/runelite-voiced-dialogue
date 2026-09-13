@@ -1,5 +1,6 @@
-package com.grahambartley.runelite.voiced.dialogue.speaker;
+package com.grahambartley.runelite.voiced.dialogue.speaker.wiki;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -14,7 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public final class WikiMapping {
+final class WikiMapping {
 
   private static final String RESOURCE = "/wiki-mapping.json";
 
@@ -23,6 +24,8 @@ public final class WikiMapping {
   private final List<RacePattern> raceRules;
   private final List<CategoryRule> categoryRules;
   private final Map<String, String> leagueRegionEthnicity;
+  private final List<String> races;
+  private final Pattern infoboxTemplates;
   private final String defaultRace;
   private final String defaultGender;
   private final String femaleGender;
@@ -53,6 +56,11 @@ public final class WikiMapping {
     for (String region : regions.keySet()) {
       leagueRegionEthnicity.put(region.toLowerCase(Locale.ROOT), regions.get(region).getAsString());
     }
+    races = new ArrayList<>();
+    for (JsonElement element : root.getAsJsonArray("races")) {
+      races.add(element.getAsString());
+    }
+    infoboxTemplates = infoboxPattern(root.getAsJsonArray("infoboxTemplates"));
     defaultRace = root.get("defaultRace").getAsString();
     defaultGender = root.get("defaultGender").getAsString();
     femaleGender = root.get("femaleGender").getAsString();
@@ -63,19 +71,19 @@ public final class WikiMapping {
     desertEthnicity = desert.get("default").getAsString();
   }
 
-  public static WikiMapping get() {
+  static WikiMapping get() {
     return INSTANCE;
   }
 
-  public String defaultRace() {
+  String defaultRace() {
     return defaultRace;
   }
 
-  public String defaultGender() {
+  String defaultGender() {
     return defaultGender;
   }
 
-  public String genderForWikiText(String genderText) {
+  String genderForWikiText(String genderText) {
     if (genderText != null) {
       String normalised = genderText.trim().toLowerCase(Locale.ROOT);
       if (normalised.startsWith("f")) {
@@ -85,7 +93,7 @@ public final class WikiMapping {
     return defaultGender;
   }
 
-  public String raceForWikiText(String raceText) {
+  String raceForWikiText(String raceText) {
     if (raceText == null || raceText.isEmpty()) {
       return null;
     }
@@ -97,7 +105,7 @@ public final class WikiMapping {
     return defaultRace;
   }
 
-  public String raceForCategories(List<String> categories) {
+  String raceForCategories(List<String> categories) {
     if (categories == null || categories.isEmpty()) {
       return null;
     }
@@ -110,7 +118,7 @@ public final class WikiMapping {
     return null;
   }
 
-  public String ethnicityKey(String leagueRegion, String location, List<String> categories) {
+  String ethnicityKey(String leagueRegion, String location, List<String> categories) {
     if (leagueRegion == null) {
       return null;
     }
@@ -132,14 +140,21 @@ public final class WikiMapping {
   }
 
   List<String> races() {
-    List<String> races = new ArrayList<>();
-    for (RacePattern rule : raceRules) {
-      races.add(rule.race);
-    }
-    for (CategoryRule rule : categoryRules) {
-      races.add(rule.race);
-    }
     return Collections.unmodifiableList(races);
+  }
+
+  boolean isNpcPage(String wikitext) {
+    return wikitext != null && infoboxTemplates.matcher(wikitext).find();
+  }
+
+  private static Pattern infoboxPattern(JsonArray templates) {
+    StringBuilder alternatives = new StringBuilder();
+    for (JsonElement element : templates) {
+      String name = element.getAsString().replaceFirst("^[^:]+:", "");
+      alternatives.append(alternatives.length() == 0 ? "" : "|");
+      alternatives.append(Pattern.quote(name).replace(" ", "\\E[ _]+\\Q"));
+    }
+    return Pattern.compile("\\{\\{\\s*(" + alternatives + ")", Pattern.CASE_INSENSITIVE);
   }
 
   private static WikiMapping load() {
