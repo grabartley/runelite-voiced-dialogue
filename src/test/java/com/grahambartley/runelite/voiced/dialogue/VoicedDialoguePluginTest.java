@@ -12,6 +12,9 @@ import com.grahambartley.runelite.voiced.dialogue.audio.AudioOutput;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingAudioPlayer;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.BackendProvider;
 import com.grahambartley.runelite.voiced.dialogue.speech.DialogueAudioService;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
@@ -151,6 +154,26 @@ public class VoicedDialoguePluginTest {
 
     assertEquals("a warm queued at close never reaches the backend", 0, warmRuns.get());
     assertEquals("and never warms it", 0, warmCalls.get());
+  }
+
+  @Test
+  public void aWarmQueuedWhileALineIsPlayingStillWarms() throws Exception {
+    AtomicInteger warmCalls = new AtomicInteger();
+    Harness harness = harness(warmCalls);
+    AtomicInteger warmRuns = new AtomicInteger();
+
+    harness.audioService.delegate.speak(
+        new SynthesisRequest(
+            "A line",
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
+            Emotion.NEUTRAL,
+            null,
+            true,
+            false));
+    harness.audioService.delegate.prewarm(warmRuns::incrementAndGet);
+    harness.audioService.awaitWarm();
+
+    assertEquals("a warm issued during a line still runs", 1, warmRuns.get());
   }
 
   private static void submitSpendTask(VoicedDialoguePlugin plugin, Runnable task) throws Exception {

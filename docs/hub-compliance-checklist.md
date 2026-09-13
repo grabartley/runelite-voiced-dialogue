@@ -65,10 +65,15 @@ src/main` returns nothing), never sleeps a thread (`grep -rn "sleep(" src/main` 
 and never interrupts one (`grep -rn "Thread.currentThread\|\.interrupt(\|shutdownNow" src/main`
 returns nothing).
 
-Every wait is a delayed `CompletableFuture` joined to completion rather than a sleeping thread: the
-cloud retry backoff in `CloudBackendSupport`, and the 500 ms rate limit `WikiCallThrottle` puts
-between wiki lookups. Blocking waits use `CompletableFuture.join()`, which needs no
+Deliberate waits are a delayed `CompletableFuture` joined to completion rather than a sleeping
+thread: the cloud retry backoff in `CloudBackendSupport`, and the 500 ms rate limit
+`WikiCallThrottle` puts between wiki lookups. `CompletableFuture.join()` needs no
 `InterruptedException` handling.
+
+The one interruptible wait in `src/main` is in `DialogueAudioService.close()`, which gives an
+already-running worker a bounded two seconds per pool to finish before it stops waiting. It never
+interrupts that worker, and it runs on the client thread only while the player is disabling the
+plugin.
 
 Every executor is closed with `ExecutorService.shutdown()`, so a worker already running finishes on
 its own and none is ever interrupted. `shutdown()` still lets a queued task start, so each pool
@@ -77,7 +82,9 @@ disk, or the audio line:
 
 | Pool | Guard checked before any work |
 |---|---|
-| Synthesis, warm, prefetch | `epoch` generation counter in `DialogueAudioService` |
+| Synthesis | `epoch` generation counter in `DialogueAudioService` |
+| Warm | `closed` flag in `DialogueAudioService` |
+| Prefetch | `prefetchEpoch` generation counter in `DialogueAudioService` |
 | Ambient synthesis and playback | `ambientEpoch` generation counter in `DialogueAudioService` |
 | `tts-wiki-learn` | `NpcLearningService.close()`, checked either side of the throttle wait and again once the wiki answers |
 | `tts-spend` | `spendEpoch` generation counter in `VoicedDialoguePlugin` |

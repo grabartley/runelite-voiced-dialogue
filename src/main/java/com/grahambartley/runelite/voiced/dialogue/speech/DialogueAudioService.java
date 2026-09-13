@@ -58,6 +58,8 @@ public final class DialogueAudioService {
   private final Set<AmbientLine> ambientLines = ConcurrentHashMap.newKeySet();
   private final Map<Integer, CompletableFuture<Void>> ambientChains = new ConcurrentHashMap<>();
   private final AtomicLong epoch = new AtomicLong();
+
+  private volatile boolean closed;
   private final AtomicLong prefetchEpoch = new AtomicLong();
   private final AtomicLong ambientEpoch = new AtomicLong();
 
@@ -106,11 +108,10 @@ public final class DialogueAudioService {
   }
 
   public void prewarm(Runnable warm) {
-    long mine = epoch.get();
     submitQuietly(
         warmExecutor,
         () -> {
-          if (epoch.get() == mine) {
+          if (!closed) {
             warm.run();
           }
         });
@@ -314,6 +315,7 @@ public final class DialogueAudioService {
   }
 
   public void close() {
+    closed = true;
     epoch.incrementAndGet();
     prefetchEpoch.incrementAndGet();
     output.stop();
@@ -344,7 +346,9 @@ public final class DialogueAudioService {
       ExecutorService es = (ExecutorService) exec;
       es.shutdown();
       try {
-        es.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
+        if (!es.awaitTermination(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS)) {
+          log.debug("A worker was still running after {}s, leaving it be", SHUTDOWN_WAIT_SECONDS);
+        }
       } catch (InterruptedException e) {
         log.debug("Interrupted while awaiting executor shutdown");
       }
