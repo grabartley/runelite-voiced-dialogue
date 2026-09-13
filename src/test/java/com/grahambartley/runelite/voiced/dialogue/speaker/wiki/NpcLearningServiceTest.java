@@ -11,6 +11,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Executor;
+import java.util.function.IntPredicate;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -45,7 +46,11 @@ public class NpcLearningServiceTest {
   }
 
   private NpcLearningService service(boolean enabled) {
-    return new NpcLearningService(client, store, INLINE, () -> enabled, UNTHROTTLED);
+    return service(enabled, npcId -> false);
+  }
+
+  private NpcLearningService service(boolean enabled, IntPredicate voiced) {
+    return new NpcLearningService(client, store, INLINE, () -> enabled, voiced, UNTHROTTLED);
   }
 
   private void enqueueNpc() {
@@ -96,7 +101,7 @@ public class NpcLearningServiceTest {
 
     LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
     assertFalse(reloaded.isWorthLooking(800, System.currentTimeMillis()));
-    new NpcLearningService(client, reloaded, INLINE, () -> true, UNTHROTTLED)
+    new NpcLearningService(client, reloaded, INLINE, () -> true, npcId -> false, UNTHROTTLED)
         .considerLearning(800, "Nobody");
     assertEquals("a remembered miss is not queried again", 1, server.getRequestCount());
   }
@@ -113,7 +118,7 @@ public class NpcLearningServiceTest {
     LearnedNpcStore reloaded = new LearnedNpcStore(file, gson);
     assertTrue(reloaded.isWorthLooking(900, System.currentTimeMillis()));
     enqueueNpc();
-    new NpcLearningService(client, reloaded, INLINE, () -> true, UNTHROTTLED)
+    new NpcLearningService(client, reloaded, INLINE, () -> true, npcId -> false, UNTHROTTLED)
         .considerLearning(900, "New Troll");
     assertEquals(2, server.getRequestCount());
     assertEquals("Troll", reloaded.get(900).getRace());
@@ -121,10 +126,27 @@ public class NpcLearningServiceTest {
 
   @Test
   public void onlyDialogueMenuOptionsStartALookup() {
-    assertTrue(NpcLearningService.isDialogueOption("Talk-to"));
-    assertTrue(NpcLearningService.isDialogueOption("talk to"));
-    assertFalse(NpcLearningService.isDialogueOption("Attack"));
-    assertFalse(NpcLearningService.isDialogueOption("Examine"));
-    assertFalse(NpcLearningService.isDialogueOption(null));
+    NpcLearningService service = service(true);
+
+    service.onMenuOption("Attack", 1000, "Someone");
+    service.onMenuOption("Examine", 1001, "Someone");
+    service.onMenuOption(null, 1002, "Someone");
+    assertEquals("a click that starts no conversation asks nothing", 0, server.getRequestCount());
+
+    enqueueNpc();
+    service.onMenuOption("Talk-to", 1003, "New Troll");
+    assertEquals(1, server.getRequestCount());
+    assertEquals("Troll", store.get(1003).getRace());
+  }
+
+  @Test
+  public void anNpcTheBundledTableAlreadyVoicesIsNeverLookedUp() {
+    NpcLearningService service = service(true, npcId -> npcId == 1100);
+
+    service.considerLearning(1100, "Bundled NPC");
+    service.onMenuOption("Talk-to", 1100, "Bundled NPC");
+
+    assertEquals("the bundled table wins, so nothing is asked", 0, server.getRequestCount());
+    assertNull(store.get(1100));
   }
 }

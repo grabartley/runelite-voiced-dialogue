@@ -63,6 +63,10 @@ public class VoiceManager {
     this.npcVoiceResolver = new NpcVoiceResolver(config);
   }
 
+  public boolean isVoiced(int npcId) {
+    return demographicAnalyzer.isVoiced(npcId);
+  }
+
   public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
     this.demographicAnalyzer.setLearnedStore(store);
     this.npcVoiceResolver.setLearningService(service);

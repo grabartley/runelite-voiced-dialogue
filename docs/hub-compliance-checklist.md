@@ -30,7 +30,7 @@ pool, derives from it via `newBuilder()` (allowed):
   `httpClient.newBuilder()...build()`; `AiStudioTranslator` shares that derived client.
 - `OpenRouterUsageClient.java`: the `::voicedspend` balance read, using the injected client
   as-is.
-- `speaker/WikiNpcClient.java`: optional NPC auto-learn lookups, also through the injected
+- `speaker/wiki/WikiNpcClient.java`: optional NPC auto-learn lookups, also through the injected
   client.
 
 ### All network and synthesis stays off the game thread

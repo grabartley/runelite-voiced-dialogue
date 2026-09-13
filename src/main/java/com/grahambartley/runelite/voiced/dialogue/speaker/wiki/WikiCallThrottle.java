@@ -12,21 +12,25 @@ public final class WikiCallThrottle {
     this.intervalNanos = TimeUnit.MILLISECONDS.toNanos(intervalMillis);
   }
 
-  public synchronized boolean awaitTurn() {
-    long now = System.nanoTime();
-    if (lastCallAt != 0) {
-      long remaining = lastCallAt + intervalNanos - now;
-      if (remaining > 0) {
-        try {
-          TimeUnit.NANOSECONDS.sleep(remaining);
-        } catch (InterruptedException interrupted) {
-          Thread.currentThread().interrupt();
-          return false;
-        }
-        now = System.nanoTime();
+  public boolean awaitTurn() {
+    long waitNanos;
+    synchronized (this) {
+      long now = System.nanoTime();
+      long turnAt = lastCallAt == 0 ? now : lastCallAt + intervalNanos;
+      if (turnAt < now) {
+        turnAt = now;
+      }
+      waitNanos = turnAt - now;
+      lastCallAt = turnAt == 0 ? 1 : turnAt;
+    }
+    if (waitNanos > 0) {
+      try {
+        TimeUnit.NANOSECONDS.sleep(waitNanos);
+      } catch (InterruptedException interrupted) {
+        Thread.currentThread().interrupt();
+        return false;
       }
     }
-    lastCallAt = now == 0 ? 1 : now;
     return true;
   }
 }

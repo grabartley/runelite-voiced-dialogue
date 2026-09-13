@@ -135,8 +135,11 @@ public final class LearnedNpcStore {
         npcs.add(String.valueOf(e.getKey()), entry);
       }
       JsonObject storedMisses = new JsonObject();
+      long now = System.currentTimeMillis();
       for (Map.Entry<Integer, Long> e : misses.entrySet()) {
-        storedMisses.addProperty(String.valueOf(e.getKey()), e.getValue());
+        if (now - e.getValue() < MISS_RETRY_MILLIS) {
+          storedMisses.addProperty(String.valueOf(e.getKey()), e.getValue());
+        }
       }
       JsonObject root = new JsonObject();
       root.add("npcs", npcs);

@@ -4,7 +4,6 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -144,12 +143,12 @@ public class WikiMappingTest {
   }
 
   @Test
-  public void everyRuleAnswersWithAMappedRace() {
-    for (String race : mapping.races()) {
-      assertNotNull(race);
+  public void everyRuleAnswersWithARaceTheOverridesAccept() {
+    for (String race : mapping.ruleRaces()) {
+      assertTrue("'" + race + "' is a declared race", mapping.races().contains(race));
     }
-    assertTrue(mapping.races().contains(mapping.raceForWikiText("Ogre")));
+    assertTrue(mapping.ruleRaces().contains(mapping.raceForWikiText("Ogre")));
     assertTrue(
-        mapping.races().contains(mapping.raceForCategories(singletonList("Category:Wizards"))));
+        mapping.ruleRaces().contains(mapping.raceForCategories(singletonList("Category:Wizards"))));
   }
 }

@@ -62,6 +62,10 @@ public class NpcDemographicAnalyzer {
     return learnedStore != null ? learnedStore.get(npcId) : null;
   }
 
+  public boolean isVoiced(int npcId) {
+    return lookupKnown(npcId) != null;
+  }
+
   public int getTableSize() {
     return voiceTable.size();
   }

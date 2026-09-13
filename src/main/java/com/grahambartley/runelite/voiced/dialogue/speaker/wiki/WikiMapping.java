@@ -79,10 +79,6 @@ final class WikiMapping {
     return defaultRace;
   }
 
-  String defaultGender() {
-    return defaultGender;
-  }
-
   String genderForWikiText(String genderText) {
     if (genderText != null) {
       String normalised = genderText.trim().toLowerCase(Locale.ROOT);
@@ -137,6 +133,17 @@ final class WikiMapping {
       return menaphiteHint.matcher(hint).find() ? menaphiteEthnicity : desertEthnicity;
     }
     return leagueRegionEthnicity.get(key);
+  }
+
+  List<String> ruleRaces() {
+    List<String> ruleRaces = new ArrayList<>();
+    for (RacePattern rule : raceRules) {
+      ruleRaces.add(rule.race);
+    }
+    for (CategoryRule rule : categoryRules) {
+      ruleRaces.add(rule.race);
+    }
+    return ruleRaces;
   }
 
   List<String> races() {

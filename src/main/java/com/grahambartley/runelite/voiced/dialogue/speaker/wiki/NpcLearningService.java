@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
+import java.util.function.IntPredicate;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -18,6 +19,7 @@ public final class NpcLearningService {
   private final LearnedNpcStore store;
   private final Executor executor;
   private final BooleanSupplier enabled;
+  private final IntPredicate voiced;
   private final WikiCallThrottle throttle;
   private final Set<Integer> attempted = ConcurrentHashMap.newKeySet();
 
@@ -26,24 +28,30 @@ public final class NpcLearningService {
       LearnedNpcStore store,
       Executor executor,
       BooleanSupplier enabled,
+      IntPredicate voiced,
       WikiCallThrottle throttle) {
     this.client = client;
     this.store = store;
     this.executor = executor;
     this.enabled = enabled;
+    this.voiced = voiced;
     this.throttle = throttle;
   }
 
-  public static boolean isDialogueOption(String menuOption) {
-    return menuOption != null
-        && menuOption.trim().toLowerCase(Locale.ROOT).startsWith(DIALOGUE_OPTION_PREFIX);
+  public void onMenuOption(String menuOption, int npcId, String npcName) {
+    if (menuOption != null
+        && menuOption.trim().toLowerCase(Locale.ROOT).startsWith(DIALOGUE_OPTION_PREFIX)) {
+      considerLearning(npcId, npcName);
+    }
   }
 
   public void considerLearning(int npcId, String npcName) {
     if (!enabled.getAsBoolean() || npcName == null || npcName.isEmpty()) {
       return;
     }
-    if (!store.isWorthLooking(npcId, System.currentTimeMillis()) || !attempted.add(npcId)) {
+    if (voiced.test(npcId)
+        || !store.isWorthLooking(npcId, System.currentTimeMillis())
+        || !attempted.add(npcId)) {
       return;
     }
     executor.execute(

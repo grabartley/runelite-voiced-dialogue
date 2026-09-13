@@ -126,6 +126,7 @@ public class VoicedDialoguePlugin extends Plugin {
             learnedStore,
             wikiExecutor,
             config::autoLearnNewNpcs,
+            voiceManager::isVoiced,
             new WikiCallThrottle(WIKI_CALL_INTERVAL_MILLIS));
     voiceManager.enableLearning(learnedStore, learningService);
 
@@ -265,12 +266,12 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onMenuOptionClicked(MenuOptionClicked event) {
-    if (learningService == null || !NpcLearningService.isDialogueOption(event.getMenuOption())) {
+    if (learningService == null) {
       return;
     }
     NPC npc = event.getMenuEntry().getNpc();
     if (npc != null) {
-      learningService.considerLearning(npc.getId(), npc.getName());
+      learningService.onMenuOption(event.getMenuOption(), npc.getId(), npc.getName());
     }
   }
 
