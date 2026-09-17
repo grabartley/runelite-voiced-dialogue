@@ -21,7 +21,7 @@ public final class FollowerBuddyIntegration {
   private final FollowerBuddySettings settings;
   private final FollowerSpeaker speaker;
 
-  private boolean mirrorNoticeChecked;
+  private volatile boolean mirrorNoticeChecked;
 
   public FollowerBuddyIntegration(
       ConfigManager configManager,
@@ -55,6 +55,9 @@ public final class FollowerBuddyIntegration {
   public void onConfigChanged(ConfigChanged event) {
     if (FollowerBuddySettings.owns(event.getGroup())) {
       settings.invalidate();
+      if (FollowerBuddySettings.MIRROR_TO_CHAT_KEY.equals(event.getKey())) {
+        mirrorNoticeChecked = false;
+      }
       return;
     }
     if (VoicedDialogueConfig.GROUP.equals(event.getGroup())

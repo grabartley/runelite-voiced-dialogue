@@ -13,16 +13,14 @@ public final class FollowerBuddySettings {
 
   static final String OUTFIT_KEY = "customOutfit";
 
-  static final String DEFAULT_NAME = "Follower";
-
   private static final String RUNELITE_GROUP = "runelite";
 
   private static final String EXTERNAL_PLUGINS_KEY = "externalPlugins";
 
   private final ConfigManager configManager;
 
-  private String cachedName;
-  private NpcGender cachedOutfitGender;
+  private volatile String cachedName;
+  private volatile NpcGender cachedOutfitGender;
 
   public FollowerBuddySettings(ConfigManager configManager) {
     this.configManager = configManager;
@@ -41,7 +39,7 @@ public final class FollowerBuddySettings {
     String name = cachedName;
     if (name == null) {
       String stored = configManager.getConfiguration(GROUP, NAME_KEY);
-      name = stored == null || stored.trim().isEmpty() ? DEFAULT_NAME : stored.trim();
+      name = stored == null || stored.trim().isEmpty() ? null : stored.trim();
       cachedName = name;
     }
     return name;

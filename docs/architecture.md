@@ -47,8 +47,11 @@ behind **Voice Follower Buddy**, off by default. Follower Buddy mirrors each lin
 speaks to public chat under the companion's configured name, and `FollowerSpeaker` picks it up off
 the same `ChatMessage` event `PublicChatSpeaker` reads. There is no compile or runtime dependency on
 its jar: the companion's name, its outfit and its mirroring setting are `ConfigManager` reads of
-another plugin's group, each falling back to our own settings when absent, so the feature is inert
-rather than broken when Follower Buddy is not installed. Its right-click Talk-to window is an
+another plugin's group. An absent name is a profile Follower Buddy has never run in, so there is no
+companion to voice and nothing is matched at all; that is what keeps the feature from billing a
+cloud call on a passing player who happens to share the companion's default name. The outfit and
+the mirroring flag degrade to our own settings, so the feature is inert rather than broken when
+Follower Buddy is not installed. Its right-click Talk-to window is an
 `Overlay` drawing to the canvas and its overhead bubble is drawn rather than set on an actor, so
 neither raises an event; the mirrored chat line carries the same text as the bubble, so it covers
 everything the bubble shows.

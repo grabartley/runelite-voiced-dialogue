@@ -25,8 +25,8 @@ public final class GeminiVoiceMap {
     playerVoices.put(NpcGender.FEMALE, new String[] {"Aoede", "Autonoe"});
 
     followerVoices = new EnumMap<>(NpcGender.class);
-    followerVoices.put(NpcGender.MALE, new String[] {"Umbriel", "Algieba"});
-    followerVoices.put(NpcGender.FEMALE, new String[] {"Laomedeia", "Autonoe"});
+    followerVoices.put(NpcGender.MALE, new String[] {"Umbriel"});
+    followerVoices.put(NpcGender.FEMALE, new String[] {"Laomedeia"});
 
     childVoices = new EnumMap<>(NpcGender.class);
     childVoices.put(NpcGender.MALE, new String[] {"Puck"});

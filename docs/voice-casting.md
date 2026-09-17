@@ -63,7 +63,7 @@ The player, the follower, children, and the narrator resolve outside the race ta
 | Speaker | Male | Female |
 |---|---|---|
 | Player | Achird, Iapetus | Aoede, Autonoe |
-| Follower | Umbriel, Algieba | Laomedeia, Autonoe |
+| Follower | Umbriel | Laomedeia |
 | Child | Puck | Leda, Zephyr |
 | Narrator | Callirrhoe | Callirrhoe |
 

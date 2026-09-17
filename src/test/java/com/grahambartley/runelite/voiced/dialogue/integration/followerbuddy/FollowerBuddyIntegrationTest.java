@@ -192,7 +192,7 @@ public class FollowerBuddyIntegrationTest {
   }
 
   @Test
-  public void aFollowerBuddyChangeDoesNotReArmTheNotice() {
+  public void switchingFollowerBuddysOwnMirroringOffReArmsTheNotice() {
     installedFromHub("follower-buddy");
     mirrorToChat(false);
 
@@ -201,7 +201,32 @@ public class FollowerBuddyIntegrationTest {
         configChange(FollowerBuddySettings.GROUP, FollowerBuddySettings.MIRROR_TO_CHAT_KEY));
     integration.onGameTick();
 
+    verify(notices, times(2)).postNotice(FollowerBuddyIntegration.MIRROR_OFF_NOTICE);
+  }
+
+  @Test
+  public void anUnrelatedFollowerBuddyChangeDoesNotReArmTheNotice() {
+    installedFromHub("follower-buddy");
+    mirrorToChat(false);
+
+    integration.onGameTick();
+    integration.onConfigChanged(
+        configChange(FollowerBuddySettings.GROUP, FollowerBuddySettings.OUTFIT_KEY));
+    integration.onGameTick();
+
     verify(notices, times(1)).postNotice(FollowerBuddyIntegration.MIRROR_OFF_NOTICE);
+  }
+
+  @Test
+  public void withFollowerBuddyNeverInstalledNoPlayersChatIsEverVoiced() {
+    when(configManager.getConfiguration(
+            FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY))
+        .thenReturn(null);
+
+    integration.onChatMessage(chat(ChatMessageType.PUBLICCHAT, "Follower", "Hi there!"));
+    integration.onChatMessage(chat(ChatMessageType.PUBLICCHAT, "Zezima", "Hi there!"));
+
+    verify(dispatcher, never()).speakFollower(anyString(), any());
   }
 
   private void installedFromHub(String externalPlugins) {

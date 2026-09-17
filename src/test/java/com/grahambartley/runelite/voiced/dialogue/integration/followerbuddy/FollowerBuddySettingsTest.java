@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.integration.followerbuddy;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -42,17 +43,20 @@ public class FollowerBuddySettingsTest {
   }
 
   @Test
-  public void anAbsentOrBlankNameFallsBackToTheFollowerBuddyDefault() {
+  public void anAbsentOrBlankNameMeansThereIsNoCompanionToVoice() {
     when(configManager.getConfiguration(
             FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY))
         .thenReturn(null);
-    assertEquals(FollowerBuddySettings.DEFAULT_NAME, settings.followerName());
+    assertNull(
+        "an absent group is a profile Follower Buddy never ran in, not a companion called"
+            + " Follower",
+        settings.followerName());
 
     settings.invalidate();
     when(configManager.getConfiguration(
             FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY))
         .thenReturn("   ");
-    assertEquals(FollowerBuddySettings.DEFAULT_NAME, settings.followerName());
+    assertNull(settings.followerName());
   }
 
   @Test
