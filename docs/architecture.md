@@ -62,7 +62,9 @@ it takes a speaker chain of its own in `DialogueAudioService` exactly as each ne
 lines queue behind each other and never overlap themselves. The chain id sits below zero, where no
 NPC index can reach, so the companion and a crowd of NPCs sound at the same time on their own audio
 lines without either cutting the other. It plays at the configured volume rather than a
-distance-scaled one, since the companion is always beside you.
+distance-scaled one, since the companion is always beside you, and it falls silent while a
+conversation is on screen for the same reason ambient chatter does: a companion talking over the
+dialogue you are reading is noise, and a line skipped is a line not billed.
 
 Whether Follower Buddy is installed is read from `runelite.externalPlugins`, the Hub list its own
 removal edits, rather than from the presence of its config keys: RuneLite persists a plugin's

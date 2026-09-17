@@ -1,8 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.integration.followerbuddy;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -29,15 +27,5 @@ public class FollowerBuddyPresenceTest {
       new Object[] {"", false},
       new Object[] {null, false},
     };
-  }
-
-  @Test
-  public void theNoticeOnlyFiresForAnInstalledPluginWithMirroringOff() {
-    assertTrue(FollowerBuddyPresence.shouldWarnMirrorOff(true, false));
-    assertFalse(FollowerBuddyPresence.shouldWarnMirrorOff(true, true));
-    assertFalse(
-        "stale config alone never earns a notice",
-        FollowerBuddyPresence.shouldWarnMirrorOff(false, false));
-    assertFalse(FollowerBuddyPresence.shouldWarnMirrorOff(false, true));
   }
 }

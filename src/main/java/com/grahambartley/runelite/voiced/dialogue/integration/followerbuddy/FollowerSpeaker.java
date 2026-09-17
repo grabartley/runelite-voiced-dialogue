@@ -14,6 +14,7 @@ public final class FollowerSpeaker {
   private final DialogueTextCleaner textCleaner;
   private final SynthesisDispatcher dispatcher;
   private final BooleanSupplier enabled;
+  private final BooleanSupplier conversationOnScreen;
   private final Supplier<String> followerName;
   private final Supplier<NpcGender> gender;
 
@@ -21,17 +22,21 @@ public final class FollowerSpeaker {
       DialogueTextCleaner textCleaner,
       SynthesisDispatcher dispatcher,
       BooleanSupplier enabled,
+      BooleanSupplier conversationOnScreen,
       Supplier<String> followerName,
       Supplier<NpcGender> gender) {
     this.textCleaner = textCleaner;
     this.dispatcher = dispatcher;
     this.enabled = enabled;
+    this.conversationOnScreen = conversationOnScreen;
     this.followerName = followerName;
     this.gender = gender;
   }
 
   public void onChatMessage(ChatMessage event) {
-    if (event.getType() != ChatMessageType.PUBLICCHAT || !enabled.getAsBoolean()) {
+    if (event.getType() != ChatMessageType.PUBLICCHAT
+        || !enabled.getAsBoolean()
+        || conversationOnScreen.getAsBoolean()) {
       return;
     }
     if (!PublicChatPolicy.isFrom(event.getName(), followerName.get())) {

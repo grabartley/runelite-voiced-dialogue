@@ -220,7 +220,12 @@ public class VoicedDialoguePlugin extends Plugin {
 
     followerBuddy =
         new FollowerBuddyIntegration(
-            configManager, noticeManager, textCleaner, synthesisDispatcher, config);
+            configManager,
+            noticeManager,
+            textCleaner,
+            synthesisDispatcher,
+            dialogueWatcher::isConversationOnScreen,
+            config);
 
     log.info("VoicedDialogue started");
   }

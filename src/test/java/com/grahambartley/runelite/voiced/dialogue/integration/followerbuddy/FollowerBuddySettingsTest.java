@@ -60,6 +60,31 @@ public class FollowerBuddySettingsTest {
   }
 
   @Test
+  public void anAbsentNameIsMemoisedSoTheChatPathStopsReadingConfig() {
+    when(configManager.getConfiguration(
+            FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY))
+        .thenReturn(null);
+
+    assertNull(settings.followerName());
+    assertNull(settings.followerName());
+    assertNull(settings.followerName());
+
+    verify(configManager, times(1))
+        .getConfiguration(FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY);
+  }
+
+  @Test
+  public void invalidatingPicksUpAFollowerBuddyInstalledMidSession() {
+    when(configManager.getConfiguration(
+            FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY))
+        .thenReturn(null, "Barkley");
+
+    assertNull(settings.followerName());
+    settings.invalidate();
+    assertEquals("Barkley", settings.followerName());
+  }
+
+  @Test
   public void theNameIsTrimmedBeforeItIsMatched() {
     when(configManager.getConfiguration(
             FollowerBuddySettings.GROUP, FollowerBuddySettings.NAME_KEY))

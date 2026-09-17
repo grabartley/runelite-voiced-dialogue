@@ -5,6 +5,7 @@ import com.grahambartley.runelite.voiced.dialogue.capture.ChatNoticeManager;
 import com.grahambartley.runelite.voiced.dialogue.capture.DialogueTextCleaner;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
+import java.util.function.BooleanSupplier;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -28,13 +29,19 @@ public final class FollowerBuddyIntegration {
       ChatNoticeManager notices,
       DialogueTextCleaner textCleaner,
       SynthesisDispatcher dispatcher,
+      BooleanSupplier conversationOnScreen,
       VoicedDialogueConfig config) {
     this.config = config;
     this.notices = notices;
     this.settings = new FollowerBuddySettings(configManager);
     this.speaker =
         new FollowerSpeaker(
-            textCleaner, dispatcher, config::voiceFollower, settings::followerName, this::gender);
+            textCleaner,
+            dispatcher,
+            config::voiceFollower,
+            conversationOnScreen,
+            settings::followerName,
+            this::gender);
   }
 
   public void onChatMessage(ChatMessage event) {
@@ -46,8 +53,7 @@ public final class FollowerBuddyIntegration {
       return;
     }
     mirrorNoticeChecked = true;
-    if (FollowerBuddyPresence.shouldWarnMirrorOff(
-        settings.installedFromHub(), settings.mirrorToChat())) {
+    if (settings.installedFromHub() && !settings.mirrorToChat()) {
       notices.postNotice(MIRROR_OFF_NOTICE);
     }
   }

@@ -32,6 +32,8 @@ public class FollowerBuddyIntegrationTest {
   private final SynthesisDispatcher dispatcher = mock(SynthesisDispatcher.class);
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
 
+  private boolean conversationOnScreen;
+
   private FollowerBuddyIntegration integration;
 
   @Before
@@ -47,6 +49,7 @@ public class FollowerBuddyIntegrationTest {
             notices,
             new DialogueTextCleaner(new ProfanityFilter()),
             dispatcher,
+            () -> conversationOnScreen,
             config);
   }
 
@@ -57,6 +60,15 @@ public class FollowerBuddyIntegrationTest {
     integration.onChatMessage(chat(ChatMessageType.PUBLICCHAT, FOLLOWER_NAME, "Woof!"));
 
     verify(dispatcher).speakFollower("Woof!", NpcGender.MALE);
+  }
+
+  @Test
+  public void theCompanionDoesNotTalkOverADialogueYouAreReading() {
+    conversationOnScreen = true;
+
+    integration.onChatMessage(chat(ChatMessageType.PUBLICCHAT, FOLLOWER_NAME, "Woof!"));
+
+    verify(dispatcher, never()).speakFollower(anyString(), any());
   }
 
   @Test

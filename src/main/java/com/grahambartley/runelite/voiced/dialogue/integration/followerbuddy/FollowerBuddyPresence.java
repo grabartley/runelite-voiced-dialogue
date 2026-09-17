@@ -17,8 +17,4 @@ public final class FollowerBuddyPresence {
     }
     return false;
   }
-
-  public static boolean shouldWarnMirrorOff(boolean installedFromHub, boolean mirrorToChat) {
-    return installedFromHub && !mirrorToChat;
-  }
 }

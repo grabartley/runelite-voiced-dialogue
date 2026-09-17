@@ -154,6 +154,10 @@ owner walking beside them.
 Its gender seeds from the outfit built in Follower Buddy, so a companion dressed as a woman gets a
 woman's voice without being asked twice, and the setting pins it when the player wants otherwise.
 
+It is configured like the player but delivered like a character: its lines follow the NPC Speaking
+Style rather than the player one, carry the cave echo, and are translated by the Spoken Language
+setting. The companion is someone standing in the room with you, not the voice in your own head.
+
 ## What the cache key does and does not see
 
 A voice spec's cache-key fragment carries the speaker class, race, and gender: `npc:ELF:FEMALE`,

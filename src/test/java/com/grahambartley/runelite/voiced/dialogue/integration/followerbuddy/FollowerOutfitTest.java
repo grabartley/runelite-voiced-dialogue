@@ -45,6 +45,13 @@ public class FollowerOutfitTest {
   }
 
   @Test
+  public void aCommentedTokenIsSkippedAndTheLastGenderWins() {
+    assertEquals(NpcGender.UNKNOWN, FollowerOutfit.genderOf("#gender=female"));
+    assertEquals(NpcGender.UNKNOWN, FollowerOutfit.genderOf("//gender=female"));
+    assertEquals(NpcGender.MALE, FollowerOutfit.genderOf("gender=female,gender=male"));
+  }
+
+  @Test
   public void theOutfitFormFollowerBuddyActuallyWritesIsRead() {
     assertEquals(
         NpcGender.FEMALE,

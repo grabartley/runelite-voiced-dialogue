@@ -138,7 +138,7 @@ never a peer.
 | Tier | Package | Holds |
 |---|---|---|
 | 9 | (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties`, and the wiring that constructs both provider backends |
-| 8 | `integration.followerbuddy` | Voicing the [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin's companion: its chat mirror, its config group, its outfit string. Everything that knows Follower Buddy exists |
+| 8 | `integration`, `integration.followerbuddy` | Voicing the [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin's companion: its chat mirror, its config group, its outfit string. Everything that knows Follower Buddy exists |
 | 7 | `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, narration, public chat, examine, prefetch |
 | 7 | `speech.openrouter` | The OpenRouter transport: payload shape, credit metering, usage reads |
 | 7 | `speech.aistudio` | The Google AI Studio transport: `generateContent`, SSE streaming, token usage |

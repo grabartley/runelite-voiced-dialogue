@@ -20,6 +20,7 @@ public final class FollowerBuddySettings {
   private final ConfigManager configManager;
 
   private volatile String cachedName;
+  private volatile boolean nameResolved;
   private volatile NpcGender cachedOutfitGender;
 
   public FollowerBuddySettings(ConfigManager configManager) {
@@ -31,18 +32,18 @@ public final class FollowerBuddySettings {
   }
 
   public void invalidate() {
+    nameResolved = false;
     cachedName = null;
     cachedOutfitGender = null;
   }
 
   public String followerName() {
-    String name = cachedName;
-    if (name == null) {
+    if (!nameResolved) {
       String stored = configManager.getConfiguration(GROUP, NAME_KEY);
-      name = stored == null || stored.trim().isEmpty() ? null : stored.trim();
-      cachedName = name;
+      cachedName = stored == null || stored.trim().isEmpty() ? null : stored.trim();
+      nameResolved = true;
     }
-    return name;
+    return cachedName;
   }
 
   public NpcGender outfitGender() {

@@ -21,6 +21,7 @@ public class FollowerSpeakerTest {
   private final SynthesisDispatcher dispatcher = mock(SynthesisDispatcher.class);
 
   private boolean enabled = true;
+  private boolean conversationOnScreen;
   private String followerName = FOLLOWER_NAME;
   private NpcGender gender = NpcGender.MALE;
   private int nameReads;
@@ -30,6 +31,7 @@ public class FollowerSpeakerTest {
           new DialogueTextCleaner(new ProfanityFilter()),
           dispatcher,
           () -> enabled,
+          () -> conversationOnScreen,
           () -> {
             nameReads++;
             return followerName;
@@ -112,6 +114,29 @@ public class FollowerSpeakerTest {
     speaker.onChatMessage(chat(ChatMessageType.GAMEMESSAGE, FOLLOWER_NAME, "Woof!"));
 
     org.junit.Assert.assertEquals(0, nameReads);
+  }
+
+  @Test
+  public void theCompanionStaysQuietWhileAConversationIsOnScreen() {
+    conversationOnScreen = true;
+
+    speaker.onChatMessage(chat(ChatMessageType.PUBLICCHAT, FOLLOWER_NAME, "Woof!"));
+
+    verify(dispatcher, never()).speakFollower(anyString(), any());
+    org.junit.Assert.assertEquals(
+        "a line we will not speak costs no cross-plugin read", 0, nameReads);
+  }
+
+  @Test
+  public void theCompanionSpeaksAgainOnceTheConversationCloses() {
+    conversationOnScreen = true;
+    speaker.onChatMessage(chat(ChatMessageType.PUBLICCHAT, FOLLOWER_NAME, "Woof!"));
+
+    conversationOnScreen = false;
+    speaker.onChatMessage(chat(ChatMessageType.PUBLICCHAT, FOLLOWER_NAME, "Woof again!"));
+
+    verify(dispatcher, never()).speakFollower("Woof!", NpcGender.MALE);
+    verify(dispatcher).speakFollower("Woof again!", NpcGender.MALE);
   }
 
   private static ChatMessage chat(ChatMessageType type, String name, String message) {
