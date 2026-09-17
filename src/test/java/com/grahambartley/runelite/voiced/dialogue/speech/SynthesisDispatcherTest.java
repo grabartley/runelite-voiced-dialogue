@@ -23,6 +23,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.function.IntSupplier;
 import net.runelite.api.NPC;
 import org.junit.Before;
@@ -87,6 +88,51 @@ public class SynthesisDispatcherTest {
     assertEquals(Emotion.NEUTRAL, r.emotion());
     assertTrue("public chat is a player line", r.player());
     assertTrue("public chat bypasses translation/styles", r.skipTranslation());
+  }
+
+  @Test
+  public void followerLinesAreNeutralNonPlayerAndStillTranslated() {
+    when(backend.isAvailable()).thenReturn(true);
+    VoiceSpec spec = mock(VoiceSpec.class);
+    CharacterProfile profile = mock(CharacterProfile.class);
+    when(voiceManager.resolveFollower(NpcGender.FEMALE))
+        .thenReturn(new ResolvedSpeaker(spec, profile));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(false);
+
+    dispatcher.speakFollower("Woof!", NpcGender.FEMALE);
+
+    ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
+    verify(audioService).speak(req.capture(), eq(false));
+    SynthesisRequest r = req.getValue();
+    assertEquals("Woof!", r.text());
+    assertSame(spec, r.voice());
+    assertSame(profile, r.profile());
+    assertEquals("a mirrored companion line carries no chat head", Emotion.NEUTRAL, r.emotion());
+    assertFalse("the companion is not the player speaking", r.player());
+    assertFalse("companion lines are translated like dialogue", r.skipTranslation());
+  }
+
+  @Test
+  public void aFollowerLineIsColouredByTheRoomLikeAnyCharacter() {
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolveFollower(NpcGender.MALE))
+        .thenReturn(new ResolvedSpeaker(VoiceSpec.follower(NpcGender.MALE), null));
+    when(caveEchoPolicy.shouldEcho()).thenReturn(true);
+
+    dispatcher.speakFollower("Woof!", NpcGender.MALE);
+
+    verify(audioService).speak(any(SynthesisRequest.class), eq(true));
+  }
+
+  @Test
+  public void aFollowerLineIsDroppedWhenNoBackendIsAvailable() {
+    when(backend.isAvailable()).thenReturn(false);
+    when(voiceManager.resolveFollower(NpcGender.MALE))
+        .thenReturn(new ResolvedSpeaker(VoiceSpec.follower(NpcGender.MALE), null));
+
+    dispatcher.speakFollower("Woof!", NpcGender.MALE);
+
+    verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
   }
 
   @Test

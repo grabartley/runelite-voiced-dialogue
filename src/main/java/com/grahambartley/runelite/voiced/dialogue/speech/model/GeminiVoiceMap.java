@@ -16,12 +16,17 @@ public final class GeminiVoiceMap {
 
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
+  private final Map<NpcGender, String[]> followerVoices;
   private final Map<NpcGender, String[]> childVoices;
 
   public GeminiVoiceMap() {
     playerVoices = new EnumMap<>(NpcGender.class);
     playerVoices.put(NpcGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NpcGender.FEMALE, new String[] {"Aoede", "Autonoe"});
+
+    followerVoices = new EnumMap<>(NpcGender.class);
+    followerVoices.put(NpcGender.MALE, new String[] {"Umbriel", "Algieba"});
+    followerVoices.put(NpcGender.FEMALE, new String[] {"Laomedeia", "Autonoe"});
 
     childVoices = new EnumMap<>(NpcGender.class);
     childVoices.put(NpcGender.MALE, new String[] {"Puck"});
@@ -73,6 +78,9 @@ public final class GeminiVoiceMap {
     NpcGender gender = normalizeGender(spec.gender());
     if (spec.player()) {
       return anchor(playerVoices.get(gender));
+    }
+    if (spec.follower()) {
+      return anchor(followerVoices.get(gender));
     }
     if (spec.child()) {
       String[] pool = childVoices.get(gender);

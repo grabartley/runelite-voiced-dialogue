@@ -105,6 +105,17 @@ public class VoiceManager {
     return new ResolvedSpeaker(voice, npcProfile(npcName, identity));
   }
 
+  public ResolvedSpeaker resolveFollower(NpcGender gender) {
+    CharacterProfile profile =
+        profileTable.resolveFollower(
+            config.followerAccent(), config.followerPersona(), config.followerPace());
+    if (config.debugMode()) {
+      log.info(VoiceTraceFormatter.buildFollowerTrace(gender));
+      log.info("[TTS profile] follower -> '{}' accent='{}'", profile.name(), profile.accent());
+    }
+    return new ResolvedSpeaker(VoiceSpec.follower(gender), profile);
+  }
+
   public ResolvedSpeaker resolveNarrator() {
     return new ResolvedSpeaker(VoiceSpec.NARRATOR, profileTable.resolveNarrator());
   }

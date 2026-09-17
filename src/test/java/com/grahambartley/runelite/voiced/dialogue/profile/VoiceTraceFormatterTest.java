@@ -36,6 +36,28 @@ public class VoiceTraceFormatterTest {
   }
 
   @Test
+  public void buildResolvedLineNamesTheFollowerAsItsOwnKind() {
+    String line =
+        VoiceTraceFormatter.buildResolvedLine(
+            "cloud-aistudio",
+            VoiceSpec.follower(NpcGender.FEMALE),
+            null,
+            "NEUTRAL",
+            profile("Companion", "British"));
+
+    assertTrue(line, line.contains("kind=follower"));
+    assertTrue("the follower has no NPC name to show", line.contains("name=-"));
+    assertTrue(line, line.contains("gender=FEMALE"));
+  }
+
+  @Test
+  public void buildFollowerTraceNamesTheResolvedGender() {
+    assertTrue(
+        VoiceTraceFormatter.buildFollowerTrace(NpcGender.FEMALE)
+            .contains("follower -> gender=FEMALE"));
+  }
+
+  @Test
   public void buildResolvedLineGivesTheWholeDecisionInOneRecord() {
     String line =
         VoiceTraceFormatter.buildResolvedLine(

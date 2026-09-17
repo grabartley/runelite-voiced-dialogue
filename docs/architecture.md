@@ -41,6 +41,25 @@ and untouched by the Player and NPC Speaking Styles and by the cave echo, which 
 of people standing in the room with you. The spoken language still applies. Being fixed is what
 keeps narrated lines on a stable cache key across sessions.
 
+The [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) companion is a speaker class of
+its own too, and everything that knows that plugin exists lives in `integration.followerbuddy`,
+behind **Voice Follower Buddy**, off by default. Follower Buddy mirrors each line its companion
+speaks to public chat under the companion's configured name, and `FollowerSpeaker` picks it up off
+the same `ChatMessage` event `PublicChatSpeaker` reads. There is no compile or runtime dependency on
+its jar: the companion's name, its outfit and its mirroring setting are `ConfigManager` reads of
+another plugin's group, each falling back to our own settings when absent, so the feature is inert
+rather than broken when Follower Buddy is not installed. Its right-click Talk-to window is an
+`Overlay` drawing to the canvas and its overhead bubble is drawn rather than set on an actor, so
+neither raises an event; the mirrored chat line carries the same text as the bubble, so it covers
+everything the bubble shows.
+
+Whether Follower Buddy is installed is read from `runelite.externalPlugins`, the Hub list its own
+removal edits, rather than from the presence of its config keys: RuneLite persists a plugin's
+defaults on load and leaves them behind on uninstall, so stale `followerbuddy.*` keys prove only
+that it once ran. A received line outranks that list, so a sideloaded install still voices. All
+three signals are read on demand rather than cached at startup, so installing mid-session works
+without a restart.
+
 These are the engine's generic dialogs (`objectbox` 193, `objectbox_double` 11, `messagebox` 229),
 not content-specific ones, and the game raises `messagebox` for interface prompts as well as story
 beats: a world switch warning arrives on the same widget, through the same chat type, in the same

@@ -83,6 +83,10 @@ public final class ChatNoticeManager {
     return !keyAvailable;
   }
 
+  public void postNotice(String message) {
+    addGameMessage(message);
+  }
+
   public void postCommandResponse(String message) {
     String formatted =
         new ChatMessageBuilder()

@@ -167,7 +167,15 @@ public final class NpcProfileTable {
   }
 
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {
-    CharacterProfile base = apply(layers.defaultProfile(), layers.playerLayer());
+    return configured(layers.playerLayer(), accent, style, pace);
+  }
+
+  public CharacterProfile resolveFollower(String accent, String style, String pace) {
+    return configured(layers.followerLayer(), accent, style, pace);
+  }
+
+  private CharacterProfile configured(Layer layer, String accent, String style, String pace) {
+    CharacterProfile base = apply(layers.defaultProfile(), layer);
     return new CharacterProfile(
         base.name(),
         sanitizedOr(accent, base.accent()),

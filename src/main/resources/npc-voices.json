@@ -66,6 +66,12 @@
       "style": "A seasoned medieval fantasy adventurer: brave and resolute, carrying the quiet confidence of someone who has seen the whole of Gielinor.",
       "pace": "Even and assured, unhurried but purposeful."
     },
+    "follower": {
+      "name": "Companion",
+      "accent": "Common British English, the plain, down-to-earth speech of a loyal travelling companion, not posh or refined.",
+      "style": "A devoted adventuring companion: eager, warm and good-humoured, speaking up beside someone they follow everywhere.",
+      "pace": "Bright and easy, a little quicker than measured, with natural pauses at the punctuation."
+    },
     "narrator": {
       "name": "Narrator",
       "accent": "Received Pronunciation British English, the clear, cultured voice of a storyteller reading a tale aloud.",

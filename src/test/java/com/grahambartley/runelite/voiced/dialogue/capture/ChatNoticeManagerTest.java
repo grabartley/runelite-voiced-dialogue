@@ -180,6 +180,18 @@ public class ChatNoticeManagerTest {
   }
 
   @Test
+  public void aNoticeIsAddedStraightToTheGameChatTaggedAsThePlugins() {
+    manager.postNotice("Follower Buddy is not mirroring to chat.");
+
+    ArgumentCaptor<String> line = ArgumentCaptor.forClass(String.class);
+    verify(client)
+        .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), line.capture(), isNull());
+    assertTrue(line.getValue(), line.getValue().contains("[Voiced Dialogue] "));
+    assertTrue(line.getValue(), line.getValue().contains("not mirroring to chat"));
+    verifyNoInteractions(chatMessageManager);
+  }
+
+  @Test
   public void aCommandResponseNeedsNoHopOntoTheClientThread() {
     manager.postCommandResponse("anything");
 

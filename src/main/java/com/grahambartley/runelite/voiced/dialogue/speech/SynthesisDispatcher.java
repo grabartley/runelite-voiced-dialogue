@@ -8,6 +8,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NPC;
@@ -54,6 +55,14 @@ public final class SynthesisDispatcher {
     dispatch(
         new SynthesisRequest(
             text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), true, true),
+        null);
+  }
+
+  public void speakFollower(String text, NpcGender gender) {
+    ResolvedSpeaker resolved = voiceManager.resolveFollower(gender);
+    dispatch(
+        new SynthesisRequest(
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
         null);
   }
 

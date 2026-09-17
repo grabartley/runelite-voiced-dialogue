@@ -20,6 +20,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.0025
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
 - **A narrator for the quest beats.** Turn on **Voice Narration** for the message and item boxes quests lean on, and **Voice Examine Text** to hear anything you examine.
 - **The world talking around you.** Turn on **Voice Ambient Chatter** and the lines NPCs say over their heads, market criers, farm animals, cutscene asides, come through in their own voices, overlapping the way a crowd actually does and fading away as you walk off.
+- **Your Follower Buddy companion, voiced.** If you run the separate [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin, turn on **Voice Follower Buddy** and your companion speaks in a voice of its own, with its own accent, persona, and pace. Without that plugin installed the setting does nothing.
 - **Any language, any register.** Speak the whole game in Spanish, or run Gielinor as a pirate crew, Gen Z roadmen, or Shakespearean nobles.
 - **Cave echo underground**, so dungeons and sewers sound enclosed.
 - **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
@@ -99,6 +100,23 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
 | **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, each in their own voice. Everyone within earshot is voiced, and they overlap, so a market square sounds like a market square. Chatter fades with distance and cuts out once the speaker walks out of range. One NPC's lines queue behind each other rather than overlapping themselves, and animal noises are left unvoiced. These play without you clicking a dialogue, so a busy area costs real calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. Silent while you are in a conversation. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Clicking **Talk-to** starts the lookup, usually before the dialogue opens, so their first line lands in the right voice. |
+
+</details>
+
+<details>
+<summary><b>Follower Buddy</b></summary>
+
+An integration with the separate [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin, which gives you a customisable companion that follows you and chats. These settings voice the lines that companion speaks. Install Follower Buddy from the Plugin Hub and turn its **Mirror to chat** setting on, or nothing here has anything to voice.
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| **Voice Follower Buddy** | `Off` | Speaks your Follower Buddy companion's lines in its own voice. Its phrases are short and repeat heavily, so the first of each costs a real call and the rest replay free. On Google AI Studio these lines draw on the same daily allowance as your dialogue. Does nothing without Follower Buddy installed and mirroring to chat. |
+| **Companion Voice** | `Auto` | The voice for your companion. `Auto` follows the gender of the outfit you built in Follower Buddy; `Type A` and `Type B` pin it. |
+| **Companion Accent** | British (travelling companion) | Accent for your companion's voice. |
+| **Companion Persona** | eager and warm | Persona and delivery style for your companion. |
+| **Companion Delivery Pace** | Normal | How your companion paces their words. |
+
+Follower Buddy's right-click **Talk-to** window is drawn straight to the canvas with no chat message behind it, so that conversation stays silent. The overhead bubble and the mirrored chat line carry the same text, so everything the bubble shows is voiced.
 
 </details>
 

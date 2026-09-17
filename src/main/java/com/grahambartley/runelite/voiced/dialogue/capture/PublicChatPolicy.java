@@ -7,9 +7,13 @@ public final class PublicChatPolicy {
   private PublicChatPolicy() {}
 
   public static boolean isSelfPublicChat(String eventName, String localName) {
-    if (eventName == null || localName == null) {
+    return isFrom(eventName, localName);
+  }
+
+  public static boolean isFrom(String eventName, String speakerName) {
+    if (eventName == null || speakerName == null) {
       return false;
     }
-    return Text.sanitize(eventName).equals(Text.sanitize(localName));
+    return Text.sanitize(eventName).equals(Text.sanitize(speakerName));
   }
 }

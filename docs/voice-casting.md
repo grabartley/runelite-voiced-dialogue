@@ -58,11 +58,12 @@ being described twice.
 | Crab | Zubenelgenubi, Sadachbia | Pulcherrima, Laomedeia |
 | Penguin | Puck, Zubenelgenubi | Zephyr, Laomedeia |
 
-The player, children, and the narrator resolve outside the race table:
+The player, the follower, children, and the narrator resolve outside the race table:
 
 | Speaker | Male | Female |
 |---|---|---|
 | Player | Achird, Iapetus | Aoede, Autonoe |
+| Follower | Umbriel, Algieba | Laomedeia, Autonoe |
 | Child | Puck | Leda, Zephyr |
 | Narrator | Callirrhoe | Callirrhoe |
 
@@ -142,10 +143,21 @@ voices no character pool claimed: it holds the directed British accent and reads
 rather than as someone in the room. An explicit high-fantasy redraft of its profile direction was
 auditioned against it and rejected.
 
+## The follower
+
+The follower is a speaker class of its own. It is a composed player model with no NPC id, no race
+and no row in the bundled table, so it is configured by hand the way the player is, from four
+settings of its own, and it anchors to its own voice per gender rather than the player's. Anchoring
+somewhere else is the point: a follower that reused the player path would sound exactly like its
+owner walking beside them.
+
+Its gender seeds from the outfit built in Follower Buddy, so a companion dressed as a woman gets a
+woman's voice without being asked twice, and the setting pins it when the player wants otherwise.
+
 ## What the cache key does and does not see
 
 A voice spec's cache-key fragment carries the speaker class, race, and gender: `npc:ELF:FEMALE`,
-`player:MALE`, `narrator`.
+`player:MALE`, `follower:FEMALE`, `narrator`.
 
 The per-NPC seed and the child flag are deliberately absent from it. The backend already folds the
 concrete resolved voice into its own cache variant, so two NPCs that map to different voices never

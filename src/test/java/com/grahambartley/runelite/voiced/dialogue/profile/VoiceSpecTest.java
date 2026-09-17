@@ -142,6 +142,67 @@ public class VoiceSpecTest {
   }
 
   @Test
+  @Parameters(method = "followerKeyCases")
+  public void followerKeyOmitsRace(NpcGender gender, String expected) {
+    assertEquals(expected, VoiceSpec.follower(gender).key());
+  }
+
+  private Object[] followerKeyCases() {
+    return new Object[] {
+      new Object[] {NpcGender.MALE, "follower:MALE"},
+      new Object[] {NpcGender.FEMALE, "follower:FEMALE"},
+    };
+  }
+
+  @Test
+  public void theFollowerIsItsOwnSpeakerClass() {
+    VoiceSpec follower = VoiceSpec.follower(NpcGender.MALE);
+
+    assertTrue(follower.follower());
+    assertFalse(follower.player());
+    assertFalse(follower.narrator());
+    assertFalse(follower.child());
+    assertFalse(follower.hasVoiceSeed());
+  }
+
+  @Test
+  public void noOtherSpeakerClassIsAFollower() {
+    assertFalse(VoiceSpec.player(NpcGender.MALE).follower());
+    assertFalse(VoiceSpec.NARRATOR.follower());
+    assertFalse(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE).follower());
+  }
+
+  @Test
+  public void followerKeyCollidesWithNoOtherSpeakerKey() {
+    for (NpcGender gender : NpcGender.values()) {
+      String follower = VoiceSpec.follower(gender).key();
+      assertNotEquals(VoiceSpec.NARRATOR.key(), follower);
+      assertNotEquals(VoiceSpec.player(gender).key(), follower);
+      for (NpcRace race : NpcRace.values()) {
+        for (NpcGender npcGender : NpcGender.values()) {
+          assertNotEquals(follower, VoiceSpec.npc(race, npcGender).key());
+        }
+      }
+    }
+  }
+
+  @Test
+  public void everyExistingSpeakerKeyIsByteIdentical() {
+    assertEquals("narrator", VoiceSpec.NARRATOR.key());
+    for (NpcGender gender : NpcGender.values()) {
+      assertEquals("player:" + gender.name(), VoiceSpec.player(gender).key());
+      for (NpcRace race : NpcRace.values()) {
+        assertEquals("npc:" + race.name() + ":" + gender.name(), VoiceSpec.npc(race, gender).key());
+        assertEquals(
+            "npc:" + race.name() + ":" + gender.name(), VoiceSpec.npc(race, gender, 42).key());
+        assertEquals(
+            "npc:" + race.name() + ":" + gender.name(),
+            VoiceSpec.npc(race, gender, 42, true).key());
+      }
+    }
+  }
+
+  @Test
   public void childFlagIsCarriedButNotFoldedIntoKey() {
     VoiceSpec child = VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE, 7, true);
     assertTrue(child.child());

@@ -255,6 +255,22 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void theFollowerProfileResolvesFromTheBundledTable() {
+    CharacterProfile follower = table.resolveFollower(null, null, null);
+    assertTrue(
+        "the follower has a name label", follower.name() != null && !follower.name().isEmpty());
+    assertTrue("the follower accent is British by default", follower.accent().contains("British"));
+    assertNotEquals(
+        "the follower is not just the player wearing a different label",
+        table.resolvePlayer(null, null, null).cacheKey(),
+        follower.cacheKey());
+    assertNotEquals(
+        "the follower is not just the narrator wearing a different label",
+        table.resolveNarrator().cacheKey(),
+        follower.cacheKey());
+  }
+
+  @Test
   public void childrenKeepTheirRaceOrEthnicityAccentAcrossRaces() {
     NpcProfileTable.Resolution gnome = resolve(6077, "Gnome child", "Gnome", null);
     assertTrue("the child category matched", gnome.source().contains("keyword:child"));

@@ -108,6 +108,7 @@ public class GeminiVoiceMapTest {
       }
     }
     voices.add(map.voiceFor(VoiceSpec.player(gender)));
+    voices.add(map.voiceFor(VoiceSpec.follower(gender)));
     return voices;
   }
 
@@ -142,6 +143,39 @@ public class GeminiVoiceMapTest {
     assertTrue("player male is in the male pool", voicesFor(NpcGender.MALE).contains(playerMale));
     assertTrue(
         "player female is in the female pool", voicesFor(NpcGender.FEMALE).contains(playerFemale));
+  }
+
+  @Test
+  public void followerVoiceRespectsGenderAndIsStableAcrossCalls() {
+    String followerMale = map.voiceFor(VoiceSpec.follower(NpcGender.MALE));
+    String followerFemale = map.voiceFor(VoiceSpec.follower(NpcGender.FEMALE));
+
+    assertNotNull(followerMale);
+    assertNotNull(followerFemale);
+    assertFalse("follower male and female differ", followerMale.equals(followerFemale));
+    assertEquals(followerMale, map.voiceFor(VoiceSpec.follower(NpcGender.MALE)));
+  }
+
+  @Test
+  public void theFollowerNeverBorrowsThePlayersVoice() {
+    for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+      assertFalse(
+          "the follower would otherwise sound exactly like its owner",
+          map.voiceFor(VoiceSpec.follower(gender)).equals(map.voiceFor(VoiceSpec.player(gender))));
+    }
+  }
+
+  @Test
+  public void theFollowerIsNeverTheNarrator() {
+    assertFalse(
+        map.voiceFor(VoiceSpec.follower(NpcGender.MALE)).equals(GeminiVoiceMap.NARRATOR_VOICE));
+    assertFalse(
+        map.voiceFor(VoiceSpec.follower(NpcGender.FEMALE)).equals(GeminiVoiceMap.NARRATOR_VOICE));
+  }
+
+  @Test
+  public void anUnknownFollowerGenderStillResolvesToARealVoice() {
+    assertTrue(GEMINI_VOICE_CATALOG.contains(map.voiceFor(VoiceSpec.follower(NpcGender.UNKNOWN))));
   }
 
   @Test
