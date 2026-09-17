@@ -53,6 +53,14 @@ rather than broken when Follower Buddy is not installed. Its right-click Talk-to
 neither raises an event; the mirrored chat line carries the same text as the bubble, so it covers
 everything the bubble shows.
 
+Its lines play on the overhead path rather than the dialogue one. The companion's bubble changes
+whenever it has something new to say, which can land well before the line playing has finished, so
+it takes a speaker chain of its own in `DialogueAudioService` exactly as each nearby NPC does: its
+lines queue behind each other and never overlap themselves. The chain id sits below zero, where no
+NPC index can reach, so the companion and a crowd of NPCs sound at the same time on their own audio
+lines without either cutting the other. It plays at the configured volume rather than a
+distance-scaled one, since the companion is always beside you.
+
 Whether Follower Buddy is installed is read from `runelite.externalPlugins`, the Hub list its own
 removal edits, rather than from the presence of its config keys: RuneLite persists a plugin's
 defaults on load and leaves them behind on uninstall, so stale `followerbuddy.*` keys prove only

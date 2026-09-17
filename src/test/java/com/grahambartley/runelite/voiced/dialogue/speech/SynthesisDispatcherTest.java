@@ -91,8 +91,9 @@ public class SynthesisDispatcherTest {
   }
 
   @Test
-  public void followerLinesAreNeutralNonPlayerAndStillTranslated() {
+  public void followerLinesRideTheOverheadPathSoTheyNeverCutTheDialogueLine() {
     when(backend.isAvailable()).thenReturn(true);
+    when(config.volume()).thenReturn(40);
     VoiceSpec spec = mock(VoiceSpec.class);
     CharacterProfile profile = mock(CharacterProfile.class);
     when(voiceManager.resolveFollower(NpcGender.FEMALE))
@@ -102,7 +103,13 @@ public class SynthesisDispatcherTest {
     dispatcher.speakFollower("Woof!", NpcGender.FEMALE);
 
     ArgumentCaptor<SynthesisRequest> req = ArgumentCaptor.forClass(SynthesisRequest.class);
-    verify(audioService).speak(req.capture(), eq(false));
+    ArgumentCaptor<IntSupplier> lineVolume = ArgumentCaptor.forClass(IntSupplier.class);
+    verify(audioService)
+        .speakAmbient(
+            req.capture(),
+            eq(false),
+            eq(SynthesisDispatcher.FOLLOWER_SPEAKER_ID),
+            lineVolume.capture());
     SynthesisRequest r = req.getValue();
     assertEquals("Woof!", r.text());
     assertSame(spec, r.voice());
@@ -110,6 +117,35 @@ public class SynthesisDispatcherTest {
     assertEquals("a mirrored companion line carries no chat head", Emotion.NEUTRAL, r.emotion());
     assertFalse("the companion is not the player speaking", r.player());
     assertFalse("companion lines are translated like dialogue", r.skipTranslation());
+    assertEquals(
+        "the companion walks beside you, so it plays at the configured volume",
+        40,
+        lineVolume.getValue().getAsInt());
+    verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
+  }
+
+  @Test
+  public void everyFollowerLineSharesOneSpeakerChainSoItNeverOverlapsItself() {
+    when(backend.isAvailable()).thenReturn(true);
+    when(voiceManager.resolveFollower(NpcGender.MALE))
+        .thenReturn(new ResolvedSpeaker(mock(VoiceSpec.class), null));
+
+    dispatcher.speakFollower("Woof!", NpcGender.MALE);
+    dispatcher.speakFollower("Woof again!", NpcGender.MALE);
+
+    verify(audioService, times(2))
+        .speakAmbient(
+            any(SynthesisRequest.class),
+            anyBoolean(),
+            eq(SynthesisDispatcher.FOLLOWER_SPEAKER_ID),
+            any(IntSupplier.class));
+  }
+
+  @Test
+  public void theFollowerChainCanNeverCollideWithAnNpcsOwnChain() {
+    assertTrue(
+        "npc indices are non-negative, so the companion needs a chain id below them",
+        SynthesisDispatcher.FOLLOWER_SPEAKER_ID < 0);
   }
 
   @Test
@@ -121,18 +157,31 @@ public class SynthesisDispatcherTest {
 
     dispatcher.speakFollower("Woof!", NpcGender.MALE);
 
-    verify(audioService).speak(any(SynthesisRequest.class), eq(true));
+    verify(audioService)
+        .speakAmbient(any(SynthesisRequest.class), eq(true), anyInt(), any(IntSupplier.class));
   }
 
   @Test
   public void aFollowerLineIsDroppedWhenNoBackendIsAvailable() {
     when(backend.isAvailable()).thenReturn(false);
-    when(voiceManager.resolveFollower(NpcGender.MALE))
-        .thenReturn(new ResolvedSpeaker(VoiceSpec.follower(NpcGender.MALE), null));
 
     dispatcher.speakFollower("Woof!", NpcGender.MALE);
 
-    verify(audioService, never()).speak(any(SynthesisRequest.class), anyBoolean());
+    verify(audioService, never())
+        .speakAmbient(any(SynthesisRequest.class), anyBoolean(), anyInt(), any(IntSupplier.class));
+    verify(voiceManager, never()).resolveFollower(any(NpcGender.class));
+  }
+
+  @Test
+  public void aFollowerLineIsDroppedWhileTheBackendIsRateLimited() {
+    when(backend.isAvailable()).thenReturn(true);
+    when(backend.isThrottled()).thenReturn(true);
+
+    dispatcher.speakFollower("Woof!", NpcGender.MALE);
+
+    verify(audioService, never())
+        .speakAmbient(any(SynthesisRequest.class), anyBoolean(), anyInt(), any(IntSupplier.class));
+    verify(voiceManager, never()).resolveFollower(any(NpcGender.class));
   }
 
   @Test
