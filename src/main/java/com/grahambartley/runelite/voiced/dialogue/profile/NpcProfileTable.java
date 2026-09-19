@@ -183,7 +183,7 @@ public final class NpcProfileTable {
   }
 
   static String voicingFor(NpcGender gender) {
-    return gender == NpcGender.FEMALE ? FEMALE_VOICING : MALE_VOICING;
+    return NpcGender.orDefault(gender) == NpcGender.FEMALE ? FEMALE_VOICING : MALE_VOICING;
   }
 
   private CharacterProfile configured(Layer layer, String accent, String style, String pace) {

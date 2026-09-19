@@ -75,7 +75,7 @@ public final class GeminiVoiceMap {
     if (spec.narrator()) {
       return NARRATOR_VOICE;
     }
-    NpcGender gender = normalizeGender(spec.gender());
+    NpcGender gender = NpcGender.orDefault(spec.gender());
     if (spec.player()) {
       return anchor(playerVoices.get(gender));
     }
@@ -106,9 +106,5 @@ public final class GeminiVoiceMap {
     }
     int index = Math.floorMod(Integer.hashCode(spec.voiceSeed()), pool.length);
     return pool[index];
-  }
-
-  private static NpcGender normalizeGender(NpcGender gender) {
-    return gender == NpcGender.FEMALE ? NpcGender.FEMALE : NpcGender.MALE;
   }
 }

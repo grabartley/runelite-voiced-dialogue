@@ -24,10 +24,10 @@ public class FollowerGenderPolicyTest {
       new Object[] {FollowerVoice.TYPE_B, NpcGender.MALE, NpcGender.FEMALE},
       new Object[] {FollowerVoice.AUTO, NpcGender.FEMALE, NpcGender.FEMALE},
       new Object[] {FollowerVoice.AUTO, NpcGender.MALE, NpcGender.MALE},
-      new Object[] {FollowerVoice.AUTO, NpcGender.UNKNOWN, FollowerGenderPolicy.FALLBACK},
-      new Object[] {FollowerVoice.AUTO, null, FollowerGenderPolicy.FALLBACK},
+      new Object[] {FollowerVoice.AUTO, NpcGender.UNKNOWN, NpcGender.orDefault(NpcGender.UNKNOWN)},
+      new Object[] {FollowerVoice.AUTO, null, NpcGender.orDefault(NpcGender.UNKNOWN)},
       new Object[] {null, NpcGender.FEMALE, NpcGender.FEMALE},
-      new Object[] {null, NpcGender.UNKNOWN, FollowerGenderPolicy.FALLBACK},
+      new Object[] {null, NpcGender.UNKNOWN, NpcGender.orDefault(NpcGender.UNKNOWN)},
     };
   }
 
