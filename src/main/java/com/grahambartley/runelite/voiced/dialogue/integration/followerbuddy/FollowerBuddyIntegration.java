@@ -9,6 +9,7 @@ import java.util.function.BooleanSupplier;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 public final class FollowerBuddyIntegration {
 
@@ -21,6 +22,7 @@ public final class FollowerBuddyIntegration {
   private final ChatNoticeManager notices;
   private final FollowerBuddySettings settings;
   private final FollowerSpeaker speaker;
+  private final FollowerDialogWatcher dialogWatcher;
 
   private volatile boolean mirrorNoticeChecked;
 
@@ -30,16 +32,24 @@ public final class FollowerBuddyIntegration {
       DialogueTextCleaner textCleaner,
       SynthesisDispatcher dispatcher,
       BooleanSupplier conversationOnScreen,
+      OverlayManager overlayManager,
       VoicedDialogueConfig config) {
     this.config = config;
     this.notices = notices;
     this.settings = new FollowerBuddySettings(configManager);
+    this.dialogWatcher =
+        new FollowerDialogWatcher(
+            new FollowerDialogReader(overlayManager),
+            textCleaner,
+            dispatcher,
+            config::voiceFollower,
+            this::gender);
     this.speaker =
         new FollowerSpeaker(
             textCleaner,
             dispatcher,
             config::voiceFollower,
-            conversationOnScreen,
+            () -> conversationOnScreen.getAsBoolean() || dialogWatcher.isOnScreen(),
             settings::followerName,
             this::gender);
   }
@@ -49,6 +59,7 @@ public final class FollowerBuddyIntegration {
   }
 
   public void onGameTick() {
+    dialogWatcher.tick();
     if (mirrorNoticeChecked || !config.voiceFollower()) {
       return;
     }

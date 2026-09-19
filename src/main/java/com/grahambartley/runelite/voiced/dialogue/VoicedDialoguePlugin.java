@@ -56,6 +56,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 import okhttp3.OkHttpClient;
 
 @Slf4j
@@ -81,6 +82,8 @@ public class VoicedDialoguePlugin extends Plugin {
   @Inject private ClientThread clientThread;
 
   @Inject private ChatMessageManager chatMessageManager;
+
+  @Inject private OverlayManager overlayManager;
 
   private BackendProvider backendProvider;
 
@@ -225,6 +228,7 @@ public class VoicedDialoguePlugin extends Plugin {
             textCleaner,
             synthesisDispatcher,
             dialogueWatcher::isConversationOnScreen,
+            overlayManager,
             config);
 
     log.info("VoicedDialogue started");

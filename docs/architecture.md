@@ -51,10 +51,25 @@ another plugin's group. An absent name is a profile Follower Buddy has never run
 companion to voice and nothing is matched at all; that is what keeps the feature from billing a
 cloud call on a passing player who happens to share the companion's default name. The outfit and
 the mirroring flag degrade to our own settings, so the feature is inert rather than broken when
-Follower Buddy is not installed. Its right-click Talk-to window is an
-`Overlay` drawing to the canvas and its overhead bubble is drawn rather than set on an actor, so
-neither raises an event; the mirrored chat line carries the same text as the bubble, so it covers
-everything the bubble shows.
+Follower Buddy is not installed. The companion speaks through two surfaces and neither raises an event, because its overhead bubble
+is drawn rather than set on an actor and its right-click Talk-to window is an `Overlay` painting
+straight to the canvas. Each is reached a different way. The bubble's text also goes to public chat
+when Follower Buddy is mirroring, so the chat line covers everything the bubble shows.
+
+The Talk-to conversation has no such echo, so it is read off the overlay itself. RuneLite's own
+`OverlayManager` holds every registered overlay, including another plugin's, and its public
+`anyMatch` walks them, so the dialog instance is found by class name and its open page read
+reflectively once per tick: which page is showing, its text, and whether the node belongs to the
+player or the companion. Player pages are voiced in the player voice exactly as quest dialogue is.
+The read is edge-triggered on the page's text and index, so a page sitting on screen is spoken
+once and turning it speaks the next.
+
+This is the one place the plugin reaches into another's internals, and it is built to fail quiet:
+the fields are resolved once and cached, any reflective failure silences the Talk-to path
+permanently with a single log line rather than throwing into the render loop, and the overlay is
+rescanned on a slow cadence so a Follower Buddy installed mid-session is picked up without a
+restart. Overhead chatter holds back while the dialog is open, using the tick's own read rather
+than a second reflection.
 
 Its lines play on the overhead path rather than the dialogue one. The companion's bubble changes
 whenever it has something new to say, which can land well before the line playing has finished, so

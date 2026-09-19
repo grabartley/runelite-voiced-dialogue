@@ -20,6 +20,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.ui.overlay.OverlayManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,6 +32,7 @@ public class FollowerBuddyIntegrationTest {
   private final ChatNoticeManager notices = mock(ChatNoticeManager.class);
   private final SynthesisDispatcher dispatcher = mock(SynthesisDispatcher.class);
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
+  private final OverlayManager overlayManager = mock(OverlayManager.class);
 
   private boolean conversationOnScreen;
 
@@ -50,6 +52,7 @@ public class FollowerBuddyIntegrationTest {
             new DialogueTextCleaner(new ProfanityFilter()),
             dispatcher,
             () -> conversationOnScreen,
+            overlayManager,
             config);
   }
 

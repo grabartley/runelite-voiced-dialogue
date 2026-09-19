@@ -19,6 +19,8 @@ public final class SynthesisDispatcher {
 
   static final int FOLLOWER_SPEAKER_ID = -1;
 
+  static final int UNKNOWN_HEAD_ANIMATION = -1;
+
   private final VoiceManager voiceManager;
   private final EmotionResolver emotionResolver;
   private final CaveEchoPolicy caveEchoPolicy;
@@ -59,6 +61,18 @@ public final class SynthesisDispatcher {
         new SynthesisRequest(
             text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), true, true),
         null);
+  }
+
+  public void speakFollowerDialogue(String text, NpcGender gender) {
+    ResolvedSpeaker resolved = voiceManager.resolveFollower(gender);
+    dispatch(
+        new SynthesisRequest(
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
+        null);
+  }
+
+  public void speakPlayerDialogue(String text) {
+    speakDialogue(text, Speaker.PLAYER, null, UNKNOWN_HEAD_ANIMATION);
   }
 
   public void speakFollower(String text, NpcGender gender) {

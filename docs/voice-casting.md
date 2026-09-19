@@ -158,6 +158,10 @@ It is configured like the player but delivered like a character: its lines follo
 Style rather than the player one, carry the cave echo, and are translated by the Spoken Language
 setting. The companion is someone standing in the room with you, not the voice in your own head.
 
+Its overhead chatter and its Talk-to conversation share that one voice, and differ only in how they
+play: chatter takes a speaker chain of its own and sounds alongside the world, while a Talk-to page
+is a dialogue line and interrupts like any other.
+
 ## What the cache key does and does not see
 
 A voice spec's cache-key fragment carries the speaker class, race, and gender: `npc:ELF:FEMALE`,
