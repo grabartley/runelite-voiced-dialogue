@@ -110,7 +110,7 @@ An integration with the separate [Follower Buddy](https://github.com/MikeSpatol/
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Voice Follower Buddy** | `Off` | Speaks your Follower Buddy companion's lines in its own voice, both its overhead chatter and its right-click **Talk-to** conversation. The companion's lines queue behind each other rather than overlapping themselves, and they play alongside ambient chatter rather than cutting it. Silent while you are in a conversation. Its phrases are short and repeat heavily, so the first of each costs a real call and the rest replay free. On Google AI Studio these lines draw on the same daily allowance as your dialogue. Does nothing without Follower Buddy installed and mirroring to chat. |
+| **Voice Follower Buddy** | `Off` | Speaks your Follower Buddy companion's lines in its own voice, both its overhead chatter and its right-click **Talk-to** conversation. The companion's lines queue behind each other rather than overlapping themselves, and they play alongside ambient chatter rather than cutting it. Silent while you are in a conversation. Its phrases are short and repeat heavily, so the first of each costs a real call and the rest replay free. On Google AI Studio these lines draw on the same daily allowance as your dialogue. Does nothing without Follower Buddy installed. |
 | **Companion Voice** | `Auto` | The voice for your companion. `Auto` follows the gender of the outfit you built in Follower Buddy; `Type A` and `Type B` pin it. |
 | **Companion Accent** | British (travelling companion) | Accent for your companion's voice. |
 | **Companion Persona** | eager and warm | Persona and delivery style for your companion. |

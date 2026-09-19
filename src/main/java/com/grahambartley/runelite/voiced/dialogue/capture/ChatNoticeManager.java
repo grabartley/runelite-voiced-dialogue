@@ -49,7 +49,7 @@ public final class ChatNoticeManager {
 
   public void notifyFromBackendThread(String message) {
     log.warn(message);
-    clientThread.invokeLater(() -> addGameMessage(message));
+    clientThread.invokeLater(() -> postNotice(message));
   }
 
   public void maybeShowOnboarding() {
@@ -63,7 +63,7 @@ public final class ChatNoticeManager {
     if (!shouldShowOnboarding(seen)) {
       return;
     }
-    addGameMessage(ONBOARDING_MESSAGE);
+    postNotice(ONBOARDING_MESSAGE);
     configManager.setConfiguration(VoicedDialogueConfig.GROUP, ONBOARDING_SEEN_KEY, true);
   }
 
@@ -76,15 +76,11 @@ public final class ChatNoticeManager {
       return;
     }
     cloudKeyNoticeChecked = true;
-    addGameMessage(backend.missingKeyNotice());
+    postNotice(backend.missingKeyNotice());
   }
 
   static boolean shouldWarnMissingCloudKey(boolean keyAvailable) {
     return !keyAvailable;
-  }
-
-  public void postNotice(String message) {
-    addGameMessage(message);
   }
 
   public void postCommandResponse(String message) {
@@ -102,7 +98,7 @@ public final class ChatNoticeManager {
             .build());
   }
 
-  private void addGameMessage(String message) {
+  public void postNotice(String message) {
     String line = "<col=" + CHAT_NOTICE_COLOR + ">[Voiced Dialogue] " + message + "</col>";
     client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", line, null);
   }

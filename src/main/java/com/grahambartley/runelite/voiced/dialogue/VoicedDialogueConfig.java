@@ -349,8 +349,8 @@ public interface VoicedDialogueConfig extends Config {
       keyName = VOICE_FOLLOWER_KEY,
       name = "Voice Follower Buddy",
       description =
-          "Speak your Follower Buddy companion's lines. Needs that plugin, with its Mirror to chat"
-              + " setting on.",
+          "Speak your Follower Buddy companion's lines. Needs that plugin. Its overhead chatter"
+              + " also needs Mirror to chat on.",
       position = 0,
       section = followerSection)
   default boolean voiceFollower() {

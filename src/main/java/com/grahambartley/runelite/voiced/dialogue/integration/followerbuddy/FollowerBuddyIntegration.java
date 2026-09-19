@@ -17,8 +17,8 @@ public final class FollowerBuddyIntegration {
 
   static final String MIRROR_OFF_NOTICE =
       "Voiced Dialogue voices the Follower Buddy plugin's companion, but Follower Buddy's"
-          + " \"Mirror to chat\" setting is off. Turn it on in Follower Buddy to hear your"
-          + " companion speak.";
+          + " \"Mirror to chat\" setting is off. Turn it on in Follower Buddy to hear the lines"
+          + " it says over its head; its Talk-to conversation is voiced either way.";
 
   private final VoicedDialogueConfig config;
   private final ChatNoticeManager notices;
