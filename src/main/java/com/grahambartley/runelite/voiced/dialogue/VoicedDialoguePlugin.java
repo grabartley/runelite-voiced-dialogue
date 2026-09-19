@@ -15,6 +15,7 @@ import com.grahambartley.runelite.voiced.dialogue.capture.DialogueWidgetReader;
 import com.grahambartley.runelite.voiced.dialogue.capture.ExamineSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.capture.NarrationWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.PublicChatSpeaker;
+import com.grahambartley.runelite.voiced.dialogue.integration.followerbuddy.FollowerBuddyIntegration;
 import com.grahambartley.runelite.voiced.dialogue.profile.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
@@ -55,6 +56,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 import okhttp3.OkHttpClient;
 
 @Slf4j
@@ -81,6 +83,8 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Inject private ChatMessageManager chatMessageManager;
 
+  @Inject private OverlayManager overlayManager;
+
   private BackendProvider backendProvider;
 
   private DialogueAudioService audioService;
@@ -97,6 +101,8 @@ public class VoicedDialoguePlugin extends Plugin {
   private PublicChatSpeaker publicChatSpeaker;
 
   private AmbientChatterWatcher ambientChatterWatcher;
+
+  private FollowerBuddyIntegration followerBuddy;
 
   private SpendTracker spendTracker;
 
@@ -215,6 +221,16 @@ public class VoicedDialoguePlugin extends Plugin {
             dialogueWatcher::isConversationOnScreen,
             config::volume);
 
+    followerBuddy =
+        new FollowerBuddyIntegration(
+            configManager,
+            noticeManager,
+            textCleaner,
+            synthesisDispatcher,
+            dialogueWatcher::isConversationOnScreen,
+            overlayManager,
+            config);
+
     log.info("VoicedDialogue started");
   }
 
@@ -237,6 +253,7 @@ public class VoicedDialoguePlugin extends Plugin {
     publicChatSpeaker = null;
     examineSpeaker = null;
     ambientChatterWatcher = null;
+    followerBuddy = null;
     if (audioService != null) {
       audioService.close();
       audioService = null;
@@ -265,6 +282,9 @@ public class VoicedDialoguePlugin extends Plugin {
     noticeManager.maybeWarnMissingCloudKey(backendProvider.active());
     dialogueWatcher.tick();
     audioService.refreshAmbientVolumes();
+    if (followerBuddy != null) {
+      followerBuddy.onGameTick();
+    }
   }
 
   @Subscribe
@@ -274,6 +294,9 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     if (examineSpeaker != null) {
       examineSpeaker.onChatMessage(event);
+    }
+    if (followerBuddy != null) {
+      followerBuddy.onChatMessage(event);
     }
   }
 
@@ -368,6 +391,9 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {
+    if (followerBuddy != null) {
+      followerBuddy.onConfigChanged(event);
+    }
     if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
         && VoicedDialogueConfig.OPENROUTER_API_KEY.equals(event.getKey())
         && creditMeter != null) {

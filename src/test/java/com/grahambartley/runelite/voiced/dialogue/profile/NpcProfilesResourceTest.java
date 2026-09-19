@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -252,6 +253,22 @@ public class NpcProfilesResourceTest {
         "the narrator is not just the player wearing a different label",
         table.resolvePlayer(null, null, null).cacheKey(),
         narrator.cacheKey());
+  }
+
+  @Test
+  public void theFollowerProfileResolvesFromTheBundledTable() {
+    CharacterProfile follower = table.resolveFollower(null, null, null, NpcGender.MALE);
+    assertTrue(
+        "the follower has a name label", follower.name() != null && !follower.name().isEmpty());
+    assertTrue("the follower accent is British by default", follower.accent().contains("British"));
+    assertNotEquals(
+        "the follower is not just the player wearing a different label",
+        table.resolvePlayer(null, null, null).cacheKey(),
+        follower.cacheKey());
+    assertNotEquals(
+        "the follower is not just the narrator wearing a different label",
+        table.resolveNarrator().cacheKey(),
+        follower.cacheKey());
   }
 
   @Test

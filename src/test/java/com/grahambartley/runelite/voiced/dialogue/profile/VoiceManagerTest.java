@@ -95,6 +95,32 @@ public class VoiceManagerTest {
   }
 
   @Test
+  public void followerResolvesToItsOwnSpecWithTheGivenGender() {
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+
+    VoiceSpec spec = manager.resolveFollower(NpcGender.FEMALE).voice();
+
+    assertTrue("the follower is its own speaker class", spec.follower());
+    assertFalse(spec.player());
+    assertEquals(NpcGender.FEMALE, spec.gender());
+    assertEquals("follower:FEMALE", spec.key());
+    assertFalse("the follower carries no per-NPC variety seed", spec.hasVoiceSeed());
+  }
+
+  @Test
+  public void thePlayerVoiceSettingDoesNotMoveTheFollower() {
+    assertEquals(
+        newManager(PlayerVoice.TYPE_A).resolveFollower(NpcGender.MALE).voice(),
+        newManager(PlayerVoice.TYPE_B).resolveFollower(NpcGender.MALE).voice());
+  }
+
+  @Test
+  public void theFollowerAlwaysResolvesToACharacterProfile() {
+    assertNotNull(newManager(PlayerVoice.TYPE_A).resolveFollower(NpcGender.MALE).profile());
+    assertNotNull(newManager(PlayerVoice.TYPE_A).resolveFollower(NpcGender.UNKNOWN).profile());
+  }
+
+  @Test
   public void everySpeakerAlwaysResolvesToACharacterProfile() {
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     assertNotNull(

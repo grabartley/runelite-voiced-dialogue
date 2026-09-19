@@ -58,11 +58,12 @@ being described twice.
 | Crab | Zubenelgenubi, Sadachbia | Pulcherrima, Laomedeia |
 | Penguin | Puck, Zubenelgenubi | Zephyr, Laomedeia |
 
-The player, children, and the narrator resolve outside the race table:
+The player, the follower, children, and the narrator resolve outside the race table:
 
 | Speaker | Male | Female |
 |---|---|---|
 | Player | Achird, Iapetus | Aoede, Autonoe |
+| Follower | Iapetus | Laomedeia |
 | Child | Puck | Leda, Zephyr |
 | Narrator | Callirrhoe | Callirrhoe |
 
@@ -142,10 +143,35 @@ voices no character pool claimed: it holds the directed British accent and reads
 rather than as someone in the room. An explicit high-fantasy redraft of its profile direction was
 auditioned against it and rejected.
 
+## The follower
+
+The follower is a speaker class of its own. It is a composed player model with no NPC id, no race
+and no row in the bundled table, so it is configured by hand the way the player is, from four
+settings of its own, and it anchors to its own voice per gender rather than the player's. Anchoring
+somewhere else is the point: a follower that reused the player path would sound exactly like its
+owner walking beside them.
+
+Its gender seeds from the outfit built in Follower Buddy, so a companion dressed as a woman gets a
+woman's voice without being asked twice, and the setting pins it when the player wants otherwise.
+
+It is configured like the player but delivered like a character: its lines follow the NPC Speaking
+Style rather than the player one, carry the cave echo, and are translated by the Spoken Language
+setting. The companion is someone standing in the room with you, not the voice in your own head.
+
+Its direction block states the speaker's gender outright, which no other speaker's does. Every
+other character carries a name the model reads as a person, so the voice alone settles how they
+sound; the follower's profile name is the genderless "Companion", and a neutral-reading voice under
+a genderless name lets the model drift mid-conversation. Saying it in the notes costs nothing and
+removes the guess.
+
+Its overhead chatter and its Talk-to conversation share that one voice, and differ only in how they
+play: chatter takes a speaker chain of its own and sounds alongside the world, while a Talk-to page
+is a dialogue line and interrupts like any other.
+
 ## What the cache key does and does not see
 
 A voice spec's cache-key fragment carries the speaker class, race, and gender: `npc:ELF:FEMALE`,
-`player:MALE`, `narrator`.
+`player:MALE`, `follower:FEMALE`, `narrator`.
 
 The per-NPC seed and the child flag are deliberately absent from it. The backend already folds the
 concrete resolved voice into its own cache variant, so two NPCs that map to different voices never

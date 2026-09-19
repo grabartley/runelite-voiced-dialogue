@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue;
 
+import com.grahambartley.runelite.voiced.dialogue.integration.followerbuddy.FollowerVoice;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -17,6 +18,8 @@ public interface VoicedDialogueConfig extends Config {
   String OPENROUTER_API_KEY = "openRouterApiKey";
 
   String GOOGLE_AI_STUDIO_API_KEY = "googleAiStudioApiKey";
+
+  String VOICE_FOLLOWER_KEY = "voiceFollower";
 
   @ConfigSection(
       name = "General",
@@ -37,9 +40,17 @@ public interface VoicedDialogueConfig extends Config {
   String deliverySection = "delivery";
 
   @ConfigSection(
+      name = "Follower Buddy",
+      description =
+          "Voice the companion from the separate Follower Buddy plugin. Does nothing without it.",
+      position = 3,
+      closedByDefault = true)
+  String followerSection = "follower";
+
+  @ConfigSection(
       name = "Advanced",
       description = "Niche tuning and diagnostics most players won't need.",
-      position = 3,
+      position = 4,
       closedByDefault = true)
   String advancedSection = "advanced";
 
@@ -332,6 +343,59 @@ public interface VoicedDialogueConfig extends Config {
       section = voicesSection)
   default boolean autoLearnNewNpcs() {
     return false;
+  }
+
+  @ConfigItem(
+      keyName = VOICE_FOLLOWER_KEY,
+      name = "Voice Follower Buddy",
+      description =
+          "Speak your Follower Buddy companion's lines. Needs that plugin. Its overhead chatter"
+              + " also needs Mirror to chat on.",
+      position = 0,
+      section = followerSection)
+  default boolean voiceFollower() {
+    return false;
+  }
+
+  @ConfigItem(
+      keyName = "followerVoice",
+      name = "Companion Voice",
+      description = "Voice for your companion. Auto follows its Follower Buddy outfit.",
+      position = 1,
+      section = followerSection)
+  default FollowerVoice followerVoice() {
+    return FollowerVoice.AUTO;
+  }
+
+  @ConfigItem(
+      keyName = "followerAccent",
+      name = "Companion Accent",
+      description = "Your companion's accent.",
+      position = 2,
+      section = followerSection)
+  default String followerAccent() {
+    return "Common British English, the plain, down-to-earth speech of a loyal travelling"
+        + " companion, not posh or refined.";
+  }
+
+  @ConfigItem(
+      keyName = "followerPersona",
+      name = "Companion Persona",
+      description = "Who your companion is.",
+      position = 3,
+      section = followerSection)
+  default String followerPersona() {
+    return "Eager, warm, and good-humoured.";
+  }
+
+  @ConfigItem(
+      keyName = "followerPace",
+      name = "Companion Delivery Pace",
+      description = "How your companion paces their words.",
+      position = 4,
+      section = followerSection)
+  default String followerPace() {
+    return "Normal.";
   }
 
   @ConfigItem(

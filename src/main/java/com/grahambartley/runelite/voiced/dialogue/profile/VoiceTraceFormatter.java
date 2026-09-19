@@ -36,7 +36,7 @@ public final class VoiceTraceFormatter {
             + " profile=%s accent=%s",
         backendId,
         kindOf(voice),
-        voice.player() || voice.narrator() ? "-" : "'" + npcName + "'",
+        voice.kind() == VoiceSpec.Kind.NPC ? "'" + npcName + "'" : NOT_APPLICABLE,
         emotion,
         character ? voice.race() : NOT_APPLICABLE,
         character ? voice.gender() : NOT_APPLICABLE,
@@ -47,10 +47,20 @@ public final class VoiceTraceFormatter {
   }
 
   private static String kindOf(VoiceSpec voice) {
-    if (voice.narrator()) {
-      return "narrator";
+    switch (voice.kind()) {
+      case NARRATOR:
+        return "narrator";
+      case PLAYER:
+        return "player";
+      case FOLLOWER:
+        return "follower";
+      default:
+        return "npc";
     }
-    return voice.player() ? "player" : "npc";
+  }
+
+  static String buildFollowerTrace(NpcGender gender) {
+    return String.format("[TTS voice] follower -> gender=%s", gender);
   }
 
   static String buildPlayerTrace(NpcGender gender) {

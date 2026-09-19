@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.CategoryRule;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.Layer;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,6 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
+
+  static final String MALE_VOICING = "The speaker is a man, and sounds like one.";
+
+  static final String FEMALE_VOICING = "The speaker is a woman, and sounds like one.";
 
   @Value
   @Accessors(fluent = true)
@@ -167,7 +172,22 @@ public final class NpcProfileTable {
   }
 
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {
-    CharacterProfile base = apply(layers.defaultProfile(), layers.playerLayer());
+    return configured(layers.playerLayer(), accent, style, pace);
+  }
+
+  public CharacterProfile resolveFollower(
+      String accent, String style, String pace, NpcGender gender) {
+    CharacterProfile base = configured(layers.followerLayer(), accent, style, pace);
+    return new CharacterProfile(
+        base.name(), base.accent(), base.style() + " " + voicingFor(gender), base.pace());
+  }
+
+  static String voicingFor(NpcGender gender) {
+    return NpcGender.orDefault(gender) == NpcGender.FEMALE ? FEMALE_VOICING : MALE_VOICING;
+  }
+
+  private CharacterProfile configured(Layer layer, String accent, String style, String pace) {
+    CharacterProfile base = apply(layers.defaultProfile(), layer);
     return new CharacterProfile(
         base.name(),
         sanitizedOr(accent, base.accent()),

@@ -41,6 +41,53 @@ and untouched by the Player and NPC Speaking Styles and by the cave echo, which 
 of people standing in the room with you. The spoken language still applies. Being fixed is what
 keeps narrated lines on a stable cache key across sessions.
 
+The [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) companion is a speaker class of
+its own too, and everything that knows that plugin exists lives in `integration.followerbuddy`,
+behind **Voice Follower Buddy**, off by default. Follower Buddy mirrors each line its companion
+speaks to public chat under the companion's configured name, and `FollowerSpeaker` picks it up off
+the same `ChatMessage` event `PublicChatSpeaker` reads. There is no compile or runtime dependency on
+its jar: the companion's name, its outfit and its mirroring setting are `ConfigManager` reads of
+another plugin's group. An absent name is a profile Follower Buddy has never run in, so there is no
+companion to voice and nothing is matched at all; that is what keeps the feature from billing a
+cloud call on a passing player who happens to share the companion's default name. The outfit and
+the mirroring flag degrade to our own settings, so the feature is inert rather than broken when
+Follower Buddy is not installed. The companion speaks through two surfaces and neither raises an event, because its overhead bubble
+is drawn rather than set on an actor and its right-click Talk-to window is an `Overlay` painting
+straight to the canvas. Each is reached a different way. The bubble's text also goes to public chat
+when Follower Buddy is mirroring, so the chat line covers everything the bubble shows.
+
+The Talk-to conversation has no such echo, so it is read off the overlay itself. RuneLite's own
+`OverlayManager` holds every registered overlay, including another plugin's, and its public
+`anyMatch` walks them, so the dialog instance is found by class name and its open page read
+reflectively once per tick: which page is showing, its text, and whether the node belongs to the
+player or the companion. Player pages are voiced in the player voice exactly as quest dialogue is.
+The read is edge-triggered on the page's text and index, so a page sitting on screen is spoken
+once and turning it speaks the next.
+
+This is the one place the plugin reaches into another's internals, and it is built to fail quiet:
+the fields are resolved once and cached, any reflective failure silences the Talk-to path
+permanently with a single log line rather than throwing into the render loop, and the overlay is
+rescanned on a slow cadence so a Follower Buddy installed mid-session is picked up without a
+restart. Overhead chatter holds back while the dialog is open, using the tick's own read rather
+than a second reflection.
+
+Its lines play on the overhead path rather than the dialogue one. The companion's bubble changes
+whenever it has something new to say, which can land well before the line playing has finished, so
+it takes a speaker chain of its own in `DialogueAudioService` exactly as each nearby NPC does: its
+lines queue behind each other and never overlap themselves. The chain id sits below zero, where no
+NPC index can reach, so the companion and a crowd of NPCs sound at the same time on their own audio
+lines without either cutting the other. It plays at the configured volume rather than a
+distance-scaled one, since the companion is always beside you, and it falls silent while a
+conversation is on screen for the same reason ambient chatter does: a companion talking over the
+dialogue you are reading is noise, and a line skipped is a line not billed.
+
+Whether Follower Buddy is installed is read from `runelite.externalPlugins`, the Hub list its own
+removal edits, rather than from the presence of its config keys: RuneLite persists a plugin's
+defaults on load and leaves them behind on uninstall, so stale `followerbuddy.*` keys prove only
+that it once ran. A received line outranks that list, so a sideloaded install still voices. All
+three signals are read on demand rather than cached at startup, so installing mid-session works
+without a restart.
+
 These are the engine's generic dialogs (`objectbox` 193, `objectbox_double` 11, `messagebox` 229),
 not content-specific ones, and the game raises `messagebox` for interface prompts as well as story
 beats: a world switch warning arrives on the same widget, through the same chat type, in the same

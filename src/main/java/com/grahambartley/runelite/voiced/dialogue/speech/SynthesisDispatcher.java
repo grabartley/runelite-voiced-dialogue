@@ -8,12 +8,18 @@ import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceTraceFormatter;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NPC;
 
 @Slf4j
 public final class SynthesisDispatcher {
+
+  static final int FOLLOWER_SPEAKER_ID = -1;
+
+  static final int UNKNOWN_HEAD_ANIMATION = -1;
 
   private final VoiceManager voiceManager;
   private final EmotionResolver emotionResolver;
@@ -57,17 +63,48 @@ public final class SynthesisDispatcher {
         null);
   }
 
+  public void speakFollowerDialogue(String text, NpcGender gender) {
+    ResolvedSpeaker resolved = voiceManager.resolveFollower(gender);
+    dispatch(
+        new SynthesisRequest(
+            text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false),
+        null);
+  }
+
+  public void speakPlayerDialogue(String text) {
+    speakDialogue(text, Speaker.PLAYER, null, UNKNOWN_HEAD_ANIMATION);
+  }
+
+  public void speakFollower(String text, NpcGender gender) {
+    speakOverhead(
+        text,
+        () -> voiceManager.resolveFollower(gender),
+        null,
+        FOLLOWER_SPEAKER_ID,
+        config::volume);
+  }
+
   public void speakAmbient(String text, NPC npc, IntSupplier distanceVolume) {
+    speakOverhead(
+        text, () -> voiceManager.resolveNpc(npc), npc.getName(), npc.getIndex(), distanceVolume);
+  }
+
+  private void speakOverhead(
+      String text,
+      Supplier<ResolvedSpeaker> speaker,
+      String traceName,
+      int speakerId,
+      IntSupplier lineVolume) {
     SynthesisBackend backend = backendProvider.active();
     if (!backend.isAvailable() || backend.isThrottled()) {
       return;
     }
-    ResolvedSpeaker resolved = voiceManager.resolveNpc(npc);
+    ResolvedSpeaker resolved = speaker.get();
     SynthesisRequest request =
         new SynthesisRequest(
             text, resolved.voice(), Emotion.NEUTRAL, resolved.profile(), false, false);
-    trace(backend, request, npc.getName());
-    audioService.speakAmbient(request, echoFor(request), npc.getIndex(), distanceVolume);
+    trace(backend, request, traceName);
+    audioService.speakAmbient(request, echoFor(request), speakerId, lineVolume);
   }
 
   public void speakNarration(String text) {

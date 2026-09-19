@@ -137,7 +137,8 @@ never a peer.
 
 | Tier | Package | Holds |
 |---|---|---|
-| 8 | (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties`, and the wiring that constructs both provider backends |
+| 9 | (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties`, and the wiring that constructs both provider backends |
+| 8 | `integration`, `integration.followerbuddy` | Voicing the [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin's companion: its chat mirror, its config group, its outfit string. Everything that knows Follower Buddy exists |
 | 7 | `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, narration, public chat, examine, prefetch |
 | 7 | `speech.openrouter` | The OpenRouter transport: payload shape, credit metering, usage reads |
 | 7 | `speech.aistudio` | The Google AI Studio transport: `generateContent`, SSE streaming, token usage |
@@ -149,6 +150,13 @@ never a peer.
 | 2 | `speaker` | Who the speaker is: NPC lookup, demographics, races, the learned store |
 | 1 | `audio` | PCM decoding and playback, plus the cave echo effect |
 | 1 | `speech.spend` | Session cost accounting behind `::voicedspend` |
+
+`integration.followerbuddy` sits above `capture` because it reuses the capture pieces, the text
+cleaner, the public chat name filter and the chat notices, without any of them naming it back. It
+owns every read of another plugin's config group, so a companion plugin can be supported or dropped
+by adding or deleting one package plus its section in `VoicedDialogueConfig` and its three
+delegating lines in the plugin root. It compiles and runs with Follower Buddy absent: every
+cross-plugin read degrades to our own settings.
 
 The two provider packages share tier 7 on purpose. Peers cannot import each other, so neither
 transport can reach into the other; anything both need belongs in `speech` or `speech.model`. Only

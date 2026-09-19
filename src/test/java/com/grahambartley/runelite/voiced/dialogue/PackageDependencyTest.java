@@ -29,7 +29,9 @@ public class PackageDependencyTest {
   private static final Map<String, Integer> TIER = new HashMap<>();
 
   static {
-    TIER.put("", 8);
+    TIER.put("", 9);
+    TIER.put("integration", 8);
+    TIER.put("integration.followerbuddy", 8);
     TIER.put("capture", 7);
     TIER.put("speech.openrouter", 7);
     TIER.put("speech.aistudio", 7);
