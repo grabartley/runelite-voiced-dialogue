@@ -63,7 +63,7 @@ The player, the follower, children, and the narrator resolve outside the race ta
 | Speaker | Male | Female |
 |---|---|---|
 | Player | Achird, Iapetus | Aoede, Autonoe |
-| Follower | Umbriel | Laomedeia |
+| Follower | Iapetus | Laomedeia |
 | Child | Puck | Leda, Zephyr |
 | Narrator | Callirrhoe | Callirrhoe |
 
@@ -157,6 +157,12 @@ woman's voice without being asked twice, and the setting pins it when the player
 It is configured like the player but delivered like a character: its lines follow the NPC Speaking
 Style rather than the player one, carry the cave echo, and are translated by the Spoken Language
 setting. The companion is someone standing in the room with you, not the voice in your own head.
+
+Its direction block states the speaker's gender outright, which no other speaker's does. Every
+other character carries a name the model reads as a person, so the voice alone settles how they
+sound; the follower's profile name is the genderless "Companion", and a neutral-reading voice under
+a genderless name lets the model drift mid-conversation. Saying it in the notes costs nothing and
+removes the guess.
 
 Its overhead chatter and its Talk-to conversation share that one voice, and differ only in how they
 play: chatter takes a speaker chain of its own and sounds alongside the world, while a Talk-to page

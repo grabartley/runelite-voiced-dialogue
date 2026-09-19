@@ -108,7 +108,7 @@ public class VoiceManager {
   public ResolvedSpeaker resolveFollower(NpcGender gender) {
     CharacterProfile profile =
         profileTable.resolveFollower(
-            config.followerAccent(), config.followerPersona(), config.followerPace());
+            config.followerAccent(), config.followerPersona(), config.followerPace(), gender);
     if (config.debugMode()) {
       log.info(VoiceTraceFormatter.buildFollowerTrace(gender));
       log.info("[TTS profile] follower -> '{}' accent='{}'", profile.name(), profile.accent());
