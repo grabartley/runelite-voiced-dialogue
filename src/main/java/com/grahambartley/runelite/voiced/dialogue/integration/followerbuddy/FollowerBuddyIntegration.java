@@ -6,11 +6,13 @@ import com.grahambartley.runelite.voiced.dialogue.capture.DialogueTextCleaner;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
 import java.util.function.BooleanSupplier;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.overlay.OverlayManager;
 
+@Slf4j
 public final class FollowerBuddyIntegration {
 
   static final String MIRROR_OFF_NOTICE =
@@ -84,6 +86,16 @@ public final class FollowerBuddyIntegration {
   }
 
   private NpcGender gender() {
-    return FollowerGenderPolicy.resolve(config.followerVoice(), settings.outfitGender());
+    FollowerVoice configured = config.followerVoice();
+    NpcGender fromOutfit = settings.outfitGender();
+    NpcGender resolved = FollowerGenderPolicy.resolve(configured, fromOutfit);
+    if (config.debugMode()) {
+      log.info(
+          "[TTS follower] voice setting={} outfit={} -> gender={}",
+          configured,
+          fromOutfit,
+          resolved);
+    }
+    return resolved;
   }
 }
