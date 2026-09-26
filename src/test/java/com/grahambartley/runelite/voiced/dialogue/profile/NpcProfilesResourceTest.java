@@ -15,7 +15,7 @@ public class NpcProfilesResourceTest {
 
   private NpcProfileTable.Resolution resolve(
       Integer npcId, String npcName, String race, String ethnicity) {
-    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity);
+    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false);
   }
 
   private boolean isChild(String npcName) {

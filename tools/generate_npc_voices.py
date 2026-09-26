@@ -70,6 +70,8 @@ DEFAULT_VOICE_REGIONS = os.path.join("tools", "voice-regions.json")
 DEFAULT_VOICE_LIBRARY = os.path.join("tools", "voice-library.json")
 DEFAULT_VOICE_REGIONS_OUT = os.path.join("src", "main", "resources", "voice-regions.json")
 VOICE_GENDERS = {"male": "MALE", "female": "FEMALE"}
+CHILD_POOL_SIZE = 3
+CHILD_POOL_PREFIX = "CHILD_"
 # Full NPC id -> name dump, used only to cross-reference ids the wiki pages do not
 # list (variants) onto wiki data by name. The wiki remains the source of truth.
 DEFAULT_SUMMARY_URL = (
@@ -453,19 +455,21 @@ def apply_overrides(table, overrides):
 def build_voice_regions(regions_source, library):
     regions = {}
     for key, region in regions_source["regions"].items():
-        excluded = set(region.get("exclude") or [])
+        excluded = set(region.get("exclude") or []) | {regions_source["narratorVoice"]}
         pools = {gender: [] for gender in VOICE_GENDERS.values()}
         for voice in library["voices"]:
             gender = VOICE_GENDERS.get(voice.get("gender"))
             if (gender and voice.get("accent") == region["libraryAccent"]
                     and voice["id"] not in excluded):
-                pools[gender].append(voice["id"])
+                pools[gender].append(voice)
         if not any(pools.values()):
             raise ValueError(f"voice region {key} matches no library voices")
-        regions[key] = {
-            "playerKeywords": [k.lower() for k in region.get("playerKeywords") or []],
-            **{gender: sorted(ids) for gender, ids in pools.items()},
-        }
+        entry = {"playerKeywords": [k.lower() for k in region.get("playerKeywords") or []]}
+        for gender, voices in pools.items():
+            entry[gender] = sorted(v["id"] for v in voices)
+            aged = sorted((v for v in voices if "age" in v), key=lambda v: (v["age"], v["id"]))
+            entry[CHILD_POOL_PREFIX + gender] = sorted(v["id"] for v in aged[:CHILD_POOL_SIZE])
+        regions[key] = entry
     return regions
 
 
@@ -557,7 +561,11 @@ def main():
     args = parser.parse_args()
 
     profiles = validate_profiles(load_json(args.profiles))
-    voice_regions = build_voice_regions(load_json(args.voice_regions), load_json(args.voice_library))
+    voice_regions_source = load_json(args.voice_regions)
+    voice_library = load_json(args.voice_library)
+    if not any(v["id"] == voice_regions_source["narratorVoice"] for v in voice_library["voices"]):
+        raise ValueError(f"narratorVoice '{voice_regions_source['narratorVoice']}' is not in the library")
+    voice_regions = build_voice_regions(voice_regions_source, voice_library)
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 
@@ -634,6 +642,7 @@ def main():
                                "tools/generate_npc_voices.py from tools/voice-regions.json and the "
                                "tools/voice-library.json snapshot. Do not hand-edit.",
             },
+            "narratorVoice": voice_regions_source["narratorVoice"],
             "regions": voice_regions,
         }, fh, indent=1, ensure_ascii=False)
         fh.write("\n")

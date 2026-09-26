@@ -48,7 +48,7 @@ final class NpcVoiceResolver {
 
     NpcRace voiceRace = race == NpcRace.UNKNOWN ? NpcRace.HUMAN : race;
     NpcGender voiceGender = NpcDemographicParser.toVoiceGender(gender);
-    boolean child = attributes.isChild() || identity.nameMatch().child();
+    boolean child = identity.child();
     int seed = voiceSeed(identity.baseId(), npcName);
     if (config.debugMode()) {
       log.info(
@@ -60,7 +60,7 @@ final class NpcVoiceResolver {
 
   private VoiceSpec defaultVoice(
       String npcName, Integer npcId, NpcIdentity identity, String source) {
-    boolean child = identity.nameMatch().child();
+    boolean child = identity.child();
     int seed = voiceSeed(npcId, npcName);
     if (config.debugMode()) {
       log.info(

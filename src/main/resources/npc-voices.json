@@ -453,7 +453,8 @@
           "urchin"
         ],
         "lifeStage": "child",
-        "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
+        "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery.",
+        "pitch": "Very high-pitched, light young child's voice, far above an adult voice"
       }
     ],
     "byEthnicity": {

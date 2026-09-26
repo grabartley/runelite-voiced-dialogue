@@ -17,6 +17,22 @@ public class GeminiVoiceMapTest {
 
   private final GeminiVoiceMap map = new GeminiVoiceMap();
 
+  private static final String[] REGION_KEYS = {
+    "SOUTHERN_ENGLISH",
+    "WEST_COUNTRY",
+    "SCOUSE",
+    "MANCUNIAN",
+    "GEORDIE",
+    "SCOTTISH",
+    "IRISH",
+    "AUSTRALIAN",
+    "NEW_ZEALAND",
+    "ITALIAN",
+    "EGYPTIAN_ARABIC",
+    "POLISH",
+    "JAPANESE"
+  };
+
   private static final Set<String> CHILD_MALE_POOL = new HashSet<>(java.util.Arrays.asList("Puck"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
@@ -152,7 +168,16 @@ public class GeminiVoiceMapTest {
   public void theNarratorVoiceIsHeldOutOfEveryCharacterPool() {
     String narrator = map.voiceFor(VoiceSpec.NARRATOR, null);
 
-    assertEquals(GeminiVoiceMap.NARRATOR_VOICE, narrator);
+    assertEquals(GeminiVoiceRegions.bundled().narratorVoice(), narrator);
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    for (String region : REGION_KEYS) {
+      for (int seed = 0; seed < 400; seed++) {
+        for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+          assertFalse(narrator.equals(bundled.voiceFor(region, gender, seed)));
+          assertFalse(narrator.equals(bundled.childVoiceFor(region, gender, seed)));
+        }
+      }
+    }
     assertFalse(
         "no character can ever voice as the narrator",
         voicesFor(NpcGender.MALE).contains(narrator));
@@ -167,7 +192,7 @@ public class GeminiVoiceMapTest {
     emitted.addAll(voicesFor(NpcGender.MALE));
     emitted.addAll(voicesFor(NpcGender.FEMALE));
     emitted.add(GeminiVoiceMap.DEFAULT_VOICE);
-    emitted.add(map.voiceFor(VoiceSpec.NARRATOR, null));
+    emitted.add(GeminiVoiceMap.FALLBACK_NARRATOR_VOICE);
     Set<String> bogus = new HashSet<>(emitted);
     bogus.removeAll(GEMINI_VOICE_CATALOG);
     assertTrue(
@@ -353,7 +378,22 @@ public class GeminiVoiceMapTest {
   }
 
   @Test
-  public void aChildKeepsTheChildPoolWhateverItsRegion() {
+  public void aChildWithARegionTakesThatRegionsYoungestVoices() {
+    GeminiVoiceMap withChildren =
+        new GeminiVoiceMap(
+            new GeminiVoiceRegions(
+                new com.google.gson.JsonParser()
+                    .parse(
+                        "{\"IRISH\":{\"MALE\":[\"ie-m-1\",\"ie-m-2\"],\"CHILD_MALE\":[\"ie-young\"]}}")
+                    .getAsJsonObject()));
+    assertEquals(
+        "ie-young",
+        withChildren.voiceFor(
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 5, true), inRegion("IRISH")));
+  }
+
+  @Test
+  public void aChildWhoseRegionHasNoYoungVoicesKeepsTheChildPool() {
     String voice =
         REGIONAL.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 5, true), inRegion("IRISH"));
     assertTrue(CHILD_MALE_POOL.contains(voice));
@@ -362,7 +402,8 @@ public class GeminiVoiceMapTest {
   @Test
   public void theNarratorIgnoresRegions() {
     assertEquals(
-        GeminiVoiceMap.NARRATOR_VOICE, REGIONAL.voiceFor(VoiceSpec.NARRATOR, inRegion("IRISH")));
+        GeminiVoiceMap.FALLBACK_NARRATOR_VOICE,
+        REGIONAL.voiceFor(VoiceSpec.NARRATOR, inRegion("IRISH")));
   }
 
   @Test

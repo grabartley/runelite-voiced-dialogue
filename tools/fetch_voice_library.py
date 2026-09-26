@@ -3,7 +3,7 @@
 
 Offline tooling, not part of the plugin runtime. Lists every voice from
 GET /v1beta/voices with a Google AI Studio key taken from the GEMINI_API_KEY
-environment variable, keeps only the fields the generator reads, and writes them
+environment variable, keeps only the fields the generator reads (plus the speaker's age, parsed from the description), and writes them
 sorted by id so a refresh produces a minimal diff. tools/generate_npc_voices.py
 builds the bundled region voice pools from this snapshot.
 
@@ -13,6 +13,7 @@ Usage
 """
 
 import json
+import re
 import os
 import sys
 import urllib.parse
@@ -22,6 +23,7 @@ ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/voices"
 PAGE_SIZE = 1000
 KEPT_FIELDS = ("id", "accent", "language_code", "region_code", "gender", "pitch")
 DEFAULT_OUT = os.path.join("tools", "voice-library.json")
+AGE = re.compile(r"(\d+)-year-old")
 
 
 def fetch_all(api_key):
@@ -40,13 +42,20 @@ def fetch_all(api_key):
             return voices
 
 
+def trim(voice):
+    kept = {k: voice[k] for k in KEPT_FIELDS if k in voice}
+    age = AGE.search(voice.get("description") or "")
+    if age:
+        kept["age"] = int(age.group(1))
+    return kept
+
+
 def main():
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         sys.exit("Set GEMINI_API_KEY to a Google AI Studio key.")
     voices = fetch_all(api_key)
-    trimmed = sorted(({k: v[k] for k in KEPT_FIELDS if k in v} for v in voices),
-                     key=lambda v: v["id"])
+    trimmed = sorted((trim(v) for v in voices), key=lambda v: v["id"])
     with open(DEFAULT_OUT, "w", encoding="utf-8") as fh:
         json.dump({"voices": trimmed}, fh, indent=1, ensure_ascii=False)
         fh.write("\n")

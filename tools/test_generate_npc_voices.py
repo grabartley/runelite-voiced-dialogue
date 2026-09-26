@@ -359,8 +359,11 @@ class ValidateProfilesTest(unittest.TestCase):
 
 
 LIBRARY = {"voices": [
-    {"id": "ie-2", "accent": "Dublin English", "gender": "male"},
-    {"id": "ie-1", "accent": "Dublin English", "gender": "male"},
+    {"id": "ie-2", "accent": "Dublin English", "gender": "male", "age": 60},
+    {"id": "ie-1", "accent": "Dublin English", "gender": "male", "age": 22},
+    {"id": "ie-3", "accent": "Dublin English", "gender": "male", "age": 31},
+    {"id": "ie-4", "accent": "Dublin English", "gender": "male", "age": 25},
+    {"id": "ie-5", "accent": "Dublin English", "gender": "male"},
     {"id": "ie-f", "accent": "Dublin English", "gender": "female"},
     {"id": "ie-n", "accent": "Dublin English", "gender": "neutral"},
     {"id": "gb-1", "accent": "Glasgow English", "gender": "male"},
@@ -370,15 +373,20 @@ LIBRARY = {"voices": [
 def regions_source(**overrides):
     region = {"libraryAccent": "Dublin English", "playerKeywords": ["Irish"], "exclude": []}
     region.update(overrides)
-    return {"regions": {"IRISH": region}}
+    return {"narratorVoice": "narrator-1", "regions": {"IRISH": region}}
 
 
 class VoiceRegionsTest(unittest.TestCase):
 
     def test_pools_split_by_gender_and_sort_by_id(self):
         regions = gen.build_voice_regions(regions_source(), LIBRARY)
-        self.assertEqual(regions["IRISH"]["MALE"], ["ie-1", "ie-2"])
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-1", "ie-2", "ie-3", "ie-4", "ie-5"])
         self.assertEqual(regions["IRISH"]["FEMALE"], ["ie-f"])
+
+    def test_child_pools_hold_the_youngest_voices_of_each_gender(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-1", "ie-3", "ie-4"])
+        self.assertEqual(regions["IRISH"]["CHILD_FEMALE"], [])
 
     def test_neutral_voices_are_left_out(self):
         regions = gen.build_voice_regions(regions_source(), LIBRARY)
@@ -388,9 +396,15 @@ class VoiceRegionsTest(unittest.TestCase):
         regions = gen.build_voice_regions(regions_source(), LIBRARY)
         self.assertEqual(regions["IRISH"]["playerKeywords"], ["irish"])
 
+    def test_the_narrator_voice_is_held_out_of_every_pool(self):
+        library = {"voices": LIBRARY["voices"] + [
+            {"id": "narrator-1", "accent": "Dublin English", "gender": "female", "age": 20}]}
+        regions = gen.build_voice_regions(regions_source(), library)
+        self.assertNotIn("narrator-1", regions["IRISH"]["FEMALE"] + regions["IRISH"]["CHILD_FEMALE"])
+
     def test_excluded_voices_are_dropped(self):
         regions = gen.build_voice_regions(regions_source(exclude=["ie-1"]), LIBRARY)
-        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2"])
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-3", "ie-4", "ie-5"])
 
     def test_a_region_matching_no_voices_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "IRISH matches no library voices"):

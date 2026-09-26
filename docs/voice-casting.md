@@ -22,7 +22,8 @@ this order:
 1. The narrator takes its fixed voice.
 2. The player takes a native voice from the first region whose keyword their typed accent names,
    or the player pool when it names none.
-3. A child takes the child pool, whatever its region.
+3. A child with a voice region takes that region's child pool: the three youngest native voices
+   of its gender. A child with no region takes the prebuilt child pool.
 4. An NPC with a voice region takes a voice from that region's pool for its gender.
 5. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
 
@@ -79,7 +80,7 @@ to it. A voice does not enter a pool on the strength of its catalog entry.
 - **Each NPC keeps one voice.** A per-NPC seed spreads same-race, same-gender NPCs across their
   pool, and the same NPC lands on the same voice on every line and in every session. The seed is
   the NPC's base composition id, which a transforming NPC keeps when its active id changes, so a
-  quest character does not change voice mid-quest. Region pools pick by rendezvous hashing, so
+  quest character does not change voice mid-quest. Every pool picks by rendezvous hashing, so
   adding or removing a voice moves only the NPCs on that voice. Race pools hold two voices, so
   their spread is variety rather than a guarantee that any two NPCs differ. A spec carrying no
   seed anchors to index 0 and never takes a region voice.
@@ -113,13 +114,14 @@ being described twice.
 | Crab | Zubenelgenubi, Sadachbia | Pulcherrima, Laomedeia |
 | Penguin | Puck, Zubenelgenubi | Zephyr, Laomedeia |
 
-The player, children, and the narrator resolve outside the race table:
+The player, children, and the narrator resolve outside the race table. A child with a voice region
+and a player whose accent names one take native voices instead (see above):
 
 | Speaker | Male | Female |
 |---|---|---|
 | Player | Achird, Iapetus | Aoede, Autonoe |
-| Child | Puck | Leda, Zephyr |
-| Narrator | Callirrhoe | Callirrhoe |
+| Child with no voice region | Puck | Leda, Zephyr |
+| Narrator | `en-gb-storyteller-2` | `en-gb-storyteller-2` |
 
 `NpcRace` is the key, and several in-game species bucket into one of these before the map is
 consulted: gnomes are voiced from the goblin pool, giants and cyclopes from the troll pool, and
@@ -171,12 +173,18 @@ Life stage is a third resolution axis alongside race and gender, and
 drawn from the gender pool it already belongs to, so the gender invariant holds with children
 included.
 
-The childlike timbre dominates what a player hears. Race and accent still colour the delivery
-through the character profile's directive text, so a troll child sounds young rather than large.
+The library holds no child voices; its youngest speakers are in their early twenties. By ear, the
+youngest native voices told to sound like a child beat the prebuilt child voices, which read young
+but carry the General American base. So a child whose accent has a voice region takes one of the
+three youngest native voices of its gender in that region, and the generator builds those child
+pools from the ages the library states. Every child, whether marked by a child keyword in its name
+or by the `child` life-stage marker in the bundled table, takes the `child` profile layer, whose
+`pitch` ("Very high-pitched, light young child's voice, far above an adult voice") opens the style
+and outranks the race's pitch, so a troll child sounds young rather than large.
 
-The male child pool holds one voice, deliberately. It is the only male voice that reads as a young
-boy, and a second that merely reads high is worse than the repetition. The female pool holds two,
-both of which read young and hold the directed British accent.
+A child whose accent has no native voices keeps the prebuilt child pool. Its male pool holds one
+voice, deliberately: it is the only prebuilt male voice that reads as a young boy, and a second
+that merely reads high is worse than the repetition. The female pool holds two.
 
 ## The player
 
@@ -195,11 +203,13 @@ not ask a player to pick a gender.
 The narrator is a speaker class of its own rather than a character, so it resolves to one fixed
 voice in every session.
 
-That voice is held out of every race pool, every child pool and the player pool, so the game's own
-narration is never mistaken for an NPC standing next to you. It was picked by ear from the three
-voices no character pool claimed: it holds the directed British accent and reads as a storyteller
-rather than as someone in the room. An explicit high-fantasy redraft of its profile direction was
-auditioned against it and rejected.
+That voice is `en-gb-storyteller-2`, a native southern English voice the library tags as a
+storyteller and narrator, picked by ear from the native storyteller candidates. It is named once,
+as `narratorVoice` in `tools/voice-regions.json`, and the generator removes it from every region
+and child pool; no race, child or player pool holds it either. So the game's own narration is never
+mistaken for an NPC standing next to you. If the bundled table cannot load, the narrator falls back
+to the prebuilt Callirrhoe. An explicit high-fantasy redraft of its profile direction was
+auditioned and rejected.
 
 ## What the cache key does and does not see
 

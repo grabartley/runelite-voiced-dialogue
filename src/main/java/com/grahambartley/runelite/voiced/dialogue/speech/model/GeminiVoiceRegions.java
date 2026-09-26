@@ -25,10 +25,19 @@ public final class GeminiVoiceRegions {
 
   private static final long HASH_MULTIPLIER = 0x9E3779B97F4A7C15L;
 
+  static final String CHILD_POOL_PREFIX = "CHILD_";
+
   private final Map<String, Map<NpcGender, List<String>>> pools = new LinkedHashMap<>();
+  private final Map<String, Map<NpcGender, List<String>>> childPools = new LinkedHashMap<>();
   private final Map<String, List<Pattern>> playerKeywords = new LinkedHashMap<>();
+  private final String narratorVoice;
 
   GeminiVoiceRegions(JsonObject regions) {
+    this(regions, null);
+  }
+
+  GeminiVoiceRegions(JsonObject regions, String narratorVoice) {
+    this.narratorVoice = narratorVoice;
     for (Map.Entry<String, JsonElement> entry : regions.entrySet()) {
       if (!entry.getValue().isJsonObject()) {
         continue;
@@ -38,6 +47,10 @@ public final class GeminiVoiceRegions {
       byGender.put(NpcGender.MALE, strings(region, "MALE"));
       byGender.put(NpcGender.FEMALE, strings(region, "FEMALE"));
       pools.put(entry.getKey(), byGender);
+      Map<NpcGender, List<String>> childByGender = new EnumMap<>(NpcGender.class);
+      childByGender.put(NpcGender.MALE, strings(region, CHILD_POOL_PREFIX + "MALE"));
+      childByGender.put(NpcGender.FEMALE, strings(region, CHILD_POOL_PREFIX + "FEMALE"));
+      childPools.put(entry.getKey(), childByGender);
       List<Pattern> keywords = new ArrayList<>();
       for (String keyword : strings(region, "playerKeywords")) {
         keywords.add(
@@ -51,9 +64,25 @@ public final class GeminiVoiceRegions {
     return Bundled.INSTANCE;
   }
 
+  String narratorVoice() {
+    return narratorVoice;
+  }
+
   String voiceFor(String region, NpcGender gender, int seed) {
-    Map<NpcGender, List<String>> byGender = region == null ? null : pools.get(region);
-    List<String> pool = byGender == null ? null : byGender.get(gender);
+    return pick(pool(pools, region, gender), seed);
+  }
+
+  String childVoiceFor(String region, NpcGender gender, int seed) {
+    return pick(pool(childPools, region, gender), seed);
+  }
+
+  private static List<String> pool(
+      Map<String, Map<NpcGender, List<String>>> source, String region, NpcGender gender) {
+    Map<NpcGender, List<String>> byGender = region == null ? null : source.get(region);
+    return byGender == null ? null : byGender.get(gender);
+  }
+
+  static String pick(List<String> pool, int seed) {
     if (pool == null || pool.isEmpty()) {
       return null;
     }
@@ -121,7 +150,9 @@ public final class GeminiVoiceRegions {
             root.has("regions") && root.get("regions").isJsonObject()
                 ? root.getAsJsonObject("regions")
                 : new JsonObject();
-        return new GeminiVoiceRegions(regions);
+        String narrator =
+            root.has("narratorVoice") ? root.get("narratorVoice").getAsString() : null;
+        return new GeminiVoiceRegions(regions, narrator);
       } catch (Exception e) {
         log.error("Failed to load voice region table {}: {}", RESOURCE, e.getMessage());
         return new GeminiVoiceRegions(new JsonObject());

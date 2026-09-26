@@ -29,7 +29,7 @@ Cloud profile resolution combines layers: `default -> byRace[race] -> byEthnicit
 
 ## Gemini (cloud) sub-pool rule
 
-Each race anchors to a small, **gender-correct** sub-pool of two Gemini voices per gender, chosen for timbre (gravelly/firm = big imposing; bright/light = small; warm/clear = friendly). `GeminiVoiceMapTest` enforces a hard invariant: **no voice may appear in any male pool and any female pool** (`maleAndFemaleVoicePoolsAreDisjointAcrossEveryRace`). So:
+The race pool is the fallback: an NPC whose accent has a `voiceRegion` is voiced from that region's native library voices first (see `docs/voice-casting.md`), so a race pool only voices members whose accent has no native voices, or a race with no region. Each race anchors to a small, **gender-correct** sub-pool of two Gemini voices per gender, chosen for timbre (gravelly/firm = big imposing; bright/light = small; warm/clear = friendly). `GeminiVoiceMapTest` enforces a hard invariant: **no voice may appear in any male pool and any female pool** (`maleAndFemaleVoicePoolsAreDisjointAcrossEveryRace`). So:
 - Reuse only voices already classified for that gender elsewhere in the map, or introduce a voice whose gender you are sure of (the API carries no gender; it is confirmed by ear).
 - Every voice must be in the 30-voice catalog hard-coded in `GeminiVoiceMapTest.GEMINI_VOICE_CATALOG`.
 - Add the race to that test's `MAPPED_RACES` array.

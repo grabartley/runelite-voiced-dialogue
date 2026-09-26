@@ -2,6 +2,7 @@
  "_meta": {
   "description": "Gemini Extended Voice Library pools per voice region and gender, baked into the plugin. Generated offline by tools/generate_npc_voices.py from tools/voice-regions.json and the tools/voice-library.json snapshot. Do not hand-edit."
  },
+ "narratorVoice": "en-gb-storyteller-2",
  "regions": {
   "WEST_COUNTRY": {
    "playerKeywords": [
@@ -23,7 +24,17 @@
     "en-gb-training-12",
     "en-gb-tutor-3"
    ],
+   "CHILD_MALE": [
+    "en-gb-csagent-13",
+    "en-gb-storyteller-1",
+    "en-gb-tutor-3"
+   ],
    "FEMALE": [
+    "en-gb-concierge-11",
+    "en-gb-podcaster-12",
+    "en-gb-techagent-1"
+   ],
+   "CHILD_FEMALE": [
     "en-gb-concierge-11",
     "en-gb-podcaster-12",
     "en-gb-techagent-1"
@@ -41,7 +52,16 @@
     "en-gb-csagent-5",
     "en-gb-podcaster-11"
    ],
+   "CHILD_MALE": [
+    "en-gb-csagent-11",
+    "en-gb-csagent-5",
+    "en-gb-podcaster-11"
+   ],
    "FEMALE": [
+    "en-gb-assistant-7",
+    "en-gb-training-6"
+   ],
+   "CHILD_FEMALE": [
     "en-gb-assistant-7",
     "en-gb-training-6"
    ]
@@ -60,6 +80,11 @@
     "en-gb-csagent-3",
     "en-gb-podcaster-9"
    ],
+   "CHILD_MALE": [
+    "en-gb-advisor-2",
+    "en-gb-concierge-3",
+    "en-gb-podcaster-9"
+   ],
    "FEMALE": [
     "en-gb-assistant-12",
     "en-gb-assistant-3",
@@ -71,6 +96,11 @@
     "en-gb-techagent-8",
     "en-gb-training-4",
     "en-gb-training-9",
+    "en-gb-tutor-15"
+   ],
+   "CHILD_FEMALE": [
+    "en-gb-csagent-1",
+    "en-gb-training-4",
     "en-gb-tutor-15"
    ]
   },
@@ -86,6 +116,11 @@
     "en-gb-training-11",
     "en-gb-tutor-2"
    ],
+   "CHILD_MALE": [
+    "en-gb-concierge-9",
+    "en-gb-csagent-12",
+    "en-gb-tutor-2"
+   ],
    "FEMALE": [
     "en-gb-advisor-12",
     "en-gb-advisor-7",
@@ -98,6 +133,11 @@
     "en-gb-training-5",
     "en-gb-tutor-17",
     "en-gb-tutor-18"
+   ],
+   "CHILD_FEMALE": [
+    "en-gb-commercial-3",
+    "en-gb-commercial-8",
+    "en-gb-tutor-17"
    ]
   },
   "SCOTTISH": {
@@ -118,6 +158,11 @@
     "en-gb-training-8",
     "en-gb-tutor-16"
    ],
+   "CHILD_MALE": [
+    "en-gb-commercial-4",
+    "en-gb-podcaster-5",
+    "en-gb-podcaster-8"
+   ],
    "FEMALE": [
     "en-gb-advisor-11",
     "en-gb-assistant-6",
@@ -126,6 +171,11 @@
     "en-gb-techagent-5",
     "en-gb-training-7",
     "en-gb-tutor-5"
+   ],
+   "CHILD_FEMALE": [
+    "en-gb-csagent-9",
+    "en-gb-techagent-5",
+    "en-gb-training-7"
    ]
   },
   "IRISH": {
@@ -173,6 +223,11 @@
     "en-ie-tutor-4",
     "en-ie-tutor-7"
    ],
+   "CHILD_MALE": [
+    "en-ie-assistant-2",
+    "en-ie-concierge-4",
+    "en-ie-csagent-6"
+   ],
    "FEMALE": [
     "en-ie-advisor-2",
     "en-ie-advisor-4",
@@ -213,6 +268,11 @@
     "en-ie-tutor-3",
     "en-ie-tutor-5",
     "en-ie-tutor-6"
+   ],
+   "CHILD_FEMALE": [
+    "en-ie-commercial-7",
+    "en-ie-concierge-7",
+    "en-ie-csagent-2"
    ]
   },
   "AUSTRALIAN": {
@@ -242,6 +302,11 @@
     "en-au-training-8",
     "en-au-tutor-5"
    ],
+   "CHILD_MALE": [
+    "en-au-techagent-3",
+    "en-au-training-5",
+    "en-au-training-8"
+   ],
    "FEMALE": [
     "en-au-advisor-5",
     "en-au-advisor-7",
@@ -267,6 +332,11 @@
     "en-au-tutor-1",
     "en-au-tutor-3",
     "en-au-tutor-4"
+   ],
+   "CHILD_FEMALE": [
+    "en-au-concierge-6",
+    "en-au-csagent-5",
+    "en-au-storyteller-4"
    ]
   },
   "NEW_ZEALAND": {
@@ -292,6 +362,11 @@
     "en-nz-tutor-7",
     "en-nz-tutor-8"
    ],
+   "CHILD_MALE": [
+    "en-nz-commercial-1",
+    "en-nz-commercial-2",
+    "en-nz-csagent-6"
+   ],
    "FEMALE": [
     "en-nz-advisor-2",
     "en-nz-assistant-3",
@@ -305,6 +380,11 @@
     "en-nz-podcaster-8",
     "en-nz-training-3",
     "en-nz-tutor-6"
+   ],
+   "CHILD_FEMALE": [
+    "en-nz-commercial-3",
+    "en-nz-podcaster-7",
+    "en-nz-podcaster-8"
    ]
   },
   "ITALIAN": {
@@ -338,6 +418,11 @@
     "it-it-tutor-6",
     "it-it-tutor-8"
    ],
+   "CHILD_MALE": [
+    "it-it-storyteller-3",
+    "it-it-tutor-4",
+    "it-it-tutor-8"
+   ],
    "FEMALE": [
     "it-it-advisor-1",
     "it-it-advisor-3",
@@ -365,6 +450,11 @@
     "it-it-tutor-1",
     "it-it-tutor-3",
     "it-it-tutor-5",
+    "it-it-tutor-7"
+   ],
+   "CHILD_FEMALE": [
+    "it-it-csagent-3",
+    "it-it-techagent-2",
     "it-it-tutor-7"
    ]
   },
@@ -423,6 +513,11 @@
     "ar-eg-tutor-8",
     "ar-eg-tutor-9"
    ],
+   "CHILD_MALE": [
+    "ar-eg-concierge-1",
+    "ar-eg-concierge-4",
+    "ar-eg-techagent-12"
+   ],
    "FEMALE": [
     "ar-eg-advisor-11",
     "ar-eg-advisor-12",
@@ -468,6 +563,11 @@
     "ar-eg-tutor-10",
     "ar-eg-tutor-11",
     "ar-eg-tutor-7"
+   ],
+   "CHILD_FEMALE": [
+    "ar-eg-assistant-1",
+    "ar-eg-concierge-5",
+    "ar-eg-concierge-7"
    ]
   },
   "POLISH": {
@@ -509,6 +609,11 @@
     "pl-pl-tutor-4",
     "pl-pl-tutor-6"
    ],
+   "CHILD_MALE": [
+    "pl-pl-concierge-5",
+    "pl-pl-podcaster-1",
+    "pl-pl-podcaster-5"
+   ],
    "FEMALE": [
     "pl-pl-advisor-2",
     "pl-pl-advisor-6",
@@ -541,6 +646,11 @@
     "pl-pl-tutor-5",
     "pl-pl-tutor-7",
     "pl-pl-tutor-8"
+   ],
+   "CHILD_FEMALE": [
+    "pl-pl-assistant-7",
+    "pl-pl-techagent-2",
+    "pl-pl-tutor-7"
    ]
   },
   "JAPANESE": {
@@ -579,6 +689,11 @@
     "ja-jp-tutor-2",
     "ja-jp-tutor-4",
     "ja-jp-tutor-9"
+   ],
+   "CHILD_MALE": [
+    "ja-jp-commercial-2",
+    "ja-jp-commercial-5",
+    "ja-jp-storyteller-5"
    ],
    "FEMALE": [
     "ja-jp-advisor-11",
@@ -620,6 +735,11 @@
     "ja-jp-tutor-10",
     "ja-jp-tutor-3",
     "ja-jp-tutor-8"
+   ],
+   "CHILD_FEMALE": [
+    "ja-jp-assistant-4",
+    "ja-jp-commercial-1",
+    "ja-jp-csagent-8"
    ]
   },
   "SOUTHERN_ENGLISH": {
@@ -647,6 +767,11 @@
     "en-gb-tutor-8",
     "en-gb-tutor-9"
    ],
+   "CHILD_MALE": [
+    "en-gb-assistant-2",
+    "en-gb-podcaster-4",
+    "en-gb-training-3"
+   ],
    "FEMALE": [
     "en-gb-advisor-1",
     "en-gb-advisor-4",
@@ -670,7 +795,6 @@
     "en-gb-podcaster-10",
     "en-gb-podcaster-2",
     "en-gb-podcaster-3",
-    "en-gb-storyteller-2",
     "en-gb-training-2",
     "en-gb-tutor-1",
     "en-gb-tutor-10",
@@ -683,6 +807,11 @@
     "en-gb-tutor-4",
     "en-gb-tutor-6",
     "en-gb-tutor-7"
+   ],
+   "CHILD_FEMALE": [
+    "en-gb-commercial-1",
+    "en-gb-csagent-6",
+    "en-gb-csagent-8"
    ]
   }
  }

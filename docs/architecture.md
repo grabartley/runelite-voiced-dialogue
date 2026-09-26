@@ -229,7 +229,7 @@ directly to the Gemini API instead: a `generateContent` request to
 `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent`,
 authenticated with a Google AI Studio API key in the `x-goog-api-key` header. It needs its own key
 (**Google AI Studio API Key**); until one is set it logs a provider-specific one-time notice and its
-lines stay silent. The shared voice resolution is requested as the `prebuiltVoiceConfig` voice.
+lines stay silent. The shared voice resolution is requested as the `prebuiltVoiceConfig` voice, which takes Extended Voice Library ids as well as the prebuilt names.
 
 Only the transport differs from OpenRouter: the style string rides as `speech_metadata` on the
 text part, and audio comes back as base64 16-bit LE PCM inside JSON rather than a raw body. The

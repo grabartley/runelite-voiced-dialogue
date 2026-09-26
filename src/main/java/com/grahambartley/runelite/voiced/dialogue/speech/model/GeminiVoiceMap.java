@@ -4,6 +4,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public final class GeminiVoiceMap {
 
   static final String DEFAULT_CHILD_VOICE = "Puck";
 
-  static final String NARRATOR_VOICE = "Callirrhoe";
+  static final String FALLBACK_NARRATOR_VOICE = "Callirrhoe";
 
   static final int PLAYER_SEED = 0;
 
@@ -77,7 +78,8 @@ public final class GeminiVoiceMap {
       return DEFAULT_VOICE;
     }
     if (spec.narrator()) {
-      return NARRATOR_VOICE;
+      String narrator = regions.narratorVoice();
+      return narrator != null ? narrator : FALLBACK_NARRATOR_VOICE;
     }
     NpcGender gender = normalizeGender(spec.gender());
     if (spec.player()) {
@@ -85,15 +87,18 @@ public final class GeminiVoiceMap {
       String regional = regions.voiceFor(regions.regionForAccent(accent), gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
     }
+    String region = profile != null && spec.hasVoiceSeed() ? profile.voiceRegion() : null;
     if (spec.child()) {
-      String[] pool = childVoices.get(gender);
-      return (pool == null || pool.length == 0) ? DEFAULT_CHILD_VOICE : pick(pool, spec);
-    }
-    if (profile != null && spec.hasVoiceSeed()) {
-      String regional = regions.voiceFor(profile.voiceRegion(), gender, spec.voiceSeed());
+      String regional = regions.childVoiceFor(region, gender, spec.voiceSeed());
       if (regional != null) {
         return regional;
       }
+      String[] pool = childVoices.get(gender);
+      return (pool == null || pool.length == 0) ? DEFAULT_CHILD_VOICE : pick(pool, spec);
+    }
+    String regional = regions.voiceFor(region, gender, spec.voiceSeed());
+    if (regional != null) {
+      return regional;
     }
     Map<NpcGender, String[]> byGender = npcVoices.get(spec.race());
     if (byGender == null) {
@@ -113,8 +118,7 @@ public final class GeminiVoiceMap {
     if (!spec.hasVoiceSeed()) {
       return pool[0];
     }
-    int index = Math.floorMod(Integer.hashCode(spec.voiceSeed()), pool.length);
-    return pool[index];
+    return GeminiVoiceRegions.pick(Arrays.asList(pool), spec.voiceSeed());
   }
 
   private static NpcGender normalizeGender(NpcGender gender) {

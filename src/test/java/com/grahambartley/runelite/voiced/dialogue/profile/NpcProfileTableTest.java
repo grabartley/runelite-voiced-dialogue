@@ -30,7 +30,7 @@ public class NpcProfileTableTest {
 
   private static NpcProfileTable.Resolution resolve(
       NpcProfileTable table, Integer npcId, String npcName, String race, String ethnicity) {
-    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity);
+    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false);
   }
 
   private static boolean isChild(NpcProfileTable table, String npcName) {
@@ -125,6 +125,24 @@ public class NpcProfileTableTest {
                     + "\"byId\":{\"9\":{\"style\":\"Gruff\"}}}")
             .getAsJsonObject();
     return NpcProfileTable.fromProfilesJson(profiles);
+  }
+
+  @Test
+  public void aChildMarkedByTheTableTakesTheChildLayerWithoutAChildName() {
+    NpcProfileTable table = table();
+    NpcProfileTable.Resolution named =
+        table.resolveNpc(null, table.matchName("Shilop"), "Human", null, true);
+    assertTrue(named.source().contains("lifeStage:child"));
+    assertTrue(named.profile().style().contains("Bright and young."));
+  }
+
+  @Test
+  public void aChildNamedAsOneTakesTheChildLayerOnce() {
+    NpcProfileTable table = table();
+    NpcProfileTable.Resolution keyword =
+        table.resolveNpc(null, table.matchName("Street urchin"), "Human", null, true);
+    assertTrue(keyword.source().contains("keyword:child"));
+    assertFalse(keyword.source().contains("lifeStage:child"));
   }
 
   @Test

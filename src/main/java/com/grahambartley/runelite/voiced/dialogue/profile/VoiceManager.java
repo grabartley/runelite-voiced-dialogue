@@ -139,7 +139,7 @@ public class VoiceManager {
     }
 
     NpcProfileTable.Resolution resolution =
-        profileTable.resolveNpc(npcId, identity.nameMatch(), race, ethnicity);
+        profileTable.resolveNpc(npcId, identity.nameMatch(), race, ethnicity, identity.child());
     if (config.debugMode()) {
       log.info(
           "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}',"

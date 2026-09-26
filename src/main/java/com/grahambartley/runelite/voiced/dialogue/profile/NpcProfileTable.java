@@ -109,12 +109,13 @@ public final class NpcProfileTable {
     return new NameMatch(matches);
   }
 
-  public Resolution resolveNpc(Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
-    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity));
+  public Resolution resolveNpc(
+      Integer npcId, NameMatch nameMatch, String race, String ethnicity, boolean child) {
+    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity, child));
   }
 
   private List<MatchedLayer> collectLayers(
-      Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
+      Integer npcId, NameMatch nameMatch, String race, String ethnicity, boolean child) {
     List<MatchedLayer> matched = new ArrayList<>();
 
     Layer raceLayer = race == null ? null : layers.byRace().get(race.toLowerCase(Locale.ROOT));
@@ -132,6 +133,13 @@ public final class NpcProfileTable {
     }
     for (CategoryRule rule : nameMatch.rules) {
       matched.add(new MatchedLayer(rule.layer(), "keyword:" + rule.id()));
+    }
+    if (child && !nameMatch.child()) {
+      for (CategoryRule rule : layers.byCategory()) {
+        if (rule.child()) {
+          matched.add(new MatchedLayer(rule.layer(), "lifeStage:" + rule.id()));
+        }
+      }
     }
     Layer idLayer = npcId == null ? null : layers.byId().get(npcId);
     if (idLayer != null) {
