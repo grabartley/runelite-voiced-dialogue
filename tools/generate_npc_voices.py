@@ -77,7 +77,9 @@ VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
-MAX_DIRECTION_LENGTH = {"accent": 80, "pace": 60}
+MAX_DIRECTION_LENGTH = {"accent": 100, "pace": 60}
+ACCENT_LEAD = "Strong "
+ACCENT_ANCHOR = "pronunciation"
 FORBIDDEN_DIRECTION = re.compile(
     r"[\[\]<>]|audio\s*profile|director'?s\s*notes|#+\s*transcript|transcript\s*#+|word\s+for\s+word",
     re.IGNORECASE)
@@ -486,6 +488,11 @@ def validate_directions(where, layer):
             continue
         if FORBIDDEN_DIRECTION.search(value):
             raise ValueError(f"{where}.{field} carries a tag or prompt marker: {value!r}")
+        if field == "accent" and not (
+                value.startswith(ACCENT_LEAD) and ACCENT_ANCHOR in value):
+            raise ValueError(
+                f"{where}.accent must start with '{ACCENT_LEAD.strip()}' and name its "
+                f"{ACCENT_ANCHOR}: {value!r}")
         limit = MAX_DIRECTION_LENGTH.get(field)
         if limit is not None and len(value) > limit:
             raise ValueError(f"{where}.{field} is longer than {limit} characters: {value!r}")

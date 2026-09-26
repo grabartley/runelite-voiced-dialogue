@@ -182,9 +182,14 @@ since Gemini 3.8 speaks its input verbatim.
 Every field is a **short phrase**, per Google's 3.8 prompting guide, which names
 long profile blocks as the main cause of voice drift:
 
-- `accent` is a short accent phrase: "Gruff Scottish accent, as heard in Glasgow",
-  "Warm Italian accent, speaking English". Short phrases land more reliably than
-  descriptive sentences.
+- `accent` is a strong, explicit accent phrase that names the pronunciation:
+  "Strong London English accent, British English pronunciation", "Strong Glasgow
+  Scottish accent, Scottish English pronunciation", "Strong Italian accent,
+  Italian-accented English pronunciation". Gemini 3.8 treats a soft phrase
+  ("Plain southern English accent") as optional and falls back to a generic
+  default accent, so every accent leads with "Strong" and names its pronunciation.
+  A delivery quirk (slurred, whispered, hissing) is never an accent: it goes in
+  `style`, so the character keeps the accent of its race or region.
 - `style` is sustained delivery only: tone, timbre, emotion, volume ("Rough,
   gravelly and blunt").
 - `pace` is a few words ("Slow, ponderous pace").
@@ -194,8 +199,9 @@ long profile blocks as the main cause of voice drift:
   and is never sent.
 
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
-bracket, a prompt-block marker, or "word for word" in any field, an `accent` over
-80 characters, and a `pace` over 60.
+bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
+does not start with "Strong" and name its pronunciation, an `accent` over 100
+characters, and a `pace` over 60.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners

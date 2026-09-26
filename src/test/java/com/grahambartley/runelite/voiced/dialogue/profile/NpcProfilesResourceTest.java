@@ -88,8 +88,8 @@ public class NpcProfilesResourceTest {
             .accent()
             .contains("Transylvanian"));
     assertTrue(
-        "gorillas sound deep and rumbling, not chattery island monkey",
-        resolve(null, "Gorilla", "Gorilla", null).profile().accent().contains("rumbling"));
+        "gorillas sound deep, not chattery island monkey",
+        resolve(null, "Gorilla", "Gorilla", null).profile().accent().contains("deep"));
     assertTrue(
         "tortugans sound Bajan / Barbados",
         resolve(null, "Elder Korel", "Tortugan", null).profile().accent().contains("Bajan"));
@@ -97,8 +97,8 @@ public class NpcProfilesResourceTest {
         "Citizens of Arceuus sound refined and cool",
         resolve(null, "Tyss", "Arceuus", null).profile().accent().contains("cool Received"));
     assertTrue(
-        "the aranei sound soft-spoken and breathy",
-        resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("breathy"));
+        "the aranei sound soft-spoken",
+        resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("soft"));
     assertTrue(
         "dogs vocalise their lines rather than pronouncing them",
         resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barks"));

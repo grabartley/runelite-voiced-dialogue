@@ -266,7 +266,7 @@ class PipedLinkFieldTest(unittest.TestCase):
 
 def profiles_with(**layers):
     profiles = {
-        "default": {"name": "Commoner", "accent": "Plain British accent",
+        "default": {"name": "Commoner", "accent": "Strong London English accent, British English pronunciation",
                     "style": "Plain and sincere", "pace": "Steady pace"},
     }
     profiles.update(layers)
@@ -276,7 +276,7 @@ def profiles_with(**layers):
 class ValidateProfilesTest(unittest.TestCase):
 
     def test_short_plain_directions_pass(self):
-        profiles = profiles_with(byRace={"Dwarf": {"accent": "Gruff Scottish accent"}})
+        profiles = profiles_with(byRace={"Dwarf": {"accent": "Strong Glasgow Scottish accent, Scottish English pronunciation"}})
         self.assertIs(gen.validate_profiles(profiles), profiles)
 
     def test_bundled_profiles_pass(self):
@@ -313,9 +313,20 @@ class ValidateProfilesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "player.style"):
             gen.validate_profiles(profiles)
 
+    def test_soft_accent_is_rejected(self):
+        profiles = profiles_with(byEthnicity={"misthalin": {"accent": "Plain southern English accent"}})
+        with self.assertRaisesRegex(ValueError, "byEthnicity.misthalin.accent must start"):
+            gen.validate_profiles(profiles)
+
+    def test_accent_without_pronunciation_is_rejected(self):
+        profiles = profiles_with(byRace={"Elf": {"accent": "Strong refined accent"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Elf.accent"):
+            gen.validate_profiles(profiles)
+
     def test_long_accent_is_rejected(self):
-        profiles = profiles_with(byEthnicity={"varlamore": {"accent": "a" * 81}})
-        with self.assertRaisesRegex(ValueError, "longer than 80"):
+        accent = "Strong " + "a" * 80 + " pronunciation"
+        profiles = profiles_with(byEthnicity={"varlamore": {"accent": accent}})
+        with self.assertRaisesRegex(ValueError, "longer than 100"):
             gen.validate_profiles(profiles)
 
     def test_long_pace_is_rejected(self):

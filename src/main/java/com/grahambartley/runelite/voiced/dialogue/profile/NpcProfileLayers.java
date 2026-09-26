@@ -13,7 +13,7 @@ class NpcProfileLayers {
   static final CharacterProfile BUILTIN_DEFAULT =
       new CharacterProfile(
           "Gielinor Commoner",
-          "Common working-class British accent",
+          "Strong working-class English accent, British English pronunciation",
           "Plain, sincere and natural, with easy warmth",
           "Steady, conversational pace");
 
