@@ -17,7 +17,7 @@ public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
 
-  private static final Pattern SENTENCE_END = Pattern.compile("[.!?]$");
+  private static final Pattern ENDS_SENTENCE = Pattern.compile("[.!?]$");
 
   @Value
   @Accessors(fluent = true)
@@ -171,7 +171,7 @@ public final class NpcProfileTable {
 
   private static String asSentence(String style) {
     String trimmed = style.trim();
-    return SENTENCE_END.matcher(trimmed).find() ? trimmed : trimmed + ".";
+    return ENDS_SENTENCE.matcher(trimmed).find() ? trimmed : trimmed + ".";
   }
 
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {

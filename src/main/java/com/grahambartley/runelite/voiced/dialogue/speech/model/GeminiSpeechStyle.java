@@ -8,11 +8,11 @@ import java.util.regex.Pattern;
 
 final class GeminiSpeechStyle {
 
-  private static final Pattern TRAILING_PUNCTUATION = Pattern.compile("[\\s.;,:]+$");
+  private static final Pattern TRAILING_SEPARATORS = Pattern.compile("[\\s.;,:]+$");
 
-  private static final String SENTENCE_BREAK = ". ";
+  private static final Pattern TERMINAL_PUNCTUATION = Pattern.compile("[!?]$");
 
-  private static final String SENTENCE_END = ".";
+  private static final String FULL_STOP = ".";
 
   private GeminiSpeechStyle() {}
 
@@ -23,10 +23,7 @@ final class GeminiSpeechStyle {
     addDirection(directions, profile.pace());
     addDirection(directions, GeminiEmotionStyle.directionFor(emotion));
     addDirection(directions, paceDirection);
-    if (directions.isEmpty()) {
-      return "";
-    }
-    return String.join(SENTENCE_BREAK, directions) + SENTENCE_END;
+    return String.join(" ", directions);
   }
 
   static String speedDirection(int speedPercent) {
@@ -37,9 +34,12 @@ final class GeminiSpeechStyle {
     if (direction == null) {
       return;
     }
-    String trimmed = TRAILING_PUNCTUATION.matcher(direction.trim()).replaceAll("");
-    if (!trimmed.isEmpty()) {
-      directions.add(Character.toUpperCase(trimmed.charAt(0)) + trimmed.substring(1));
+    String trimmed = TRAILING_SEPARATORS.matcher(direction.trim()).replaceAll("");
+    if (trimmed.isEmpty()) {
+      return;
     }
+    String capitalised = Character.toUpperCase(trimmed.charAt(0)) + trimmed.substring(1);
+    boolean terminated = TERMINAL_PUNCTUATION.matcher(capitalised).find();
+    directions.add(terminated ? capitalised : capitalised + FULL_STOP);
   }
 }

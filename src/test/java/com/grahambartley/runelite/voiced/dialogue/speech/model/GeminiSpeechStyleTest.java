@@ -42,6 +42,12 @@ public class GeminiSpeechStyleTest {
   }
 
   @Test
+  public void keepsAnExclamationOrQuestionMarkAsTheSentenceEnd() {
+    CharacterProfile loud = new CharacterProfile("Crier", "loud accent!", "curious?", "brisk");
+    assertEquals("Loud accent! Curious? Brisk.", GeminiSpeechStyle.compose(loud, null, null));
+  }
+
+  @Test
   public void skipsMissingAndBlankFields() {
     CharacterProfile sparse = new CharacterProfile("Child", null, "Bright and light", "  ");
     assertEquals("Bright and light.", GeminiSpeechStyle.compose(sparse, Emotion.NEUTRAL, null));
