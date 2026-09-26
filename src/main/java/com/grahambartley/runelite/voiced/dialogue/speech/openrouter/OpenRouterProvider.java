@@ -18,23 +18,20 @@ final class OpenRouterProvider {
   private OpenRouterProvider() {}
 
   static void apply(JsonObject body) {
-    body.add("provider", throughputProvider());
+    apply(body, null);
   }
 
   static void apply(JsonObject body, JsonObject speechMetadata) {
-    JsonObject googleOptions = new JsonObject();
-    googleOptions.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
-    JsonObject options = new JsonObject();
-    options.add(GOOGLE_AI_STUDIO, googleOptions);
-    JsonObject provider = throughputProvider();
-    provider.add("options", options);
-    body.add("provider", provider);
-  }
-
-  private static JsonObject throughputProvider() {
     JsonObject provider = new JsonObject();
     provider.addProperty("sort", THROUGHPUT_SORT);
-    return provider;
+    if (speechMetadata != null) {
+      JsonObject googleOptions = new JsonObject();
+      googleOptions.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
+      JsonObject options = new JsonObject();
+      options.add(GOOGLE_AI_STUDIO, googleOptions);
+      provider.add("options", options);
+    }
+    body.add("provider", provider);
   }
 
   static Request.Builder attributedRequest(String url, String apiKey) {

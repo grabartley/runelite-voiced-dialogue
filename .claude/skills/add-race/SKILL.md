@@ -64,7 +64,7 @@ Tests to extend: `GeminiVoiceMapTest` (`MAPPED_RACES`, `GEMINI_VOICE_CATALOG` if
 
 ## World rules (non-negotiable prose constraints)
 
-- **Phrase accents positively and strongly.** Name the wanted accent strongly, with its pronunciation ("Strong Bajan Caribbean accent, Bajan English pronunciation"); never describe by negation, and follow the Gemini 3.8 profile shape in `add-npc-profile`. Gemini renders British/European accents reliably but foreign accents only partially, so make `style` carry the character so the line still reads well if the accent lands only halfway.
+- **Phrase accents positively and strongly.** Name the wanted accent strongly, with its pronunciation ("Strong Bajan Caribbean accent, Bajan English pronunciation"); never describe by negation, and follow the Gemini 3.8 profile shape in `add-npc-profile`. Keep the character in `style` too, so the persona carries the line alongside the accent.
 - **Keep all prose timeless.** No rollout/batch/PR/date/"for now" references in code, JSON, or comments.
 - **British medieval-fantasy default.** Everything is British unless lore or trope says otherwise.
 

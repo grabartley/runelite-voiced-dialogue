@@ -56,7 +56,7 @@ public class DirectionSanitizerTest {
   public void outputIsByteStableForCacheSafety() {
     String input = "A  noble  knight.\nSpeaks with conviction.";
     assertEquals(
-        "the same input always sanitizes to the same output (prompt-cache prefix stays warm)",
+        "the same input always sanitizes to the same output (the profile cache key stays stable)",
         sanitizer.sanitize(input),
         sanitizer.sanitize(input));
   }

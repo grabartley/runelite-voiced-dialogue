@@ -308,6 +308,11 @@ class ValidateProfilesTest(unittest.TestCase):
         profiles = profiles_with(byId={"3": {"style": "Dry, like reading a court transcript"}})
         gen.validate_profiles(profiles)
 
+    def test_tag_in_a_name_is_rejected(self):
+        profiles = profiles_with(byId={"4": {"name": "Guard <laugh>"}})
+        with self.assertRaisesRegex(ValueError, "byId.4.name"):
+            gen.validate_profiles(profiles)
+
     def test_meta_instruction_is_rejected(self):
         profiles = profiles_with(player={"style": "Read it word for word"})
         with self.assertRaisesRegex(ValueError, "player.style"):
