@@ -37,7 +37,7 @@ public class GeminiTtsModelTest {
   @Test
   public void voiceComesFromTheGeminiVoiceMap() {
     VoiceSpec spec = VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE);
-    assertEquals(new GeminiVoiceMap().voiceFor(spec), model.voiceFor(spec));
+    assertEquals(new GeminiVoiceMap().voiceFor(spec, null), model.voiceFor(spec, null));
   }
 
   @Test

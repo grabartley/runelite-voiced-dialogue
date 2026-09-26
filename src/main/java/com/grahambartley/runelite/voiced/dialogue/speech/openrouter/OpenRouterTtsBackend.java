@@ -253,7 +253,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       JsonObject payload = new JsonObject();
       payload.addProperty("model", model.modelId());
       payload.addProperty("input", line.input);
-      payload.addProperty("voice", model.voiceFor(request.voice()));
+      payload.addProperty("voice", model.voiceFor(request.voice(), request.profile()));
       payload.addProperty("response_format", model.responseFormat());
       if (line.speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
         payload.addProperty("speed", line.speedRatio);

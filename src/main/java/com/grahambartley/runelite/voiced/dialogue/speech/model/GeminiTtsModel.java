@@ -36,8 +36,8 @@ public final class GeminiTtsModel {
     return EnumSet.copyOf(GeminiEmotionStyle.SUPPORTED);
   }
 
-  public String voiceFor(VoiceSpec voice) {
-    return voiceMap.voiceFor(voice);
+  public String voiceFor(VoiceSpec voice, CharacterProfile profile) {
+    return voiceMap.voiceFor(voice, profile);
   }
 
   public String speechStyle(CharacterProfile profile, Emotion emotion) {

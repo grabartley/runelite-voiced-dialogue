@@ -233,7 +233,7 @@ public class OpenRouterTtsBackendTest {
 
     assertEquals(
         "the voice is whatever the map resolves for the spec",
-        new GeminiVoiceMap().voiceFor(female.voice()),
+        new GeminiVoiceMap().voiceFor(female.voice(), null),
         sentBody().get("voice").getAsString());
   }
 
@@ -264,7 +264,7 @@ public class OpenRouterTtsBackendTest {
         variant.contains("gemini"));
     assertTrue(
         "the variant carries the resolved Gemini voice",
-        variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice())));
+        variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice(), null)));
     assertNotEquals(
         "two specs that map to different voices never share a variant",
         backend.cacheVariant(humanMale),

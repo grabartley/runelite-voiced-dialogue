@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
@@ -271,6 +272,27 @@ public class NpcProfilesResourceTest {
     assertTrue(
         "a Menaphite child keeps the Egyptian accent",
         menaphite.profile().accent().contains("Egyptian"));
+  }
+
+  @Test
+  public void regionalAccentsCarryTheirNativeVoiceRegion() {
+    assertEquals("SCOTTISH", resolve(null, "Dwarf", "Dwarf", null).profile().voiceRegion());
+    assertEquals("IRISH", resolve(null, "Gnome", "Gnome", null).profile().voiceRegion());
+    assertEquals("IRISH", resolve(null, "Tool Leprechaun", "Human", null).profile().voiceRegion());
+    assertEquals(
+        "SOUTHERN_ENGLISH", resolve(null, "Man", "Human", "misthalin").profile().voiceRegion());
+    assertEquals("WEST_COUNTRY", resolve(null, "Man", "Human", "asgarnia").profile().voiceRegion());
+    assertEquals("ITALIAN", resolve(null, "Man", "Human", "varlamore").profile().voiceRegion());
+    assertEquals(
+        "EGYPTIAN_ARABIC", resolve(null, "Man", "Human", "menaphite").profile().voiceRegion());
+  }
+
+  @Test
+  public void accentsWithNoNativeVoicesKeepTheRacePool() {
+    assertNull(resolve(null, "Elf", "Human", "tirannwn").profile().voiceRegion());
+    assertNull(resolve(null, "Man", "Human", "fremennik").profile().voiceRegion());
+    assertNull(resolve(null, "Man", "Human", "karamja").profile().voiceRegion());
+    assertNull(resolve(null, "KGP Agent", "Penguin", null).profile().voiceRegion());
   }
 
   @Test

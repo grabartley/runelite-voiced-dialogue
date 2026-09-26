@@ -17,10 +17,10 @@ trace lines the plugin emits per line:
 
 ```
 [TTS voice]   npc='X' world=HIT(id=<activeId>) race=R gender=G source=table-hit -> seed=<n>
-[TTS profile] npc='X' id=<id> race=R ethnicity=E -> '<profile name>' (source=..., accent='...')
+[TTS profile] npc='X' id=<id> race=R ethnicity=E -> '<profile name>' (source=..., accent='...', voiceRegion=REGION)
 ```
 
-- `[TTS voice]` = the **timbre** pick: race/gender select a Gemini voice sub-pool, and `seed` spreads same-race/gender NPCs across it. `[TTS cloud] ...` lines show the actual request/response.
+- `[TTS voice]` = the **timbre** pick: a `voiceRegion` on the profile selects that region's native voice pool, otherwise race/gender select a Gemini voice sub-pool, and `seed` spreads same-race/gender NPCs across it. `[TTS cloud] ...` lines show the actual request/response.
 - `[TTS voice] cloud emotion X -> style '...'` (Debug Mode) = the exact style string sent in `speech_metadata.style`: the full profile plus the emotion. The most direct evidence for a wrong accent.
 - `[TTS profile]` = the **delivery** (accent/style/pace). `source=` lists every layer that combined, e.g. `race:Human+ethnicity:karamja+keyword:vampyre+id:123`. For single-valued fields the **last** layer that sets them wins.
 

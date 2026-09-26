@@ -10,6 +10,8 @@ class NpcIdentity {
 
   Integer worldId;
 
+  Integer baseId;
+
   NpcAttributes attributes;
 
   NpcProfileTable.NameMatch nameMatch;

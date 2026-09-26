@@ -163,7 +163,7 @@ public final class CloudSpeechExecutor {
 
   public String cacheVariant(SynthesisRequest request) {
     return CloudCacheKeyBuilder.build(
-        model.voiceFor(request.voice()),
+        model.voiceFor(request.voice(), request.profile()),
         support.speedPercent(),
         request.profile(),
         CloudTtsText.effectiveSpokenLanguage(config, request),

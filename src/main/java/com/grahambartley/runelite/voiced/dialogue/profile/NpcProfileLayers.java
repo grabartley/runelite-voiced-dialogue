@@ -34,6 +34,7 @@ class NpcProfileLayers {
     String accent;
     String style;
     String pace;
+    String voiceRegion;
   }
 
   @Value

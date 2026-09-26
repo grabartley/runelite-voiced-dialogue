@@ -17,7 +17,12 @@ python3 tools/generate_npc_voices.py        # needs network access to the wiki
 ```
 
 Quick partial run for testing: `--limit 500`. Commit the regenerated
-`npc-voices.json` alongside any `overrides.json` / `profiles.json` edits.
+`npc-voices.json` and `voice-regions.json` alongside any `overrides.json` /
+`profiles.json` / `voice-regions.json` edits. The generator also writes
+`src/main/resources/voice-regions.json` from `tools/voice-regions.json` and the
+`tools/voice-library.json` snapshot; refresh that snapshot only on purpose
+(`GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`), since a changed
+pool can move NPCs onto different voices.
 
 For an overrides/profiles-only change, prefer `--base src/main/resources/npc-voices.json`
 (offline, no wiki fetch) so the diff is exactly your intended edits with **no

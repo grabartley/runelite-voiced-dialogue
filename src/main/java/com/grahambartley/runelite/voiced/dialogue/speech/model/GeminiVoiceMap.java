@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
@@ -14,11 +15,19 @@ public final class GeminiVoiceMap {
 
   static final String NARRATOR_VOICE = "Callirrhoe";
 
+  static final int PLAYER_SEED = 0;
+
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
   private final Map<NpcGender, String[]> childVoices;
+  private final GeminiVoiceRegions regions;
 
   public GeminiVoiceMap() {
+    this(GeminiVoiceRegions.bundled());
+  }
+
+  GeminiVoiceMap(GeminiVoiceRegions regions) {
+    this.regions = regions;
     playerVoices = new EnumMap<>(NpcGender.class);
     playerVoices.put(NpcGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NpcGender.FEMALE, new String[] {"Aoede", "Autonoe"});
@@ -63,7 +72,7 @@ public final class GeminiVoiceMap {
     npcVoices.put(race, byGender);
   }
 
-  public String voiceFor(VoiceSpec spec) {
+  public String voiceFor(VoiceSpec spec, CharacterProfile profile) {
     if (spec == null) {
       return DEFAULT_VOICE;
     }
@@ -72,11 +81,19 @@ public final class GeminiVoiceMap {
     }
     NpcGender gender = normalizeGender(spec.gender());
     if (spec.player()) {
-      return anchor(playerVoices.get(gender));
+      String accent = profile == null ? null : profile.accent();
+      String regional = regions.voiceFor(regions.regionForAccent(accent), gender, PLAYER_SEED);
+      return regional != null ? regional : anchor(playerVoices.get(gender));
     }
     if (spec.child()) {
       String[] pool = childVoices.get(gender);
       return (pool == null || pool.length == 0) ? DEFAULT_CHILD_VOICE : pick(pool, spec);
+    }
+    if (profile != null && spec.hasVoiceSeed()) {
+      String regional = regions.voiceFor(profile.voiceRegion(), gender, spec.voiceSeed());
+      if (regional != null) {
+        return regional;
+      }
     }
     Map<NpcGender, String[]> byGender = npcVoices.get(spec.race());
     if (byGender == null) {

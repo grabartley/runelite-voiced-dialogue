@@ -37,6 +37,19 @@ public class NpcVoiceResolverTest {
   }
 
   @Test
+  public void aTransformedNpcKeepsTheVoiceSeedOfItsBaseId() {
+    NpcProfileTable.NameMatch nameMatch = mock(NpcProfileTable.NameMatch.class);
+    NpcAttributes before = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
+    NpcAttributes after = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
+
+    VoiceSpec original = resolver.resolve("Juliet", new NpcIdentity(8000, 8000, before, nameMatch));
+    VoiceSpec transformed =
+        resolver.resolve("Juliet", new NpcIdentity(8001, 8000, after, nameMatch));
+
+    assertEquals(original.voiceSeed(), transformed.voiceSeed());
+  }
+
+  @Test
   public void detectedNpcCarriesItsRaceAndGender() {
     NpcLearningService learning = mock(NpcLearningService.class);
     resolver.setLearningService(learning);
@@ -141,7 +154,7 @@ public class NpcVoiceResolverTest {
     if (attributes != null && worldId != null) {
       attributes.setNpcId(worldId);
     }
-    return new NpcIdentity(worldId, attributes, nameMatch);
+    return new NpcIdentity(worldId, worldId, attributes, nameMatch);
   }
 
   private static NpcAttributes attributes(String race, String gender, String source) {

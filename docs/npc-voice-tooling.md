@@ -16,6 +16,12 @@ are no network calls or large downloads when choosing a voice.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
   (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
+- `tools/voice-regions.json` - hand-curated **voice regions**: each names one Gemini Extended
+  Voice Library accent, the player-accent keywords that select it, and any voices excluded by ear.
+- `tools/voice-library.json` - a committed snapshot of the Extended Voice Library, refreshed with
+  `GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`. The generator builds each region's
+  male and female pools from it into `src/main/resources/voice-regions.json`, so a voice only
+  changes when the snapshot or the regions change and are shipped.
 
 ## Data source
 
@@ -201,14 +207,19 @@ different people, where a short style string flattens them together.
 - `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
   rhythm.
 - `name` is sent as the profile's name, so it is part of the cache key.
+- `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
+  (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
+  comes from the same layer as the winning accent, so an accent with no region (Welsh, Norse)
+  clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
 - No meta-instructions ("word for word", "do not change voice"), no wording
   instructions (slang, syntax: the model cannot reword a verbatim transcript), and
   no square- or angle-bracket tags.
 
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
-does not start with "Strong" and name its pronunciation, and an `accent` over 100
-characters.
+does not start with "Strong" and end with its pronunciation, an `accent` over 100
+characters, a `voiceRegion` that is not in `tools/voice-regions.json`, and a `voiceRegion` on a
+layer with no `accent`.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners

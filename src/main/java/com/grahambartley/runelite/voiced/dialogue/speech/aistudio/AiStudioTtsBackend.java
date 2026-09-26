@@ -214,7 +214,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
           buildPayload(
               line.input,
               model.speechMetadata(line.style),
-              model.voiceFor(request.voice()),
+              model.voiceFor(request.voice(), request.profile()),
               languageCode);
       byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
       return new CloudSpeechExecutor.PreparedSpeech(

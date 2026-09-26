@@ -352,5 +352,64 @@ class ValidateProfilesTest(unittest.TestCase):
         gen.validate_profiles(profiles)
 
 
+
+LIBRARY = {"voices": [
+    {"id": "ie-2", "accent": "Dublin English", "gender": "male"},
+    {"id": "ie-1", "accent": "Dublin English", "gender": "male"},
+    {"id": "ie-f", "accent": "Dublin English", "gender": "female"},
+    {"id": "ie-n", "accent": "Dublin English", "gender": "neutral"},
+    {"id": "gb-1", "accent": "Glasgow English", "gender": "male"},
+]}
+
+
+def regions_source(**overrides):
+    region = {"libraryAccent": "Dublin English", "playerKeywords": ["Irish"], "exclude": []}
+    region.update(overrides)
+    return {"regions": {"IRISH": region}}
+
+
+class VoiceRegionsTest(unittest.TestCase):
+
+    def test_pools_split_by_gender_and_sort_by_id(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-1", "ie-2"])
+        self.assertEqual(regions["IRISH"]["FEMALE"], ["ie-f"])
+
+    def test_neutral_voices_are_left_out(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertNotIn("ie-n", regions["IRISH"]["MALE"] + regions["IRISH"]["FEMALE"])
+
+    def test_player_keywords_are_lowercased(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(regions["IRISH"]["playerKeywords"], ["irish"])
+
+    def test_excluded_voices_are_dropped(self):
+        regions = gen.build_voice_regions(regions_source(exclude=["ie-1"]), LIBRARY)
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2"])
+
+    def test_a_region_matching_no_voices_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "IRISH matches no library voices"):
+            gen.build_voice_regions(regions_source(libraryAccent="Cork English"), LIBRARY)
+
+    def test_a_profile_region_must_exist(self):
+        profiles = profiles_with(byRace={"Dwarf": {"accent": "Strong Glasgow Scottish accent, "
+                                                   "Scottish English pronunciation",
+                                                   "voiceRegion": "WELSH"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Dwarf.voiceRegion 'WELSH'"):
+            gen.validate_voice_regions(profiles, {"IRISH": {}})
+
+    def test_a_region_must_sit_next_to_an_accent(self):
+        profiles = profiles_with(byId={"5": {"style": "Gruff", "voiceRegion": "IRISH"}})
+        with self.assertRaisesRegex(ValueError, "byId.5.voiceRegion must sit next to"):
+            gen.validate_voice_regions(profiles, {"IRISH": {}})
+
+    def test_the_bundled_regions_and_profiles_agree(self):
+        tools = os.path.dirname(os.path.abspath(__file__))
+        regions = gen.build_voice_regions(
+            gen.load_json(os.path.join(tools, "voice-regions.json")),
+            gen.load_json(os.path.join(tools, "voice-library.json")))
+        gen.validate_voice_regions(gen.load_json(os.path.join(tools, "profiles.json")), regions)
+
+
 if __name__ == "__main__":
     unittest.main()

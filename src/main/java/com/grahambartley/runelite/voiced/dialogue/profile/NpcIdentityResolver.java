@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 
 final class NpcIdentityResolver {
 
@@ -23,13 +24,22 @@ final class NpcIdentityResolver {
     NpcProfileTable.NameMatch nameMatch = profileTable.matchName(npcName);
     NPC npc = npcFinder.findByName(npcName);
     if (npc == null) {
-      return new NpcIdentity(null, null, nameMatch);
+      return new NpcIdentity(null, null, null, nameMatch);
     }
-    return new NpcIdentity(npc.getId(), demographicAnalyzer.analyzeNPC(npc), nameMatch);
+    return new NpcIdentity(
+        npc.getId(), baseId(npc), demographicAnalyzer.analyzeNPC(npc), nameMatch);
   }
 
   NpcIdentity resolve(NPC npc) {
     return new NpcIdentity(
-        npc.getId(), demographicAnalyzer.analyzeNPC(npc), profileTable.matchName(npc.getName()));
+        npc.getId(),
+        baseId(npc),
+        demographicAnalyzer.analyzeNPC(npc),
+        profileTable.matchName(npc.getName()));
+  }
+
+  private static int baseId(NPC npc) {
+    NPCComposition base = npc.getComposition();
+    return base == null ? npc.getId() : base.getId();
   }
 }

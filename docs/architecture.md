@@ -16,8 +16,12 @@ transport.
 
 ## Voice resolution and prompt construction (shared by both providers)
 
-Each NPC gets a gender-correct Gemini voice by race (`GeminiVoiceMap`), and two NPCs of the same
-race and gender are spread across a sub-pool by a per-NPC seed that is stable across sessions.
+Each NPC gets one gender-correct Gemini voice for life (`GeminiVoiceMap`). An NPC whose accent has
+native speakers in Google's Extended Voice Library is voiced from that accent's region pool: the
+profile layer that supplies the winning accent names its `voiceRegion`, and the region travels on
+the `CharacterProfile`. Every other NPC is voiced from its race pool. Within a pool, a per-NPC seed
+taken from the NPC's base composition id spreads same-pool NPCs apart and keeps each on the same
+voice across sessions and across a mid-quest transform.
 Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the bundled
 table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to a dedicated
 youthful sub-pool of its gender instead of its adult race anchor, for every race and ethnicity

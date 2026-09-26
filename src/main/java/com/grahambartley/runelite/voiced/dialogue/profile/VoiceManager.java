@@ -142,14 +142,16 @@ public class VoiceManager {
         profileTable.resolveNpc(npcId, identity.nameMatch(), race, ethnicity);
     if (config.debugMode()) {
       log.info(
-          "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}')",
+          "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}',"
+              + " voiceRegion={})",
           npcName,
           npcId == null ? "MISS" : npcId,
           race == null ? "UNKNOWN" : race,
           ethnicity == null ? "-" : ethnicity,
           resolution.profile().name(),
           resolution.source(),
-          resolution.profile().accent());
+          resolution.profile().accent(),
+          resolution.profile().voiceRegion() == null ? "-" : resolution.profile().voiceRegion());
     }
     return resolution.profile();
   }

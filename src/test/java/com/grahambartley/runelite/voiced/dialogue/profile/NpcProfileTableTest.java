@@ -114,6 +114,38 @@ public class NpcProfileTableTest {
         resolve(table, 7, "King", "Gnome", null).profile().style());
   }
 
+  private static NpcProfileTable regionTable() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"Southern\",\"voiceRegion\":\"SOUTHERN\","
+                    + "\"style\":\"Plain\",\"pace\":\"Steady\"},"
+                    + "\"byRace\":{\"Dwarf\":{\"accent\":\"Glasgow\",\"voiceRegion\":\"SCOTTISH\"}},"
+                    + "\"byEthnicity\":{\"tirannwn\":{\"accent\":\"Welsh\"}},"
+                    + "\"byId\":{\"9\":{\"style\":\"Gruff\"}}}")
+            .getAsJsonObject();
+    return NpcProfileTable.fromProfilesJson(profiles);
+  }
+
+  @Test
+  public void theVoiceRegionComesFromTheLayerThatSetTheWinningAccent() {
+    assertEquals(
+        "SCOTTISH", resolve(regionTable(), 9, "Dwarf", "Dwarf", null).profile().voiceRegion());
+  }
+
+  @Test
+  public void anAccentWithNoRegionClearsTheRegionItOverrides() {
+    CharacterProfile welsh = resolve(regionTable(), null, "Elf", "Human", "tirannwn").profile();
+    assertEquals("Welsh", welsh.accent());
+    assertEquals(null, welsh.voiceRegion());
+  }
+
+  @Test
+  public void anNpcWithNoAccentLayerKeepsTheDefaultRegion() {
+    assertEquals(
+        "SOUTHERN", resolve(regionTable(), null, "Man", "Human", null).profile().voiceRegion());
+  }
+
   @Test
   public void multipleCategoriesAllCombine() {
     NpcProfileTable.Resolution r = resolve(table(), null, "Imp Vampyre", null, null);

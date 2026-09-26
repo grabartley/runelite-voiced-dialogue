@@ -128,7 +128,8 @@ final class NpcProfileParser {
         optString(obj, "name"),
         optString(obj, "accent"),
         optString(obj, "style"),
-        optString(obj, "pace"));
+        optString(obj, "pace"),
+        optString(obj, "voiceRegion"));
   }
 
   private static CharacterProfile parseComplete(JsonObject obj) {
@@ -140,7 +141,8 @@ final class NpcProfileParser {
         || layer.pace() == null) {
       return null;
     }
-    return new CharacterProfile(layer.name(), layer.accent(), layer.style(), layer.pace());
+    return new CharacterProfile(
+        layer.name(), layer.accent(), layer.style(), layer.pace(), layer.voiceRegion());
   }
 
   private static JsonObject optObject(JsonObject parent, String key) {
