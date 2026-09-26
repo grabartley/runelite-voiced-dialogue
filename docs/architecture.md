@@ -202,8 +202,10 @@ learned entry.
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It
 needs an OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent.
-Gemini 3.8 Flash TTS is the one OpenRouter speech model with both a voice catalog rich enough to
-map every race and gender and full emotion support; OpenRouter routes it to Google AI Studio. The
+Gemini 3.8 Flash TTS carries a voice catalog rich enough to map every race and gender and full
+emotion support, and leads its Flash-Lite sibling on regional accents, which is what the plugin is
+about ([#332](https://github.com/grabartley/runelite-voiced-dialogue/issues/332)); OpenRouter
+routes it to Google AI Studio. The
 body requests `response_format: "pcm"`, a headerless 16-bit LE mono stream at 24 kHz decoded to the
 pipeline's native rate (OpenRouter offers only `mp3` and `pcm` for it). The style string rides in
 `provider.options["google-ai-studio"].speech_metadata.style`, merged into the same `provider`
@@ -335,8 +337,8 @@ Because synthesis is billed per character, several guards keep cost bounded and 
 - **Fastest-provider routing.** Every request carries a `provider` block with `sort: "throughput"`
   (the `:nitro` equivalent), so OpenRouter routes to the lowest-latency provider for the model.
 - **Style outside the billed text.** The profile and emotion ride in `speech_metadata.style`,
-  which Google does not count in `promptTokenCount`, so a line's text tokens are the spoken line
-  alone.
+  which Google does not count in `promptTokenCount` (the same line reports the same count with no
+  style and with a long one), so a line's text tokens are the spoken line alone.
 - **Rate-limit back-off.** A `429` opens a back-off window. When the rejection states its own wait,
   through a `Retry-After` header or a `google.rpc.RetryInfo` delay in the body, that wait is the
   window (clamped to an hour) and nothing is sent until it passes, since a call made before the

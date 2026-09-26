@@ -22,8 +22,8 @@ public final class ChatNoticeManager {
   private static final String ONBOARDING_MESSAGE =
       "Voiced Dialogue is on. It needs an API key to voice dialogue. Google AI Studio starts lines"
           + " almost instantly but caps fresh lines a day by usage tier, prefetched options"
-          + " included, and billing does not lift that: set Voice Provider to Google AI Studio and use a key"
-          + " from aistudio.google.com with billing enabled. OpenRouter is"
+          + " included, and billing does not lift that: set Voice Provider to Google AI Studio and"
+          + " use a key from aistudio.google.com with billing enabled. OpenRouter is"
           + " simpler to set up and has no daily cap, at the cost of much slower lines: use a key"
           + " from openrouter.ai instead. Your dialogue text is sent to whichever provider you"
           + " pick. Until a key is set, lines stay silent.";

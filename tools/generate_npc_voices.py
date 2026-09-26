@@ -77,8 +77,6 @@ VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
-# Gemini 3.8 speaks its input verbatim and takes delivery from a short speech_metadata.style
-# string, so profile fields stay short phrases and carry no tags or prompt-block markers.
 MAX_DIRECTION_LENGTH = {"accent": 80, "pace": 60}
 FORBIDDEN_DIRECTION = re.compile(
     r"[\[\]<>]|audio\s*profile|director'?s\s*notes|#+\s*transcript|transcript\s*#+|word\s+for\s+word",

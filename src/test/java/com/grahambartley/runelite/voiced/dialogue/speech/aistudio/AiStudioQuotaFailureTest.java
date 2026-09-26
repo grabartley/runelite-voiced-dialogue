@@ -19,7 +19,7 @@ public class AiStudioQuotaFailureTest {
           "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
           "generativelanguage.googleapis.com/generate_content_free_tier_requests",
           "15",
-          "gemini-3.1-flash-tts");
+          "gemini-3.8-flash-tts");
 
   private final Gson gson = new Gson();
 
@@ -29,7 +29,7 @@ public class AiStudioQuotaFailureTest {
 
     assertEquals("GenerateRequestsPerDayPerProjectPerModel", quota.quotaId);
     assertEquals("100", quota.quotaValue);
-    assertEquals("gemini-3.1-flash-tts", quota.model);
+    assertEquals("gemini-3.8-flash-tts", quota.model);
     assertEquals(Period.DAILY, quota.period());
     assertFalse("a paid per-model cap is not a free-tier one", quota.isFreeTier());
   }
@@ -74,9 +74,9 @@ public class AiStudioQuotaFailureTest {
     String body =
         "{\"error\": {\"details\": [\"not an object\", {\"@type\":"
             + " \"type.googleapis.com/google.rpc.QuotaFailure\", \"violations\":"
-            + " [{\"quotaDimensions\": {\"model\": \"gemini-3.1-flash-tts\"}}]}]}}";
+            + " [{\"quotaDimensions\": {\"model\": \"gemini-3.8-flash-tts\"}}]}]}}";
 
-    assertEquals("gemini-3.1-flash-tts", parse(body).model);
+    assertEquals("gemini-3.8-flash-tts", parse(body).model);
   }
 
   @Test
@@ -93,7 +93,7 @@ public class AiStudioQuotaFailureTest {
   public void aPaidCapNamesTheCapAndNeverAsksForBilling() {
     String notice = noticeFor(PAID_DAILY_CAP);
 
-    assertTrue("the model is named: " + notice, notice.contains("gemini-3.1-flash-tts"));
+    assertTrue("the model is named: " + notice, notice.contains("gemini-3.8-flash-tts"));
     assertTrue("as is the cap it hit: " + notice, notice.contains("daily request cap of 100"));
     assertTrue(
         "billing is already on, so the notice says so rather than asking for it",
@@ -123,9 +123,9 @@ public class AiStudioQuotaFailureTest {
 
   @Test
   public void aMalformedViolationDoesNotHideAWellFormedOneBehindIt() {
-    String body = violations("[7, {\"quotaDimensions\": {\"model\": \"gemini-3.1-flash-tts\"}}]");
+    String body = violations("[7, {\"quotaDimensions\": {\"model\": \"gemini-3.8-flash-tts\"}}]");
 
-    assertEquals("gemini-3.1-flash-tts", parse(body).model);
+    assertEquals("gemini-3.8-flash-tts", parse(body).model);
   }
 
   @Test
@@ -195,7 +195,7 @@ public class AiStudioQuotaFailureTest {
     assertTrue(logged.contains("quotaId=GenerateRequestsPerDayPerProjectPerModel"));
     assertTrue("the metric decides the free-tier verdict", logged.contains("generate_requests"));
     assertTrue(logged.contains("quotaValue=100"));
-    assertTrue(logged.contains("model=gemini-3.1-flash-tts"));
+    assertTrue(logged.contains("model=gemini-3.8-flash-tts"));
   }
 
   private static String violations(String value) {
