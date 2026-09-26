@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
-import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.speech.CloudBackendSupport;
 import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
@@ -21,8 +20,6 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.EnumSet;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -93,8 +90,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
   private final GeminiTtsModel model = new GeminiTtsModel();
   private final OpenRouterTranslator translator;
 
-  private final Map<String, Integer> prefixHashes = new ConcurrentHashMap<>();
-
   private final Duration callTimeout;
 
   private final CloudBackendSupport support;
@@ -131,8 +126,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     this.translator =
         new OpenRouterTranslator(
             this.httpClient, config, gson, siblingEndpoint(endpoint, CHAT_COMPLETIONS_PATH));
-    this.executor =
-        new CloudSpeechExecutor(config, support, model, "OpenRouter", model.modelId(), new Ops());
+    this.executor = new CloudSpeechExecutor(config, support, model, "OpenRouter", new Ops());
   }
 
   private static String siblingEndpoint(String endpoint, String path) {
@@ -232,21 +226,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
         + "); check your API key. This line was not voiced.";
   }
 
-  private void assertStablePrefix(CharacterProfile profile) {
-    if (!config.debugMode()) {
-      return;
-    }
-    int hash = profile.renderPromptBlock().hashCode();
-    Integer seen = prefixHashes.putIfAbsent(profile.cacheKey(), hash);
-    if (seen != null && seen != hash) {
-      log.warn(
-          "[TTS cloud] cacheable prefix for profile '{}' changed across calls (prompt cache will"
-              + " miss); cacheKey={}",
-          profile.name(),
-          profile.cacheKey());
-    }
-  }
-
   private final class Ops implements CloudSpeechExecutor.Ops {
 
     @Override
@@ -269,17 +248,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     }
 
     @Override
-    public void profileApplied(CharacterProfile profile) {
-      assertStablePrefix(profile);
-    }
-
-    @Override
     public CloudSpeechExecutor.PreparedSpeech buildRequests(
         CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
       JsonObject payload = new JsonObject();
       payload.addProperty("model", model.modelId());
       payload.addProperty("input", line.input);
-      payload.addProperty("voice", model.voiceFor(request.voice()));
+      payload.addProperty("voice", model.voiceFor(request.voice(), request.profile()));
       payload.addProperty("response_format", model.responseFormat());
       if (line.speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
         payload.addProperty("speed", line.speedRatio);
@@ -287,7 +261,7 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       if (line.translating) {
         payload.addProperty("language_code", config.cloudLanguage().code());
       }
-      OpenRouterProvider.apply(payload);
+      OpenRouterProvider.apply(payload, model.speechMetadata(line.style));
 
       Request httpRequest =
           OpenRouterProvider.attributedRequest(endpoint, line.apiKey)

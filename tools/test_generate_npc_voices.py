@@ -263,5 +263,158 @@ class PipedLinkFieldTest(unittest.TestCase):
         self.assertIsNone(gen.bucket_for_race("{{plink|Human}}"))
 
 
+
+def profiles_with(**layers):
+    profiles = {
+        "default": {"name": "Commoner", "accent": "Strong London English accent, British English pronunciation",
+                    "style": "Plain and sincere", "pace": "Steady pace"},
+    }
+    profiles.update(layers)
+    return profiles
+
+
+class ValidateProfilesTest(unittest.TestCase):
+
+    def test_short_plain_directions_pass(self):
+        profiles = profiles_with(byRace={"Dwarf": {"accent": "Strong Glasgow Scottish accent, Scottish English pronunciation"}})
+        self.assertIs(gen.validate_profiles(profiles), profiles)
+
+    def test_bundled_profiles_pass(self):
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles.json")
+        gen.validate_profiles(gen.load_json(path))
+
+    def test_square_bracket_tag_is_rejected(self):
+        profiles = profiles_with(byId={"1": {"style": "[angry] Gruff"}})
+        with self.assertRaisesRegex(ValueError, "byId.1.style"):
+            gen.validate_profiles(profiles)
+
+    def test_angle_bracket_tag_is_rejected(self):
+        profiles = profiles_with(byCategory=[{"id": "imp", "keywords": ["imp"],
+                                              "style": "Shrill <laugh>"}])
+        with self.assertRaisesRegex(ValueError, "byCategory.imp.style"):
+            gen.validate_profiles(profiles)
+
+    def test_prompt_block_marker_is_rejected(self):
+        profiles = profiles_with(narrator={"style": "DIRECTOR'S NOTES: calm"})
+        with self.assertRaisesRegex(ValueError, "narrator.style"):
+            gen.validate_profiles(profiles)
+
+    def test_transcript_divider_is_rejected(self):
+        profiles = profiles_with(byId={"2": {"style": "Calm #### TRANSCRIPT"}})
+        with self.assertRaisesRegex(ValueError, "byId.2.style"):
+            gen.validate_profiles(profiles)
+
+    def test_the_plain_word_transcript_passes(self):
+        profiles = profiles_with(byId={"3": {"style": "Dry, like reading a court transcript"}})
+        gen.validate_profiles(profiles)
+
+    def test_tag_in_a_name_is_rejected(self):
+        profiles = profiles_with(byId={"4": {"name": "Guard <laugh>"}})
+        with self.assertRaisesRegex(ValueError, "byId.4.name"):
+            gen.validate_profiles(profiles)
+
+    def test_tag_in_a_pitch_is_rejected(self):
+        profiles = profiles_with(byRace={"Goblin": {"pitch": "High <squeak>"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Goblin.pitch"):
+            gen.validate_profiles(profiles)
+
+    def test_meta_instruction_is_rejected(self):
+        profiles = profiles_with(player={"style": "Read it word for word"})
+        with self.assertRaisesRegex(ValueError, "player.style"):
+            gen.validate_profiles(profiles)
+
+    def test_soft_accent_is_rejected(self):
+        profiles = profiles_with(byEthnicity={"misthalin": {"accent": "Plain southern English accent"}})
+        with self.assertRaisesRegex(ValueError, "byEthnicity.misthalin.accent must start"):
+            gen.validate_profiles(profiles)
+
+    def test_accent_without_pronunciation_is_rejected(self):
+        profiles = profiles_with(byRace={"Elf": {"accent": "Strong refined accent"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Elf.accent"):
+            gen.validate_profiles(profiles)
+
+    def test_pronunciation_mid_accent_is_rejected(self):
+        profiles = profiles_with(byRace={"Troll": {"accent": "Strong pronunciation, deep voice"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Troll.accent"):
+            gen.validate_profiles(profiles)
+
+    def test_the_dog_accent_is_exempt(self):
+        profiles = profiles_with(byRace={"Dog": {"accent": "Strong canine barks and growls"}})
+        gen.validate_profiles(profiles)
+
+    def test_long_accent_is_rejected(self):
+        accent = "Strong " + "a" * 80 + ", English pronunciation"
+        profiles = profiles_with(byEthnicity={"varlamore": {"accent": accent}})
+        with self.assertRaisesRegex(ValueError, "longer than 100"):
+            gen.validate_profiles(profiles)
+
+    def test_long_pace_passes(self):
+        profiles = profiles_with(byRace={"Troll": {"pace": "Slow and heavy, " * 10}})
+        gen.validate_profiles(profiles)
+
+    def test_comment_keys_are_skipped(self):
+        profiles = profiles_with(byId={"_comment": "[notes] about ids"})
+        gen.validate_profiles(profiles)
+
+
+
+LIBRARY = {"voices": [
+    {"id": "ie-2", "accent": "Dublin English", "gender": "male"},
+    {"id": "ie-1", "accent": "Dublin English", "gender": "male"},
+    {"id": "ie-f", "accent": "Dublin English", "gender": "female"},
+    {"id": "ie-n", "accent": "Dublin English", "gender": "neutral"},
+    {"id": "gb-1", "accent": "Glasgow English", "gender": "male"},
+]}
+
+
+def regions_source(**overrides):
+    region = {"libraryAccent": "Dublin English", "playerKeywords": ["Irish"], "exclude": []}
+    region.update(overrides)
+    return {"regions": {"IRISH": region}}
+
+
+class VoiceRegionsTest(unittest.TestCase):
+
+    def test_pools_split_by_gender_and_sort_by_id(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-1", "ie-2"])
+        self.assertEqual(regions["IRISH"]["FEMALE"], ["ie-f"])
+
+    def test_neutral_voices_are_left_out(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertNotIn("ie-n", regions["IRISH"]["MALE"] + regions["IRISH"]["FEMALE"])
+
+    def test_player_keywords_are_lowercased(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(regions["IRISH"]["playerKeywords"], ["irish"])
+
+    def test_excluded_voices_are_dropped(self):
+        regions = gen.build_voice_regions(regions_source(exclude=["ie-1"]), LIBRARY)
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2"])
+
+    def test_a_region_matching_no_voices_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "IRISH matches no library voices"):
+            gen.build_voice_regions(regions_source(libraryAccent="Cork English"), LIBRARY)
+
+    def test_a_profile_region_must_exist(self):
+        profiles = profiles_with(byRace={"Dwarf": {"accent": "Strong Glasgow Scottish accent, "
+                                                   "Scottish English pronunciation",
+                                                   "voiceRegion": "WELSH"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Dwarf.voiceRegion 'WELSH'"):
+            gen.validate_voice_regions(profiles, {"IRISH": {}})
+
+    def test_a_region_must_sit_next_to_an_accent(self):
+        profiles = profiles_with(byId={"5": {"style": "Gruff", "voiceRegion": "IRISH"}})
+        with self.assertRaisesRegex(ValueError, "byId.5.voiceRegion must sit next to"):
+            gen.validate_voice_regions(profiles, {"IRISH": {}})
+
+    def test_the_bundled_regions_and_profiles_agree(self):
+        tools = os.path.dirname(os.path.abspath(__file__))
+        regions = gen.build_voice_regions(
+            gen.load_json(os.path.join(tools, "voice-regions.json")),
+            gen.load_json(os.path.join(tools, "voice-library.json")))
+        gen.validate_voice_regions(gen.load_json(os.path.join(tools, "profiles.json")), regions)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -16,6 +16,12 @@ are no network calls or large downloads when choosing a voice.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
   (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
+- `tools/voice-regions.json` - hand-curated **voice regions**: each names one Gemini Extended
+  Voice Library accent, the player-accent keywords that select it, and any voices excluded by ear.
+- `tools/voice-library.json` - a committed snapshot of the Extended Voice Library, refreshed with
+  `GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`. The generator builds each region's
+  male and female pools from it into `src/main/resources/voice-regions.json`, so a voice only
+  changes when the snapshot or the regions change and are shipped.
 
 ## Data source
 
@@ -173,10 +179,50 @@ plugin (it logs the id and chosen voice/profile per line).
 ## Character voice profiles (cloud)
 
 Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
-carries a `profiles` section that steers **how** the cloud (Gemini) backend
-delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
-PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
-emotion is layered on top as a separate inline tag, so the two compose.
+carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
+delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them, with any `pitch` first, as a
+full character profile in one style string sent in `speech_metadata.style`, with
+the line's chat-head emotion after it:
+
+```
+Audio profile: Benny, a character in a medieval fantasy world. Accent: Strong London
+English accent, British English pronunciation. Style: An ordinary citizen of
+Gielinor. Down-to-earth, sincere, and approachable. Eager street vendor, loud and
+pitchy, hawking his newspapers to passers-by. Pace: Steady and conversational.
+Sounding happy.
+```
+
+The text the model receives is the spoken line alone, since Gemini 3.8 speaks its
+input verbatim. By ear, the full profile keeps NPCs that share a voice sounding like
+different people, where a short style string flattens them together.
+
+- `accent` is a strong, explicit accent phrase that names the pronunciation:
+  "Strong London English accent, British English pronunciation", "Strong Glasgow
+  Scottish accent, Scottish English pronunciation", "Strong Italian accent,
+  Italian-accented English pronunciation". Gemini 3.8 treats a soft phrase
+  ("Plain southern English accent") as optional and falls back to a generic
+  default accent, so every accent leads with "Strong" and names its pronunciation.
+  A delivery quirk (slurred, whispered, hissing) is never an accent: it goes in
+  `style`, so the character keeps the accent of its race or region.
+- `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
+  rhythm.
+- `name` is sent as the profile's name, so it is part of the cache key.
+- `pitch` is optional and opens the style string, ahead of the profile name ("Very high-pitched,
+  squeaky, thin little voice, far above a normal adult voice"). Native library voices ignore
+  pitch described later in the style, so it leads. The most specific layer that sets it wins.
+- `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
+  (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
+  comes from the same layer as the winning accent, so an accent with no region (Welsh, Norse)
+  clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
+- No meta-instructions ("word for word", "do not change voice"), no wording
+  instructions (slang, syntax: the model cannot reword a verbatim transcript), and
+  no square- or angle-bracket tags.
+
+The generator enforces the mechanical part: `validate_profiles` rejects a tag
+bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
+does not start with "Strong" and end with its pronunciation, an `accent` over 100
+characters, a `voiceRegion` that is not in `tools/voice-regions.json`, and a `voiceRegion` on a
+layer with no `accent`.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners

@@ -4,6 +4,58 @@ Which Gemini voice each speaker gets, and why that one.
 [architecture.md](architecture.md) owns how a speaker is resolved into a voice spec; this owns
 which voice that spec lands on.
 
+## Native accent voices come first
+
+Gemini's 30 prebuilt voices are all tagged General American in Google's own voice list, so on
+their own they can only put an accent on. Gemini 3.8 renders that as an American speaker doing an
+accent. Google's Extended Voice Library holds about two thousand more voices, many of them native
+speakers tagged by accent: 80 Dublin, 49 Winchester (southern English), 16 each for Glasgow,
+Manchester and Newcastle, 14 Bristol, 6 Liverpool, and native Italian, Egyptian Arabic, Polish,
+Japanese, Australian and New Zealand speakers, each of whom reads English text in English.
+
+So an NPC whose accent has native speakers is voiced from them. Each profile layer that sets an
+`accent` can name a `voiceRegion` next to it (see
+[npc-voice-tooling.md](npc-voice-tooling.md)), and the region always comes from the same layer as
+the winning accent, so the two can never disagree. `GeminiVoiceMap` then resolves a speaker in
+this order:
+
+1. The narrator takes its fixed voice.
+2. The player takes a native voice from the first region whose keyword their typed accent names,
+   or the player pool when it names none.
+3. A child takes the child pool, whatever its region.
+4. An NPC with a voice region takes a voice from that region's pool for its gender.
+5. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
+
+| Region | Library accent | Male | Female | Voices |
+|---|---|---|---|---|
+| `SOUTHERN_ENGLISH` | Winchester | 14 | 35 | commoners, Misthalin, Received Pronunciation, Cockney, most British creatures |
+| `WEST_COUNTRY` | Bristol | 10 | 3 | Asgarnia, pirates, crabs |
+| `SCOUSE` | Liverpool | 4 | 2 | Kandarin |
+| `MANCUNIAN` | Manchester | 5 | 11 | Kourend, Yorkshire barbarians, Northern bespoke NPCs |
+| `GEORDIE` | Newcastle | 5 | 11 | the Wilderness |
+| `SCOTTISH` | Glasgow | 9 | 7 | dwarves |
+| `IRISH` | Dublin | 37 | 39 | gnomes, leprechauns, Wyrmscraig, Irish bespoke NPCs |
+| `ITALIAN` | Italian | 25 | 27 | Varlamore |
+| `EGYPTIAN_ARABIC` | Egyptian Arabic | 46 | 44 | the Kharidian desert, Menaphos and Sophanem |
+| `POLISH` | Polish | 31 | 31 | Morytania, vampyres, Romani bespoke NPCs |
+| `JAPANESE` | Tokyo Japanese | 31 | 39 | the Eastern Lands |
+| `AUSTRALIAN`, `NEW_ZEALAND` | Sydney, Auckland | | | bespoke NPCs |
+
+Accents with no native speakers in the library (Welsh, Norse, Nigerian, Bajan and Caribbean, the
+Russian penguins, the West Midlands ogres) keep their race pool and carry the accent through the
+profile's style alone. The library has no countryside Irish voices, so gnomes and leprechauns take
+Dublin voices and the style's "rural Irish" accent pulls them toward the country. Pitch is not
+filtered, since the library's male voices are overwhelmingly low and a pitch filter would empty
+most pools. A creature's depth or squeak rides in the profile's `pitch` field instead, which opens
+the style string ("Very high-pitched, squeaky, thin little voice, far above a normal adult
+voice."): by ear, a native voice ignores pitch described later in the style but follows it when it
+leads. Goblins, gnomes, monkeys, crabs, imps and fairies are high; trolls, gorillas, demons,
+dragons, TzHaar, ogres and dwarves are low.
+
+The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
+of the library, so a voice never changes because Google's list changed; it changes only when the
+pools are regenerated and shipped.
+
 ## The catalog adjectives are not the casting
 
 Gemini exposes 30 prebuilt voices identified by a name and a one-word vibe adjective: Charon is
@@ -24,10 +76,13 @@ to it. A voice does not enter a pool on the strength of its catalog entry.
 - **Gender is structural.** A male spec resolves to a voice from a male sub-pool and a female spec
   to one from a female sub-pool. The 14 male and 13 female voices in use are disjoint sets, so no
   race maps two genders onto the same voice.
-- **Placement within a pool is stable.** A per-NPC seed spreads same-race, same-gender NPCs across
-  their sub-pool, and the same NPC lands on the same voice in every session. Adult pools hold two
-  voices, so the spread is variety rather than a guarantee that any two NPCs differ. A spec
-  carrying no seed anchors to index 0.
+- **Each NPC keeps one voice.** A per-NPC seed spreads same-race, same-gender NPCs across their
+  pool, and the same NPC lands on the same voice on every line and in every session. The seed is
+  the NPC's base composition id, which a transforming NPC keeps when its active id changes, so a
+  quest character does not change voice mid-quest. Region pools pick by rendezvous hashing, so
+  adding or removing a voice moves only the NPCs on that voice. Race pools hold two voices, so
+  their spread is variety rather than a guarantee that any two NPCs differ. A spec carrying no
+  seed anchors to index 0 and never takes a region voice.
 - **Every spec resolves.** An unknown gender is voiced as male. Four further fallbacks exist and
   none is reachable today, so they are defence in depth rather than live behaviour: a null spec
   and an empty adult pool both resolve to Charon, an empty child pool to Puck, both regardless of
@@ -125,8 +180,12 @@ both of which read young and hold the directed British accent.
 
 ## The player
 
-The **Player Voice** setting picks a gender pool rather than a voice, and the player always takes
-index 0 of it: there is one player, so nothing needs spreading on a seed. The two options are
+The **Player Voice** setting picks a gender. When the typed **Your Accent** names a region's
+keyword ("Irish", "Glasgow", "southern", and so on, listed in `tools/voice-regions.json`), the
+player takes a fixed native voice from that region for the gender; regions are tried in file order
+and the broad southern English region comes last, so a more specific accent always wins. Otherwise
+the player takes index 0 of the player pool: there is one player, so nothing needs spreading on a
+seed. The two options are
 labelled Type A and Type B rather than by gender: the voices are
 recognisably male and female, and the labelling follows the modern convention so the setting does
 not ask a player to pick a gender.

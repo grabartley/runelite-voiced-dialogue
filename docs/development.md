@@ -142,7 +142,7 @@ never a peer.
 | 7 | `speech.openrouter` | The OpenRouter transport: payload shape, credit metering, usage reads |
 | 7 | `speech.aistudio` | The Google AI Studio transport: `generateContent`, SSE streaming, token usage |
 | 6 | `speech` | The provider-neutral call flow: retry and back-off, HTTP helpers, the backend contract, the off-thread pipeline |
-| 5 | `speech.model` | The Gemini speech and translation models both providers serve: model ids, voice catalog, emotion tags |
+| 5 | `speech.model` | The Gemini speech and translation models both providers serve: model ids, voice catalog, speech style and emotion directions |
 | 5 | `cache` | The memory and disk tiers that keep a line from being billed twice |
 | 4 | `profile` | Resolving who is speaking into how they sound: voice spec, character profile, emotion |
 | 3 | `speaker.wiki` | Learning an unknown NPC's demographics from the OSRS Wiki: the mapping resource, the infobox parser, the lookup and its throttle |

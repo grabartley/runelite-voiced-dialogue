@@ -34,7 +34,7 @@ final class NpcVoiceResolver {
     }
     NpcAttributes attributes = identity.attributes();
     if (attributes == null) {
-      return defaultVoice(npcName, identity.worldId(), identity, "analysis-failed");
+      return defaultVoice(npcName, identity.baseId(), identity, "analysis-failed");
     }
 
     NpcRace race = NpcDemographicParser.toRace(attributes.getRace());
@@ -49,7 +49,7 @@ final class NpcVoiceResolver {
     NpcRace voiceRace = race == NpcRace.UNKNOWN ? NpcRace.HUMAN : race;
     NpcGender voiceGender = NpcDemographicParser.toVoiceGender(gender);
     boolean child = attributes.isChild() || identity.nameMatch().child();
-    int seed = voiceSeed(identity.worldId(), npcName);
+    int seed = voiceSeed(identity.baseId(), npcName);
     if (config.debugMode()) {
       log.info(
           VoiceTraceFormatter.buildNpcTrace(

@@ -46,9 +46,10 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
 
   public static final String NO_KEY_NOTICE =
       "Add your Google AI Studio API key in the Voiced Dialogue settings to hear dialogue; without"
-          + " a key, lines are not voiced. Google AI Studio begins at 100 fresh lines a day while"
-          + " its speech model is in preview, prefetched options included; OpenRouter has no daily"
-          + " cap.";
+          + " a key, lines are not voiced. Google AI Studio caps fresh lines a day by usage tier,"
+          + " prefetched options included; OpenRouter has no daily cap.";
+
+  static final String PCM_MIME_TYPE = "AUDIO_L16";
 
   private static final Duration KEEP_ALIVE = Duration.ofMinutes(5);
 
@@ -93,8 +94,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     this.endpoint = endpoint;
     this.streamingEndpoint = streamingEndpoint(endpoint);
     this.translator = new AiStudioTranslator(this.httpClient, config, gson, translatorEndpoint);
-    this.executor =
-        new CloudSpeechExecutor(config, support, model, "Google AI Studio", MODEL, new Ops());
+    this.executor = new CloudSpeechExecutor(config, support, model, "Google AI Studio", new Ops());
   }
 
   public void setNotice(Consumer<String> notice) {
@@ -202,20 +202,26 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     }
 
     @Override
+    public boolean speedInStyle() {
+      return true;
+    }
+
+    @Override
     public CloudSpeechExecutor.PreparedSpeech buildRequests(
         CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
-      String input = line.input;
-      if (line.speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
-        input = "SPEAKING PACE: " + line.speedPercent + "% of normal.\n\n" + input;
-      }
       String languageCode = line.translating ? config.cloudLanguage().code() : null;
-      JsonObject payload = buildPayload(input, model.voiceFor(request.voice()), languageCode);
+      JsonObject payload =
+          buildPayload(
+              line.input,
+              model.speechMetadata(line.style),
+              model.voiceFor(request.voice(), request.profile()),
+              languageCode);
       byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
       return new CloudSpeechExecutor.PreparedSpeech(
           buildHttpRequest(endpoint, line.apiKey, body),
           buildHttpRequest(streamingEndpoint, line.apiKey, body),
           line.speedRatio,
-          input.length(),
+          line.input.length(),
           request.prefetch());
     }
 
@@ -299,9 +305,13 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     }
   }
 
-  private static JsonObject buildPayload(String input, String voice, String languageCode) {
+  private static JsonObject buildPayload(
+      String input, JsonObject speechMetadata, String voice, String languageCode) {
     JsonObject textPart = new JsonObject();
     textPart.addProperty("text", input);
+    if (speechMetadata != null) {
+      textPart.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
+    }
     JsonArray parts = new JsonArray();
     parts.add(textPart);
     JsonObject content = new JsonObject();
@@ -323,11 +333,20 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     JsonObject generationConfig = new JsonObject();
     generationConfig.add("responseModalities", modalities);
     generationConfig.add("speechConfig", speechConfig);
+    generationConfig.add("responseFormat", pcmResponseFormat());
 
     JsonObject payload = new JsonObject();
     payload.add("contents", contents);
     payload.add("generationConfig", generationConfig);
     return payload;
+  }
+
+  private static JsonObject pcmResponseFormat() {
+    JsonObject audio = new JsonObject();
+    audio.addProperty("mimeType", PCM_MIME_TYPE);
+    JsonObject responseFormat = new JsonObject();
+    responseFormat.add("audio", audio);
+    return responseFormat;
   }
 
   private static Request buildHttpRequest(String target, String apiKey, byte[] body) {

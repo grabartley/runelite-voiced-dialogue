@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
+
+  private static final Pattern ENDS_SENTENCE = Pattern.compile("[.!?]$");
 
   @Value
   @Accessors(fluent = true)
@@ -141,7 +144,9 @@ public final class NpcProfileTable {
     CharacterProfile defaultProfile = layers.defaultProfile();
     String name = defaultProfile.name();
     String accent = defaultProfile.accent();
+    String voiceRegion = defaultProfile.voiceRegion();
     String pace = defaultProfile.pace();
+    String pitch = defaultProfile.pitch();
     List<String> styleParts = new ArrayList<>();
     List<String> sources = new ArrayList<>();
     for (MatchedLayer entry : matched) {
@@ -151,19 +156,29 @@ public final class NpcProfileTable {
       }
       if (layer.accent() != null) {
         accent = layer.accent();
+        voiceRegion = layer.voiceRegion();
       }
       if (layer.pace() != null) {
         pace = layer.pace();
       }
+      if (layer.pitch() != null) {
+        pitch = layer.pitch();
+      }
       if (layer.style() != null) {
-        styleParts.add(layer.style());
+        styleParts.add(asSentence(layer.style()));
       }
       sources.add(entry.source);
     }
     String style = styleParts.isEmpty() ? defaultProfile.style() : String.join(" ", styleParts);
     String source = sources.isEmpty() ? "default" : String.join("+", sources);
 
-    return new Resolution(new CharacterProfile(name, accent, style, pace), source);
+    return new Resolution(
+        new CharacterProfile(name, accent, style, pace, pitch, voiceRegion), source);
+  }
+
+  private static String asSentence(String style) {
+    String trimmed = style.trim();
+    return ENDS_SENTENCE.matcher(trimmed).find() ? trimmed : trimmed + ".";
   }
 
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {

@@ -9,7 +9,7 @@
 
 **Gielinor talks back.** Voiced Dialogue speaks every dialogue box aloud with cloud AI voices, in real time, as you play.
 
-Bring your own API key. You pay only for the audio you generate, about **$0.0025 a line**, and every line you have already heard replays free from your cache.
+Bring your own API key. You pay only for the audio you generate, about **$0.001 a line**, and every line you have already heard replays free from your cache.
 
 ## What it does
 
@@ -43,7 +43,7 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 | Long (400 chars) | **0.8s** | 19.5s |
 | Very long (500+ chars) | **0.8s** | 37.2s |
 
-**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. While the speech model is in preview, a billed key begins at **up to 100 fresh lines a day**, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use.
+**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. Google caps how many fresh lines a key can voice each day, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use; your key's current limit is on its AI Studio rate-limit page.
 
 **OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A quest speech can leave you waiting the better part of a minute.
 
@@ -92,7 +92,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | British (Cambridge) | Accent for your character's voice. |
+| **Your Accent** | Strong educated southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, and more) voices you with a native speaker from it. |
 | **Your Persona** | friendly and plucky | Persona and delivery style for your character. |
 | **Your Delivery Pace** | Normal | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |

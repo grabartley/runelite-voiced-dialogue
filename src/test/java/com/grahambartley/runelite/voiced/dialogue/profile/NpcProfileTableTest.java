@@ -98,6 +98,70 @@ public class NpcProfileTableTest {
   }
 
   @Test
+  public void stackedStylesWithoutFullStopsAreSeparatedAsSentences() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"British accent\","
+                    + "\"style\":\"Plain\",\"pace\":\"Steady pace\"},"
+                    + "\"byRace\":{\"Gnome\":{\"style\":\"Chatty and clever\"}},"
+                    + "\"byId\":{\"7\":{\"style\":\"Regal and gracious!\"}}}")
+            .getAsJsonObject();
+    NpcProfileTable table = NpcProfileTable.fromProfilesJson(profiles);
+
+    assertEquals(
+        "Chatty and clever. Regal and gracious!",
+        resolve(table, 7, "King", "Gnome", null).profile().style());
+  }
+
+  private static NpcProfileTable regionTable() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"Southern\",\"voiceRegion\":\"SOUTHERN\","
+                    + "\"style\":\"Plain\",\"pace\":\"Steady\"},"
+                    + "\"byRace\":{\"Dwarf\":{\"accent\":\"Glasgow\",\"voiceRegion\":\"SCOTTISH\"}},"
+                    + "\"byEthnicity\":{\"tirannwn\":{\"accent\":\"Welsh\"}},"
+                    + "\"byId\":{\"9\":{\"style\":\"Gruff\"}}}")
+            .getAsJsonObject();
+    return NpcProfileTable.fromProfilesJson(profiles);
+  }
+
+  @Test
+  public void theMostSpecificPitchWins() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"A\",\"style\":\"S\",\"pace\":\"P\"},"
+                    + "\"byRace\":{\"Goblin\":{\"pitch\":\"High\"}},"
+                    + "\"byId\":{\"3\":{\"pitch\":\"Very high\"}}}")
+            .getAsJsonObject();
+    NpcProfileTable table = NpcProfileTable.fromProfilesJson(profiles);
+    assertEquals("High", resolve(table, null, "Goblin", "Goblin", null).profile().pitch());
+    assertEquals("Very high", resolve(table, 3, "Goblin", "Goblin", null).profile().pitch());
+    assertEquals(null, resolve(table, null, "Man", "Human", null).profile().pitch());
+  }
+
+  @Test
+  public void theVoiceRegionComesFromTheLayerThatSetTheWinningAccent() {
+    assertEquals(
+        "SCOTTISH", resolve(regionTable(), 9, "Dwarf", "Dwarf", null).profile().voiceRegion());
+  }
+
+  @Test
+  public void anAccentWithNoRegionClearsTheRegionItOverrides() {
+    CharacterProfile welsh = resolve(regionTable(), null, "Elf", "Human", "tirannwn").profile();
+    assertEquals("Welsh", welsh.accent());
+    assertEquals(null, welsh.voiceRegion());
+  }
+
+  @Test
+  public void anNpcWithNoAccentLayerKeepsTheDefaultRegion() {
+    assertEquals(
+        "SOUTHERN", resolve(regionTable(), null, "Man", "Human", null).profile().voiceRegion());
+  }
+
+  @Test
   public void multipleCategoriesAllCombine() {
     NpcProfileTable.Resolution r = resolve(table(), null, "Imp Vampyre", null, null);
     assertEquals(

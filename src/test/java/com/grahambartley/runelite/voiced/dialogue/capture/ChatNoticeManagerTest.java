@@ -92,7 +92,7 @@ public class ChatNoticeManagerTest {
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), posted.capture(), isNull());
     assertTrue(
         "a player picking a provider is told the ceiling on the fast one",
-        posted.getValue().contains("begins at 100 fresh lines a day"));
+        posted.getValue().contains("caps fresh lines a day by usage tier"));
     assertTrue("and that the other one has none", posted.getValue().contains("no daily cap"));
   }
 

@@ -8,9 +8,7 @@ public final class DirectionSanitizer {
 
   private static final Pattern CONTROL = Pattern.compile("[\\u0000-\\u001F\\u007F]+");
 
-  private static final Pattern MARKERS =
-      Pattern.compile(
-          "(?i)(#+\\s*transcript|transcript\\s*####|audio\\s*profile|director'?s\\s*notes)");
+  private static final Pattern TAG_BRACKETS = Pattern.compile("[\\[\\]<>]");
 
   private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
@@ -25,7 +23,7 @@ public final class DirectionSanitizer {
       return null;
     }
     String flattened = CONTROL.matcher(field).replaceAll(" ");
-    String demarked = MARKERS.matcher(flattened).replaceAll(" ");
+    String demarked = TAG_BRACKETS.matcher(flattened).replaceAll(" ");
     String collapsed = WHITESPACE.matcher(demarked).replaceAll(" ").trim();
     if (collapsed.length() > MAX_FIELD_LENGTH) {
       collapsed = collapsed.substring(0, MAX_FIELD_LENGTH).trim();

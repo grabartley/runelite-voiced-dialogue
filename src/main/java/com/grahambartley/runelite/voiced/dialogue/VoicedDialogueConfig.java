@@ -191,8 +191,8 @@ public interface VoicedDialogueConfig extends Config {
       name = "Voice Provider",
       description =
           "Cloud service that voices dialogue and bills the calls. Google AI Studio is fastest but"
-              + " begins at 100 fresh lines a day, prefetched options included; OpenRouter has no"
-              + " daily cap.",
+              + " caps fresh lines a day by usage tier, prefetched options included; OpenRouter has"
+              + " no daily cap.",
       position = 0,
       section = generalSection)
   default TtsProvider ttsProvider() {
@@ -265,11 +265,13 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "playerAccent",
       name = "Your Accent",
-      description = "Your voice's accent.",
+      description =
+          "Your voice's accent. Name it strongly, e.g. \"Strong Dublin Irish accent, Irish English"
+              + " pronunciation\".",
       position = 1,
       section = voicesSection)
   default String playerAccent() {
-    return "British English, as spoken in Cambridge, England.";
+    return "Strong educated southern English accent, British English pronunciation";
   }
 
   @ConfigItem(

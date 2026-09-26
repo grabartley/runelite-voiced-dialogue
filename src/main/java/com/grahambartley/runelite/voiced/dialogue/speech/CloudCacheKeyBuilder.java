@@ -7,13 +7,12 @@ final class CloudCacheKeyBuilder {
   private CloudCacheKeyBuilder() {}
 
   static String build(
-      String modelId,
       String voice,
       int speedPercent,
       CharacterProfile profile,
       String language,
       boolean skipTranslation) {
-    StringBuilder variant = new StringBuilder(modelId).append('|').append(voice);
+    StringBuilder variant = new StringBuilder(voice);
     if (speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
       variant.append("|s").append(speedPercent);
     }

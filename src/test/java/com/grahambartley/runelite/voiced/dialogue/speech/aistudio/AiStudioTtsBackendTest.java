@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
+import static com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioRequests.keyedConfig;
+import static com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioRequests.req;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
@@ -12,11 +14,11 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.RawPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
@@ -59,12 +61,6 @@ public class AiStudioTtsBackendTest {
     server.shutdown();
   }
 
-  private static MutableTestConfig keyedConfig() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.googleAiStudioKey = "AIza-abc";
-    return config;
-  }
-
   private AiStudioTtsBackend backend(MutableTestConfig config) {
     return new AiStudioTtsBackend(
         client,
@@ -88,31 +84,6 @@ public class AiStudioTtsBackendTest {
     return backend;
   }
 
-  private static SynthesisRequest req() {
-    return new SynthesisRequest(
-        "Hello & welcome",
-        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-        Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE,
-        false,
-        false);
-  }
-
-  private static String spokenText(JsonObject body) {
-    return TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, sentPayload(body));
-  }
-
-  private static String sentPayload(JsonObject body) {
-    return body.getAsJsonArray("contents")
-        .get(0)
-        .getAsJsonObject()
-        .getAsJsonArray("parts")
-        .get(0)
-        .getAsJsonObject()
-        .get("text")
-        .getAsString();
-  }
-
   @Test
   public void availabilityRequiresKey() {
     MutableTestConfig config = new MutableTestConfig();
@@ -132,7 +103,7 @@ public class AiStudioTtsBackendTest {
     assertTrue(AiStudioTtsBackend.NO_KEY_NOTICE.contains("Google AI Studio"));
     assertTrue(
         "the ceiling reaches a player before they commit to a key",
-        AiStudioTtsBackend.NO_KEY_NOTICE.contains("begins at 100 fresh lines a day"));
+        AiStudioTtsBackend.NO_KEY_NOTICE.contains("caps fresh lines a day"));
     assertTrue(
         "paired with the provider that has none",
         AiStudioTtsBackend.NO_KEY_NOTICE.contains("OpenRouter has no daily cap"));
@@ -164,8 +135,8 @@ public class AiStudioTtsBackendTest {
         recorded.getHeader("Content-Type").startsWith("application/json"));
     assertNotNull("a User-Agent is sent", recorded.getHeader("User-Agent"));
 
-    JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
-    assertEquals("Hello & welcome", spokenText(body));
+    JsonObject body = AiStudioRequests.body(recorded);
+    assertEquals("Hello & welcome", AiStudioRequests.text(body));
     JsonObject generationConfig = body.getAsJsonObject("generationConfig");
     assertEquals(
         "AUDIO", generationConfig.getAsJsonArray("responseModalities").get(0).getAsString());
@@ -178,7 +149,7 @@ public class AiStudioTtsBackendTest {
             .getAsString();
     assertEquals(
         "the voice is whatever the shared map resolves for the spec",
-        new GeminiVoiceMap().voiceFor(req().voice()),
+        new GeminiVoiceMap().voiceFor(req().voice(), null),
         voiceName);
     assertFalse(
         "plain English sends no language code",
@@ -198,7 +169,7 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
-  public void emotionTagAndProfileBlockLeadTheSpokenText() throws Exception {
+  public void profileAndEmotionTravelInSpeechMetadataNotInTheText() throws Exception {
     server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     backend(keyedConfig())
@@ -211,30 +182,48 @@ public class AiStudioTtsBackendTest {
                 false,
                 false));
 
-    JsonObject body =
-        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String text = sentPayload(body);
-    assertTrue(
-        "the profile block leads and the emotion-tagged transcript follows",
-        text.endsWith("[angry] You no take candle!"));
-    assertTrue(
-        "the profile block is present",
-        text.startsWith(TestFixtures.TROLL_PROFILE.renderPromptBlock()));
+    JsonObject body = AiStudioRequests.body(server.takeRequest());
+    assertEquals("You no take candle!", AiStudioRequests.text(body));
+    assertEquals(TestFixtures.TROLL_STYLE + " Sounding angry.", AiStudioRequests.style(body));
   }
 
   @Test
-  public void nonDefaultPaceBecomesAPromptDirection() throws Exception {
+  public void nonDefaultPaceBecomesAStyleDirection() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.speedPercent = 150;
     server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     backend(config).synthesize(req());
 
-    JsonObject body =
-        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    assertTrue(
-        "a non-default pace has no API parameter, so it is a prompt direction",
-        sentPayload(body).startsWith("SPEAKING PACE: 150% of normal."));
+    JsonObject body = AiStudioRequests.body(server.takeRequest());
+    assertEquals("Hello & welcome", AiStudioRequests.text(body));
+    assertEquals(
+        "a non-default pace has no API parameter, so it is a style direction",
+        TestFixtures.TROLL_STYLE + " Speaking at 150% of normal speed.",
+        AiStudioRequests.style(body));
+  }
+
+  @Test
+  public void anEmptyStyleSendsNoSpeechMetadata() throws Exception {
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
+    CharacterProfile blank = new CharacterProfile(null, null, null, null);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
+
+    backend(keyedConfig())
+        .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
+
+    assertFalse(AiStudioRequests.hasSpeechMetadata(AiStudioRequests.body(server.takeRequest())));
+  }
+
+  @Test
+  public void requestsHeaderlessPcmSoTheUnaryReplyCarriesNoWavHeader() throws Exception {
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
+
+    backend(keyedConfig()).synthesize(req());
+
+    assertEquals(
+        "AUDIO_L16",
+        AiStudioRequests.responseMimeType(AiStudioRequests.body(server.takeRequest())));
   }
 
   @Test
@@ -428,7 +417,7 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
-  public void cacheVariantFoldsInModelAndVoiceSoRendersNeverCollide() {
+  public void cacheVariantFoldsInVoiceButNotModelSoRendersNeverCollide() {
     AiStudioTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
@@ -449,11 +438,12 @@ public class AiStudioTtsBackendTest {
             false);
 
     String variant = backend.cacheVariant(humanMale);
-    assertTrue(
-        "the variant carries the AI Studio model id", variant.contains(AiStudioTtsBackend.MODEL));
+    assertFalse(
+        "the variant leaves the model out so a model swap keeps every cached clip",
+        variant.contains(AiStudioTtsBackend.MODEL));
     assertTrue(
         "the variant carries the resolved Gemini voice",
-        variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice())));
+        variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice(), null)));
     assertNotEquals(
         "two specs that map to different voices never share a variant",
         backend.cacheVariant(humanMale),
@@ -475,8 +465,7 @@ public class AiStudioTtsBackendTest {
         "the first hop is the Flash Lite translation model",
         "/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent",
         translation.getPath());
-    JsonObject translationBody =
-        new JsonParser().parse(translation.getBody().readUtf8()).getAsJsonObject();
+    JsonObject translationBody = AiStudioRequests.body(translation);
     String systemPrompt =
         translationBody
             .getAsJsonObject("systemInstruction")
@@ -489,8 +478,9 @@ public class AiStudioTtsBackendTest {
         "the shared translation prompt targets the language", systemPrompt.contains("French"));
 
     RecordedRequest speech = server.takeRequest();
-    JsonObject speechBody = new JsonParser().parse(speech.getBody().readUtf8()).getAsJsonObject();
-    assertEquals("the translated text is what gets voiced", "Bonjour", spokenText(speechBody));
+    JsonObject speechBody = AiStudioRequests.body(speech);
+    assertEquals(
+        "the translated text is what gets voiced", "Bonjour", AiStudioRequests.text(speechBody));
     assertEquals(
         "a translated line carries the BCP-47 code so it is pronounced natively",
         "fr-FR",
@@ -551,9 +541,8 @@ public class AiStudioTtsBackendTest {
 
     assertNotNull(backend.synthesize(req()));
 
-    JsonObject sent =
-        new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
-    String input = sentPayload(sent);
+    JsonObject sent = AiStudioRequests.body(server.takeRequest());
+    String input = AiStudioRequests.text(sent);
 
     SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
     assertEquals(VoicedDialogueConfig.TtsProvider.GOOGLE_AI_STUDIO, recorded.provider());
