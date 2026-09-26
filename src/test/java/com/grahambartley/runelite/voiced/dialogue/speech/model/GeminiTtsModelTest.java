@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
@@ -53,6 +54,11 @@ public class GeminiTtsModelTest {
         "Audio profile: Gnome, a character in a medieval fantasy world. Accent: Irish accent."
             + " Style: Cheerful. Pace: Quick pace. Speaking at 80% of normal speed.",
         model.speechStyle(GNOME, Emotion.NEUTRAL, 80));
+  }
+
+  @Test
+  public void anEmptyStyleHasNoSpeechMetadata() {
+    assertNull(model.speechMetadata(""));
   }
 
   @Test

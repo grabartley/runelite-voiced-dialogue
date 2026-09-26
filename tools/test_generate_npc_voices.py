@@ -328,8 +328,17 @@ class ValidateProfilesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "byRace.Elf.accent"):
             gen.validate_profiles(profiles)
 
+    def test_pronunciation_mid_accent_is_rejected(self):
+        profiles = profiles_with(byRace={"Troll": {"accent": "Strong pronunciation, deep voice"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Troll.accent"):
+            gen.validate_profiles(profiles)
+
+    def test_the_dog_accent_is_exempt(self):
+        profiles = profiles_with(byRace={"Dog": {"accent": "Strong canine barks and growls"}})
+        gen.validate_profiles(profiles)
+
     def test_long_accent_is_rejected(self):
-        accent = "Strong " + "a" * 80 + " pronunciation"
+        accent = "Strong " + "a" * 80 + ", English pronunciation"
         profiles = profiles_with(byEthnicity={"varlamore": {"accent": accent}})
         with self.assertRaisesRegex(ValueError, "longer than 100"):
             gen.validate_profiles(profiles)

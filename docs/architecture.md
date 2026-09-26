@@ -315,8 +315,9 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
   result still caches) does not block the next line: the free worker picks it up.
 - **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter
-  `speed` parameter only when it is not 100%, so the default request body is unchanged; the active
-  model may ignore it.
+  `speed` parameter only when it is not 100%, so the default request body is unchanged. On Google
+  AI Studio a non-default pace joins the style string as a closing direction instead (see the
+  Google AI Studio section).
 - **Keepalive connection.** The pipeline reuses one long-lived client derived from the injected one
   (an 8-connection 15-minute keepalive pool and a 2s connect budget), so back-to-back lines
   reuse a warm connection instead of re-handshaking. It is pinned to HTTP/1.1: the speech endpoint

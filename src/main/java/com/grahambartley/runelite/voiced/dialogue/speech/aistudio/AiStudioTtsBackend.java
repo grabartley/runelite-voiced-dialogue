@@ -213,7 +213,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       JsonObject payload =
           buildPayload(
               line.input,
-              line.style.isEmpty() ? null : model.speechMetadata(line.style),
+              model.speechMetadata(line.style),
               model.voiceFor(request.voice()),
               languageCode);
       byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
