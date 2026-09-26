@@ -37,12 +37,12 @@ public class CharacterProfileTest {
   }
 
   @Test
-  @Parameters(method = "changedSpokenFieldProfiles")
-  public void cacheKeyChangesWhenAnySpokenFieldChanges(CharacterProfile changed) {
+  @Parameters(method = "changedDeliveryFieldProfiles")
+  public void cacheKeyChangesWhenAnyDeliveryFieldChanges(CharacterProfile changed) {
     assertNotEquals(WIZARD.cacheKey(), changed.cacheKey());
   }
 
-  private Object[] changedSpokenFieldProfiles() {
+  private Object[] changedDeliveryFieldProfiles() {
     return new Object[] {
       new CharacterProfile(
           "Wizard", "Distinguished elderly British accent", "Foolish", "Measured pace"),

@@ -98,7 +98,7 @@ public class NpcProfileTableTest {
   }
 
   @Test
-  public void stackedShortPhrasesAreSeparatedAsSentences() {
+  public void stackedStylesWithoutFullStopsAreSeparatedAsSentences() {
     JsonObject profiles =
         new JsonParser()
             .parse(

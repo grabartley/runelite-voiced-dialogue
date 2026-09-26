@@ -35,11 +35,11 @@ takes sustained delivery from a structured `speech_metadata.style` field, so the
 spoken line alone and `GeminiSpeechStyle` renders the profile as labelled fields ("Audio profile:
 <name>, a character in a medieval fantasy world. Accent: ... Style: ... Pace: ..."), followed by
 the emotion direction, as one style string. By ear, the full profile keeps NPCs that share a voice
-distinct and a strong accent phrase naming its pronunciation keeps every accent from falling back
-to a generic default, where short, soft style strings did neither. `CloudSpeechExecutor` builds it once per line for both providers; each provider only
-places it (see below). The profile sets the character and the emotion direction colours the
-moment. Square-bracket tags are not part of the 3.8 prompting model, and a player-typed field has
-its tag brackets stripped by `DirectionSanitizer`.
+distinct, and a strong accent phrase naming its pronunciation keeps every accent from falling back
+to a generic default. `CloudSpeechExecutor` builds the string once per line for both providers;
+each provider only places it (see below). The profile sets the character and the emotion
+direction colours the moment. Square-bracket tags are not part of the 3.8 prompting model, and a
+player-typed field has its tag brackets stripped by `DirectionSanitizer`.
 
 Narration is a speaker class of its own. The item, double-item, and message boxes (`NarrationWatcher`,
 gated by **Voice Narration**, off by default) are the game telling the story rather than a character
@@ -295,7 +295,8 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   behind the Cloud Billing API, so AI Studio is costed from the token counts it does report:
   `AiStudioTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
   which report a running total), and `SpendPricing` converts those measured tokens at Google's
-  published Gemini 3.8 Flash TTS rate ($0.50 per million text tokens, $9 per million audio tokens). The readout labels that conversion an estimate and OpenRouter's figure as billed.
+  published Gemini 3.8 Flash TTS rate ($0.50 per million text tokens, $9 per million audio
+  tokens). The readout labels that conversion an estimate and OpenRouter's figure as billed.
 
   The translation hop is a second billable call against a second model, and each provider accounts
   for it differently. On OpenRouter it bills to the same key, so it is inside the usage delta with
