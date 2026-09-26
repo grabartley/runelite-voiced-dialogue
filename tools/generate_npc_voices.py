@@ -453,17 +453,30 @@ def apply_overrides(table, overrides):
 
 
 def build_voice_regions(regions_source, library):
+    library_ids = {voice["id"] for voice in library["voices"]}
+    narrator = regions_source["narratorVoice"]
+    if narrator not in library_ids:
+        raise ValueError(f"narratorVoice '{narrator}' is not in the voice library")
     regions = {}
+    seen_keywords = {}
     for key, region in regions_source["regions"].items():
-        excluded = set(region.get("exclude") or []) | {regions_source["narratorVoice"]}
+        unknown = set(region.get("exclude") or []) - library_ids
+        if unknown:
+            raise ValueError(f"voice region {key} excludes unknown voices {sorted(unknown)}")
+        for keyword in region.get("playerKeywords") or []:
+            owner = seen_keywords.setdefault(keyword.lower(), key)
+            if owner != key:
+                raise ValueError(f"player keyword '{keyword}' is in both {owner} and {key}")
+        excluded = set(region.get("exclude") or []) | {narrator}
         pools = {gender: [] for gender in VOICE_GENDERS.values()}
         for voice in library["voices"]:
             gender = VOICE_GENDERS.get(voice.get("gender"))
             if (gender and voice.get("accent") == region["libraryAccent"]
                     and voice["id"] not in excluded):
                 pools[gender].append(voice)
-        if not any(pools.values()):
-            raise ValueError(f"voice region {key} matches no library voices")
+        for gender, voices in pools.items():
+            if not voices:
+                raise ValueError(f"voice region {key} has no {gender.lower()} library voices")
         entry = {"playerKeywords": [k.lower() for k in region.get("playerKeywords") or []]}
         for gender, voices in pools.items():
             entry[gender] = sorted(v["id"] for v in voices)
@@ -473,7 +486,15 @@ def build_voice_regions(regions_source, library):
     return regions
 
 
+FIXED_VOICE_LAYERS = ("player", "narrator")
+
+
 def validate_voice_regions(profiles, regions):
+    for key in FIXED_VOICE_LAYERS:
+        for field in ("pitch", "voiceRegion"):
+            if field in (profiles.get(key) or {}):
+                raise ValueError(f"{key}.{field} is not read: that speaker's voice is chosen apart "
+                                 "from the profile layers")
     for where, layer in profile_layers(profiles):
         region = layer.get("voiceRegion")
         if region is None:
@@ -562,10 +583,7 @@ def main():
 
     profiles = validate_profiles(load_json(args.profiles))
     voice_regions_source = load_json(args.voice_regions)
-    voice_library = load_json(args.voice_library)
-    if not any(v["id"] == voice_regions_source["narratorVoice"] for v in voice_library["voices"]):
-        raise ValueError(f"narratorVoice '{voice_regions_source['narratorVoice']}' is not in the library")
-    voice_regions = build_voice_regions(voice_regions_source, voice_library)
+    voice_regions = build_voice_regions(voice_regions_source, load_json(args.voice_library))
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 

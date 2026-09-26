@@ -76,6 +76,7 @@ public final class CloudSpeechExecutor {
     public final String apiKey;
     public final String input;
     public final String style;
+    public final String voice;
     public final boolean translating;
     public final double speedRatio;
     public final int speedPercent;
@@ -84,12 +85,14 @@ public final class CloudSpeechExecutor {
         String apiKey,
         String input,
         String style,
+        String voice,
         boolean translating,
         double speedRatio,
         int speedPercent) {
       this.apiKey = apiKey;
       this.input = input;
       this.style = style;
+      this.voice = voice;
       this.translating = translating;
       this.speedRatio = speedRatio;
       this.speedPercent = speedPercent;
@@ -223,8 +226,11 @@ public final class CloudSpeechExecutor {
             ? model.speechStyle(profile, request.emotion(), speed)
             : model.speechStyle(profile, request.emotion());
 
+    String voice = model.voiceFor(request.voice(), profile);
+
     if (config.debugMode()) {
-      log.info("[TTS voice] cloud emotion {} -> style '{}'", request.emotion(), style);
+      log.info(
+          "[TTS voice] cloud voice {} emotion {} -> style '{}'", voice, request.emotion(), style);
       log.info(
           "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
           profile.name(),
@@ -236,7 +242,7 @@ public final class CloudSpeechExecutor {
     }
 
     return ops.buildRequests(
-        new SpokenLine(apiKey, spokenText, style, translating, speedRatio, speed), request);
+        new SpokenLine(apiKey, spokenText, style, voice, translating, speedRatio, speed), request);
   }
 
   private Pcm runBuffered(PreparedSpeech prepared) {

@@ -4,7 +4,7 @@
   "regions": {
     "WEST_COUNTRY": {"libraryAccent": "Bristol English", "playerKeywords": ["west country", "bristol", "cornish", "somerset", "devon"], "exclude": []},
     "SCOUSE": {"libraryAccent": "Liverpool English", "playerKeywords": ["scouse", "liverpool", "liverpudlian"], "exclude": []},
-    "MANCUNIAN": {"libraryAccent": "Manchester English", "playerKeywords": ["manchester", "mancunian", "yorkshire", "northern"], "exclude": []},
+    "MANCUNIAN": {"libraryAccent": "Manchester English", "playerKeywords": ["manchester", "mancunian", "yorkshire", "northern english"], "exclude": []},
     "GEORDIE": {"libraryAccent": "Newcastle English", "playerKeywords": ["geordie", "newcastle"], "exclude": []},
     "SCOTTISH": {"libraryAccent": "Glasgow English", "playerKeywords": ["scottish", "scots", "glasgow", "edinburgh"], "exclude": []},
     "IRISH": {"libraryAccent": "Dublin English", "playerKeywords": ["irish", "dublin", "ireland"], "exclude": []},
@@ -14,6 +14,6 @@
     "EGYPTIAN_ARABIC": {"libraryAccent": "Egyptian Arabic", "playerKeywords": ["egyptian", "arabic", "arab", "middle eastern"], "exclude": []},
     "POLISH": {"libraryAccent": "Polish", "playerKeywords": ["polish", "eastern european", "transylvanian"], "exclude": []},
     "JAPANESE": {"libraryAccent": "Tokyo Japanese", "playerKeywords": ["japanese"], "exclude": []},
-    "SOUTHERN_ENGLISH": {"libraryAccent": "Winchester English", "playerKeywords": ["southern", "london", "cockney", "received pronunciation", "posh", "cambridge"], "exclude": []}
+    "SOUTHERN_ENGLISH": {"libraryAccent": "Winchester English", "playerKeywords": ["southern english", "london", "cockney", "received pronunciation", "posh", "cambridge"], "exclude": []}
   }
 }

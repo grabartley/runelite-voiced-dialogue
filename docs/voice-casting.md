@@ -29,7 +29,7 @@ this order:
 
 | Region | Library accent | Male | Female | Voices |
 |---|---|---|---|---|
-| `SOUTHERN_ENGLISH` | Winchester | 14 | 35 | commoners, Misthalin, Received Pronunciation, Cockney, most British creatures |
+| `SOUTHERN_ENGLISH` | Winchester | 14 | 34 | commoners, Misthalin, Received Pronunciation, Cockney, most British creatures |
 | `WEST_COUNTRY` | Bristol | 10 | 3 | Asgarnia, pirates, crabs |
 | `SCOUSE` | Liverpool | 4 | 2 | Kandarin |
 | `MANCUNIAN` | Manchester | 5 | 11 | Kourend, Yorkshire barbarians, Northern bespoke NPCs |

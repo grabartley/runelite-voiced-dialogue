@@ -71,7 +71,7 @@
     "manchester",
     "mancunian",
     "yorkshire",
-    "northern"
+    "northern english"
    ],
    "MALE": [
     "en-gb-advisor-2",
@@ -744,7 +744,7 @@
   },
   "SOUTHERN_ENGLISH": {
    "playerKeywords": [
-    "southern",
+    "southern english",
     "london",
     "cockney",
     "received pronunciation",

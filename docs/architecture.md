@@ -276,7 +276,7 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   plus (only when not at their defaults) the speaking pace and a non-English spoken language, on
   top of the shared `(backendId, voiceKey, emotion, text)` identity. Every speaker resolves to a
   profile, so every key carries a hash of the profile fields that are sent (name, accent, style,
-  pace). A voice, pace, profile, or language change therefore never
+  pace, and pitch when set). A voice, pace, profile, or language change therefore never
   replays the wrong audio, while a plain English line stays on a stable key so changing a setting
   that cannot affect it does not force a needless re-bill. The model is not part of the key: a
   model swap keeps every cached clip, since a line voiced once should not be billed again for a

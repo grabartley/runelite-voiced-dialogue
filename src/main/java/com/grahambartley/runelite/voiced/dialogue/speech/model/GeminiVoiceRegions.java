@@ -19,13 +19,21 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class GeminiVoiceRegions {
+final class GeminiVoiceRegions {
 
   static final String RESOURCE = "/voice-regions.json";
+
+  static final String REGIONS_KEY = "regions";
+
+  static final String NARRATOR_KEY = "narratorVoice";
+
+  static final String PLAYER_KEYWORDS_KEY = "playerKeywords";
 
   private static final long HASH_MULTIPLIER = 0x9E3779B97F4A7C15L;
 
   static final String CHILD_POOL_PREFIX = "CHILD_";
+
+  private static final NpcGender[] VOICED_GENDERS = {NpcGender.MALE, NpcGender.FEMALE};
 
   private final Map<String, Map<NpcGender, List<String>>> pools = new LinkedHashMap<>();
   private final Map<String, Map<NpcGender, List<String>>> childPools = new LinkedHashMap<>();
@@ -44,15 +52,15 @@ public final class GeminiVoiceRegions {
       }
       JsonObject region = entry.getValue().getAsJsonObject();
       Map<NpcGender, List<String>> byGender = new EnumMap<>(NpcGender.class);
-      byGender.put(NpcGender.MALE, strings(region, "MALE"));
-      byGender.put(NpcGender.FEMALE, strings(region, "FEMALE"));
-      pools.put(entry.getKey(), byGender);
       Map<NpcGender, List<String>> childByGender = new EnumMap<>(NpcGender.class);
-      childByGender.put(NpcGender.MALE, strings(region, CHILD_POOL_PREFIX + "MALE"));
-      childByGender.put(NpcGender.FEMALE, strings(region, CHILD_POOL_PREFIX + "FEMALE"));
+      for (NpcGender gender : VOICED_GENDERS) {
+        byGender.put(gender, strings(region, gender.name()));
+        childByGender.put(gender, strings(region, CHILD_POOL_PREFIX + gender.name()));
+      }
+      pools.put(entry.getKey(), byGender);
       childPools.put(entry.getKey(), childByGender);
       List<Pattern> keywords = new ArrayList<>();
-      for (String keyword : strings(region, "playerKeywords")) {
+      for (String keyword : strings(region, PLAYER_KEYWORDS_KEY)) {
         keywords.add(
             Pattern.compile("\\b" + Pattern.quote(keyword.toLowerCase(Locale.ROOT)) + "\\b"));
       }
@@ -147,11 +155,10 @@ public final class GeminiVoiceRegions {
                 .parse(new InputStreamReader(stream, StandardCharsets.UTF_8))
                 .getAsJsonObject();
         JsonObject regions =
-            root.has("regions") && root.get("regions").isJsonObject()
-                ? root.getAsJsonObject("regions")
+            root.has(REGIONS_KEY) && root.get(REGIONS_KEY).isJsonObject()
+                ? root.getAsJsonObject(REGIONS_KEY)
                 : new JsonObject();
-        String narrator =
-            root.has("narratorVoice") ? root.get("narratorVoice").getAsString() : null;
+        String narrator = root.has(NARRATOR_KEY) ? root.get(NARRATOR_KEY).getAsString() : null;
         return new GeminiVoiceRegions(regions, narrator);
       } catch (Exception e) {
         log.error("Failed to load voice region table {}: {}", RESOURCE, e.getMessage());

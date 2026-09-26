@@ -170,7 +170,9 @@ local-only correction, or to pin a talkable monster the wiki splits into
 
 The optional `name` field is documentation only. `ethnicity` is also optional (set a byEthnicity key, or omit to clear a wrong one). The optional
 `lifeStage` field marks a named child (`"lifeStage": "child"` is the only value) so it voices
-from the youthful cloud voice sub-pool instead of its adult race anchor;
+from its region's youngest native voices (or the prebuilt child pool when its accent has no
+region) and takes the `child` profile layer, with its style and child pitch, just as a
+keyword-named child does;
 generically named children (Child, Schoolboy, Street urchin, ...) are caught by
 the `child` keyword category in `profiles.json` instead and need no override. Find
 an NPC's id with the RuneLite developer tools, the wiki, or **Debug Logging** in the
@@ -233,8 +235,10 @@ use posh Received Pronunciation.
 
 An NPC can be several things at once (a Fremennik human, a ghost pirate), so
 **every** matching layer contributes. `style` accumulates across all contributing
-layers so the persona blends; `name`, `accent`, and `pace` are single-valued, so
-the most specific layer that sets each one wins.
+layers so the persona blends; `name`, `accent`, `pace`, and `pitch` are single-valued, so
+the most specific layer that sets each one wins, and `voiceRegion` always follows the layer
+that set the winning `accent`. A child marked by the table's `lifeStage` rather than by a child
+keyword takes the `child` category layer after the keyword categories and before `byId`.
 
 1. `default` - the global British fallback. **Must be complete** (all four of
    `name`, `accent`, `style`, `pace`). Every other layer is sparse.

@@ -5,10 +5,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
@@ -33,10 +35,10 @@ public class GeminiVoiceMapTest {
     "JAPANESE"
   };
 
-  private static final Set<String> CHILD_MALE_POOL = new HashSet<>(java.util.Arrays.asList("Puck"));
+  private static final Set<String> CHILD_MALE_POOL = new HashSet<>(Arrays.asList("Puck"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
-      new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr"));
+      new HashSet<>(Arrays.asList("Leda", "Zephyr"));
 
   private static final NpcRace[] MAPPED_RACES = {
     NpcRace.HUMAN,
@@ -60,7 +62,7 @@ public class GeminiVoiceMapTest {
 
   private static final Set<String> GEMINI_VOICE_CATALOG =
       new HashSet<>(
-          java.util.Arrays.asList(
+          Arrays.asList(
               "Zephyr",
               "Puck",
               "Charon",
@@ -344,7 +346,7 @@ public class GeminiVoiceMapTest {
   private static final GeminiVoiceMap REGIONAL =
       new GeminiVoiceMap(
           new GeminiVoiceRegions(
-              new com.google.gson.JsonParser()
+              new JsonParser()
                   .parse(
                       "{\"IRISH\":{\"playerKeywords\":[\"irish\"],\"MALE\":[\"ie-m-1\",\"ie-m-2\"],"
                           + "\"FEMALE\":[]}}")
@@ -382,7 +384,7 @@ public class GeminiVoiceMapTest {
     GeminiVoiceMap withChildren =
         new GeminiVoiceMap(
             new GeminiVoiceRegions(
-                new com.google.gson.JsonParser()
+                new JsonParser()
                     .parse(
                         "{\"IRISH\":{\"MALE\":[\"ie-m-1\",\"ie-m-2\"],\"CHILD_MALE\":[\"ie-young\"]}}")
                     .getAsJsonObject()));
@@ -425,6 +427,6 @@ public class GeminiVoiceMapTest {
   }
 
   private static Set<String> pool(String... voices) {
-    return new HashSet<>(java.util.Arrays.asList(voices));
+    return new HashSet<>(Arrays.asList(voices));
   }
 }

@@ -96,6 +96,19 @@ public class GeminiVoiceRegionsTest {
   }
 
   @Test
+  public void theBundledKeywordsSendNorthernIrishToIrishAndTheDefaultToSouthernEnglish() {
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    assertEquals(
+        "IRISH",
+        bundled.regionForAccent("Strong Northern Irish accent, Irish English pronunciation"));
+    assertEquals(
+        "SOUTHERN_ENGLISH",
+        bundled.regionForAccent(
+            "Strong educated southern English accent, British English pronunciation"));
+    assertNull(bundled.regionForAccent("Strong Southern American accent"));
+  }
+
+  @Test
   public void anEmptyTableVoicesNothing() {
     GeminiVoiceRegions empty = new GeminiVoiceRegions(new JsonObject());
     assertNull(empty.voiceFor("IRISH", NpcGender.MALE, 1));

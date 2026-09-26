@@ -367,6 +367,7 @@ LIBRARY = {"voices": [
     {"id": "ie-f", "accent": "Dublin English", "gender": "female"},
     {"id": "ie-n", "accent": "Dublin English", "gender": "neutral"},
     {"id": "gb-1", "accent": "Glasgow English", "gender": "male"},
+    {"id": "narrator-1", "accent": "Winchester English", "gender": "female", "age": 30},
 ]}
 
 
@@ -399,6 +400,8 @@ class VoiceRegionsTest(unittest.TestCase):
     def test_the_narrator_voice_is_held_out_of_every_pool(self):
         library = {"voices": LIBRARY["voices"] + [
             {"id": "narrator-1", "accent": "Dublin English", "gender": "female", "age": 20}]}
+        library["voices"] = [v for v in library["voices"]
+                             if not (v["id"] == "narrator-1" and v["accent"] != "Dublin English")]
         regions = gen.build_voice_regions(regions_source(), library)
         self.assertNotIn("narrator-1", regions["IRISH"]["FEMALE"] + regions["IRISH"]["CHILD_FEMALE"])
 
@@ -407,8 +410,34 @@ class VoiceRegionsTest(unittest.TestCase):
         self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-3", "ie-4", "ie-5"])
 
     def test_a_region_matching_no_voices_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "IRISH matches no library voices"):
+        with self.assertRaisesRegex(ValueError, "IRISH has no male library voices"):
             gen.build_voice_regions(regions_source(libraryAccent="Cork English"), LIBRARY)
+
+    def test_a_region_missing_one_gender_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "has no female library voices"):
+            gen.build_voice_regions(regions_source(libraryAccent="Glasgow English"), LIBRARY)
+
+    def test_an_unknown_excluded_voice_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "excludes unknown voices"):
+            gen.build_voice_regions(regions_source(exclude=["ie-typo"]), LIBRARY)
+
+    def test_a_narrator_missing_from_the_library_is_rejected(self):
+        source = regions_source()
+        source["narratorVoice"] = "gone-1"
+        with self.assertRaisesRegex(ValueError, "narratorVoice 'gone-1'"):
+            gen.build_voice_regions(source, LIBRARY)
+
+    def test_a_keyword_in_two_regions_is_rejected(self):
+        source = regions_source()
+        source["regions"]["SCOTTISH"] = {"libraryAccent": "Dublin English",
+                                         "playerKeywords": ["irish"], "exclude": []}
+        with self.assertRaisesRegex(ValueError, "player keyword 'irish' is in both"):
+            gen.build_voice_regions(source, LIBRARY)
+
+    def test_pitch_on_the_narrator_is_rejected(self):
+        profiles = profiles_with(narrator={"pitch": "Deep"})
+        with self.assertRaisesRegex(ValueError, "narrator.pitch is not read"):
+            gen.validate_voice_regions(profiles, {})
 
     def test_a_profile_region_must_exist(self):
         profiles = profiles_with(byRace={"Dwarf": {"accent": "Strong Glasgow Scottish accent, "
@@ -428,6 +457,16 @@ class VoiceRegionsTest(unittest.TestCase):
             gen.load_json(os.path.join(tools, "voice-regions.json")),
             gen.load_json(os.path.join(tools, "voice-library.json")))
         gen.validate_voice_regions(gen.load_json(os.path.join(tools, "profiles.json")), regions)
+
+    def test_the_bundled_pools_match_what_the_generator_builds(self):
+        tools = os.path.dirname(os.path.abspath(__file__))
+        source = gen.load_json(os.path.join(tools, "voice-regions.json"))
+        regions = gen.build_voice_regions(
+            source, gen.load_json(os.path.join(tools, "voice-library.json")))
+        bundled = gen.load_json(os.path.join(tools, os.pardir, "src", "main", "resources",
+                                             "voice-regions.json"))
+        self.assertEqual(bundled["regions"], regions)
+        self.assertEqual(bundled["narratorVoice"], source["narratorVoice"])
 
 
 if __name__ == "__main__":

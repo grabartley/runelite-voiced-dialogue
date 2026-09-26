@@ -211,11 +211,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
         CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
       String languageCode = line.translating ? config.cloudLanguage().code() : null;
       JsonObject payload =
-          buildPayload(
-              line.input,
-              model.speechMetadata(line.style),
-              model.voiceFor(request.voice(), request.profile()),
-              languageCode);
+          buildPayload(line.input, model.speechMetadata(line.style), line.voice, languageCode);
       byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
       return new CloudSpeechExecutor.PreparedSpeech(
           buildHttpRequest(endpoint, line.apiKey, body),
