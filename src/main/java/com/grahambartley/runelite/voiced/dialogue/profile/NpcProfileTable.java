@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
+
+  private static final Pattern SENTENCE_END = Pattern.compile("[.!?]$");
 
   @Value
   @Accessors(fluent = true)
@@ -156,7 +159,7 @@ public final class NpcProfileTable {
         pace = layer.pace();
       }
       if (layer.style() != null) {
-        styleParts.add(layer.style());
+        styleParts.add(asSentence(layer.style()));
       }
       sources.add(entry.source);
     }
@@ -164,6 +167,11 @@ public final class NpcProfileTable {
     String source = sources.isEmpty() ? "default" : String.join("+", sources);
 
     return new Resolution(new CharacterProfile(name, accent, style, pace), source);
+  }
+
+  private static String asSentence(String style) {
+    String trimmed = style.trim();
+    return SENTENCE_END.matcher(trimmed).find() ? trimmed : trimmed + ".";
   }
 
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {

@@ -98,6 +98,23 @@ public class NpcProfileTableTest {
   }
 
   @Test
+  public void stackedShortPhrasesAreSeparatedAsSentences() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"British accent\","
+                    + "\"style\":\"Plain\",\"pace\":\"Steady pace\"},"
+                    + "\"byRace\":{\"Gnome\":{\"style\":\"Chatty and clever\"}},"
+                    + "\"byId\":{\"7\":{\"style\":\"Regal and gracious!\"}}}")
+            .getAsJsonObject();
+    NpcProfileTable table = NpcProfileTable.fromProfilesJson(profiles);
+
+    assertEquals(
+        "Chatty and clever. Regal and gracious!",
+        resolve(table, 7, "King", "Gnome", null).profile().style());
+  }
+
+  @Test
   public void multipleCategoriesAllCombine() {
     NpcProfileTable.Resolution r = resolve(table(), null, "Imp Vampyre", null, null);
     assertEquals(
