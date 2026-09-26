@@ -128,6 +128,21 @@ public class NpcProfileTableTest {
   }
 
   @Test
+  public void theMostSpecificPitchWins() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"A\",\"style\":\"S\",\"pace\":\"P\"},"
+                    + "\"byRace\":{\"Goblin\":{\"pitch\":\"High\"}},"
+                    + "\"byId\":{\"3\":{\"pitch\":\"Very high\"}}}")
+            .getAsJsonObject();
+    NpcProfileTable table = NpcProfileTable.fromProfilesJson(profiles);
+    assertEquals("High", resolve(table, null, "Goblin", "Goblin", null).profile().pitch());
+    assertEquals("Very high", resolve(table, 3, "Goblin", "Goblin", null).profile().pitch());
+    assertEquals(null, resolve(table, null, "Man", "Human", null).profile().pitch());
+  }
+
+  @Test
   public void theVoiceRegionComesFromTheLayerThatSetTheWinningAccent() {
     assertEquals(
         "SCOTTISH", resolve(regionTable(), 9, "Dwarf", "Dwarf", null).profile().voiceRegion());

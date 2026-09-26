@@ -517,7 +517,7 @@ def profile_layers(profiles):
 
 
 def validate_directions(where, layer):
-    for field in ("name", "accent", "style", "pace"):
+    for field in ("name", "accent", "style", "pace", "pitch"):
         value = layer.get(field)
         if value is None:
             continue

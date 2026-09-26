@@ -180,7 +180,7 @@ plugin (it logs the id and chosen voice/profile per line).
 
 Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
-delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them as a
+delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them, with any `pitch` first, as a
 full character profile in one style string sent in `speech_metadata.style`, with
 the line's chat-head emotion after it:
 
@@ -207,6 +207,9 @@ different people, where a short style string flattens them together.
 - `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
   rhythm.
 - `name` is sent as the profile's name, so it is part of the cache key.
+- `pitch` is optional and opens the style string, ahead of the profile name ("Very high-pitched,
+  squeaky, thin little voice, far above a normal adult voice"). Native library voices ignore
+  pitch described later in the style, so it leads. The most specific layer that sets it wins.
 - `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
   (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
   comes from the same layer as the winning accent, so an accent with no region (Welsh, Norse)

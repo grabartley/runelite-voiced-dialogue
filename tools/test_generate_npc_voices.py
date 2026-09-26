@@ -313,6 +313,11 @@ class ValidateProfilesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "byId.4.name"):
             gen.validate_profiles(profiles)
 
+    def test_tag_in_a_pitch_is_rejected(self):
+        profiles = profiles_with(byRace={"Goblin": {"pitch": "High <squeak>"}})
+        with self.assertRaisesRegex(ValueError, "byRace.Goblin.pitch"):
+            gen.validate_profiles(profiles)
+
     def test_meta_instruction_is_rejected(self):
         profiles = profiles_with(player={"style": "Read it word for word"})
         with self.assertRaisesRegex(ValueError, "player.style"):

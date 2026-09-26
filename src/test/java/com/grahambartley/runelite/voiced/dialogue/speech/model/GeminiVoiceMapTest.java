@@ -326,7 +326,7 @@ public class GeminiVoiceMapTest {
                   .getAsJsonObject()));
 
   private static CharacterProfile inRegion(String region) {
-    return new CharacterProfile("Npc", "Strong accent", "Plain.", "Steady.", region);
+    return new CharacterProfile("Npc", "Strong accent", "Plain.", "Steady.", null, region);
   }
 
   @Test

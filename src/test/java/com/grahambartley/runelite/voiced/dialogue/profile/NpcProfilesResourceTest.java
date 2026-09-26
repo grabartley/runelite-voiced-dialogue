@@ -288,6 +288,16 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void smallAndLargeCreaturesCarryTheirPitch() {
+    assertTrue(
+        resolve(null, "Hudo", "Goblin", null).profile().pitch().startsWith("Very high-pitched"));
+    assertTrue(resolve(null, "Imp", "Demon", null).profile().pitch().startsWith("Very high"));
+    assertTrue(resolve(null, "Troll", "Troll", null).profile().pitch().startsWith("Very deep"));
+    assertTrue(resolve(null, "Dwarf", "Dwarf", null).profile().pitch().startsWith("Very deep"));
+    assertNull(resolve(null, "Man", "Human", "misthalin").profile().pitch());
+  }
+
+  @Test
   public void accentsWithNoNativeVoicesKeepTheRacePool() {
     assertNull(resolve(null, "Elf", "Human", "tirannwn").profile().voiceRegion());
     assertNull(resolve(null, "Man", "Human", "fremennik").profile().voiceRegion());

@@ -53,6 +53,19 @@ public class CharacterProfileTest {
   }
 
   @Test
+  public void cacheKeyChangesWithThePitchSinceItIsSent() {
+    CharacterProfile pitched =
+        new CharacterProfile(
+            "Wizard",
+            "Distinguished elderly British accent",
+            "Warm and knowing",
+            "Measured pace",
+            "Very deep voice",
+            null);
+    assertNotEquals(WIZARD.cacheKey(), pitched.cacheKey());
+  }
+
+  @Test
   public void cacheKeyChangesWithTheNameSinceItIsSent() {
     CharacterProfile renamed =
         new CharacterProfile(

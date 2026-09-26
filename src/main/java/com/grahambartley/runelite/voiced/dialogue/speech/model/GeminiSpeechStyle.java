@@ -20,6 +20,7 @@ final class GeminiSpeechStyle {
 
   static String compose(CharacterProfile profile, Emotion emotion, String paceDirection) {
     List<String> directions = new ArrayList<>();
+    addDirection(directions, profile.pitch());
     String name = clean(profile.name());
     if (name != null) {
       directions.add(sentence("Audio profile: " + name + CHARACTER_FRAME));

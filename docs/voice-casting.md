@@ -45,8 +45,12 @@ Accents with no native speakers in the library (Welsh, Norse, Nigerian, Bajan an
 Russian penguins, the West Midlands ogres) keep their race pool and carry the accent through the
 profile's style alone. The library has no countryside Irish voices, so gnomes and leprechauns take
 Dublin voices and the style's "rural Irish" accent pulls them toward the country. Pitch is not
-filtered: a creature's depth or squeak rides in its profile style ("A deep, low-pitched voice."),
-since the library's male voices are overwhelmingly low and a pitch filter would empty most pools.
+filtered, since the library's male voices are overwhelmingly low and a pitch filter would empty
+most pools. A creature's depth or squeak rides in the profile's `pitch` field instead, which opens
+the style string ("Very high-pitched, squeaky, thin little voice, far above a normal adult
+voice."): by ear, a native voice ignores pitch described later in the style but follows it when it
+leads. Goblins, gnomes, monkeys, crabs, imps and fairies are high; trolls, gorillas, demons,
+dragons, TzHaar, ogres and dwarves are low.
 
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the

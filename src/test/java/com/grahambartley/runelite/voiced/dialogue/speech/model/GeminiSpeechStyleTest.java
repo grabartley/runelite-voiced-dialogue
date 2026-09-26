@@ -28,6 +28,23 @@ public class GeminiSpeechStyleTest {
   }
 
   @Test
+  public void pitchOpensTheStyleBeforeTheProfile() {
+    CharacterProfile goblin =
+        new CharacterProfile(
+            "Goblin",
+            "Strong East London accent, British English pronunciation",
+            "Crude and mischievous.",
+            "Quick.",
+            "Very high-pitched, squeaky voice",
+            null);
+    assertEquals(
+        "Very high-pitched, squeaky voice. Audio profile: Goblin, a character in a medieval fantasy"
+            + " world. Accent: Strong East London accent, British English pronunciation."
+            + " Style: Crude and mischievous. Pace: Quick.",
+        GeminiSpeechStyle.compose(goblin, Emotion.NEUTRAL, null));
+  }
+
+  @Test
   public void appendsTheEmotionDirectionAfterTheProfile() {
     assertEquals(
         DWARF_PROFILE + " Sounding angry.", GeminiSpeechStyle.compose(DWARF, Emotion.ANGRY, null));
