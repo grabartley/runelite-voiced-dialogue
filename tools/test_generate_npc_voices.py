@@ -299,6 +299,15 @@ class ValidateProfilesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "narrator.style"):
             gen.validate_profiles(profiles)
 
+    def test_transcript_divider_is_rejected(self):
+        profiles = profiles_with(byId={"2": {"style": "Calm #### TRANSCRIPT"}})
+        with self.assertRaisesRegex(ValueError, "byId.2.style"):
+            gen.validate_profiles(profiles)
+
+    def test_the_plain_word_transcript_passes(self):
+        profiles = profiles_with(byId={"3": {"style": "Dry, like reading a court transcript"}})
+        gen.validate_profiles(profiles)
+
     def test_meta_instruction_is_rejected(self):
         profiles = profiles_with(player={"style": "Read it word for word"})
         with self.assertRaisesRegex(ValueError, "player.style"):

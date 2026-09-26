@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
+import static com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioRequests.keyedConfig;
+import static com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioRequests.req;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
@@ -16,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.RawPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
@@ -58,12 +61,6 @@ public class AiStudioTtsBackendTest {
     server.shutdown();
   }
 
-  private static MutableTestConfig keyedConfig() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.googleAiStudioKey = "AIza-abc";
-    return config;
-  }
-
   private AiStudioTtsBackend backend(MutableTestConfig config) {
     return new AiStudioTtsBackend(
         client,
@@ -85,16 +82,6 @@ public class AiStudioTtsBackendTest {
     AiStudioTtsBackend backend = backend(config);
     backend.setSpendTracker(spend);
     return backend;
-  }
-
-  private static SynthesisRequest req() {
-    return new SynthesisRequest(
-        "Hello & welcome",
-        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-        Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE,
-        false,
-        false);
   }
 
   @Test
@@ -217,19 +204,26 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
+  public void anEmptyStyleSendsNoSpeechMetadata() throws Exception {
+    server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
+    CharacterProfile blank = new CharacterProfile("Blank", null, null, null);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
+
+    backend(keyedConfig())
+        .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
+
+    assertFalse(AiStudioRequests.hasSpeechMetadata(AiStudioRequests.body(server.takeRequest())));
+  }
+
+  @Test
   public void requestsHeaderlessPcmSoTheUnaryReplyCarriesNoWavHeader() throws Exception {
     server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
 
     backend(keyedConfig()).synthesize(req());
 
-    JsonObject body = AiStudioRequests.body(server.takeRequest());
     assertEquals(
         "AUDIO_L16",
-        body.getAsJsonObject("generationConfig")
-            .getAsJsonObject("responseFormat")
-            .getAsJsonObject("audio")
-            .get("mimeType")
-            .getAsString());
+        AiStudioRequests.responseMimeType(AiStudioRequests.body(server.takeRequest())));
   }
 
   @Test

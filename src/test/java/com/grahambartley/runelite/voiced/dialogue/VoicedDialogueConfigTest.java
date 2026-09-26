@@ -29,7 +29,7 @@ public class VoicedDialogueConfigTest {
 
     assertTrue(
         "a player choosing in the panel is told the fast provider's ceiling: " + description,
-        description.contains("100 fresh lines a day"));
+        description.contains("caps fresh lines a day"));
     assertTrue(
         "and that the other one has none: " + description,
         description.contains("OpenRouter has no daily cap"));

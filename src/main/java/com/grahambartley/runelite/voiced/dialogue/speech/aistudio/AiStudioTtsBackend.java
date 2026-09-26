@@ -213,7 +213,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       JsonObject payload =
           buildPayload(
               line.input,
-              model.speechMetadata(line.style),
+              line.style.isEmpty() ? null : model.speechMetadata(line.style),
               model.voiceFor(request.voice()),
               languageCode);
       byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
@@ -309,7 +309,9 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       String input, JsonObject speechMetadata, String voice, String languageCode) {
     JsonObject textPart = new JsonObject();
     textPart.addProperty("text", input);
-    textPart.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
+    if (speechMetadata != null) {
+      textPart.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
+    }
     JsonArray parts = new JsonArray();
     parts.add(textPart);
     JsonObject content = new JsonObject();

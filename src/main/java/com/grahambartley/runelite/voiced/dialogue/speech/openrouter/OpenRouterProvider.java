@@ -9,13 +9,13 @@ final class OpenRouterProvider {
 
   static final String THROUGHPUT_SORT = "throughput";
 
+  static final String GOOGLE_AI_STUDIO = "google-ai-studio";
+
   static final String APP_TITLE = "RuneLite Voiced Dialogue";
 
   static final String APP_URL = "https://github.com/grabartley/runelite-voiced-dialogue";
 
   private OpenRouterProvider() {}
-
-  static final String GOOGLE_AI_STUDIO = "google-ai-studio";
 
   static void apply(JsonObject body) {
     body.add("provider", throughputProvider());

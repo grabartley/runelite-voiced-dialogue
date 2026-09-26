@@ -81,7 +81,8 @@ PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 # string, so profile fields stay short phrases and carry no tags or prompt-block markers.
 MAX_DIRECTION_LENGTH = {"accent": 80, "pace": 60}
 FORBIDDEN_DIRECTION = re.compile(
-    r"[\[\]<>]|audio\s*profile|director'?s\s*notes|transcript|word\s+for\s+word", re.IGNORECASE)
+    r"[\[\]<>]|audio\s*profile|director'?s\s*notes|#+\s*transcript|transcript\s*#+|word\s+for\s+word",
+    re.IGNORECASE)
 
 # Wiki race text -> the voice buckets (VoiceProfile), ordered, first hit wins. The rules, the
 # category rules above and the league region map below are shared with the plugin's auto-learn

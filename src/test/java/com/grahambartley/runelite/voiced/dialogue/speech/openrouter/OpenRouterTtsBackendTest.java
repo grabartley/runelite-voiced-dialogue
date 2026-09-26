@@ -295,6 +295,20 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void anEmptyStyleSendsNoProviderOptions() throws Exception {
+    enqueuePcm((short) 1);
+    CharacterProfile blank = new CharacterProfile("Blank", null, null, null);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
+
+    backend(keyedConfig())
+        .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
+
+    JsonObject provider = sentBody().getAsJsonObject("provider");
+    assertEquals("throughput", provider.get("sort").getAsString());
+    assertFalse(provider.has("options"));
+  }
+
+  @Test
   public void nonDefaultSpeedUsesTheSpeedFieldAndLeavesTheStyleAlone() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.speedPercent = 150;

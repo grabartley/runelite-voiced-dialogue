@@ -290,8 +290,7 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   behind the Cloud Billing API, so AI Studio is costed from the token counts it does report:
   `AiStudioTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
   which report a running total), and `SpendPricing` converts those measured tokens at Google's
-  published Gemini 3.8 Flash TTS rate ($0.50 per million text tokens, $9 per million audio tokens,
-  which Google has announced will double on 1 January 2027). The readout labels that conversion an estimate and OpenRouter's figure as billed.
+  published Gemini 3.8 Flash TTS rate ($0.50 per million text tokens, $9 per million audio tokens). The readout labels that conversion an estimate and OpenRouter's figure as billed.
 
   The translation hop is a second billable call against a second model, and each provider accounts
   for it differently. On OpenRouter it bills to the same key, so it is inside the usage delta with
