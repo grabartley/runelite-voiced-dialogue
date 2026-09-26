@@ -77,6 +77,12 @@ VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
+# Gemini 3.8 speaks its input verbatim and takes delivery from a short speech_metadata.style
+# string, so profile fields stay short phrases and carry no tags or prompt-block markers.
+MAX_DIRECTION_LENGTH = {"accent": 80, "pace": 60}
+FORBIDDEN_DIRECTION = re.compile(
+    r"[\[\]<>]|audio\s*profile|director'?s\s*notes|transcript|word\s+for\s+word", re.IGNORECASE)
+
 # Wiki race text -> the voice buckets (VoiceProfile), ordered, first hit wins. The rules, the
 # category rules above and the league region map below are shared with the plugin's auto-learn
 # lookup, which reads the same resource.
@@ -457,7 +463,33 @@ def validate_profiles(profiles):
             int(key)
         except (TypeError, ValueError):
             raise ValueError(f"byId key '{key}' is not a numeric NPC id")
+    for where, layer in profile_layers(profiles):
+        validate_directions(where, layer)
     return profiles
+
+
+def profile_layers(profiles):
+    for key in ("default", "player", "narrator"):
+        if isinstance(profiles.get(key), dict):
+            yield key, profiles[key]
+    for section in ("byRace", "byEthnicity", "byId"):
+        for key, layer in (profiles.get(section) or {}).items():
+            if not key.startswith("_") and isinstance(layer, dict):
+                yield f"{section}.{key}", layer
+    for entry in (profiles.get("byCategory") or []):
+        yield f"byCategory.{entry.get('id', '?')}", entry
+
+
+def validate_directions(where, layer):
+    for field in ("accent", "style", "pace"):
+        value = layer.get(field)
+        if value is None:
+            continue
+        if FORBIDDEN_DIRECTION.search(value):
+            raise ValueError(f"{where}.{field} carries a tag or prompt marker: {value!r}")
+        limit = MAX_DIRECTION_LENGTH.get(field)
+        if limit is not None and len(value) > limit:
+            raise ValueError(f"{where}.{field} is longer than {limit} characters: {value!r}")
 
 
 def load_json(path):

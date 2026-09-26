@@ -173,10 +173,29 @@ plugin (it logs the id and chosen voice/profile per line).
 ## Character voice profiles (cloud)
 
 Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
-carries a `profiles` section that steers **how** the cloud (Gemini) backend
-delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
-PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
-emotion is layered on top as a separate inline tag, so the two compose.
+carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
+delivers each line: accent, style, and pace. `GeminiSpeechStyle` joins them, with
+the line's chat-head emotion after them, into one short style string sent in
+`speech_metadata.style`; the text the model receives is the spoken line alone,
+since Gemini 3.8 speaks its input verbatim.
+
+Every field is a **short phrase**, per Google's 3.8 prompting guide, which names
+long profile blocks as the main cause of voice drift:
+
+- `accent` is a short accent phrase: "Gruff Scottish accent, as heard in Glasgow",
+  "Warm Italian accent, speaking English". Short phrases land more reliably than
+  descriptive sentences.
+- `style` is sustained delivery only: tone, timbre, emotion, volume ("Rough,
+  gravelly and blunt").
+- `pace` is a few words ("Slow, ponderous pace").
+- No meta-instructions ("word for word", "do not change voice"), no wording
+  instructions (slang, syntax: the model cannot reword a verbatim transcript), and
+  no square- or angle-bracket tags. `name` is a label for editing and debug logs
+  and is never sent.
+
+The generator enforces the mechanical part: `validate_profiles` rejects a tag
+bracket, a prompt-block marker, or "word for word" in any field, an `accent` over
+80 characters, and a `pace` over 60.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners

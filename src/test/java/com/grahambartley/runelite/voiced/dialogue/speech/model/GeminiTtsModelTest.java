@@ -2,8 +2,10 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
@@ -13,11 +15,14 @@ import org.junit.Test;
 
 public class GeminiTtsModelTest {
 
+  private static final CharacterProfile GNOME =
+      new CharacterProfile("Gnome", "Irish accent", "Cheerful", "Quick pace");
+
   private final GeminiTtsModel model = new GeminiTtsModel();
 
   @Test
   public void identifiesTheGeminiModelAndPcmFormat() {
-    assertEquals("google/gemini-3.1-flash-tts-preview", model.modelId());
+    assertEquals("google/gemini-3.8-flash-tts", model.modelId());
     assertEquals("pcm", model.responseFormat());
   }
 
@@ -35,9 +40,24 @@ public class GeminiTtsModelTest {
   }
 
   @Test
-  public void emotionIsRenderedAsAnInlineStyleTag() {
-    assertEquals("[happy] Hello", model.styleInput("Hello", Emotion.HAPPY));
-    assertEquals("Hello", model.styleInput("Hello", Emotion.NEUTRAL));
+  public void speechStyleCarriesProfileAndEmotion() {
+    assertEquals(
+        "Irish accent. Cheerful. Quick pace. Sounding happy.",
+        model.speechStyle(GNOME, Emotion.HAPPY));
+  }
+
+  @Test
+  public void speechStyleWithSpeedAddsASpeedDirection() {
+    assertEquals(
+        "Irish accent. Cheerful. Quick pace. Speaking at 80% of normal speed.",
+        model.speechStyle(GNOME, Emotion.NEUTRAL, 80));
+  }
+
+  @Test
+  public void speechMetadataWrapsTheStyle() {
+    JsonObject metadata = model.speechMetadata("Calm.");
+    assertEquals(1, metadata.size());
+    assertEquals("Calm.", metadata.get("style").getAsString());
   }
 
   @Test

@@ -88,20 +88,20 @@ public class NpcProfilesResourceTest {
             .accent()
             .contains("Transylvanian"));
     assertTrue(
-        "gorillas sound deep and booming, not chattery island monkey",
-        resolve(null, "Gorilla", "Gorilla", null).profile().accent().contains("booming"));
+        "gorillas sound deep and rumbling, not chattery island monkey",
+        resolve(null, "Gorilla", "Gorilla", null).profile().accent().contains("rumbling"));
     assertTrue(
         "tortugans sound Bajan / Barbados",
-        resolve(null, "Elder Korel", "Tortugan", null).profile().accent().contains("Barbados"));
+        resolve(null, "Elder Korel", "Tortugan", null).profile().accent().contains("Bajan"));
     assertTrue(
-        "Citizens of Arceuus sound refined and faintly echoing",
-        resolve(null, "Tyss", "Arceuus", null).profile().accent().contains("beyond the room"));
+        "Citizens of Arceuus sound refined and cool",
+        resolve(null, "Tyss", "Arceuus", null).profile().accent().contains("cool Received"));
     assertTrue(
         "the aranei sound soft-spoken and breathy",
         resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("breathy"));
     assertTrue(
         "dogs vocalise their lines rather than pronouncing them",
-        resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barked"));
+        resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barks"));
     assertTrue(
         "crabs sound bright and West Country seaside",
         resolve(null, "Crab", "Crab", null).profile().accent().contains("West Country"));
@@ -143,14 +143,14 @@ public class NpcProfilesResourceTest {
   @Test
   public void dogsKeepTheirVocalisedDeliveryWhereverTheyAreFound() {
     CharacterProfile p = resolve(null, "Stray dog", "Dog", "morytania").profile();
-    assertTrue("the dog delivery holds over the region", p.accent().contains("barked"));
-    assertFalse("the Morytanian accent does not apply", p.accent().contains("gothic"));
+    assertTrue("the dog delivery holds over the region", p.accent().contains("barks"));
+    assertFalse("the Morytanian accent does not apply", p.accent().contains("Eastern European"));
   }
 
   @Test
   public void arceuusCitizensKeepTheirOwnAccentRatherThanTheKourendOne() {
     CharacterProfile p = resolve(null, "Regath", "Arceuus", "kourend").profile();
-    assertTrue("the Arceuus accent holds over the region", p.accent().contains("beyond the room"));
+    assertTrue("the Arceuus accent holds over the region", p.accent().contains("cool Received"));
     assertFalse("the rustic Kourend accent does not apply", p.accent().contains("rustic"));
   }
 
@@ -161,8 +161,7 @@ public class NpcProfilesResourceTest {
     assertTrue("the race layer contributes", r.source().contains("race:Arceuus"));
     assertTrue("her librarian persona survives", r.profile().style().contains("chief librarian"));
     assertTrue(
-        "she still speaks with the Arceuus accent",
-        r.profile().accent().contains("beyond the room"));
+        "she still speaks with the Arceuus accent", r.profile().accent().contains("cool Received"));
   }
 
   @Test
@@ -262,7 +261,7 @@ public class NpcProfilesResourceTest {
         "a gnome child keeps the Irish gnome accent", gnome.profile().accent().contains("Irish"));
     assertTrue(
         "the child delivery layers into the style",
-        gnome.profile().style().contains("A young child's voice"));
+        gnome.profile().style().contains("young child's voice"));
 
     NpcProfileTable.Resolution troll = resolve(696, "Troll child", "Troll", null);
     assertTrue(

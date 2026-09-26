@@ -221,7 +221,10 @@ via **style register**, not a new accent; distinctive races and lore creatures
 keep their racial accents (handled by the race layer, do not restate them in a
 `byId` accent); `ethnicity` = origin, following the real-world cultures the OSRS
 locations are based on. Phrase accents positively, never by negation. No
-transient comments. Gemini renders British/European accents reliably, foreign
+transient comments. Every field is a short Gemini 3.8 phrase: `accent` a short
+accent phrase, `style` sustained delivery only, `pace` a few words, with no
+meta-instructions, no wording instructions (slang, syntax), and no tag brackets;
+`validate_profiles` rejects the mechanical violations at generation time. Gemini renders British/European accents reliably, foreign
 ones inconsistently, do not over-invest where the model cannot deliver.
 
 ## 6. Regenerate, verify, ship

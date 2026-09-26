@@ -9,7 +9,7 @@ emotion-downgrade rule (an emotion the model cannot voice is rewritten to Neutra
 A line the pipeline cannot voice (for example when the active provider's API key is not set) is
 left silent, never routed to the other provider.
 
-Both providers speak through the same model, Google's **Gemini 3.1 Flash TTS**, and receive the
+Both providers speak through the same model, Google's **Gemini 3.8 Flash TTS**, and receive the
 same spoken content, so a line sounds the same whichever provider voices it. The next section
 describes how that content is built once for both; each provider section after it covers only the
 transport.
@@ -25,13 +25,18 @@ alike. Which voices sit in each pool, and why those ones, is
 [voice-casting.md](voice-casting.md).
 
 Emotion is detected from each speaker's chat-head animation and rides in every request as one of
-Happy, Sad, Angry, Scared, or Neutral. It is prepended to the spoken text as an inline Gemini
-style tag (`[happy]`, `[sad]`, `[angry]`, `[fearful]`, rendered by `GeminiEmotionStyle`), so
-happy, sad, angry, and scared lines are audibly different; Neutral adds no tag.
+Happy, Sad, Angry, Scared, or Neutral, rendered by `GeminiEmotionStyle` as a short delivery
+direction ("Sounding happy", "Sounding sad", "Sounding angry", "Sounding fearful"), so happy,
+sad, angry, and scared lines are audibly different; Neutral adds no direction.
 
-A per-speaker **character profile** (`CharacterProfile`, resolved by `NpcProfileTable`) is
-rendered as a leading `AUDIO PROFILE` direction block setting accent/style/pace, so the profile
-sets the character and the emotion tag colours the moment.
+A per-speaker **character profile** (`CharacterProfile`, resolved by `NpcProfileTable`) carries a
+short accent, style, and pace. Gemini 3.8 speaks its input verbatim and takes sustained delivery
+from a structured `speech_metadata.style` field, so the text sent is the spoken line alone and
+`GeminiSpeechStyle` joins accent, style, pace, and the emotion direction, in that order, into one
+style string. `CloudSpeechExecutor` builds it once per line for both providers; each provider only
+places it (see below). The profile sets the character and the emotion direction colours the
+moment. Square-bracket tags are not part of the 3.8 prompting model, and a player-typed field has
+its tag brackets stripped by `DirectionSanitizer`.
 
 Narration is a speaker class of its own. The item, double-item, and message boxes (`NarrationWatcher`,
 gated by **Voice Narration**, off by default) are the game telling the story rather than a character
@@ -197,9 +202,13 @@ learned entry.
 
 An OpenAI-compatible speech request over HTTPS to `https://openrouter.ai/api/v1/audio/speech`. It
 needs an OpenRouter API key; until one is set it logs a one-time notice and its lines stay silent.
-Gemini 3.1 Flash TTS is the one OpenRouter speech model with both a voice catalog rich enough to
-map every race and gender and full emotion support. The body requests `response_format: "pcm"`, a
-headerless 16-bit LE mono stream at 24 kHz decoded to the pipeline's native rate.
+Gemini 3.8 Flash TTS is the one OpenRouter speech model with both a voice catalog rich enough to
+map every race and gender and full emotion support; OpenRouter routes it to Google AI Studio. The
+body requests `response_format: "pcm"`, a headerless 16-bit LE mono stream at 24 kHz decoded to the
+pipeline's native rate (OpenRouter offers only `mp3` and `pcm` for it). The style string rides in
+`provider.options["google-ai-studio"].speech_metadata.style`, merged into the same `provider`
+block that carries the throughput sort, and a non-default **Speaking Pace** is sent as the
+`speed` field.
 
 Dialogue text leaves your machine and is sent to OpenRouter. A missing key, an API error, or a network
 problem fails that line gracefully (it is left unvoiced) and surfaces a one-time notice.
@@ -208,14 +217,18 @@ problem fails that line gracefully (it is left unvoiced) and surfaces a one-time
 
 With **Voice Provider** set to Google AI Studio, `AiStudioTtsBackend` sends the same content
 directly to the Gemini API instead: a `generateContent` request to
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent`,
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent`,
 authenticated with a Google AI Studio API key in the `x-goog-api-key` header. It needs its own key
 (**Google AI Studio API Key**); until one is set it logs a provider-specific one-time notice and its
 lines stay silent. The shared voice resolution is requested as the `prebuiltVoiceConfig` voice.
 
-Only the transport differs from OpenRouter: audio comes back as base64 16-bit LE PCM inside JSON
-rather than a raw body, and the Gemini API has no `speed` parameter, so a non-default **Speaking
-Pace** is rendered as a leading `SPEAKING PACE` prompt direction instead. The
+Only the transport differs from OpenRouter: the style string rides as `speech_metadata` on the
+text part, and audio comes back as base64 16-bit LE PCM inside JSON rather than a raw body. The
+unary call defaults to WAV, so the request sets `generationConfig.responseFormat.audio.mimeType`
+to `AUDIO_L16` and the reply stays headerless PCM for `RawPcmDecoder`; the streaming call is L16
+either way. The Gemini API has no `speed` parameter, so the backend declares `speedInStyle` and a
+non-default **Speaking Pace** joins the style string as a closing direction ("Speaking at 120% of
+normal speed"). The
 `streamGenerateContent` variant (`?alt=sse`) backs the streaming path below, delivering audio as
 server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
 mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
@@ -226,26 +239,17 @@ On the Gemini API a 429 means quota, so the notice is worded from the `google.rp
 violation the rejection carries: a free-tier ceiling, a paid per-model cap, and a per-minute limit
 each read differently, and a body carrying no violation falls back to wording that names no cause.
 
-The paid per-model cap is the one players meet. A billed key on Google's entry usage tier gets 100
-requests per day per project for the pinned preview speech model
-(`GenerateRequestsPerDayPerProjectPerModel`, `quotaValue: 100`), so 100 uncached synthesis calls
-a day.
-Enabling billing does not lift it: the allowance is a property of the usage tier, which Google
-raises on cumulative spend (around 10,000 requests per day once the account has spent roughly $100),
-so in practice it stands for the whole player base. The cap is scoped per model, which is why at the
-same moment the speech model rejects with 429 the GA `gemini-3.1-flash-lite` translation model on
-the same key still answers 200. The durable fix is the GA model swap, tracked in
-[#236](https://github.com/grabartley/runelite-voiced-dialogue/issues/236).
+The paid per-model daily cap is the one players meet. Google sets it per project and per model by
+usage tier and raises it on cumulative spend, not on enabling billing, so a new billed key starts
+at the lowest allowance. The current figure for a key is on its AI Studio rate-limit page.
 
-The 100 requests are not 100 lines the player hears. **Prefetch Dialogue** defaults on, and
+Those requests are not lines the player hears. **Prefetch Dialogue** defaults on, and
 `DialoguePrefetcher` speculatively synthesizes every visible dialogue option, so options that are
-never picked draw on the same allowance. Player-facing copy therefore says *up to* 100 fresh lines
-a day and names prefetch as a claim on them, rather than equating requests with heard lines.
-
-Player-facing copy states the 100-a-day figure and that billing does not raise it, and describes the
-lift only as one Google grants for heavy long-term use. The spend threshold is deliberately kept out
-of the README and the in-game notices: it reads as a paywall on a plugin that costs fractions of a
-cent per line.
+never picked draw on the same allowance. Player-facing copy therefore names prefetch as a claim on
+the daily allowance, rather than equating requests with heard lines, and describes the lift only
+as one Google grants for heavy long-term use. The spend threshold is deliberately kept out of the
+README and the in-game notices: it reads as a paywall on a plugin that costs fractions of a cent
+per line.
 
 OpenRouter carries no equivalent ceiling. It serves the same model as a paid model, and paid models
 have no platform-level request cap: `GET /api/v1/key` on a credited key reports `is_free_tier:
@@ -259,13 +263,16 @@ speaking style works without an OpenRouter key.
 
 Because synthesis is billed per character, several guards keep cost bounded and latency low:
 
-- **Cache key.** `cacheVariant` folds in the model, the resolved Gemini voice, and the character
-  profile, plus (only when not at their defaults) the speaking pace and a non-English spoken
-  language, on top of the shared `(backendId, voiceKey, emotion, text)` identity. Every speaker
-  resolves to a profile, so every key carries its content hash. A model, voice, pace, profile, or
-  language change therefore never replays the wrong audio, while a plain English line stays on a
-  stable key so changing a setting that cannot affect it does not force a needless re-bill. Line
-  length is not part of the key: every line is sent whole.
+- **Cache key.** `cacheVariant` folds in the resolved Gemini voice and the character profile,
+  plus (only when not at their defaults) the speaking pace and a non-English spoken language, on
+  top of the shared `(backendId, voiceKey, emotion, text)` identity. Every speaker resolves to a
+  profile, so every key carries a hash of the profile fields that are sent (accent, style, pace;
+  the `name` label is left out). A voice, pace, profile, or language change therefore never
+  replays the wrong audio, while a plain English line stays on a stable key so changing a setting
+  that cannot affect it does not force a needless re-bill. The model is not part of the key: a
+  model swap keeps every cached clip, since a line voiced once should not be billed again for a
+  model change the player never asked for. Line length is not part of the key: every line is sent
+  whole.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
 - **Session spend readout.** `SpendTracker` counts billable work per provider, recorded inside each
@@ -283,7 +290,8 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   behind the Cloud Billing API, so AI Studio is costed from the token counts it does report:
   `AiStudioTokenUsage` reads `usageMetadata` (taking the largest reading across a stream's events,
   which report a running total), and `SpendPricing` converts those measured tokens at Google's
-  published rate. The readout labels that conversion an estimate and OpenRouter's figure as billed.
+  published Gemini 3.8 Flash TTS rate ($0.50 per million text tokens, $9 per million audio tokens,
+  which Google has announced will double on 1 January 2027). The readout labels that conversion an estimate and OpenRouter's figure as billed.
 
   The translation hop is a second billable call against a second model, and each provider accounts
   for it differently. On OpenRouter it bills to the same key, so it is inside the usage delta with
@@ -327,9 +335,9 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   failure. A connect-phase failure (host unreachable) and any non-2xx fail the line without a retry.
 - **Fastest-provider routing.** Every request carries a `provider` block with `sort: "throughput"`
   (the `:nitro` equivalent), so OpenRouter routes to the lowest-latency provider for the model.
-- **Prompt-cache stabilisation.** The per-speaker character-profile block leads each request and is
-  byte-stable (profile fields are trailing-trimmed at construction), so Gemini's implicit prompt
-  cache hits on repeats for the same speaker, lowering input cost and time-to-first-byte.
+- **Style outside the billed text.** The profile and emotion ride in `speech_metadata.style`,
+  which Google does not count in `promptTokenCount`, so a line's text tokens are the spoken line
+  alone.
 - **Rate-limit back-off.** A `429` opens a back-off window. When the rejection states its own wait,
   through a `Retry-After` header or a `google.rpc.RetryInfo` delay in the body, that wait is the
   window (clamped to an hour) and nothing is sent until it passes, since a call made before the

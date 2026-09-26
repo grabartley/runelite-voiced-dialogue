@@ -2,7 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -14,78 +13,50 @@ public class CharacterProfileTest {
 
   private static final CharacterProfile WIZARD =
       new CharacterProfile(
-          "Wizard", "Distinguished elderly British English.", "A wise old wizard.", "Measured.");
-
-  @Test
-  public void renderPromptBlockMatchesTheGeminiDirectorsNotesFormat() {
-    assertEquals(
-        "VOICE ONLY THE TRANSCRIPT BELOW THE DIVIDER, WORD FOR WORD. ADD NO WORDS OF YOUR OWN.\n\n"
-            + "AUDIO PROFILE: Wizard\n\n"
-            + "DIRECTOR'S NOTES:\n"
-            + "- Style: A wise old wizard.\n"
-            + "- Accent: Distinguished elderly British English.\n"
-            + "- Pace: Measured.\n\n"
-            + "#### TRANSCRIPT\n",
-        WIZARD.renderPromptBlock());
-  }
-
-  @Test
-  public void renderPromptBlockLeadsWithTheStaticGuardLine() {
-    assertTrue(
-        "every block starts with the cache-stable guard instruction",
-        WIZARD
-            .renderPromptBlock()
-            .startsWith(
-                "VOICE ONLY THE TRANSCRIPT BELOW THE DIVIDER, WORD FOR WORD."
-                    + " ADD NO WORDS OF YOUR OWN.\n\n"));
-  }
-
-  @Test
-  public void renderPromptBlockEndsAtTheDividerSoTheTranscriptAppendsCleanly() {
-    String block = WIZARD.renderPromptBlock();
-    assertTrue("block ends with the divider and a newline", block.endsWith("#### TRANSCRIPT\n"));
-    assertTrue(
-        "appending the transcript yields a single composed input",
-        (block + "[happy] Greetings.").endsWith("#### TRANSCRIPT\n[happy] Greetings."));
-  }
+          "Wizard", "Distinguished elderly British accent", "Warm and knowing", "Measured pace");
 
   @Test
   public void cacheKeyIsStableForIdenticalFields() {
     CharacterProfile same =
         new CharacterProfile(
-            "Wizard", "Distinguished elderly British English.", "A wise old wizard.", "Measured.");
+            "Wizard", "Distinguished elderly British accent", "Warm and knowing", "Measured pace");
     assertEquals("identical profiles share a cache key", WIZARD.cacheKey(), same.cacheKey());
   }
 
   @Test
-  public void trailingWhitespaceIsStrippedSoThePrefixIsByteIdenticalAndCacheStable() {
+  public void trailingWhitespaceIsStrippedFromEveryField() {
     CharacterProfile padded =
         new CharacterProfile(
             "Wizard  ",
-            "Distinguished elderly British English.\n",
-            "A wise old wizard. \t",
-            "Measured.   ");
-    assertEquals(
-        "the rendered block is identical to the unpadded profile",
-        WIZARD.renderPromptBlock(),
-        padded.renderPromptBlock());
+            "Distinguished elderly British accent\n",
+            "Warm and knowing \t",
+            "Measured pace   ");
+    assertEquals(WIZARD, padded);
     assertEquals(
         "padded and unpadded profiles share a cache key", WIZARD.cacheKey(), padded.cacheKey());
   }
 
   @Test
-  @Parameters(method = "changedFieldProfiles")
-  public void cacheKeyChangesWhenAnyFieldChanges(CharacterProfile changed) {
+  @Parameters(method = "changedSpokenFieldProfiles")
+  public void cacheKeyChangesWhenAnySpokenFieldChanges(CharacterProfile changed) {
     assertNotEquals(WIZARD.cacheKey(), changed.cacheKey());
   }
 
-  private Object[] changedFieldProfiles() {
+  private Object[] changedSpokenFieldProfiles() {
     return new Object[] {
       new CharacterProfile(
-          "Wizard", "Distinguished elderly British English.", "A foolish wizard.", "Measured."),
-      new CharacterProfile("Wizard", "Irish English.", "A wise old wizard.", "Measured."),
+          "Wizard", "Distinguished elderly British accent", "Foolish", "Measured pace"),
+      new CharacterProfile("Wizard", "Irish accent", "Warm and knowing", "Measured pace"),
       new CharacterProfile(
-          "Mage", "Distinguished elderly British English.", "A wise old wizard.", "Measured."),
+          "Wizard", "Distinguished elderly British accent", "Warm and knowing", "Quick pace"),
     };
+  }
+
+  @Test
+  public void cacheKeyIgnoresTheNameSinceItIsNeverSent() {
+    CharacterProfile renamed =
+        new CharacterProfile(
+            "Mage", "Distinguished elderly British accent", "Warm and knowing", "Measured pace");
+    assertEquals(WIZARD.cacheKey(), renamed.cacheKey());
   }
 }

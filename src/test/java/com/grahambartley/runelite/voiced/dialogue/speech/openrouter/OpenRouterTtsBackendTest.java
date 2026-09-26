@@ -132,19 +132,32 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void prependsTheInlineStyleTagForEachEmotion() throws Exception {
-    assertEquals("[happy] Hello & welcome", inputForEmotion(Emotion.HAPPY));
-    assertEquals("[sad] Hello & welcome", inputForEmotion(Emotion.SAD));
-    assertEquals("[angry] Hello & welcome", inputForEmotion(Emotion.ANGRY));
-    assertEquals("[fearful] Hello & welcome", inputForEmotion(Emotion.SCARED));
+  public void everyEmotionSendsOnlyTheSpokenLineAsInput() throws Exception {
+    for (Emotion emotion : EnumSet.allOf(Emotion.class)) {
+      enqueuePcm((short) 1);
+      assertEquals("Hello & welcome", bodyForEmotion(emotion).get("input").getAsString());
+    }
   }
 
   @Test
-  public void neutralEmotionSendsThePlainTextWithNoTag() throws Exception {
-    assertEquals("Hello & welcome", inputForEmotion(Emotion.NEUTRAL));
+  public void emotionRidesInTheSpeechStyle() throws Exception {
+    enqueuePcm((short) 1);
+    assertEquals(
+        TestFixtures.TROLL_STYLE + " Sounding fearful.", sentStyle(bodyForEmotion(Emotion.SCARED)));
+    enqueuePcm((short) 1);
+    assertEquals(TestFixtures.TROLL_STYLE, sentStyle(bodyForEmotion(Emotion.NEUTRAL)));
   }
 
-  private String inputForEmotion(Emotion emotion) throws Exception {
+  private static String sentStyle(JsonObject body) {
+    return body.getAsJsonObject("provider")
+        .getAsJsonObject("options")
+        .getAsJsonObject("google-ai-studio")
+        .getAsJsonObject("speech_metadata")
+        .get("style")
+        .getAsString();
+  }
+
+  private JsonObject bodyForEmotion(Emotion emotion) throws Exception {
     enqueuePcm((short) 1);
 
     SynthesisRequest request =
@@ -157,8 +170,7 @@ public class OpenRouterTtsBackendTest {
             false);
     backend(keyedConfig()).synthesize(request);
 
-    return TestFixtures.spokenTranscript(
-        TestFixtures.TROLL_PROFILE, sentBody().get("input").getAsString());
+    return sentBody();
   }
 
   private JsonObject sentBody() throws Exception {
@@ -199,10 +211,8 @@ public class OpenRouterTtsBackendTest {
         recorded.getHeader("X-Title"));
 
     JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
-    assertEquals("google/gemini-3.1-flash-tts-preview", body.get("model").getAsString());
-    assertEquals(
-        "Hello & welcome",
-        TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, body.get("input").getAsString()));
+    assertEquals("google/gemini-3.8-flash-tts", body.get("model").getAsString());
+    assertEquals("Hello & welcome", body.get("input").getAsString());
     assertEquals("pcm", body.get("response_format").getAsString());
     assertEquals("Charon", body.get("voice").getAsString());
   }
@@ -228,7 +238,7 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void cacheVariantFoldsInModelAndVoiceSoRendersNeverCollide() {
+  public void cacheVariantFoldsInVoiceButNotModelSoRendersNeverCollide() {
     OpenRouterTtsBackend backend = backend(new MutableTestConfig());
 
     SynthesisRequest humanMale =
@@ -249,9 +259,9 @@ public class OpenRouterTtsBackendTest {
             false);
 
     String variant = backend.cacheVariant(humanMale);
-    assertTrue(
-        "the variant carries the fixed model id so no future model switch can replay its audio",
-        variant.contains("google/gemini-3.1-flash-tts-preview"));
+    assertFalse(
+        "the variant leaves the model out so a model swap keeps every cached clip",
+        variant.contains("gemini"));
     assertTrue(
         "the variant carries the resolved Gemini voice",
         variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice())));
@@ -262,8 +272,7 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void profilePrependsTheAudioProfileBlockBeforeTheEmotionTaggedTranscript()
-      throws Exception {
+  public void profileAndEmotionTravelInProviderOptionsNotInTheInput() throws Exception {
     enqueuePcm((short) 1);
 
     backend(keyedConfig())
@@ -276,15 +285,26 @@ public class OpenRouterTtsBackendTest {
                 false,
                 false));
 
-    String input = sentBody().get("input").getAsString();
-    assertTrue(
-        "the static guard line leads the block",
-        input.startsWith("VOICE ONLY THE TRANSCRIPT BELOW THE DIVIDER"));
-    assertTrue("the AUDIO PROFILE block follows the guard", input.contains("AUDIO PROFILE: Troll"));
-    assertTrue("the director's notes carry the accent", input.contains("Brixton"));
-    assertTrue(
-        "the emotion-tagged transcript follows the divider, so the two layers compose",
-        input.contains("#### TRANSCRIPT\n[angry] You no take candle!"));
+    JsonObject body = sentBody();
+    assertEquals("You no take candle!", body.get("input").getAsString());
+    assertEquals(TestFixtures.TROLL_STYLE + " Sounding angry.", sentStyle(body));
+    assertEquals(
+        "the speech options merge into the throughput routing block",
+        "throughput",
+        body.getAsJsonObject("provider").get("sort").getAsString());
+  }
+
+  @Test
+  public void nonDefaultSpeedUsesTheSpeedFieldAndLeavesTheStyleAlone() throws Exception {
+    MutableTestConfig config = keyedConfig();
+    config.speedPercent = 150;
+    enqueuePcm((short) 1);
+
+    backend(config).synthesize(req());
+
+    JsonObject body = sentBody();
+    assertEquals(1.5, body.get("speed").getAsDouble(), 1e-9);
+    assertEquals(TestFixtures.TROLL_STYLE, sentStyle(body));
   }
 
   @Test
@@ -352,11 +372,7 @@ public class OpenRouterTtsBackendTest {
 
     backend.synthesize(request);
 
-    assertEquals(
-        "the whole line is sent",
-        longLine,
-        TestFixtures.spokenTranscript(
-            TestFixtures.TROLL_PROFILE, sentBody().get("input").getAsString()));
+    assertEquals("the whole line is sent", longLine, sentBody().get("input").getAsString());
     SynthesisRequest shortLine =
         new SynthesisRequest(
             "ab",
@@ -443,8 +459,7 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the rewritten line is what is voiced",
         "no cap, well met",
-        TestFixtures.spokenTranscript(
-            TestFixtures.TROLL_PROFILE, speech.get("input").getAsString()));
+        speech.get("input").getAsString());
     assertEquals(
         "the language_code stays the base language, not the quirk",
         "en-GB",
@@ -593,7 +608,7 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the spoken transcript is the translation, not the source",
         "Bonjour",
-        TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, body.get("input").getAsString()));
+        body.get("input").getAsString());
     assertEquals(
         "the BCP-47 language_code matches the target",
         "fr-FR",
@@ -627,7 +642,7 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the transcript is the source text exactly as typed, untranslated",
         "Hello",
-        TestFixtures.spokenTranscript(TestFixtures.TROLL_PROFILE, body.get("input").getAsString()));
+        body.get("input").getAsString());
     assertFalse("an untranslated line carries no language_code", body.has("language_code"));
   }
 

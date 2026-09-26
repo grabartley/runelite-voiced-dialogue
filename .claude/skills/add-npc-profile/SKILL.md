@@ -54,6 +54,7 @@ blank on many genuine talkers (monster-infobox bosses, cave goblins). See
 
 - British medieval fantasy. Commoners speak **common** British; royalty/knights/nobles/high society are **posh** RP, carried by the role's **style register**, not an accent. Distinctive races and lore creatures keep their accents (dwarf Scottish, troll Brixton, gnome country Irish, leprechaun Irish, vampyre Dracula, Fremennik Norse, wizard wise).
 - Phrase accents **positively**; never by negation.
+- **Gemini 3.8 profile shape.** Profile fields travel in `speech_metadata.style`, never in the spoken text, and Google names long profile blocks as the main cause of voice drift. Keep each field a short phrase: `accent` a short accent phrase ("Gruff Scottish accent, as heard in Glasgow", "Warm Italian accent, speaking English"), `style` sustained delivery only (tone, timbre, volume), `pace` a few words. No meta-instructions ("word for word"), no wording instructions (slang, syntax, "refers to himself in the third person": the model cannot reword a verbatim line), no `[tag]` or `<tag>` brackets. `validate_profiles` in the generator rejects brackets, prompt markers, an accent over 80 characters, and a pace over 60.
 - No transient comments (no "for now", batch/PR/date references) in code or JSON.
 - Do **not** change pitch on the fly; depth comes from the race -> Gemini voice map (`GeminiVoiceMap`).
 - Gemini renders British/European accents reliably; foreign accents (Italian, Egyptian, West African, Japanese) are inconsistent in the model, no prompt guarantees them.

@@ -29,6 +29,10 @@ public class CloudSpeechExecutorTest {
 
   private long bodyStatedWaitMillis;
 
+  private boolean speedInStyle;
+
+  private CloudSpeechExecutor.SpokenLine spoken;
+
   @Before
   public void setUp() throws Exception {
     server = new MockWebServer();
@@ -121,8 +125,56 @@ public class CloudSpeechExecutorTest {
     assertEquals("the line reaches the provider again", 2, server.getRequestCount());
   }
 
-  private CloudSpeechExecutor executor() {
+  @Test
+  public void theSpokenLineCarriesOnlyTheTextWhileTheProfileRidesInTheStyle() {
+    CloudSpeechExecutor executor = executor();
+    server.enqueue(rejection());
+
+    executor.synthesize(request());
+
+    assertEquals("Hello", spoken.input);
+    assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
+  }
+
+  @Test
+  public void aProviderWithoutASpeedFieldGetsTheSpeedInTheStyle() {
+    speedInStyle = true;
     MutableTestConfig config = new MutableTestConfig();
+    config.speedPercent = 80;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request());
+
+    assertEquals(TestFixtures.TROLL_STYLE + " Speaking at 80% of normal speed.", spoken.style);
+    assertEquals(80, spoken.speedPercent);
+  }
+
+  @Test
+  public void aProviderWithASpeedFieldKeepsTheSpeedOutOfTheStyle() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.speedPercent = 80;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request());
+
+    assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
+  }
+
+  @Test
+  public void theDefaultSpeedNeverAddsASpeedDirection() {
+    speedInStyle = true;
+    server.enqueue(rejection());
+
+    executor().synthesize(request());
+
+    assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
+  }
+
+  private CloudSpeechExecutor executor() {
+    return executor(new MutableTestConfig());
+  }
+
+  private CloudSpeechExecutor executor(MutableTestConfig config) {
     CloudBackendSupport support =
         new CloudBackendSupport(
             config,
@@ -130,7 +182,7 @@ public class CloudSpeechExecutorTest {
             CloudSpeechExecutor.MAX_SPEECH_ATTEMPTS,
             RetryTuning.openRouter());
     return new CloudSpeechExecutor(
-        config, support, new GeminiTtsModel(), "Test provider", "test-model", new StubOps());
+        config, support, new GeminiTtsModel(), "Test provider", new StubOps());
   }
 
   private MockResponse rejection() {
@@ -165,8 +217,14 @@ public class CloudSpeechExecutorTest {
     }
 
     @Override
+    public boolean speedInStyle() {
+      return speedInStyle;
+    }
+
+    @Override
     public CloudSpeechExecutor.PreparedSpeech buildRequests(
         CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
+      spoken = line;
       Request httpRequest =
           new Request.Builder()
               .url(server.url("/speech"))

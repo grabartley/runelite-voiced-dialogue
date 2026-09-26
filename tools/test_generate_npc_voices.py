@@ -263,5 +263,61 @@ class PipedLinkFieldTest(unittest.TestCase):
         self.assertIsNone(gen.bucket_for_race("{{plink|Human}}"))
 
 
+
+def profiles_with(**layers):
+    profiles = {
+        "default": {"name": "Commoner", "accent": "Plain British accent",
+                    "style": "Plain and sincere", "pace": "Steady pace"},
+    }
+    profiles.update(layers)
+    return profiles
+
+
+class ValidateProfilesTest(unittest.TestCase):
+
+    def test_short_plain_directions_pass(self):
+        profiles = profiles_with(byRace={"Dwarf": {"accent": "Gruff Scottish accent"}})
+        self.assertIs(gen.validate_profiles(profiles), profiles)
+
+    def test_bundled_profiles_pass(self):
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles.json")
+        gen.validate_profiles(gen.load_json(path))
+
+    def test_square_bracket_tag_is_rejected(self):
+        profiles = profiles_with(byId={"1": {"style": "[angry] Gruff"}})
+        with self.assertRaisesRegex(ValueError, "byId.1.style"):
+            gen.validate_profiles(profiles)
+
+    def test_angle_bracket_tag_is_rejected(self):
+        profiles = profiles_with(byCategory=[{"id": "imp", "keywords": ["imp"],
+                                              "style": "Shrill <laugh>"}])
+        with self.assertRaisesRegex(ValueError, "byCategory.imp.style"):
+            gen.validate_profiles(profiles)
+
+    def test_prompt_block_marker_is_rejected(self):
+        profiles = profiles_with(narrator={"style": "DIRECTOR'S NOTES: calm"})
+        with self.assertRaisesRegex(ValueError, "narrator.style"):
+            gen.validate_profiles(profiles)
+
+    def test_meta_instruction_is_rejected(self):
+        profiles = profiles_with(player={"style": "Read it word for word"})
+        with self.assertRaisesRegex(ValueError, "player.style"):
+            gen.validate_profiles(profiles)
+
+    def test_long_accent_is_rejected(self):
+        profiles = profiles_with(byEthnicity={"varlamore": {"accent": "a" * 81}})
+        with self.assertRaisesRegex(ValueError, "longer than 80"):
+            gen.validate_profiles(profiles)
+
+    def test_long_pace_is_rejected(self):
+        profiles = profiles_with(byRace={"Troll": {"pace": "p" * 61}})
+        with self.assertRaisesRegex(ValueError, "longer than 60"):
+            gen.validate_profiles(profiles)
+
+    def test_comment_keys_are_skipped(self):
+        profiles = profiles_with(byId={"_comment": "[notes] about ids"})
+        gen.validate_profiles(profiles)
+
+
 if __name__ == "__main__":
     unittest.main()

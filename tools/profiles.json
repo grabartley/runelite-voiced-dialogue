@@ -1,131 +1,131 @@
 {
-  "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini) TTS backend. A profile is a delivery template (name, accent, style, pace) the backend renders into a Gemini AUDIO PROFILE / DIRECTOR'S NOTES block prepended to the spoken line; chat-head emotion is layered on top as a separate inline tag. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
+  "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, style, pace). The backend joins accent, style, and pace, plus the line's chat-head emotion, into one short style string sent in speech_metadata.style; the text sent to the model is the spoken line alone. 'name' is a human-readable label for editing and debug logs and is never sent. Keep every field a short phrase: accent is a short accent phrase ('Gruff Scottish accent, as heard in Glasgow'), style is sustained delivery only (tone, emotion, timbre, volume), pace is a few words. No meta-instructions ('word for word', 'do not change voice'), no wording instructions (slang, syntax), and no square-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
   "default": {
     "name": "Gielinor Commoner",
-    "accent": "Common British English, the plain, earthy speech of an ordinary medieval peasant or townsperson, not posh or refined.",
-    "style": "A grounded medieval fantasy townsperson. Plain, sincere, and natural, with the easy warmth of someone going about their day.",
-    "pace": "Steady and conversational, with natural pauses at the punctuation."
+    "accent": "Common working-class British accent",
+    "style": "Plain, sincere and natural, with easy warmth",
+    "pace": "Steady, conversational pace"
   },
   "player": {
     "name": "Adventurer",
-    "accent": "Common British English, the plain, down-to-earth speech of an ordinary adventurer, not posh or refined.",
-    "style": "A seasoned medieval fantasy adventurer: brave and resolute, carrying the quiet confidence of someone who has seen the whole of Gielinor.",
-    "pace": "Even and assured, unhurried but purposeful."
+    "accent": "Plain, down-to-earth British accent",
+    "style": "Brave, resolute and quietly confident",
+    "pace": "Even, assured pace"
   },
   "narrator": {
     "name": "Narrator",
-    "accent": "Received Pronunciation British English, the clear, cultured voice of a storyteller reading a tale aloud.",
-    "style": "Gielinor's own narrator, describing what happens rather than playing a part. Calm, measured and quietly authoritative, never acting the line out.",
-    "pace": "Unhurried and even, letting each sentence land, with a clear beat at every full stop."
+    "accent": "Clear Received Pronunciation British accent",
+    "style": "Calm, measured and quietly authoritative, reading aloud rather than acting",
+    "pace": "Unhurried, even pace, with a clear beat at every full stop"
   },
   "byRace": {
     "Human": {
       "name": "Gielinor Townsfolk",
-      "accent": "Common British English, the plain, earthy speech of an ordinary medieval commoner, not posh or refined.",
-      "style": "An ordinary citizen of Gielinor. Down-to-earth, sincere, and approachable.",
-      "pace": "Steady and conversational."
+      "accent": "Common working-class British accent",
+      "style": "Down-to-earth, sincere and approachable",
+      "pace": "Steady, conversational pace"
     },
     "Elf": {
       "name": "Elf of Tirannwn",
-      "accent": "Posh, refined British English, an elegant Received Pronunciation with a faint melodic lilt.",
-      "style": "An ancient, otherworldly elf. Graceful and soft-spoken, serene and knowing, speaking with quiet wisdom as if from beyond the mortal world.",
-      "pace": "Slow and flowing, with a graceful, deliberate cadence."
+      "accent": "Refined Received Pronunciation accent with a faint melodic lilt",
+      "style": "Graceful, soft-spoken, serene and knowing",
+      "pace": "Slow, flowing pace"
     },
     "Dwarf": {
       "name": "Keldagrim Dwarf",
-      "accent": "Gruff Scottish English, as heard in Glasgow.",
-      "style": "A stout, hard-bitten mountain dwarf. Rough, gravelly, and blunt, with the no-nonsense grit of a lifetime at the forge.",
-      "pace": "Firm and forthright, clipped and a little impatient."
+      "accent": "Gruff Scottish accent, as heard in Glasgow",
+      "style": "Rough, gravelly and blunt",
+      "pace": "Firm, clipped and a little impatient"
     },
     "Goblin": {
       "name": "Goblin",
-      "accent": "Scrappy British English with an East London edge.",
-      "style": "A small, crude, mischievous goblin. High-pitched, reedy, and nasal, sniggering and excitable, never quite trustworthy.",
-      "pace": "Quick and jittery, words tumbling out in bursts."
+      "accent": "Scrappy East London accent",
+      "style": "High-pitched, reedy and nasal, sniggering and excitable",
+      "pace": "Quick and jittery, in tumbling bursts"
     },
     "Monkey": {
       "name": "Monkey of Ape Atoll",
-      "accent": "Bright, casual island English, the quick, chattery speech of a tropical islander.",
-      "style": "A lively, quick-witted monkey from a tropical island. Fast, chattery, and expressive, hopping between mischief and earnestness with restless energy.",
-      "pace": "Quick and animated, words tripping over each other in bursts."
+      "accent": "Bright, casual island accent",
+      "style": "Fast, chattery and expressive, restless and mischievous",
+      "pace": "Quick, animated bursts"
     },
     "Gorilla": {
       "name": "Gorilla",
-      "accent": "Deep, booming English, the low rumbling growl of a huge silverback ape.",
-      "style": "An enormous, powerful gorilla. A very deep, booming, guttural voice that rumbles from the chest, primal and commanding, with a slow, heavy weight behind every word.",
-      "pace": "Slow and ponderous, each utterance landing with deliberate heft."
+      "accent": "Deep, rumbling British accent",
+      "style": "Very deep, guttural and commanding, rumbling from the chest",
+      "pace": "Slow, ponderous pace"
     },
     "Gnome": {
       "name": "Gnome",
-      "accent": "A country Irish accent, the warm rural lilt of the Irish countryside.",
-      "style": "A small, brisk, brainy gnome. Chatty, clever, and self-important, brimming with opinions and schemes.",
-      "pace": "Fast and animated, tripping along eagerly."
+      "accent": "Warm rural Irish accent",
+      "style": "Chatty, clever and self-important",
+      "pace": "Fast, eager pace"
     },
     "Troll": {
       "name": "Troll",
-      "accent": "British English, South London Brixton accent.",
-      "style": "A huge, slow, simple-minded troll, good-natured but dim. A very deep, low, booming, rumbling voice, lumbering and pleased with itself, easily confused.",
-      "pace": "Slow and heavy, with long thinking pauses."
+      "accent": "South London Brixton accent",
+      "style": "Very deep, slow and booming, good-natured but easily confused",
+      "pace": "Slow and heavy, with long thinking pauses"
     },
     "Undead": {
       "name": "The Undead",
-      "accent": "British English, Received Pronunciation, cold and hollow.",
-      "style": "A restless undead thing dragged back from the grave. Hollow, breathy, and sepulchral, the voice echoing as if from a long way off.",
-      "pace": "Slow and dragging, with an eerie, drawn-out delivery."
+      "accent": "Cold, hollow Received Pronunciation accent",
+      "style": "Hollow, breathy and sepulchral, echoing as if from far off",
+      "pace": "Slow, dragging pace"
     },
     "Demon": {
       "name": "Demon",
-      "accent": "Deep, resonant British English with a menacing edge.",
-      "style": "A vast, malevolent demon from the abyss. Booming, guttural, and contemptuous, radiating ancient threat.",
-      "pace": "Slow and deliberate, each word landing like a hammer."
+      "accent": "Deep, menacing British accent",
+      "style": "Booming, guttural and contemptuous",
+      "pace": "Slow and deliberate, each word landing hard"
     },
     "Wizard": {
       "name": "Wizard",
-      "accent": "Distinguished elderly British English, Received Pronunciation.",
-      "style": "A wise and learned old wizard, a sage and storyteller. Warm, knowing, and unhurried, weighty with deep arcane knowledge.",
-      "pace": "Measured and thoughtful, with deliberate, knowing pauses."
+      "accent": "Distinguished elderly Received Pronunciation accent",
+      "style": "Warm, knowing and weighty",
+      "pace": "Measured pace, with knowing pauses"
     },
     "Tortugan": {
       "name": "Tortugan Islander",
-      "accent": "A warm Caribbean accent, the lilting Bajan English of Barbados, melodic and unhurried with a gentle sing-song rhythm.",
-      "style": "A turtle-like islander of the Great Conch. Peaceful, self-reliant and easy-going, with a sun-warmed, seafaring calm that turns firm and steady when the island is threatened.",
-      "pace": "Relaxed and unhurried, with a natural island lilt."
+      "accent": "Warm Bajan Caribbean accent",
+      "style": "Peaceful and easy-going, turning firm when threatened",
+      "pace": "Relaxed pace, with a gentle island lilt"
     },
     "Icyene": {
       "name": "Icyene",
-      "accent": "A resonant, otherworldly delivery with an ethereal, hallowed timbre.",
-      "style": "An ancient winged Saradominist being; serene, luminous and commanding.",
-      "pace": "Measured and stately, each phrase carrying weight."
+      "accent": "Resonant, ethereal British accent",
+      "style": "Serene, luminous and commanding",
+      "pace": "Measured, stately pace"
     },
     "Arceuus": {
       "name": "Citizen of Arceuus",
-      "accent": "British English, Received Pronunciation, refined and cool, the voice softly resonant as though a faint echo of it arrives from somewhere just beyond the room.",
-      "style": "An ascended immortal of Arceuus, a soul lifted out of its mortal body into an incorporeal form sustained by the Dark Altar. Serene, weightless and detached, steeped in the dark arts and centuries past any need for hunger, sleep or death, every word settled and touched with deep arcane learning.",
-      "pace": "Slow and floating, unhurried, with long, airy pauses."
+      "accent": "Refined, cool Received Pronunciation accent",
+      "style": "Serene, weightless and detached, with a faint distant echo",
+      "pace": "Slow, floating pace, with airy pauses"
     },
     "Aranei": {
       "name": "The Aranei",
-      "accent": "British English, Received Pronunciation, soft-spoken and breathy, every word placed with unhurried care.",
-      "style": "A hooded aranei of House Shadum, devoted past the point of self and never showing a face. Telepathic, carrying the memories of others and of the dead, so every line arrives as something relayed rather than chosen, hushed and serene to the point of being unsettling, with a faint sibilance beneath the calm.",
-      "pace": "Unhurried and even, with a small stillness before each answer."
+      "accent": "Soft, breathy Received Pronunciation accent",
+      "style": "Hushed and unsettlingly serene, with a faint sibilance",
+      "pace": "Unhurried, with a small stillness before each answer"
     },
     "Dog": {
       "name": "Dog",
-      "accent": "Voiced purely as dog sounds: every line barked, yipped, whined, growled or snuffled out as the animal itself would make it, the meaning carried by the noise rather than by pronounced words.",
-      "style": "A loyal, wholehearted dog who means every sound it makes. Eager, urgent and openly expressive, swinging between bright excitement, anxious pleading and a low protective rumble.",
-      "pace": "Short, sharp bursts, panting quick between them."
+      "accent": "Dog sounds instead of words: barks, yips, whines and growls",
+      "style": "Eager, urgent and openly expressive",
+      "pace": "Short, sharp bursts, with quick panting"
     },
     "Crab": {
       "name": "Crab",
-      "accent": "Bright, chirpy British English with a broad West Country seaside lilt, pitched high and small, each phrase snapping shut like a claw.",
-      "style": "A pint-sized beach crab who takes crab society entirely seriously. Scuttling and excitable, forever anxious about standing among the other crabs, tipping from breathless enthusiasm into sideways panic, and ready to lose itself in the rhythm the moment a beat starts.",
-      "pace": "Quick and skittering, darting through a phrase and then stopping dead."
+      "accent": "Chirpy West Country seaside accent",
+      "style": "High, small and excitable, tipping into sideways panic",
+      "pace": "Quick and skittering, then stopping dead"
     },
     "Penguin": {
       "name": "Penguin",
-      "accent": "A crisp Russian accent, the clipped consonants and rolled r's of an operative of the Motherland speaking careful, precise English.",
-      "style": "A flightless bird of the penguin Motherland, disciplined, humourless and certain of the cause. Formal and deadpan to the point of comedy, delivering the absurd with total conviction and treating the smallest exchange as a matter of state security.",
-      "pace": "Measured and clipped, each sentence closed off like a line of a report."
+      "accent": "Crisp Russian accent, speaking careful English",
+      "style": "Formal, humourless and deadpan, utterly convinced",
+      "pace": "Measured and clipped, like reading a report"
     }
   },
   "byCategory": [
@@ -133,175 +133,175 @@
       "id": "leprechaun",
       "keywords": ["leprechaun"],
       "name": "Leprechaun",
-      "accent": "Irish English, as heard in Dublin.",
-      "style": "A jaunty, twinkle-eyed leprechaun. Playful, lilting, and full of cheek, forever amused at its own jokes.",
-      "pace": "Quick and lively, with a bouncing, sing-song rhythm."
+      "accent": "Dublin Irish accent",
+      "style": "Jaunty, playful and cheeky, amused at its own jokes",
+      "pace": "Quick, bouncing, sing-song pace"
     },
     {
       "id": "vampyre",
       "keywords": ["vampyre", "vyre", "juvinate", "vanstrom", "drakan", "vanescula", "ranis", "damien", "count check"],
       "name": "Vampyre",
-      "accent": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.",
-      "style": "An ancient, predatory vampyre noble. Silken, cold, and menacing, dripping with disdain for lesser mortals.",
-      "pace": "Slow and hypnotic, savouring every word with quiet menace."
+      "accent": "Aristocratic Transylvanian accent",
+      "style": "Silken, cold and menacing, dripping with disdain",
+      "pace": "Slow, hypnotic pace"
     },
     {
       "id": "fremennik",
       "keywords": ["fremennik", "thorvald", "manni", "swensen", "sigli", "thora", "koschei", "askeladden", "brundt", "olaf", "lanzig", "freygerd", "skulgrimen", "peer the seer"],
       "name": "Fremennik",
-      "accent": "A fantasy Norse accent, a Scandinavian-flavoured English in the manner of a Viking warrior from the old sagas.",
-      "style": "A hardy Fremennik Viking of the frozen north. Proud, hearty, and weathered, bred to longship, axe, and saga.",
-      "pace": "Strong and steady, robust and deliberate."
+      "accent": "Norse Scandinavian accent, speaking English",
+      "style": "Proud, hearty and weathered",
+      "pace": "Strong, steady pace"
     },
     {
       "id": "tzhaar",
       "keywords": ["tzhaar", "tztok", "tzkal", "jad"],
       "name": "TzHaar",
-      "accent": "Deep, rumbling British English, slow and elemental.",
-      "style": "A living creature of molten rock from the city of TzHaar. Vast, stony, and rumbling, calm but immense, speaking of honour and combat.",
-      "pace": "Very slow and ponderous, like grinding stone."
+      "accent": "Deep, rumbling British accent",
+      "style": "Stony, calm and immense",
+      "pace": "Very slow, grinding pace"
     },
     {
       "id": "dragon",
       "keywords": ["dragon", "wyvern", "wyrm", "drake"],
       "name": "Dragon",
-      "accent": "Vast, resonant British English, ancient and imperious.",
-      "style": "An ancient, colossal dragon. Booming, regal, and contemptuous of mortals, every word freighted with age and power.",
-      "pace": "Slow and grand, rolling and unhurried."
+      "accent": "Vast, resonant British accent",
+      "style": "Booming, regal and contemptuous, heavy with age",
+      "pace": "Slow, grand, rolling pace"
     },
     {
       "id": "imp",
       "keywords": ["imp"],
       "name": "Imp",
-      "accent": "Squeaky, high-pitched British English, fast and impish.",
-      "style": "A tiny, hyperactive imp. Shrill, gleeful, and mischievous, cackling and impossible to pin down.",
-      "pace": "Extremely fast and erratic, words spilling over each other."
+      "accent": "Squeaky, high-pitched British accent",
+      "style": "Shrill, gleeful and mischievous, cackling",
+      "pace": "Extremely fast and erratic"
     },
     {
       "id": "fairy",
       "keywords": ["fairy", "tooth fairy"],
       "name": "Fairy",
-      "accent": "Light, airy British English, bright and delicate.",
-      "style": "A small, sparkling fairy. Sweet, breezy, and quick, flitting from thought to thought with childlike delight.",
-      "pace": "Quick and light, with a fluttering, buoyant lilt."
+      "accent": "Light, airy British accent",
+      "style": "Sweet, breezy and delighted",
+      "pace": "Quick, light, fluttering pace"
     },
     {
       "id": "ogre",
       "keywords": ["ogre"],
       "name": "Ogre",
-      "accent": "Big, dim British English with a West Midlands burr.",
-      "style": "A huge, slow-witted ogre with a very deep, low, booming voice. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
-      "pace": "Slow and heavy, with plodding, simple phrasing."
+      "accent": "Dim West Midlands accent",
+      "style": "Very deep, loud, blunt and lumbering",
+      "pace": "Slow, heavy, plodding pace"
     },
     {
       "id": "ghost",
       "keywords": ["ghost", "spectre", "spirit", "wraith", "banshee", "shade"],
       "name": "Ghost",
-      "accent": "Distant, breathy British English, Received Pronunciation, faint and mournful.",
-      "style": "A lingering, sorrowful spirit. Wispy, far-off, and forlorn, half-faded from the world of the living.",
-      "pace": "Slow and drifting, trailing off into silence."
+      "accent": "Faint, mournful Received Pronunciation accent",
+      "style": "Wispy, far-off and forlorn",
+      "pace": "Slow and drifting, trailing off"
     },
     {
       "id": "pirate",
       "keywords": ["pirate", "buccaneer", "corsair"],
       "name": "Pirate",
-      "accent": "Rough West Country British English, a Cornish seafarer's drawl.",
-      "style": "A salty, swaggering pirate. Gravelly, hearty, and roguish, all bluster and grog and tall tales.",
-      "pace": "Loose and rollicking, with a swaggering swing."
+      "accent": "Rough Cornish West Country accent",
+      "style": "Gravelly, hearty and roguish, all bluster",
+      "pace": "Loose, rollicking swagger"
     },
     {
       "id": "barbarian",
       "keywords": ["barbarian"],
       "name": "Barbarian",
-      "accent": "Broad, hearty Northern English, as heard in Yorkshire.",
-      "style": "A boisterous barbarian of the wilds. Loud, blunt, and full-blooded, proud of strength and scornful of soft folk.",
-      "pace": "Forceful and robust, full of gusto."
+      "accent": "Broad, hearty Yorkshire accent",
+      "style": "Loud, blunt and full-blooded",
+      "pace": "Forceful and robust"
     },
     {
       "id": "wizard",
       "keywords": ["wizard", "sorcerer", "sorceress", "mage", "magus", "necromancer", "enchanter", "warlock", "witch", "archmage"],
       "name": "Wizard",
-      "style": "A wise and learned spellcaster, a sage and keeper of arcane lore; knowing and unhurried, speaking in a measured, scholarly register weighty with deep magical knowledge.",
-      "pace": "Measured and thoughtful, with deliberate, knowing pauses."
+      "style": "Knowing, scholarly and unhurried",
+      "pace": "Measured pace, with knowing pauses"
     },
     {
       "id": "monk",
       "keywords": ["monk", "friar", "abbot", "priest", "priestess", "nun", "cleric"],
       "name": "Devotee",
-      "style": "A pious monastic of the faith; calm, kindly, and serene, speaking in a gentle, devout register with quiet, unshakeable conviction.",
-      "pace": "Slow and tranquil, softly measured."
+      "style": "Calm, kindly and serene, gently devout",
+      "pace": "Slow, tranquil pace"
     },
     {
       "id": "royalty",
       "keywords": ["king", "queen", "emperor", "empress", "prince", "princess", "duke", "duchess"],
       "name": "Royalty",
-      "style": "A sovereign of the realm; regal, authoritative, and gracious, speaking in a refined, aristocratic, elevated register, every word carrying the weight of a crown.",
-      "pace": "Stately and deliberate, never rushed."
+      "style": "Regal, authoritative and gracious, in a refined register",
+      "pace": "Stately, deliberate pace"
     },
     {
       "id": "knight",
       "keywords": ["knight", "paladin", "squire", "templar", "sir"],
       "name": "Knight",
-      "style": "A noble knight of the realm; honourable, disciplined, and gallant, speaking in a crisp, formal, well-bred register weighted with chivalric duty.",
-      "pace": "Firm and measured, crisp and commanding."
+      "style": "Honourable, disciplined and gallant, crisp and formal",
+      "pace": "Firm, crisp and commanding"
     },
     {
       "id": "noble",
       "keywords": ["lord", "lady", "baron", "baroness", "advisor", "chancellor", "steward", "dame", "noble"],
       "name": "Noble",
-      "style": "A highborn aristocrat of the realm; polished, urbane, and self-assured, speaking in a refined, well-bred register, accustomed to deference.",
-      "pace": "Measured and composed."
+      "style": "Polished, urbane and self-assured, in a refined register",
+      "pace": "Measured and composed"
     },
     {
       "id": "child",
       "keywords": ["child", "schoolboy", "schoolgirl", "urchin"],
       "lifeStage": "child",
-      "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
+      "style": "Bright, light and high-pitched young child's voice, simple and unguarded"
     }
   ],
   "byEthnicity": {
     "_comment": "Accent layer keyed by an NPC's ethnicity (where they are from, baked per-NPC into npcs[id].ethnicity; defaulted from the wiki leagueRegion and corrected in overrides.json for foreigners). Applied only to the plain folk (Human / unknown race) so it tints them with local colour, while distinctive races (dwarf, elf, troll, goblin, undead, demon, wizard) keep their racial accent wherever they are. A keyword category (vampyre, ghost) or a bespoke byId entry can still override. Sparse and accent-only, so it does not dilute the persona blend. The desert and far lands follow the real-world cultures they are based on; the central British kingdoms use distinct English regional accents for variety. NPCs with no single ethnicity keep the common British default.",
     "misthalin": {
-      "accent": "Common British English, the plain, standard speech of Gielinor's central kingdom of Misthalin."
+      "accent": "Plain southern English accent"
     },
     "asgarnia": {
-      "accent": "A West Country British English, the rural burr of the Asgarnian countryside."
+      "accent": "Rural West Country accent"
     },
     "kandarin": {
-      "accent": "A Liverpudlian accent, the distinctive Scouse sound of Merseyside in northern England, for the folk of Kandarin."
+      "accent": "Liverpudlian Scouse accent"
     },
     "kourend": {
-      "accent": "A broad, rustic British English, the working speech of the Kingdom of Great Kourend."
+      "accent": "Broad, rustic rural British accent"
     },
     "wilderness": {
-      "accent": "A rough, harsh British English, the hard edge of the outlaws of the Wilderness."
+      "accent": "Rough, harsh British accent"
     },
     "tirannwn": {
-      "accent": "A Welsh accent, lilting and lyrical, of the western land of Tirannwn."
+      "accent": "Lilting Welsh accent"
     },
     "varlamore": {
-      "accent": "An Italian accent, warm and expressive, as spoken by a native of Rome, Italy speaking English, with a melodic, rolling, up-and-down intonation."
+      "accent": "Warm Italian accent, speaking English"
     },
     "kharidian": {
-      "accent": "A Middle Eastern accent, Arabic-inflected English, as spoken in the desert cities of the Kharidian."
+      "accent": "Arabic-inflected Middle Eastern accent, speaking English"
     },
     "menaphite": {
-      "accent": "An Egyptian accent, the cadence of ancient Menaphos and Sophanem."
+      "accent": "Egyptian accent, speaking English"
     },
     "karamja": {
-      "accent": "A West African accent, Nigerian-inflected English, as spoken on the jungle isle of Karamja."
+      "accent": "Nigerian-inflected West African accent"
     },
     "morytania": {
-      "accent": "An Eastern European accent, the cold, gothic lilt of the cursed land of Morytania."
+      "accent": "Cold Eastern European accent"
     },
     "fremennik": {
-      "accent": "A fantasy Norse accent, a Scandinavian-flavoured English in the manner of a Viking from the old sagas."
+      "accent": "Norse Scandinavian accent, speaking English"
     },
     "easternlands": {
-      "accent": "A Japanese accent, refined and precise, of the distant Eastern Lands across the sea."
+      "accent": "Refined, precise Japanese accent, speaking English"
     },
     "wyrmscraig": {
-      "accent": "A country Irish accent, the warm rural lilt of the Irish countryside."
+      "accent": "Warm rural Irish accent"
     }
   },
   "byId": {
@@ -312,14 +312,14 @@
     "2812": {"name": "Father Aereck", "style": "A gentle, earnest, soft-spoken parish priest; mild-mannered and a touch timid."},
     "10619": {"name": "Bob", "style": "A laid-back, chatty axe-shop owner; easygoing and casual, a bit of a rambler who loves to gab."},
     "1305": {"name": "Hairdresser", "style": "A bubbly, talkative Falador stylist; upbeat, breezy, and a little vain about appearances."},
-    "732": {"name": "Fred the Farmer", "style": "A gruff, plain-spoken working farmer; blunt, no-nonsense, and rustic.", "accent": "Rural West Country English."},
-    "4628": {"name": "Gillie Groats", "style": "A cheery, down-to-earth milkmaid; simple, sweet, and chatty.", "accent": "Rural West Country English."},
+    "732": {"name": "Fred the Farmer", "style": "A gruff, plain-spoken working farmer; blunt, no-nonsense, and rustic.", "accent": "Rural West Country accent"},
+    "4628": {"name": "Gillie Groats", "style": "A cheery, down-to-earth milkmaid; simple, sweet, and chatty.", "accent": "Rural West Country accent"},
     "2147": {"name": "Veos", "style": "An earnest, purposeful seafarer with a calm, faintly devout streak; steady and measured."},
     "3308": {"name": "Gielinor Guide", "style": "A warm, encouraging instructor for brand-new adventurers; clear, patient, and didactic."},
     "4243": {"name": "Reldo", "style": "A bookish, mild-mannered royal librarian; precise and slightly pedantic, quietly enthusiastic about history and lore."},
     "2886": {"name": "Aubury", "style": "An eccentric, slightly distracted rune-shop wizard; affable but absent-minded, with an offhand scholarly oddness."},
     "5005": {"name": "Wizard Mizgog", "style": "A cranky, irritable old wizard; gruff, impatient, and blunt, forever grumbling about younger folk."},
-    "11868": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Romani Eastern European fortune-teller's lilt."},
+    "11868": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Romani Eastern European lilt"},
     "5037": {"name": "Romeo", "style": "A naive, lovestruck young romantic; gushing, dim-witted, and overdramatic, with his head in the clouds."},
     "5035": {"name": "Juliet", "style": "A gentle, earnest young noblewoman; soft-spoken, sincere, and romantic, a touch melodramatic."},
     "3480": {"name": "Dr Harlow", "style": "A washed-up, perpetually sozzled vampire-hunter; gruff and rambling, far more interested in his next drink than the conversation.", "pace": "Slow, slurred, and meandering."},
@@ -332,10 +332,10 @@
     "3500": {"name": "Gertrude", "style": "A busy, fussy working mother; brisk and talkative, brusque but ultimately warm-hearted."},
     "4619": {"name": "Hetty", "style": "A sly old village witch; sing-song, mysterious, and faintly mocking, relishing the dark and arcane."},
     "5081": {"name": "Wizard Traiborn", "style": "A doddering, absent-minded old wizard; eccentric, rambling, and forgetful, forever wandering off-topic."},
-    "3893": {"name": "Doric", "style": "A hardy, plain-spoken dwarf smith; gruff but good-natured and welcoming to those who lend a hand.", "accent": "Gruff Scottish English, as heard in Glasgow."},
+    "3893": {"name": "Doric", "style": "A hardy, plain-spoken dwarf smith; gruff but good-natured and welcoming to those who lend a hand.", "accent": "Gruff Scottish accent, as heard in Glasgow"},
     "822": {"name": "Oziach", "style": "A blunt, no-nonsense armour seller; gruff and dismissive, unimpressed and curt with strangers."},
     "9636": {"name": "Drezel", "style": "A meek, devout monk; gentle, humble, and earnest, soft-spoken and grateful for any aid."},
-    "4280": {"name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Irish English."},
+    "4280": {"name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Irish accent"},
     "2989": {"name": "Ak-Haranu", "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence."},
     "120": {"name": "Aggie", "style": "Earthy village witch who dyes cloth; speaks knowingly and a touch curt, plain-spoken and unbothered."},
     "121": {"name": "Aggie", "style": "Earthy village witch who dyes cloth; speaks knowingly and a touch curt, plain-spoken and unbothered."},
@@ -534,7 +534,7 @@
     "5083": {"name": "Sir Prysin", "style": "A knight of Varrock; formal and well-spoken, but easily flustered and apt to fret over his own blunders."},
     "5084": {"name": "Sir Prysin", "style": "A knight of Varrock; formal and well-spoken, but easily flustered and apt to fret over his own blunders."},
     "5085": {"name": "Captain Rovin", "style": "Stern, officious captain of the guard, clipped and interrogating, all business about rank and rules."},
-    "5118": {"name": "Sylas", "style": "Eccentric, addled old man; rambles and mutters, repeating his own words as if reassuring himself.", "pace": "repeats and trails off, muttering to himself"},
+    "5118": {"name": "Sylas", "style": "Eccentric, addled old man; rambles and mutters, repeating his own words as if reassuring himself.", "pace": "Muttering and trailing off"},
     "5122": {"name": "Drain Pipe", "style": "Gruff voice carrying up from below, muffled and echoing as if through a pipe.", "accent": "muffled and echoing, as if heard through a pipe"},
     "5131": {"name": "Winkin", "style": "Chatty, cunning little entrepreneur; quick-tongued and self-satisfied about his shrinking schemes."},
     "5139": {"name": "Sigmund", "style": "Cold, sanctimonious and self-righteous, a sneering fanatic who speaks with superior, condescending zeal."},
@@ -569,7 +569,7 @@
     "5896": {"name": "Flynn", "style": "Plain, matter-of-fact shopkeeper proud of his maces; grounded townsman."},
     "5897": {"name": "Wayne", "style": "Chainmail shop owner; plain, matter-of-fact merchant patter."},
     "5905": {"name": "Betty", "style": "A grounded magic-shop keeper who talks plainly and briskly about her wares."},
-    "6001": {"name": "Orlando Smith", "style": "Boisterous globe-trotting adventurer-scholar in a fedora, chatty and full of swagger, peppers his speech with cheery slang.", "accent": "broad Australian outback drawl with mate/cobber slang"},
+    "6001": {"name": "Orlando Smith", "style": "Boisterous globe-trotting adventurer-scholar in a fedora, chatty and full of swagger, peppers his speech with cheery slang.", "accent": "Broad Australian outback drawl"},
     "6002": {"name": "Natural historian", "style": "Aged scholarly lecturer, informative and didactic, delivers little presentations about the exhibits with professorial care."},
     "6003": {"name": "Natural historian", "style": "Aged scholarly lecturer, informative and didactic, delivers little presentations about the exhibits with professorial care."},
     "6004": {"name": "Natural historian", "style": "Aged scholarly lecturer, informative and didactic, delivers little presentations about the exhibits with professorial care."},
@@ -587,7 +587,7 @@
     "7284": {"name": "Gertrude", "style": "A warm, busy housewife and devoted mother who fusses over her cats and children with motherly, talkative concern."},
     "7300": {"name": "Kazgar", "style": "Meek, timid cave goblin guard who softly leads travellers through the tunnels."},
     "7301": {"name": "Kazgar", "style": "Meek, timid cave goblin guard who softly leads travellers through the tunnels."},
-    "7414": {"name": "Count Check", "style": "Theatrical and hammy, drawing out his words and counting with melodramatic relish; a man playing at being a vampyre.", "accent": "exaggerated mock-Transylvanian counting affectation, like a stage vampire"},
+    "7414": {"name": "Count Check", "style": "Theatrical and hammy, drawing out his words and counting with melodramatic relish; a man playing at being a vampyre.", "accent": "Exaggerated mock-Transylvanian stage-vampire accent"},
     "7417": {"name": "Amy", "style": "Bright and chatty young townswoman, quick and eager in her patter."},
     "7546": {"name": "Bartender", "style": "Genial Lumbridge publican; plain, easy bartender patter."},
     "7615": {"name": "Historian Aldo", "style": "An eager natural-history expert who speaks with scholarly enthusiasm and a researcher's curiosity."},
@@ -837,7 +837,7 @@
     "2459": {"name": "Gamfred", "style": "Gruff, practical dwarf who runs the catapult activity; brisk and no-frills."},
     "2460": {"name": "Ajjat", "style": "A hardened, disciplined master swordsman and former knight, speaking with gruff, no-nonsense authority."},
     "2461": {"name": "Kamfreena", "style": "A blademistress who speaks in cryptic zen koans; calm, measured and unhurried, almost meditative.", "pace": "slow and deliberate"},
-    "2462": {"name": "Shanomi", "style": "Cryptic warrior-mage who speaks in calm, aphoristic riddles with inverted word order; serene and sage-like.", "accent": "speaks with object-first inverted syntax delivering terse proverbs", "pace": "slow and deliberate"},
+    "2462": {"name": "Shanomi", "style": "Cryptic warrior-mage who speaks in calm, aphoristic riddles with inverted word order; serene and sage-like.", "accent": "Terse, sage delivery", "pace": "slow and deliberate"},
     "2469": {"name": "Lidio", "style": "Workaday guild cook; plain and grounded, matter-of-fact about kitchen wares."},
     "2470": {"name": "Lilly", "style": "A friendly, helpful attendant; warm and approachable, speaking plainly and pleasantly."},
     "2471": {"name": "Anton", "style": "Plain, grounded warrior of the guild; straightforward and matter-of-fact."},
@@ -949,7 +949,7 @@
     "4984": {"name": "Dimintheis", "style": "Genteel and formal with the airs of nobility; prideful and self-important, slipping into a pleading desperation when his pretence is challenged."},
     "4985": {"name": "Boot", "style": "Gruff, short-tempered and irritable; clipped grumbling delivery, quick to bristle."},
     "5006": {"name": "Wizard Grayzag", "style": "A scheming, spiteful necromancer; muttering and resentful, nursing a petty grudge against a rival."},
-    "5119": {"name": "Grimgnash", "style": "A surly, dismissive predator with blunt, clipped speech, contemptuous of lesser creatures and perpetually hungry and irritable.", "accent": "refers to himself in the third person in broken, simple phrasing"},
+    "5119": {"name": "Grimgnash", "style": "A surly, dismissive predator with blunt, clipped speech, contemptuous of lesser creatures and perpetually hungry and irritable.", "accent": "Simple, halting delivery"},
     "5120": {"name": "Rupert the Beard", "style": "Friendly, eccentric and jolly; speaks in a fruity, plummy upper-class fashion, fond of theatrical, old-fashioned turns of phrase.", "accent": "posh, plummy upper-class gentleman manner"},
     "5121": {"name": "Rupert the Beard", "style": "Friendly, eccentric and jolly; speaks in a fruity, plummy upper-class fashion, fond of theatrical, old-fashioned turns of phrase.", "accent": "posh, plummy upper-class gentleman manner"},
     "5123": {"name": "Rupert the Beard", "style": "Friendly, eccentric and jolly; speaks in a fruity, plummy upper-class fashion, fond of theatrical, old-fashioned turns of phrase.", "accent": "posh, plummy upper-class gentleman manner"},
@@ -1000,12 +1000,12 @@
     "6646": {"name": "Pet zilyana", "style": "Non-speaking miniature icyene follower; minimal vocalisation."},
     "6647": {"name": "Pet k'ril tsutsaroth", "style": "Non-speaking miniature demon follower; snarls and hisses rather than words."},
     "6801": {"name": "Pieve", "style": "Cheeky, no-nonsense slayer guardian who bars you from the wyverns. Casual and a touch smug."},
-    "7219": {"name": "Scurry", "style": "Cheeky, chattery little rat; quick, scrappy comedic patter with a streetwise swagger.", "accent": "cheeky cockney street patter"},
+    "7219": {"name": "Scurry", "style": "Cheeky, chattery little rat; quick, scrappy comedic patter with a streetwise swagger.", "accent": "Cheeky Cockney accent"},
     "7297": {"name": "Mistag", "style": "A polite, curious cave goblin leader; earnest and measured, speaking carefully and a little formally."},
     "7298": {"name": "Mistag", "style": "A polite, curious cave goblin leader; earnest and measured, speaking carefully and a little formally."},
     "7299": {"name": "Mistag", "style": "A polite, curious cave goblin leader; earnest and measured, speaking carefully and a little formally."},
     "7456": {"name": "Perdu", "style": "Gruff, businesslike travelling merchant; clipped and matter-of-fact about returning lost property for a fee."},
-    "7616": {"name": "Scurry", "style": "Cheeky, chattery little rat; quick, scrappy comedic patter with a streetwise swagger.", "accent": "cheeky cockney street patter"},
+    "7616": {"name": "Scurry", "style": "Cheeky, chattery little rat; quick, scrappy comedic patter with a streetwise swagger.", "accent": "Cheeky Cockney accent"},
     "7623": {"name": "Abigale", "style": "Young woman with a sweet, helpful surface manner masking a cold, sinister edge."},
     "7624": {"name": "Hewey", "style": "Casual, easygoing young man; chatty and offhand in conversation."},
     "7632": {"name": "Killer", "style": "Masked slasher; menacing, low raspy whisper, taunting and predatory.", "accent": "sinister rasping whisper"},
@@ -1085,12 +1085,12 @@
     "10464": {"name": "Captain Bleemadge", "style": "Easygoing, chatty glider pilot; breezy and casual with a flyer's confidence."},
     "10465": {"name": "Captain Bleemadge", "style": "Easygoing, chatty glider pilot; breezy and casual with a flyer's confidence."},
     "10466": {"name": "Captain Bleemadge", "style": "Easygoing, chatty glider pilot; breezy and casual with a flyer's confidence."},
-    "10517": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney"},
-    "10518": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney"},
-    "10519": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney"},
+    "10517": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney accent"},
+    "10518": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney accent"},
+    "10519": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney accent"},
     "10528": {"name": "Nomad", "style": "A powerful warrior-mage and self-styled host; commanding, grandiose and faintly menacing, every line delivered with theatrical authority."},
     "10529": {"name": "Nomad", "style": "A powerful warrior-mage and self-styled host; commanding, grandiose and faintly menacing, every line delivered with theatrical authority."},
-    "10530": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney"},
+    "10530": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Cockney accent"},
     "10560": {"name": "Garl", "style": "A lone adventurer camped on the island; grounded and wary, speaking with cautious unease about something sinister."},
     "10630": {"name": "Dusuri", "style": "A dwarf shopkeeper running the star reward shop; plain, businesslike and matter-of-fact."},
     "10631": {"name": "Dusuri", "style": "A dwarf shopkeeper running the star reward shop; plain, businesslike and matter-of-fact."},
@@ -1191,13 +1191,13 @@
     "13615": {"name": "Harrallak Menarous", "style": "Refined, self-assured guildmaster and master duelist; measured and confident with a touch of pride."},
     "13616": {"name": "Sloane", "style": "A seasoned guild warrior, direct and businesslike with a tough, matter-of-fact manner."},
     "13617": {"name": "Yadech Strongarm", "style": "A gruff, stoic barbarian warrior. Speaks plainly and heavily, bound by codes of friendship and honour, weighty and unhurried."},
-    "15253": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
-    "15254": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
-    "15256": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
-    "15257": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
-    "15258": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
-    "15259": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
-    "15260": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Cockney rhyming slang, working-class dockside patter"},
+    "15253": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
+    "15254": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
+    "15256": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
+    "15257": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
+    "15258": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
+    "15259": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
+    "15260": {"name": "Jobless Jim", "style": "A down-on-his-luck dockside crewman who talks in dense Cockney rhyming slang that baffles everyone around him.", "accent": "Working-class Cockney dockside accent"},
     "15632": {"name": "Cassius", "style": "An eager, fast-talking aspiring entrepreneur, all sales pitch and grand ambition until his schemes collapse, then sharply indignant."},
     "17009": {"name": "Rickety door", "style": "Creaky, weary and dry; a worn old guardian that grudgingly poses its questions."},
     "17100": {"name": "Rickety door", "style": "Creaky, weary and dry; a worn old guardian that grudgingly poses its questions."},
@@ -1214,10 +1214,10 @@
     "23728": {"name": "Portal of Death", "style": "A portal crafted from the bones of the dead; deep, ominous, sepulchral delivery intoning grave warnings and security questions."},
     "23729": {"name": "Portal of Death", "style": "A portal crafted from the bones of the dead; deep, ominous, sepulchral delivery intoning grave warnings and security questions."},
     "23730": {"name": "Portal of Death", "style": "A portal crafted from the bones of the dead; deep, ominous, sepulchral delivery intoning grave warnings and security questions."},
-    "24839": {"name": "Grimgnash", "style": "A surly, dismissive predator with blunt, clipped speech, contemptuous of lesser creatures and perpetually hungry and irritable.", "accent": "refers to himself in the third person in broken, simple phrasing"},
+    "24839": {"name": "Grimgnash", "style": "A surly, dismissive predator with blunt, clipped speech, contemptuous of lesser creatures and perpetually hungry and irritable.", "accent": "Simple, halting delivery"},
     "26383": {"name": "Sir Gerry", "style": "A mortally wounded knight giving his last account; faint, breathless and faltering between gasps.", "pace": "slow, halting"},
     "28246": {"name": "Wisp", "style": "Soft, sibilant, ethereal whisper; otherworldly and hushed, words drift and trail.", "accent": "breathy whispering siren tone"},
-    "28801": {"name": "Scurry", "style": "Cheeky, chattery little rat; quick, scrappy comedic patter with a streetwise swagger.", "accent": "cheeky cockney street patter"},
+    "28801": {"name": "Scurry", "style": "Cheeky, chattery little rat; quick, scrappy comedic patter with a streetwise swagger.", "accent": "Cheeky Cockney accent"},
     "28928": {"name": "Juna", "style": "Ancient serpent guardian; slow, measured and solemn, speaking in cryptic, ceremonious riddles with timeless gravity.", "pace": "slow, deliberate"},
     "28929": {"name": "Juna", "style": "Ancient serpent guardian; slow, measured and solemn, speaking in cryptic, ceremonious riddles with timeless gravity.", "pace": "slow, deliberate"},
     "13622": {"name": "Duradel", "style": "A hardened veteran who has seen every monster worth naming and is not impressed by much. Cool, authoritative, and dry, with just enough edge to command attention."},
@@ -1350,14 +1350,14 @@
     "1495": {"name": "Charlie", "style": "An earnest zoo handler with the anxious energy of someone working around animals and chaos, decent, busy, and a little flappable."},
     "4917": {"name": "Trobert", "style": "A rough Brimhaven operator used to shady company and keeping his cards close, guarded, streetwise, and unsentimental."},
     "4397": {"name": "Watchtower Wizard", "style": "A vigilant, workmanlike tower wizard. Speak with clipped focus and the air of someone used to keeping watch over magical trouble."},
-    "4707": {"name": "Lubufu", "style": "A crotchety old fisherman who guards his secrets like treasure. Sour, suspicious, and grumbling, with a wounded pride under the crust.", "pace": "Slow and deliberate, lingering on complaints."},
+    "4707": {"name": "Lubufu", "style": "A crotchety old fisherman who guards his secrets like treasure. Sour, suspicious, and grumbling, with a wounded pride under the crust.", "pace": "Slow and deliberate, lingering"},
     "2670": {"name": "Ellena", "style": "A practical crop-tender with a calm, capable manner. Warm enough, but always sounding like she has real work to get back to."},
     "3452": {"name": "Valdez", "style": "A solemn, faded explorer-spirit speaking with grave sincerity. Hushed and haunted, but still purposeful."},
     "888": {"name": "Irwin Feaselbaum", "style": "A young assistant necromancer who is eager, odd, and a bit too comfortable around the dead. Polite but unsettling in a mild, matter-of-fact way."},
     "861": {"name": "Uglug Nar", "style": "An ogre shaman with big, lumbering confidence. Deep-voiced, blunt, and practical, sounding clever by ogre standards."},
     "1471": {"name": "Fycie", "style": "A straightforward ogre with a simple, earnest manner. Big, blunt, and uncomplicated, without much patience for fancy talk."},
-    "4252": {"name": "Bravek", "style": "A stressed civic official trying to sound important through exhaustion and drink. Frazzled, defensive, and faintly self-pitying.", "pace": "Uneven, sluggish when hungover, quicker when panicking."},
-    "4253": {"name": "Bravek", "style": "A stressed civic official trying to sound important through exhaustion and drink. Frazzled, defensive, and faintly self-pitying.", "pace": "Uneven, sluggish when hungover, quicker when panicking."},
+    "4252": {"name": "Bravek", "style": "A stressed civic official trying to sound important through exhaustion and drink. Frazzled, defensive, and faintly self-pitying.", "pace": "Uneven, sluggish then suddenly quick"},
+    "4253": {"name": "Bravek", "style": "A stressed civic official trying to sound important through exhaustion and drink. Frazzled, defensive, and faintly self-pitying.", "pace": "Uneven, sluggish then suddenly quick"},
     "1358": {"name": "Tindel Marchant", "style": "A quietly enthusiastic armour expert who perks up when talking shop. Measured and professional, with a collector's fondness for old metal."},
     "4365": {"name": "Grew", "style": "A hulking ogre elder with simple authority. Speak in a heavy, plain way, like every thought is slow but solid."},
     "4364": {"name": "Og", "style": "A big, dim ogre companion with a heavy, literal delivery. Friendly enough, but never quick on the uptake."},
@@ -1393,8 +1393,8 @@
     "755": {"name": "Murcaily", "style": "A hard-nosed village gatekeeper who sounds used to enforcing rules. Gruff, practical, and not easily charmed."},
     "6430": {"name": "Murcaily", "style": "A hard-nosed village gatekeeper who sounds used to enforcing rules. Gruff, practical, and not easily charmed."},
     "6431": {"name": "Murcaily", "style": "A hard-nosed village gatekeeper who sounds used to enforcing rules. Gruff, practical, and not easily charmed."},
-    "4701": {"name": "Tinsay", "style": "A half-unhinged priest with manic conviction and abrupt mood swings. Wildly eccentric, intense, and liable to veer from solemnity into frantic obsession.", "pace": "Erratic, jumping between calm pronouncements and sudden bursts."},
-    "4702": {"name": "Tinsay", "style": "A half-unhinged priest with manic conviction and abrupt mood swings. Wildly eccentric, intense, and liable to veer from solemnity into frantic obsession.", "pace": "Erratic, jumping between calm pronouncements and sudden bursts."},
+    "4701": {"name": "Tinsay", "style": "A half-unhinged priest with manic conviction and abrupt mood swings. Wildly eccentric, intense, and liable to veer from solemnity into frantic obsession.", "pace": "Erratic, calm then in sudden bursts"},
+    "4702": {"name": "Tinsay", "style": "A half-unhinged priest with manic conviction and abrupt mood swings. Wildly eccentric, intense, and liable to veer from solemnity into frantic obsession.", "pace": "Erratic, calm then in sudden bursts"},
     "4698": {"name": "Timfraku", "style": "An imposing tribal chief with stern paternal authority. Strong, deliberate, and proud, carrying the weight of leadership in every line."},
     "12085": {"name": "Ceril Carnillean", "style": "A wealthy nobleman with polished manners and a sheltered air. Refined, courteous, and faintly fussy, never fully comfortable with danger."},
     "12086": {"name": "Ceril Carnillean", "style": "A wealthy nobleman with polished manners and a sheltered air. Refined, courteous, and faintly fussy, never fully comfortable with danger."},
@@ -5244,10 +5244,10 @@
     "6584": {"name": "Uri", "style": "Shifty, theatrical clue-trail courier who delivers mock-cryptic spy one-liners with smug self-importance, then leaves."},
     "7311": {"name": "Uri", "style": "Shifty, theatrical clue-trail courier who delivers mock-cryptic spy one-liners with smug self-importance, then leaves."},
     "8638": {"name": "Uri", "style": "Shifty, theatrical clue-trail courier who delivers mock-cryptic spy one-liners with smug self-importance, then leaves."},
-    "0": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish"},
-    "7757": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish"},
-    "12109": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish"},
-    "12765": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish"},
+    "0": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish accent"},
+    "7757": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish accent"},
+    "12109": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish accent"},
+    "12765": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Irish accent"},
     "4810": {"name": "Rohak", "style": "An old dwarven father figure; gruff, weary, warm beneath a grumbling exterior."},
     "4811": {"name": "Rohak", "style": "An old dwarven father figure; gruff, weary, warm beneath a grumbling exterior."},
     "4812": {"name": "Rohak", "style": "An old dwarven father figure; gruff, weary, warm beneath a grumbling exterior."},
@@ -5629,7 +5629,7 @@
     "5847": {"name": "Zanaris choir", "style": "An overenthusiastic troupe that bursts into grand, overwrought, tuneless song at unsuspecting passersby."},
     "5856": {"name": "Fairy chef", "style": "A fussy, temperamental kitchen cook fiercely protective of her ingredients, then sheepishly apologetic."},
     "2565": {"name": "Mimm", "style": "A hungry, impatient restaurant customer; chatty and demanding about her order."},
-    "12163": {"name": "Woodcutting Leprechaun", "style": "A jolly, mischievous lucky helper; breezy, quick-witted and forever in a hurry to move on.", "accent": "Irish"},
+    "12163": {"name": "Woodcutting Leprechaun", "style": "A jolly, mischievous lucky helper; breezy, quick-witted and forever in a hurry to move on.", "accent": "Irish accent"},
     "14867": {"name": "One Eyed Rosalee", "style": "A rowdy, boastful pirate; swaggering, loud and salty as she brags over her drink."},
     "15036": {"name": "Captain Maclean", "style": "A stern, serious sea captain; clipped, commanding and all business."},
     "14878": {"name": "Cap'n Anne Boney", "style": "A fearsome, swaggering pirate captain; gruff, menacing and quick to threaten."},
@@ -6569,8 +6569,8 @@
     "11694": {"name": "Helpful Spirit", "style": "A calm, ethereal guide; patient, gentle and instructive, speaking in measured reassurance."},
     "11886": {"name": "Ali the Camel", "style": "A sardonic, world-weary talking camel; dry, grumbling, and put-upon."},
     "11887": {"name": "Ali the Camel", "style": "A sardonic, world-weary talking camel; dry, grumbling, and put-upon."},
-    "11890": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Romani Eastern European fortune-teller's lilt."},
-    "11891": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Romani Eastern European fortune-teller's lilt."},
+    "11890": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Romani Eastern European lilt"},
+    "11891": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Romani Eastern European lilt"},
     "11892": {"name": "White Knight", "style": "A disciplined, righteous order knight; formal, dutiful, faintly haughty toward outsiders."},
     "11911": {"name": "Guard", "style": "A bored, officious city guard; gruff, plain, mildly authoritative."},
     "11912": {"name": "Guard", "style": "A bored, officious city guard; gruff, plain, mildly authoritative."},
@@ -6702,8 +6702,8 @@
     "15941": {"name": "Efaritay Hallow", "style": "A luminous, ancient queen; serene celestial majesty and maternal warmth, dignified and resplendent, speaking with the timeless grace and quiet authority of the ages."},
     "21273": {"name": "Skotos", "style": "A mysterious, brooding lesser demon; cryptic, ominous and dark in tone."},
     "29559": {"name": "Death (NPC)", "style": "A courteous, weary, bureaucratic Grim Reaper; dryly formal, patient, and unbothered."},
-    "9579": {"name": "Lowerniel Drakan", "style": "A towering vampyre lord of terrible majesty; deep, booming and imperious, grandiose and coldly contemptuous, savouring absolute dominion over all lesser creatures.", "pace": "Slow, deliberate and thunderous, letting each word fall like a decree."},
-    "16204": {"name": "Lowerniel Drakan", "style": "A towering vampyre lord of terrible majesty; deep, booming and imperious, grandiose and coldly contemptuous, savouring absolute dominion over all lesser creatures.", "pace": "Slow, deliberate and thunderous, letting each word fall like a decree."},
+    "9579": {"name": "Lowerniel Drakan", "style": "A towering vampyre lord of terrible majesty; deep, booming and imperious, grandiose and coldly contemptuous, savouring absolute dominion over all lesser creatures.", "pace": "Slow, deliberate and thunderous"},
+    "16204": {"name": "Lowerniel Drakan", "style": "A towering vampyre lord of terrible majesty; deep, booming and imperious, grandiose and coldly contemptuous, savouring absolute dominion over all lesser creatures.", "pace": "Slow, deliberate and thunderous"},
     "3740": {"name": "Vanescula Drakan", "style": "A sharp, imperious vampyre noblewoman; coolly commanding and razor-witted, her regal disdain wrapped in silken, unhurried confidence and dry, cutting amusement."},
     "3741": {"name": "Vanescula Drakan", "style": "A sharp, imperious vampyre noblewoman; coolly commanding and razor-witted, her regal disdain wrapped in silken, unhurried confidence and dry, cutting amusement."},
     "3742": {"name": "Vanescula Drakan", "style": "A sharp, imperious vampyre noblewoman; coolly commanding and razor-witted, her regal disdain wrapped in silken, unhurried confidence and dry, cutting amusement."},
@@ -6712,9 +6712,9 @@
     "9576": {"name": "Vanescula Drakan", "style": "A sharp, imperious vampyre noblewoman; coolly commanding and razor-witted, her regal disdain wrapped in silken, unhurried confidence and dry, cutting amusement."},
     "9577": {"name": "Vanescula Drakan", "style": "A sharp, imperious vampyre noblewoman; coolly commanding and razor-witted, her regal disdain wrapped in silken, unhurried confidence and dry, cutting amusement."},
     "15911": {"name": "Vanescula Drakan", "style": "A sharp, imperious vampyre noblewoman; coolly commanding and razor-witted, her regal disdain wrapped in silken, unhurried confidence and dry, cutting amusement."},
-    "15960": {"name": "Sugadinti Vitur", "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.", "accent": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.", "pace": "Slow and deliberate, unhurried as one who commands all of eternity."},
-    "15961": {"name": "Sugadinti Vitur", "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.", "accent": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.", "pace": "Slow and deliberate, unhurried as one who commands all of eternity."},
-    "15962": {"name": "Sugadinti Vitur", "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.", "accent": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.", "pace": "Slow and deliberate, unhurried as one who commands all of eternity."},
+    "15960": {"name": "Sugadinti Vitur", "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.", "accent": "Aristocratic Transylvanian accent", "pace": "Slow, deliberate and unhurried"},
+    "15961": {"name": "Sugadinti Vitur", "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.", "accent": "Aristocratic Transylvanian accent", "pace": "Slow, deliberate and unhurried"},
+    "15962": {"name": "Sugadinti Vitur", "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.", "accent": "Aristocratic Transylvanian accent", "pace": "Slow, deliberate and unhurried"},
     "15942": {"name": "Efaritay Hallow", "style": "A luminous, ancient queen; serene celestial majesty and maternal warmth, dignified and resplendent, speaking with the timeless grace and quiet authority of the ages."},
     "15953": {"name": "Efaritay Hallow", "style": "A luminous, ancient queen; serene celestial majesty and maternal warmth, dignified and resplendent, speaking with the timeless grace and quiet authority of the ages."},
     "16005": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
@@ -6723,20 +6723,20 @@
     "16008": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
     "16009": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
     "16242": {"name": "Sarei", "style": "A formal, softly reverent aranei mystic; measured and articulate, philosophical poise carried in a calm, dignified, hushed cadence."},
-    "16212": {"name": "Wyrd", "style": "A tormented soul torn between straining human pleading and eruptions of guttural, bestial roaring; hoarse, cracking and monstrous.", "accent": "A ragged, inhuman rasp, human words splintering into a beast's snarl."},
-    "11181": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
-    "15967": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
-    "15968": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
-    "15969": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
-    "16190": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "A sibilant, many-voiced insectile hiss, drawing out every syllable.", "pace": "Slow and drawn-out, savouring each word like prey."},
+    "16212": {"name": "Wyrd", "style": "A tormented soul torn between straining human pleading and eruptions of guttural, bestial roaring; hoarse, cracking and monstrous.", "accent": "Ragged, inhuman rasp, splintering into a snarl"},
+    "11181": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "Sibilant, many-voiced insectile hiss", "pace": "Slow and drawn-out, savouring each word"},
+    "15967": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "Sibilant, many-voiced insectile hiss", "pace": "Slow and drawn-out, savouring each word"},
+    "15968": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "Sibilant, many-voiced insectile hiss", "pace": "Slow and drawn-out, savouring each word"},
+    "15969": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "Sibilant, many-voiced insectile hiss", "pace": "Slow and drawn-out, savouring each word"},
+    "16190": {"name": "Nylocas Queen", "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm.", "accent": "Sibilant, many-voiced insectile hiss", "pace": "Slow and drawn-out, savouring each word"},
     "3776": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "3778": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "6161": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
     "9598": {"name": "Sarius Guile", "style": "A furtive Myreque spy; soft, hushed and quick, low-voiced and cautious, with a warm, earnest undercurrent beneath the wariness."},
-    "16175": {"name": "Mortimer", "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.", "accent": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.", "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."},
-    "16294": {"name": "Mortimer", "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.", "accent": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.", "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."},
-    "16314": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."},
-    "16315": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "An angelic, reverberant delivery gone cold and menacing."},
+    "16175": {"name": "Mortimer", "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.", "accent": "Dry, graveyard-cold rural Irish accent", "pace": "Brisk, clipped and matter-of-fact"},
+    "16294": {"name": "Mortimer", "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw.", "accent": "Dry, graveyard-cold rural Irish accent", "pace": "Brisk, clipped and matter-of-fact"},
+    "16314": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "Cold, menacing angelic reverberance"},
+    "16315": {"name": "Mad Angel", "style": "A fallen Icyene, radiant divinity twisted into menace; grief and wrath under an angelic calm.", "accent": "Cold, menacing angelic reverberance"},
     "16504": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
     "16505": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},
     "16529": {"name": "Stray dog", "style": "A stray mother searching for her stolen puppies, every sound driven by that single purpose; frantic and imploring one moment, low and protective the next, and boundlessly glad the instant she is understood."},

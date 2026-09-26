@@ -269,7 +269,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 1,
       section = voicesSection)
   default String playerAccent() {
-    return "British English, as spoken in Cambridge, England.";
+    return "Educated southern English accent, as heard in Cambridge";
   }
 
   @ConfigItem(
@@ -279,7 +279,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 2,
       section = voicesSection)
   default String playerPersona() {
-    return "Friendly, plucky, warm, and enthusiastic.";
+    return "Friendly, plucky, warm and enthusiastic";
   }
 
   @ConfigItem(
@@ -289,7 +289,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 3,
       section = voicesSection)
   default String playerPace() {
-    return "Normal.";
+    return "Natural, even pace";
   }
 
   @ConfigItem(
