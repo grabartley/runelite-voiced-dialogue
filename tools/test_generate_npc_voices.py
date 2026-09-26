@@ -329,10 +329,9 @@ class ValidateProfilesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "longer than 100"):
             gen.validate_profiles(profiles)
 
-    def test_long_pace_is_rejected(self):
-        profiles = profiles_with(byRace={"Troll": {"pace": "p" * 61}})
-        with self.assertRaisesRegex(ValueError, "longer than 60"):
-            gen.validate_profiles(profiles)
+    def test_long_pace_passes(self):
+        profiles = profiles_with(byRace={"Troll": {"pace": "Slow and heavy, " * 10}})
+        gen.validate_profiles(profiles)
 
     def test_comment_keys_are_skipped(self):
         profiles = profiles_with(byId={"_comment": "[notes] about ids"})

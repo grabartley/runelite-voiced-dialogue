@@ -297,7 +297,7 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void anEmptyStyleSendsNoProviderOptions() throws Exception {
     enqueuePcm((short) 1);
-    CharacterProfile blank = new CharacterProfile("Blank", null, null, null);
+    CharacterProfile blank = new CharacterProfile(null, null, null, null);
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
     backend(keyedConfig())

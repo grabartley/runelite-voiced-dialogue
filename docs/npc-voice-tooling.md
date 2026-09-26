@@ -174,13 +174,21 @@ plugin (it logs the id and chosen voice/profile per line).
 
 Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
-delivers each line: accent, style, and pace. `GeminiSpeechStyle` joins them, with
-the line's chat-head emotion after them, into one short style string sent in
-`speech_metadata.style`; the text the model receives is the spoken line alone,
-since Gemini 3.8 speaks its input verbatim.
+delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them as a
+full character profile in one style string sent in `speech_metadata.style`, with
+the line's chat-head emotion after it:
 
-Every field is a **short phrase**, per Google's 3.8 prompting guide, which names
-long profile blocks as the main cause of voice drift:
+```
+Audio profile: Benny, a character in a medieval fantasy world. Accent: Strong London
+English accent, British English pronunciation. Style: An ordinary citizen of
+Gielinor. Down-to-earth, sincere, and approachable. Eager street vendor, loud and
+pitchy, hawking his newspapers to passers-by. Pace: Steady and conversational.
+Sounding happy.
+```
+
+The text the model receives is the spoken line alone, since Gemini 3.8 speaks its
+input verbatim. By ear, the full profile keeps NPCs that share a voice sounding like
+different people, where a short style string flattens them together.
 
 - `accent` is a strong, explicit accent phrase that names the pronunciation:
   "Strong London English accent, British English pronunciation", "Strong Glasgow
@@ -190,18 +198,17 @@ long profile blocks as the main cause of voice drift:
   default accent, so every accent leads with "Strong" and names its pronunciation.
   A delivery quirk (slurred, whispered, hissing) is never an accent: it goes in
   `style`, so the character keeps the accent of its race or region.
-- `style` is sustained delivery only: tone, timbre, emotion, volume ("Rough,
-  gravelly and blunt").
-- `pace` is a few words ("Slow, ponderous pace").
+- `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
+  rhythm.
+- `name` is sent as the profile's name, so it is part of the cache key.
 - No meta-instructions ("word for word", "do not change voice"), no wording
   instructions (slang, syntax: the model cannot reword a verbatim transcript), and
-  no square- or angle-bracket tags. `name` is a label for editing and debug logs
-  and is never sent.
+  no square- or angle-bracket tags.
 
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
-does not start with "Strong" and name its pronunciation, an `accent` over 100
-characters, and a `pace` over 60.
+does not start with "Strong" and name its pronunciation, and an `accent` over 100
+characters.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners

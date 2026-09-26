@@ -53,133 +53,133 @@
     "profiles_bespoke": 6447
   },
   "profiles": {
-    "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, style, pace). The backend joins accent, style, and pace, plus the line's chat-head emotion, into one short style string sent in speech_metadata.style; the text sent to the model is the spoken line alone. 'name' is a human-readable label for editing and debug logs and is never sent. Keep every field a short phrase: accent is a short accent phrase ('Gruff Scottish accent, as heard in Glasgow'), style is sustained delivery only (tone, emotion, timbre, volume), pace is a few words. No meta-instructions ('word for word', 'do not change voice'), no wording instructions (slang, syntax), and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
+    "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, style, pace). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Audio profile: <name>, a character in a medieval fantasy world. Accent: ... Style: ... Pace: ...'); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. No meta-instructions ('word for word'), no wording instructions (slang, syntax), and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> byId[npcId]. 'style' accumulates across the matching layers; 'name', 'accent', and 'pace' take the most specific layer that sets them. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
     "default": {
       "name": "Gielinor Commoner",
       "accent": "Strong working-class English accent, British English pronunciation",
-      "style": "Plain, sincere and natural, with easy warmth",
-      "pace": "Steady, conversational pace"
+      "style": "A grounded medieval fantasy townsperson. Plain, sincere, and natural, with the easy warmth of someone going about their day.",
+      "pace": "Steady and conversational, with natural pauses at the punctuation."
     },
     "player": {
       "name": "Adventurer",
       "accent": "Strong down-to-earth English accent, British English pronunciation",
-      "style": "Brave, resolute and quietly confident",
-      "pace": "Even, assured pace"
+      "style": "A seasoned medieval fantasy adventurer: brave and resolute, carrying the quiet confidence of someone who has seen the whole of Gielinor.",
+      "pace": "Even and assured, unhurried but purposeful."
     },
     "narrator": {
       "name": "Narrator",
       "accent": "Strong clear Received Pronunciation accent, British English pronunciation",
-      "style": "Calm, measured and quietly authoritative, reading aloud rather than acting",
-      "pace": "Unhurried, even pace, with a clear beat at every full stop"
+      "style": "Gielinor's own narrator, describing what happens rather than playing a part. Calm, measured and quietly authoritative, never acting the line out.",
+      "pace": "Unhurried and even, letting each sentence land, with a clear beat at every full stop."
     },
     "byRace": {
       "Human": {
         "name": "Gielinor Townsfolk",
         "accent": "Strong working-class English accent, British English pronunciation",
-        "style": "Down-to-earth, sincere and approachable",
-        "pace": "Steady, conversational pace"
+        "style": "An ordinary citizen of Gielinor. Down-to-earth, sincere, and approachable.",
+        "pace": "Steady and conversational."
       },
       "Elf": {
         "name": "Elf of Tirannwn",
         "accent": "Strong refined Received Pronunciation accent, faint melodic lilt, British English pronunciation",
-        "style": "Graceful, soft-spoken, serene and knowing",
-        "pace": "Slow, flowing pace"
+        "style": "An ancient, otherworldly elf. Graceful and soft-spoken, serene and knowing, speaking with quiet wisdom as if from beyond the mortal world.",
+        "pace": "Slow and flowing, with a graceful, deliberate cadence."
       },
       "Dwarf": {
         "name": "Keldagrim Dwarf",
         "accent": "Strong Glasgow Scottish accent, Scottish English pronunciation",
-        "style": "Rough, gravelly and blunt",
-        "pace": "Firm, clipped and a little impatient"
+        "style": "A stout, hard-bitten mountain dwarf. Rough, gravelly, and blunt, with the no-nonsense grit of a lifetime at the forge.",
+        "pace": "Firm and forthright, clipped and a little impatient."
       },
       "Goblin": {
         "name": "Goblin",
         "accent": "Strong East London accent, British English pronunciation",
-        "style": "High-pitched, reedy and nasal, sniggering and excitable",
-        "pace": "Quick and jittery, in tumbling bursts"
+        "style": "A small, crude, mischievous goblin. High-pitched, reedy, and nasal, sniggering and excitable, never quite trustworthy.",
+        "pace": "Quick and jittery, words tumbling out in bursts."
       },
       "Monkey": {
         "name": "Monkey of Ape Atoll",
         "accent": "Strong casual Caribbean island accent, Caribbean English pronunciation",
-        "style": "Fast, chattery and expressive, restless and mischievous",
-        "pace": "Quick, animated bursts"
+        "style": "A lively, quick-witted monkey from a tropical island. Fast, chattery, and expressive, hopping between mischief and earnestness with restless energy.",
+        "pace": "Quick and animated, words tripping over each other in bursts."
       },
       "Gorilla": {
         "name": "Gorilla",
         "accent": "Strong deep English accent, British English pronunciation",
-        "style": "Very deep, guttural and commanding, rumbling from the chest",
-        "pace": "Slow, ponderous pace"
+        "style": "An enormous, powerful gorilla. A very deep, booming, guttural voice that rumbles from the chest, primal and commanding, with a slow, heavy weight behind every word.",
+        "pace": "Slow and ponderous, each utterance landing with deliberate heft."
       },
       "Gnome": {
         "name": "Gnome",
         "accent": "Strong rural Irish accent, Irish English pronunciation",
-        "style": "Chatty, clever and self-important",
-        "pace": "Fast, eager pace"
+        "style": "A small, brisk, brainy gnome. Chatty, clever, and self-important, brimming with opinions and schemes.",
+        "pace": "Fast and animated, tripping along eagerly."
       },
       "Troll": {
         "name": "Troll",
         "accent": "Strong South London Brixton accent, British English pronunciation",
-        "style": "Very deep, slow and booming, good-natured but easily confused",
-        "pace": "Slow and heavy, with long thinking pauses"
+        "style": "A huge, slow, simple-minded troll, good-natured but dim. A very deep, low, booming, rumbling voice, lumbering and pleased with itself, easily confused.",
+        "pace": "Slow and heavy, with long thinking pauses."
       },
       "Undead": {
         "name": "The Undead",
         "accent": "Strong cold Received Pronunciation accent, British English pronunciation",
-        "style": "Hollow, breathy and sepulchral, echoing as if from far off",
-        "pace": "Slow, dragging pace"
+        "style": "A restless undead thing dragged back from the grave. Hollow, breathy, and sepulchral, the voice echoing as if from a long way off.",
+        "pace": "Slow and dragging, with an eerie, drawn-out delivery."
       },
       "Demon": {
         "name": "Demon",
         "accent": "Strong menacing English accent, British English pronunciation",
-        "style": "Booming, guttural and contemptuous",
-        "pace": "Slow and deliberate, each word landing hard"
+        "style": "A vast, malevolent demon from the abyss. Booming, guttural, and contemptuous, radiating ancient threat.",
+        "pace": "Slow and deliberate, each word landing like a hammer."
       },
       "Wizard": {
         "name": "Wizard",
         "accent": "Strong distinguished Received Pronunciation accent, British English pronunciation",
-        "style": "Warm, knowing and weighty",
-        "pace": "Measured pace, with knowing pauses"
+        "style": "A wise and learned old wizard, a sage and storyteller. Warm, knowing, and unhurried, weighty with deep arcane knowledge.",
+        "pace": "Measured and thoughtful, with deliberate, knowing pauses."
       },
       "Tortugan": {
         "name": "Tortugan Islander",
         "accent": "Strong Bajan Caribbean accent, Bajan English pronunciation",
-        "style": "Peaceful and easy-going, turning firm when threatened",
-        "pace": "Relaxed pace, with a gentle island lilt"
+        "style": "A turtle-like islander of the Great Conch. Peaceful, self-reliant and easy-going, with a sun-warmed, seafaring calm that turns firm and steady when the island is threatened.",
+        "pace": "Relaxed and unhurried, with a natural island lilt."
       },
       "Icyene": {
         "name": "Icyene",
         "accent": "Strong ethereal English accent, British English pronunciation",
-        "style": "Serene, luminous and commanding",
-        "pace": "Measured, stately pace"
+        "style": "An ancient winged Saradominist being; serene, luminous and commanding.",
+        "pace": "Measured and stately, each phrase carrying weight."
       },
       "Arceuus": {
         "name": "Citizen of Arceuus",
         "accent": "Strong refined, cool Received Pronunciation accent, British English pronunciation",
-        "style": "Serene, weightless and detached, with a faint distant echo",
-        "pace": "Slow, floating pace, with airy pauses"
+        "style": "An ascended immortal of Arceuus, a soul lifted out of its mortal body into an incorporeal form sustained by the Dark Altar. Serene, weightless and detached, steeped in the dark arts and centuries past any need for hunger, sleep or death, every word settled and touched with deep arcane learning.",
+        "pace": "Slow and floating, unhurried, with long, airy pauses."
       },
       "Aranei": {
         "name": "The Aranei",
         "accent": "Strong soft Received Pronunciation accent, British English pronunciation",
-        "style": "Hushed and unsettlingly serene, with a faint sibilance",
-        "pace": "Unhurried, with a small stillness before each answer"
+        "style": "A hooded aranei of House Shadum, devoted past the point of self and never showing a face. Telepathic, carrying the memories of others and of the dead, so every line arrives as something relayed rather than chosen, hushed and serene to the point of being unsettling, with a faint sibilance beneath the calm.",
+        "pace": "Unhurried and even, with a small stillness before each answer."
       },
       "Dog": {
         "name": "Dog",
         "accent": "Strong canine delivery: barks, yips, whines and growls in place of pronunciation",
-        "style": "Eager, urgent and openly expressive",
-        "pace": "Short, sharp bursts, with quick panting"
+        "style": "A loyal, wholehearted dog who means every sound it makes. Eager, urgent and openly expressive, swinging between bright excitement, anxious pleading and a low protective rumble.",
+        "pace": "Short, sharp bursts, panting quick between them."
       },
       "Crab": {
         "name": "Crab",
         "accent": "Strong West Country seaside accent, British English pronunciation",
-        "style": "High, small and excitable, tipping into sideways panic",
-        "pace": "Quick and skittering, then stopping dead"
+        "style": "A pint-sized beach crab who takes crab society entirely seriously. Scuttling and excitable, forever anxious about standing among the other crabs, tipping from breathless enthusiasm into sideways panic, and ready to lose itself in the rhythm the moment a beat starts.",
+        "pace": "Quick and skittering, darting through a phrase and then stopping dead."
       },
       "Penguin": {
         "name": "Penguin",
         "accent": "Strong Russian accent, Russian-accented English pronunciation",
-        "style": "Formal, humourless and deadpan, utterly convinced",
-        "pace": "Measured and clipped, like reading a report"
+        "style": "A flightless bird of the penguin Motherland, disciplined, humourless and certain of the cause. Formal and deadpan to the point of comedy, delivering the absurd with total conviction and treating the smallest exchange as a matter of state security.",
+        "pace": "Measured and clipped, each sentence closed off like a line of a report."
       }
     },
     "byCategory": [
@@ -190,8 +190,8 @@
         ],
         "name": "Leprechaun",
         "accent": "Strong Dublin Irish accent, Irish English pronunciation",
-        "style": "Jaunty, playful and cheeky, amused at its own jokes",
-        "pace": "Quick, bouncing, sing-song pace"
+        "style": "A jaunty, twinkle-eyed leprechaun. Playful, lilting, and full of cheek, forever amused at its own jokes.",
+        "pace": "Quick and lively, with a bouncing, sing-song rhythm."
       },
       {
         "id": "vampyre",
@@ -208,8 +208,8 @@
         ],
         "name": "Vampyre",
         "accent": "Strong aristocratic Transylvanian accent, Eastern European-accented English pronunciation",
-        "style": "Silken, cold and menacing, dripping with disdain",
-        "pace": "Slow, hypnotic pace"
+        "style": "An ancient, predatory vampyre noble. Silken, cold, and menacing, dripping with disdain for lesser mortals.",
+        "pace": "Slow and hypnotic, savouring every word with quiet menace."
       },
       {
         "id": "fremennik",
@@ -231,8 +231,8 @@
         ],
         "name": "Fremennik",
         "accent": "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation",
-        "style": "Proud, hearty and weathered",
-        "pace": "Strong, steady pace"
+        "style": "A hardy Fremennik Viking of the frozen north. Proud, hearty, and weathered, bred to longship, axe, and saga.",
+        "pace": "Strong and steady, robust and deliberate."
       },
       {
         "id": "tzhaar",
@@ -244,8 +244,8 @@
         ],
         "name": "TzHaar",
         "accent": "Strong deep English accent, British English pronunciation",
-        "style": "Stony, calm and immense",
-        "pace": "Very slow, grinding pace"
+        "style": "A living creature of molten rock from the city of TzHaar. Vast, stony, and rumbling, calm but immense, speaking of honour and combat.",
+        "pace": "Very slow and ponderous, like grinding stone."
       },
       {
         "id": "dragon",
@@ -257,8 +257,8 @@
         ],
         "name": "Dragon",
         "accent": "Strong resonant English accent, British English pronunciation",
-        "style": "Booming, regal and contemptuous, heavy with age",
-        "pace": "Slow, grand, rolling pace"
+        "style": "An ancient, colossal dragon. Booming, regal, and contemptuous of mortals, every word freighted with age and power.",
+        "pace": "Slow and grand, rolling and unhurried."
       },
       {
         "id": "imp",
@@ -267,8 +267,8 @@
         ],
         "name": "Imp",
         "accent": "Strong squeaky English accent, British English pronunciation",
-        "style": "Shrill, gleeful and mischievous, cackling",
-        "pace": "Extremely fast and erratic"
+        "style": "A tiny, hyperactive imp. Shrill, gleeful, and mischievous, cackling and impossible to pin down.",
+        "pace": "Extremely fast and erratic, words spilling over each other."
       },
       {
         "id": "fairy",
@@ -278,8 +278,8 @@
         ],
         "name": "Fairy",
         "accent": "Strong light, airy English accent, British English pronunciation",
-        "style": "Sweet, breezy and delighted",
-        "pace": "Quick, light, fluttering pace"
+        "style": "A small, sparkling fairy. Sweet, breezy, and quick, flitting from thought to thought with childlike delight.",
+        "pace": "Quick and light, with a fluttering, buoyant lilt."
       },
       {
         "id": "ogre",
@@ -288,8 +288,8 @@
         ],
         "name": "Ogre",
         "accent": "Strong West Midlands accent, British English pronunciation",
-        "style": "Very deep, loud, blunt and lumbering",
-        "pace": "Slow, heavy, plodding pace"
+        "style": "A huge, slow-witted ogre with a very deep, low, booming voice. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
+        "pace": "Slow and heavy, with plodding, simple phrasing."
       },
       {
         "id": "ghost",
@@ -303,8 +303,8 @@
         ],
         "name": "Ghost",
         "accent": "Strong mournful Received Pronunciation accent, British English pronunciation",
-        "style": "Wispy, far-off and forlorn",
-        "pace": "Slow and drifting, trailing off"
+        "style": "A lingering, sorrowful spirit. Wispy, far-off, and forlorn, half-faded from the world of the living.",
+        "pace": "Slow and drifting, trailing off into silence."
       },
       {
         "id": "pirate",
@@ -315,8 +315,8 @@
         ],
         "name": "Pirate",
         "accent": "Strong Cornish West Country accent, British English pronunciation",
-        "style": "Gravelly, hearty and roguish, all bluster",
-        "pace": "Loose, rollicking swagger"
+        "style": "A salty, swaggering pirate. Gravelly, hearty, and roguish, all bluster and grog and tall tales.",
+        "pace": "Loose and rollicking, with a swaggering swing."
       },
       {
         "id": "barbarian",
@@ -325,8 +325,8 @@
         ],
         "name": "Barbarian",
         "accent": "Strong Yorkshire accent, British English pronunciation",
-        "style": "Loud, blunt and full-blooded",
-        "pace": "Forceful and robust"
+        "style": "A boisterous barbarian of the wilds. Loud, blunt, and full-blooded, proud of strength and scornful of soft folk.",
+        "pace": "Forceful and robust, full of gusto."
       },
       {
         "id": "wizard",
@@ -343,8 +343,8 @@
           "archmage"
         ],
         "name": "Wizard",
-        "style": "Knowing, scholarly and unhurried",
-        "pace": "Measured pace, with knowing pauses"
+        "style": "A wise and learned spellcaster, a sage and keeper of arcane lore; knowing and unhurried, speaking in a measured, scholarly register weighty with deep magical knowledge.",
+        "pace": "Measured and thoughtful, with deliberate, knowing pauses."
       },
       {
         "id": "monk",
@@ -358,8 +358,8 @@
           "cleric"
         ],
         "name": "Devotee",
-        "style": "Calm, kindly and serene, gently devout",
-        "pace": "Slow, tranquil pace"
+        "style": "A pious monastic of the faith; calm, kindly, and serene, speaking in a gentle, devout register with quiet, unshakeable conviction.",
+        "pace": "Slow and tranquil, softly measured."
       },
       {
         "id": "royalty",
@@ -374,8 +374,8 @@
           "duchess"
         ],
         "name": "Royalty",
-        "style": "Regal, authoritative and gracious, in a refined register",
-        "pace": "Stately, deliberate pace"
+        "style": "A sovereign of the realm; regal, authoritative, and gracious, speaking in a refined, aristocratic, elevated register, every word carrying the weight of a crown.",
+        "pace": "Stately and deliberate, never rushed."
       },
       {
         "id": "knight",
@@ -387,8 +387,8 @@
           "sir"
         ],
         "name": "Knight",
-        "style": "Honourable, disciplined and gallant, crisp and formal",
-        "pace": "Firm, crisp and commanding"
+        "style": "A noble knight of the realm; honourable, disciplined, and gallant, speaking in a crisp, formal, well-bred register weighted with chivalric duty.",
+        "pace": "Firm and measured, crisp and commanding."
       },
       {
         "id": "noble",
@@ -404,8 +404,8 @@
           "noble"
         ],
         "name": "Noble",
-        "style": "Polished, urbane and self-assured, in a refined register",
-        "pace": "Measured and composed"
+        "style": "A highborn aristocrat of the realm; polished, urbane, and self-assured, speaking in a refined, well-bred register, accustomed to deference.",
+        "pace": "Measured and composed."
       },
       {
         "id": "child",
@@ -416,7 +416,7 @@
           "urchin"
         ],
         "lifeStage": "child",
-        "style": "Bright, light and high-pitched young child's voice, simple and unguarded"
+        "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery."
       }
     ],
     "byEthnicity": {
@@ -1397,7 +1397,7 @@
       "5118": {
         "name": "Sylas",
         "style": "Eccentric, addled old man; rambles and mutters, repeating his own words as if reassuring himself.",
-        "pace": "Muttering and trailing off"
+        "pace": "repeats and trails off, muttering to himself"
       },
       "5122": {
         "name": "Drain Pipe",
@@ -4708,7 +4708,7 @@
       "4707": {
         "name": "Lubufu",
         "style": "A crotchety old fisherman who guards his secrets like treasure. Sour, suspicious, and grumbling, with a wounded pride under the crust.",
-        "pace": "Slow and deliberate, lingering"
+        "pace": "Slow and deliberate, lingering on complaints."
       },
       "2670": {
         "name": "Ellena",
@@ -4733,12 +4733,12 @@
       "4252": {
         "name": "Bravek",
         "style": "A stressed civic official trying to sound important through exhaustion and drink. Frazzled, defensive, and faintly self-pitying.",
-        "pace": "Uneven, sluggish then suddenly quick"
+        "pace": "Uneven, sluggish when hungover, quicker when panicking."
       },
       "4253": {
         "name": "Bravek",
         "style": "A stressed civic official trying to sound important through exhaustion and drink. Frazzled, defensive, and faintly self-pitying.",
-        "pace": "Uneven, sluggish then suddenly quick"
+        "pace": "Uneven, sluggish when hungover, quicker when panicking."
       },
       "1358": {
         "name": "Tindel Marchant",
@@ -4883,12 +4883,12 @@
       "4701": {
         "name": "Tinsay",
         "style": "A half-unhinged priest with manic conviction and abrupt mood swings. Wildly eccentric, intense, and liable to veer from solemnity into frantic obsession.",
-        "pace": "Erratic, calm then in sudden bursts"
+        "pace": "Erratic, jumping between calm pronouncements and sudden bursts."
       },
       "4702": {
         "name": "Tinsay",
         "style": "A half-unhinged priest with manic conviction and abrupt mood swings. Wildly eccentric, intense, and liable to veer from solemnity into frantic obsession.",
-        "pace": "Erratic, calm then in sudden bursts"
+        "pace": "Erratic, jumping between calm pronouncements and sudden bursts."
       },
       "4698": {
         "name": "Timfraku",
@@ -26397,12 +26397,12 @@
       "9579": {
         "name": "Lowerniel Drakan",
         "style": "A towering vampyre lord of terrible majesty; deep, booming and imperious, grandiose and coldly contemptuous, savouring absolute dominion over all lesser creatures.",
-        "pace": "Slow, deliberate and thunderous"
+        "pace": "Slow, deliberate and thunderous, letting each word fall like a decree."
       },
       "16204": {
         "name": "Lowerniel Drakan",
         "style": "A towering vampyre lord of terrible majesty; deep, booming and imperious, grandiose and coldly contemptuous, savouring absolute dominion over all lesser creatures.",
-        "pace": "Slow, deliberate and thunderous"
+        "pace": "Slow, deliberate and thunderous, letting each word fall like a decree."
       },
       "3740": {
         "name": "Vanescula Drakan",
@@ -26440,19 +26440,19 @@
         "name": "Sugadinti Vitur",
         "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.",
         "accent": "Strong aristocratic Transylvanian accent, Eastern European-accented English pronunciation",
-        "pace": "Slow, deliberate and unhurried"
+        "pace": "Slow and deliberate, unhurried as one who commands all of eternity."
       },
       "15961": {
         "name": "Sugadinti Vitur",
         "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.",
         "accent": "Strong aristocratic Transylvanian accent, Eastern European-accented English pronunciation",
-        "pace": "Slow, deliberate and unhurried"
+        "pace": "Slow and deliberate, unhurried as one who commands all of eternity."
       },
       "15962": {
         "name": "Sugadinti Vitur",
         "style": "A grand patriarch of an ancient vampyre bloodline; serene, magnetic authority, courtly and paternal, every measured word weighted with venerable gravitas.",
         "accent": "Strong aristocratic Transylvanian accent, Eastern European-accented English pronunciation",
-        "pace": "Slow, deliberate and unhurried"
+        "pace": "Slow and deliberate, unhurried as one who commands all of eternity."
       },
       "15942": {
         "name": "Efaritay Hallow",
@@ -26493,27 +26493,27 @@
       "11181": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm. Sibilant, many-voiced insectile hiss.",
-        "pace": "Slow and drawn-out, savouring each word"
+        "pace": "Slow and drawn-out, savouring each word like prey."
       },
       "15967": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm. Sibilant, many-voiced insectile hiss.",
-        "pace": "Slow and drawn-out, savouring each word"
+        "pace": "Slow and drawn-out, savouring each word like prey."
       },
       "15968": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm. Sibilant, many-voiced insectile hiss.",
-        "pace": "Slow and drawn-out, savouring each word"
+        "pace": "Slow and drawn-out, savouring each word like prey."
       },
       "15969": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm. Sibilant, many-voiced insectile hiss.",
-        "pace": "Slow and drawn-out, savouring each word"
+        "pace": "Slow and drawn-out, savouring each word like prey."
       },
       "16190": {
         "name": "Nylocas Queen",
         "style": "An imperious insect matriarch; sultry, predatory and regal, dripping with slow, hungering command over her swarm. Sibilant, many-voiced insectile hiss.",
-        "pace": "Slow and drawn-out, savouring each word"
+        "pace": "Slow and drawn-out, savouring each word like prey."
       },
       "3776": {
         "name": "Sarius Guile",
@@ -26535,13 +26535,13 @@
         "name": "Mortimer",
         "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw. Dry and graveyard-cold.",
         "accent": "Strong rural Irish accent, Irish English pronunciation",
-        "pace": "Brisk, clipped and matter-of-fact"
+        "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."
       },
       "16294": {
         "name": "Mortimer",
         "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw. Dry and graveyard-cold.",
         "accent": "Strong rural Irish accent, Irish English pronunciation",
-        "pace": "Brisk, clipped and matter-of-fact"
+        "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out."
       },
       "16314": {
         "name": "Mad Angel",

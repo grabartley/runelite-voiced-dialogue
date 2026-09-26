@@ -14,13 +14,19 @@ final class GeminiSpeechStyle {
 
   private static final String FULL_STOP = ".";
 
+  private static final String CHARACTER_FRAME = ", a character in a medieval fantasy world";
+
   private GeminiSpeechStyle() {}
 
   static String compose(CharacterProfile profile, Emotion emotion, String paceDirection) {
     List<String> directions = new ArrayList<>();
-    addDirection(directions, profile.accent());
-    addDirection(directions, profile.style());
-    addDirection(directions, profile.pace());
+    String name = clean(profile.name());
+    if (name != null) {
+      directions.add(sentence("Audio profile: " + name + CHARACTER_FRAME));
+    }
+    addLabelled(directions, "Accent", profile.accent());
+    addLabelled(directions, "Style", profile.style());
+    addLabelled(directions, "Pace", profile.pace());
     addDirection(directions, GeminiEmotionStyle.directionFor(emotion));
     addDirection(directions, paceDirection);
     return String.join(" ", directions);
@@ -30,16 +36,29 @@ final class GeminiSpeechStyle {
     return "Speaking at " + speedPercent + "% of normal speed";
   }
 
+  private static void addLabelled(List<String> directions, String label, String value) {
+    String cleaned = clean(value);
+    if (cleaned != null) {
+      directions.add(sentence(label + ": " + cleaned));
+    }
+  }
+
   private static void addDirection(List<String> directions, String direction) {
-    if (direction == null) {
-      return;
+    String cleaned = clean(direction);
+    if (cleaned != null) {
+      directions.add(sentence(Character.toUpperCase(cleaned.charAt(0)) + cleaned.substring(1)));
     }
-    String trimmed = TRAILING_SEPARATORS.matcher(direction.trim()).replaceAll("");
-    if (trimmed.isEmpty()) {
-      return;
+  }
+
+  private static String clean(String value) {
+    if (value == null) {
+      return null;
     }
-    String capitalised = Character.toUpperCase(trimmed.charAt(0)) + trimmed.substring(1);
-    boolean terminated = TERMINAL_PUNCTUATION.matcher(capitalised).find();
-    directions.add(terminated ? capitalised : capitalised + FULL_STOP);
+    String trimmed = TRAILING_SEPARATORS.matcher(value.trim()).replaceAll("");
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private static String sentence(String text) {
+    return TERMINAL_PUNCTUATION.matcher(text).find() ? text : text + FULL_STOP;
   }
 }

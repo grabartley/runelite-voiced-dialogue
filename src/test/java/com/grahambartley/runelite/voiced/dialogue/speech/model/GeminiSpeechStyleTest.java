@@ -11,58 +11,67 @@ public class GeminiSpeechStyleTest {
 
   private static final CharacterProfile DWARF =
       new CharacterProfile(
-          "Dwarf", "Gruff Scottish accent, as heard in Glasgow", "Rough and blunt", "Firm pace");
+          "Keldagrim Dwarf",
+          "Strong Glasgow Scottish accent, Scottish English pronunciation",
+          "A stout, hard-bitten mountain dwarf. Rough, gravelly, and blunt.",
+          "Firm and forthright.");
+
+  private static final String DWARF_PROFILE =
+      "Audio profile: Keldagrim Dwarf, a character in a medieval fantasy world."
+          + " Accent: Strong Glasgow Scottish accent, Scottish English pronunciation."
+          + " Style: A stout, hard-bitten mountain dwarf. Rough, gravelly, and blunt."
+          + " Pace: Firm and forthright.";
 
   @Test
-  public void joinsAccentStyleAndPaceIntoSentences() {
-    assertEquals(
-        "Gruff Scottish accent, as heard in Glasgow. Rough and blunt. Firm pace.",
-        GeminiSpeechStyle.compose(DWARF, Emotion.NEUTRAL, null));
+  public void rendersTheFullProfileWithLabelledFields() {
+    assertEquals(DWARF_PROFILE, GeminiSpeechStyle.compose(DWARF, Emotion.NEUTRAL, null));
   }
 
   @Test
   public void appendsTheEmotionDirectionAfterTheProfile() {
     assertEquals(
-        "Gruff Scottish accent, as heard in Glasgow. Rough and blunt. Firm pace. Sounding angry.",
-        GeminiSpeechStyle.compose(DWARF, Emotion.ANGRY, null));
+        DWARF_PROFILE + " Sounding angry.", GeminiSpeechStyle.compose(DWARF, Emotion.ANGRY, null));
   }
 
   @Test
   public void appendsASpeedDirectionLast() {
     assertEquals(
-        "Gruff Scottish accent, as heard in Glasgow. Rough and blunt. Firm pace. Sounding sad."
-            + " Speaking at 150% of normal speed.",
+        DWARF_PROFILE + " Sounding sad. Speaking at 150% of normal speed.",
         GeminiSpeechStyle.compose(DWARF, Emotion.SAD, GeminiSpeechStyle.speedDirection(150)));
   }
 
   @Test
-  public void normalisesTrailingPunctuationAndCapitalisesEachDirection() {
-    CharacterProfile ragged = new CharacterProfile("Imp", "squeaky accent.", "shrill;  ", "fast,");
-    assertEquals("Squeaky accent. Shrill. Fast.", GeminiSpeechStyle.compose(ragged, null, null));
+  public void normalisesTrailingPunctuationToOneFullStop() {
+    CharacterProfile ragged = new CharacterProfile("Imp;", "squeaky accent.", "shrill;  ", "fast,");
+    assertEquals(
+        "Audio profile: Imp, a character in a medieval fantasy world. Accent: squeaky accent."
+            + " Style: shrill. Pace: fast.",
+        GeminiSpeechStyle.compose(ragged, null, null));
   }
 
   @Test
   public void keepsAnExclamationOrQuestionMarkAsTheSentenceEnd() {
-    CharacterProfile loud = new CharacterProfile("Crier", "loud accent!", "curious?", "brisk");
-    assertEquals("Loud accent! Curious? Brisk.", GeminiSpeechStyle.compose(loud, null, null));
+    CharacterProfile loud = new CharacterProfile(null, "loud accent!", "curious?", "brisk");
+    assertEquals(
+        "Accent: loud accent! Style: curious? Pace: brisk.",
+        GeminiSpeechStyle.compose(loud, null, null));
   }
 
   @Test
   public void skipsMissingAndBlankFields() {
-    CharacterProfile sparse = new CharacterProfile("Child", null, "Bright and light", "  ");
-    assertEquals("Bright and light.", GeminiSpeechStyle.compose(sparse, Emotion.NEUTRAL, null));
+    CharacterProfile sparse = new CharacterProfile(null, null, "Bright and light", "  ");
+    assertEquals(
+        "Style: Bright and light.", GeminiSpeechStyle.compose(sparse, Emotion.NEUTRAL, null));
   }
 
   @Test
   public void anEmptyProfileGivesAnEmptyStyle() {
-    CharacterProfile empty = new CharacterProfile("Nobody", null, null, null);
+    CharacterProfile empty = new CharacterProfile(null, null, null, null);
     assertEquals("", GeminiSpeechStyle.compose(empty, null, null));
   }
 
   @Test
-  public void neverCarriesBracketTagsOrTheProfileName() {
-    String style = GeminiSpeechStyle.compose(DWARF, Emotion.HAPPY, null);
-    assertFalse(style.contains("["));
-    assertFalse(style.contains("Dwarf"));
+  public void neverCarriesBracketTags() {
+    assertFalse(GeminiSpeechStyle.compose(DWARF, Emotion.HAPPY, null).contains("["));
   }
 }

@@ -206,7 +206,7 @@ public class AiStudioTtsBackendTest {
   @Test
   public void anEmptyStyleSendsNoSpeechMetadata() throws Exception {
     server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
-    CharacterProfile blank = new CharacterProfile("Blank", null, null, null);
+    CharacterProfile blank = new CharacterProfile(null, null, null, null);
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
     backend(keyedConfig())

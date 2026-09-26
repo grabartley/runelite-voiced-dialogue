@@ -53,10 +53,10 @@ public class CharacterProfileTest {
   }
 
   @Test
-  public void cacheKeyIgnoresTheNameSinceItIsNeverSent() {
+  public void cacheKeyChangesWithTheNameSinceItIsSent() {
     CharacterProfile renamed =
         new CharacterProfile(
             "Mage", "Distinguished elderly British accent", "Warm and knowing", "Measured pace");
-    assertEquals(WIZARD.cacheKey(), renamed.cacheKey());
+    assertNotEquals(WIZARD.cacheKey(), renamed.cacheKey());
   }
 }

@@ -28,7 +28,7 @@ public final class CharacterProfile {
   }
 
   public String cacheKey() {
-    String joined = accent + '\u0001' + style + '\u0001' + pace;
+    String joined = name + '\u0001' + accent + '\u0001' + style + '\u0001' + pace;
     return Integer.toHexString(joined.hashCode());
   }
 }

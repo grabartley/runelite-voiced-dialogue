@@ -30,10 +30,13 @@ direction ("Sounding happy", "Sounding sad", "Sounding angry", "Sounding fearful
 sad, angry, and scared lines are audibly different; Neutral adds no direction.
 
 A per-speaker **character profile** (`CharacterProfile`, resolved by `NpcProfileTable`) carries a
-short accent, style, and pace. Gemini 3.8 speaks its input verbatim and takes sustained delivery
-from a structured `speech_metadata.style` field, so the text sent is the spoken line alone and
-`GeminiSpeechStyle` joins accent, style, pace, and the emotion direction, in that order, into one
-style string. `CloudSpeechExecutor` builds it once per line for both providers; each provider only
+name, a strong accent, and descriptive style and pace. Gemini 3.8 speaks its input verbatim and
+takes sustained delivery from a structured `speech_metadata.style` field, so the text sent is the
+spoken line alone and `GeminiSpeechStyle` renders the profile as labelled fields ("Audio profile:
+<name>, a character in a medieval fantasy world. Accent: ... Style: ... Pace: ..."), followed by
+the emotion direction, as one style string. By ear, the full profile keeps NPCs that share a voice
+distinct and a strong accent phrase naming its pronunciation keeps every accent from falling back
+to a generic default, where short, soft style strings did neither. `CloudSpeechExecutor` builds it once per line for both providers; each provider only
 places it (see below). The profile sets the character and the emotion direction colours the
 moment. Square-bracket tags are not part of the 3.8 prompting model, and a player-typed field has
 its tag brackets stripped by `DirectionSanitizer`.
@@ -268,8 +271,8 @@ Because synthesis is billed per character, several guards keep cost bounded and 
 - **Cache key.** `cacheVariant` folds in the resolved Gemini voice and the character profile,
   plus (only when not at their defaults) the speaking pace and a non-English spoken language, on
   top of the shared `(backendId, voiceKey, emotion, text)` identity. Every speaker resolves to a
-  profile, so every key carries a hash of the profile fields that are sent (accent, style, pace;
-  the `name` label is left out). A voice, pace, profile, or language change therefore never
+  profile, so every key carries a hash of the profile fields that are sent (name, accent, style,
+  pace). A voice, pace, profile, or language change therefore never
   replays the wrong audio, while a plain English line stays on a stable key so changing a setting
   that cannot affect it does not force a needless re-bill. The model is not part of the key: a
   model swap keeps every cached clip, since a line voiced once should not be billed again for a

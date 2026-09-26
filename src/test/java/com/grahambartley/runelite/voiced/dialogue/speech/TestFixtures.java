@@ -11,7 +11,8 @@ public final class TestFixtures {
           "Troll", "South London Brixton accent", "Deep, slow and booming", "Slow and heavy");
 
   public static final String TROLL_STYLE =
-      "South London Brixton accent. Deep, slow and booming. Slow and heavy.";
+      "Audio profile: Troll, a character in a medieval fantasy world."
+          + " Accent: South London Brixton accent. Style: Deep, slow and booming. Pace: Slow and heavy.";
 
   public static final CharacterProfile NARRATOR_PROFILE =
       new CharacterProfile(

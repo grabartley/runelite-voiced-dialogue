@@ -14,8 +14,8 @@ class NpcProfileLayers {
       new CharacterProfile(
           "Gielinor Commoner",
           "Strong working-class English accent, British English pronunciation",
-          "Plain, sincere and natural, with easy warmth",
-          "Steady, conversational pace");
+          "A grounded medieval fantasy townsperson; plain, sincere, and natural.",
+          "Steady and conversational.");
 
   static final NpcProfileLayers EMPTY =
       new NpcProfileLayers(

@@ -77,7 +77,7 @@ VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
 
-MAX_DIRECTION_LENGTH = {"accent": 100, "pace": 60}
+MAX_DIRECTION_LENGTH = {"accent": 100}
 ACCENT_LEAD = "Strong "
 ACCENT_ANCHOR = "pronunciation"
 FORBIDDEN_DIRECTION = re.compile(
