@@ -398,10 +398,8 @@ class VoiceRegionsTest(unittest.TestCase):
         self.assertEqual(regions["IRISH"]["playerKeywords"], ["irish"])
 
     def test_the_narrator_voice_is_held_out_of_every_pool(self):
-        library = {"voices": LIBRARY["voices"] + [
+        library = {"voices": [v for v in LIBRARY["voices"] if v["id"] != "narrator-1"] + [
             {"id": "narrator-1", "accent": "Dublin English", "gender": "female", "age": 20}]}
-        library["voices"] = [v for v in library["voices"]
-                             if not (v["id"] == "narrator-1" and v["accent"] != "Dublin English")]
         regions = gen.build_voice_regions(regions_source(), library)
         self.assertNotIn("narrator-1", regions["IRISH"]["FEMALE"] + regions["IRISH"]["CHILD_FEMALE"])
 

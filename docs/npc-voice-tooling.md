@@ -248,17 +248,19 @@ keyword takes the `child` category layer after the keyword categories and before
    they are. Every league region has an accent: the far lands follow the
    real-world cultures they are based on (Desert -> Middle Eastern,
    Sophanem/Menaphos -> Egyptian, Karamja -> West African, Fremennik -> Norse,
-   Morytania -> Eastern European gothic, Varlamore -> Mediterranean), the central
-   kingdoms use distinct English regional accents (Misthalin, Asgarnia West
-   Country, Kandarin Liverpudlian, Kourend, Wilderness), and Tirannwn is Welsh.
+   Morytania -> Eastern European, Varlamore -> Italian, Wyrmscraig -> rural Irish),
+   the central kingdoms use distinct English regional accents (Misthalin London,
+   Asgarnia West Country, Kandarin Scouse, Kourend Northern, Wilderness Geordie),
+   and Tirannwn is Welsh.
 4. `byCategory[]` - an ordered list; **every** entry whose `keywords` word-match
    the display name contributes. This expresses categories the race buckets cannot
    (leprechaun -> Irish, vampyre -> Dracula-esque, gnome, imp, ghost, pirate,
    royalty, knight, noble, wizard, ...). Matching is case-insensitive and bounded
    on word edges, so `imp` matches "Imp" but not "important". A category may also
    carry `"lifeStage": "child"`: besides layering its style, it marks every matching NPC
-   as a child so the voice resolver picks from the youthful voice sub-pool (the
-   `child` category keys on child/schoolboy/schoolgirl/urchin).
+   as a child so the voice resolver picks from its region's youngest native voices, or
+   the prebuilt child pool when it has no region (the `child` category keys on
+   child/schoolboy/schoolgirl/urchin).
 5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id. Sparse:
    carry only what is unique to the character (usually `name` + `style`); its
    style is added on top of the blend, and accent and pace inherit unless it sets

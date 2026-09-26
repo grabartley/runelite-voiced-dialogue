@@ -23,9 +23,9 @@ the `CharacterProfile`. Every other NPC is voiced from its race pool. Within a p
 taken from the NPC's base composition id spreads same-pool NPCs apart and keeps each on the same
 voice across sessions and across a mid-quest transform.
 Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the bundled
-table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to a dedicated
-youthful sub-pool of its gender instead of its adult race anchor, for every race and ethnicity
-alike. Which voices sit in each pool, and why those ones, is
+table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to its
+region's youngest native voices of its gender, or to the prebuilt child pool when its accent has
+no region, for every race and ethnicity alike. Which voices sit in each pool, and why those ones, is
 [voice-casting.md](voice-casting.md).
 
 Emotion is detected from each speaker's chat-head animation and rides in every request as one of
@@ -36,7 +36,8 @@ sad, angry, and scared lines are audibly different; Neutral adds no direction.
 A per-speaker **character profile** (`CharacterProfile`, resolved by `NpcProfileTable`) carries a
 name, a strong accent, and descriptive style and pace. Gemini 3.8 speaks its input verbatim and
 takes sustained delivery from a structured `speech_metadata.style` field, so the text sent is the
-spoken line alone and `GeminiSpeechStyle` renders the profile as labelled fields ("Audio profile:
+spoken line alone and `GeminiSpeechStyle` renders the profile, led by its optional `pitch`
+direction, as labelled fields ("Audio profile:
 <name>, a character in a medieval fantasy world. Accent: ... Style: ... Pace: ..."), followed by
 the emotion direction, as one style string. By ear, the full profile keeps NPCs that share a voice
 distinct, and a strong accent phrase naming its pronunciation keeps every accent from falling back
