@@ -32,7 +32,9 @@ class NpcProfileLayers {
   static class Layer {
     String name;
     String accent;
+    String accentDetail;
     String style;
+    boolean replaceStyle;
     String pace;
     String pitch;
     String voiceRegion;

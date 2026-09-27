@@ -29,7 +29,7 @@ keys are low-contrast; the foreign ones are jarring if mis-assigned:
 | `asgarnia` | Strong West Country English (also the classic **pirate** "arr" sound) | West Country |
 | `kandarin` | Strong Liverpool Scouse | Scouse |
 | `kourend` | Strong rustic Northern English | Mancunian |
-| `wilderness` | Strong rough Newcastle Geordie (outlaws) | Geordie |
+| `wilderness` | Strong rough, harsh English (outlaws) | Geordie (Newcastle voices) |
 | `tirannwn` | Strong lilting Welsh | none (race voices) |
 | `fremennik` | Strong Norse Scandinavian | Norse (Dutch voices) |
 | `morytania` | Strong Eastern European | Polish |

@@ -66,6 +66,34 @@ public class CharacterProfileTest {
   }
 
   @Test
+  public void cacheKeyChangesWithTheAccentDetailSinceItIsSent() {
+    CharacterProfile detailed =
+        new CharacterProfile(
+            "Wizard",
+            "Distinguished elderly British accent",
+            "Received Pronunciation of an old scholar",
+            "Warm and knowing",
+            "Measured pace",
+            null,
+            null);
+    assertNotEquals(WIZARD.cacheKey(), detailed.cacheKey());
+  }
+
+  @Test
+  public void aProfileWithoutAccentDetailKeepsItsCacheKey() {
+    CharacterProfile plain =
+        new CharacterProfile(
+            "Wizard",
+            "Distinguished elderly British accent",
+            null,
+            "Warm and knowing",
+            "Measured pace",
+            null,
+            null);
+    assertEquals(WIZARD.cacheKey(), plain.cacheKey());
+  }
+
+  @Test
   public void cacheKeyChangesWithTheNameSinceItIsSent() {
     CharacterProfile renamed =
         new CharacterProfile(

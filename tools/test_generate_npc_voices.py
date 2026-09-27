@@ -283,6 +283,23 @@ class ValidateProfilesTest(unittest.TestCase):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles.json")
         gen.validate_profiles(gen.load_json(path))
 
+    def test_accent_detail_needs_an_accent_beside_it(self):
+        profiles = profiles_with(byId={"1": {"accentDetail": "A rough, harsh burr."}})
+        with self.assertRaisesRegex(ValueError, "byId.1.accentDetail"):
+            gen.validate_profiles(profiles)
+
+    def test_accent_detail_is_checked_for_markers(self):
+        profiles = profiles_with(byId={"1": {
+            "accent": "Strong Glasgow Scottish accent, Scottish English pronunciation",
+            "accentDetail": "[gruff] Glaswegian"}})
+        with self.assertRaisesRegex(ValueError, "byId.1.accentDetail"):
+            gen.validate_profiles(profiles)
+
+    def test_replace_style_needs_a_style_beside_it(self):
+        profiles = profiles_with(byEthnicity={"wilderness": {"replaceStyle": True}})
+        with self.assertRaisesRegex(ValueError, "byEthnicity.wilderness.replaceStyle"):
+            gen.validate_profiles(profiles)
+
     def test_square_bracket_tag_is_rejected(self):
         profiles = profiles_with(byId={"1": {"style": "[angry] Gruff"}})
         with self.assertRaisesRegex(ValueError, "byId.1.style"):

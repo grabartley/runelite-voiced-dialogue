@@ -152,6 +152,7 @@ public final class NpcProfileTable {
     CharacterProfile defaultProfile = layers.defaultProfile();
     String name = defaultProfile.name();
     String accent = defaultProfile.accent();
+    String accentDetail = defaultProfile.accentDetail();
     String voiceRegion = defaultProfile.voiceRegion();
     String pace = defaultProfile.pace();
     String pitch = defaultProfile.pitch();
@@ -164,6 +165,7 @@ public final class NpcProfileTable {
       }
       if (layer.accent() != null) {
         accent = layer.accent();
+        accentDetail = layer.accentDetail();
         voiceRegion = layer.voiceRegion();
       }
       if (layer.pace() != null) {
@@ -173,6 +175,9 @@ public final class NpcProfileTable {
         pitch = layer.pitch();
       }
       if (layer.style() != null) {
+        if (layer.replaceStyle()) {
+          styleParts.clear();
+        }
         styleParts.add(asSentence(layer.style()));
       }
       sources.add(entry.source);
@@ -181,7 +186,7 @@ public final class NpcProfileTable {
     String source = sources.isEmpty() ? "default" : String.join("+", sources);
 
     return new Resolution(
-        new CharacterProfile(name, accent, style, pace, pitch, voiceRegion), source);
+        new CharacterProfile(name, accent, accentDetail, style, pace, pitch, voiceRegion), source);
   }
 
   private static String asSentence(String style) {

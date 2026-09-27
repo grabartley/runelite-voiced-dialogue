@@ -120,9 +120,14 @@ public class NpcProfileTableTest {
             .parse(
                 "{\"default\":{\"name\":\"D\",\"accent\":\"Southern\",\"voiceRegion\":\"SOUTHERN\","
                     + "\"style\":\"Plain\",\"pace\":\"Steady\"},"
-                    + "\"byRace\":{\"Dwarf\":{\"accent\":\"Glasgow\",\"voiceRegion\":\"SCOTTISH\"}},"
-                    + "\"byEthnicity\":{\"tirannwn\":{\"accent\":\"Welsh\"}},"
-                    + "\"byId\":{\"9\":{\"style\":\"Gruff\"}}}")
+                    + "\"byRace\":{\"Dwarf\":{\"accent\":\"Glasgow\",\"voiceRegion\":\"SCOTTISH\","
+                    + "\"accentDetail\":\"Gruff Glaswegian.\"},"
+                    + "\"Human\":{\"style\":\"An ordinary citizen.\"}},"
+                    + "\"byEthnicity\":{\"tirannwn\":{\"accent\":\"Welsh\"},"
+                    + "\"wilderness\":{\"accent\":\"Harsh\",\"style\":\"A hardened outlaw.\","
+                    + "\"replaceStyle\":true}},"
+                    + "\"byId\":{\"9\":{\"style\":\"Gruff\"},\"12\":{\"style\":\"A witch.\"},"
+                    + "\"13\":{\"accent\":\"Plain\"}}}")
             .getAsJsonObject();
     return NpcProfileTable.fromProfilesJson(profiles);
   }
@@ -171,6 +176,28 @@ public class NpcProfileTableTest {
     CharacterProfile welsh = resolve(regionTable(), null, "Elf", "Human", "tirannwn").profile();
     assertEquals("Welsh", welsh.accent());
     assertEquals(null, welsh.voiceRegion());
+  }
+
+  @Test
+  public void theAccentDetailComesFromTheLayerThatSetTheWinningAccent() {
+    assertEquals(
+        "Gruff Glaswegian.",
+        resolve(regionTable(), 9, "Dwarf", "Dwarf", null).profile().accentDetail());
+  }
+
+  @Test
+  public void anAccentWithoutDetailClearsTheDetailItOverrides() {
+    assertEquals(null, resolve(regionTable(), 13, "Dwarf", "Dwarf", null).profile().accentDetail());
+  }
+
+  @Test
+  public void aReplacingStyleDropsTheLessSpecificStylesAndKeepsTheMoreSpecificOnes() {
+    CharacterProfile outlaw =
+        resolve(regionTable(), 12, "Krystilia", "Human", "wilderness").profile();
+    assertEquals("A hardened outlaw. A witch.", outlaw.style());
+    assertEquals(
+        "An ordinary citizen.",
+        resolve(regionTable(), null, "Man", "Human", null).profile().style());
   }
 
   @Test

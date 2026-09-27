@@ -295,7 +295,7 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void anEmptyStyleSendsNoProviderOptions() throws Exception {
+  public void aBlankProfileStillSendsTheLanguageDirection() throws Exception {
     enqueuePcm((short) 1);
     CharacterProfile blank = new CharacterProfile(null, null, null, null);
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
@@ -303,9 +303,7 @@ public class OpenRouterTtsBackendTest {
     backend(keyedConfig())
         .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
 
-    JsonObject provider = sentBody().getAsJsonObject("provider");
-    assertEquals("throughput", provider.get("sort").getAsString());
-    assertFalse(provider.has("options"));
+    assertEquals("Speaking English.", sentStyle(sentBody()));
   }
 
   @Test

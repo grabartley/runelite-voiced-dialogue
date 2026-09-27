@@ -291,6 +291,38 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void mainsAccentDetailRidesBesideTheStrongAccent() {
+    assertTrue(
+        resolve(null, "Villager", "Human", "fremennik")
+            .profile()
+            .accentDetail()
+            .contains("a Viking from the old sagas"));
+    assertTrue(
+        resolve(null, "Man", "Human", "misthalin")
+            .profile()
+            .accentDetail()
+            .contains("Gielinor's central kingdom of Misthalin"));
+  }
+
+  @Test
+  public void wildernessFolkTakeTheirOwnStyleInPlaceOfTheOrdinaryCitizen() {
+    CharacterProfile outlaw = resolve(null, "Bandit", "Human", "wilderness").profile();
+    assertFalse(outlaw.style().contains("approachable"));
+    assertTrue(outlaw.style().contains("lawless Wilderness"));
+    assertTrue(
+        resolve(null, "Man", "Human", "misthalin").profile().style().contains("approachable"));
+  }
+
+  @Test
+  public void aQuirkMovedOutOfTheAccentKeepsMainsWording() {
+    assertTrue(
+        resolve(7663, "Krystilia", "Human", "wilderness")
+            .profile()
+            .style()
+            .contains("A witchy, cackling edge."));
+  }
+
+  @Test
   public void smallAndLargeCreaturesCarryTheirPitch() {
     assertTrue(
         resolve(null, "Hudo", "Goblin", null).profile().pitch().startsWith("Very high-pitched"));

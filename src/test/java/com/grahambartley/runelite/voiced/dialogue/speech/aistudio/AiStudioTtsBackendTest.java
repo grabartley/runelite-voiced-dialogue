@@ -204,7 +204,7 @@ public class AiStudioTtsBackendTest {
   }
 
   @Test
-  public void anEmptyStyleSendsNoSpeechMetadata() throws Exception {
+  public void aBlankProfileStillSendsTheLanguageDirection() throws Exception {
     server.enqueue(AiStudioResponses.ok(AiStudioResponses.audio(new short[] {1})));
     CharacterProfile blank = new CharacterProfile(null, null, null, null);
     VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
@@ -212,7 +212,8 @@ public class AiStudioTtsBackendTest {
     backend(keyedConfig())
         .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
 
-    assertFalse(AiStudioRequests.hasSpeechMetadata(AiStudioRequests.body(server.takeRequest())));
+    assertEquals(
+        "Speaking English.", AiStudioRequests.style(AiStudioRequests.body(server.takeRequest())));
   }
 
   @Test

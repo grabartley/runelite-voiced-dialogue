@@ -40,13 +40,19 @@ public final class GeminiTtsModel {
     return voiceMap.voiceFor(voice, profile);
   }
 
-  public String speechStyle(CharacterProfile profile, Emotion emotion) {
-    return GeminiSpeechStyle.compose(profile, emotion, null);
+  public String speechStyle(
+      CharacterProfile profile, VoiceSpec voice, Emotion emotion, String language) {
+    return GeminiSpeechStyle.compose(profile, voice, emotion, language, null);
   }
 
-  public String speechStyle(CharacterProfile profile, Emotion emotion, int speedPercent) {
+  public String speechStyle(
+      CharacterProfile profile,
+      VoiceSpec voice,
+      Emotion emotion,
+      String language,
+      int speedPercent) {
     return GeminiSpeechStyle.compose(
-        profile, emotion, GeminiSpeechStyle.speedDirection(speedPercent));
+        profile, voice, emotion, language, GeminiSpeechStyle.speedDirection(speedPercent));
   }
 
   public JsonObject speechMetadata(String style) {

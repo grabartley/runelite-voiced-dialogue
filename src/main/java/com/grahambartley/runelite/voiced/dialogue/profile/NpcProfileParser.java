@@ -127,7 +127,9 @@ final class NpcProfileParser {
     return new Layer(
         optString(obj, "name"),
         optString(obj, "accent"),
+        optString(obj, "accentDetail"),
         optString(obj, "style"),
+        obj.has("replaceStyle") && obj.get("replaceStyle").getAsBoolean(),
         optString(obj, "pace"),
         optString(obj, "pitch"),
         optString(obj, "voiceRegion"));
@@ -145,6 +147,7 @@ final class NpcProfileParser {
     return new CharacterProfile(
         layer.name(),
         layer.accent(),
+        layer.accentDetail(),
         layer.style(),
         layer.pace(),
         layer.pitch(),

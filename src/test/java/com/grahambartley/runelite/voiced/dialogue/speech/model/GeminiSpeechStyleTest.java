@@ -5,9 +5,18 @@ import static org.junit.Assert.assertFalse;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import org.junit.Test;
 
 public class GeminiSpeechStyleTest {
+
+  private static final String ENGLISH = "English";
+
+  private static final VoiceSpec MAN = VoiceSpec.npc(NpcRace.DWARF, NpcGender.MALE, 1);
+
+  private static final VoiceSpec WOMAN = VoiceSpec.npc(NpcRace.TROLL, NpcGender.FEMALE, 1);
 
   private static final CharacterProfile DWARF =
       new CharacterProfile(
@@ -17,78 +26,146 @@ public class GeminiSpeechStyleTest {
           "Firm and forthright.");
 
   private static final String DWARF_PROFILE =
-      "Audio profile: Keldagrim Dwarf, a character in a medieval fantasy world."
+      "Speaking English. Audio profile: Keldagrim Dwarf, a character in a medieval fantasy world."
           + " Accent: Strong Glasgow Scottish accent, Scottish English pronunciation."
           + " Style: A stout, hard-bitten mountain dwarf. Rough, gravelly, and blunt."
           + " Pace: Firm and forthright.";
 
-  @Test
-  public void rendersTheFullProfileWithLabelledFields() {
-    assertEquals(DWARF_PROFILE, GeminiSpeechStyle.compose(DWARF, Emotion.NEUTRAL, null));
+  private static final String DEEP = "Very deep, booming voice";
+
+  private static CharacterProfile pitched(String pitch) {
+    return new CharacterProfile("Aga", null, null, null, pitch, null);
+  }
+
+  private static String compose(CharacterProfile profile, VoiceSpec voice, Emotion emotion) {
+    return GeminiSpeechStyle.compose(profile, voice, emotion, ENGLISH, null);
   }
 
   @Test
-  public void pitchOpensTheStyleBeforeTheProfile() {
-    CharacterProfile goblin =
+  public void rendersTheFullProfileWithLabelledFields() {
+    assertEquals(DWARF_PROFILE, compose(DWARF, MAN, Emotion.NEUTRAL));
+  }
+
+  @Test
+  public void opensWithTheSpokenLanguage() {
+    assertEquals(
+        "Speaking French. Style: Bright.",
+        GeminiSpeechStyle.compose(
+            new CharacterProfile(null, null, "Bright", null),
+            MAN,
+            Emotion.NEUTRAL,
+            "French",
+            null));
+  }
+
+  @Test
+  public void pitchFollowsTheVoicesGenderSoADeepWomanStaysAWoman() {
+    assertEquals(
+        "Speaking English. A woman's voice. Very deep, booming voice. Audio profile: Aga, a"
+            + " character in a medieval fantasy world.",
+        compose(pitched(DEEP), WOMAN, Emotion.NEUTRAL));
+    assertEquals(
+        "Speaking English. A man's voice. Very deep, booming voice. Audio profile: Aga, a"
+            + " character in a medieval fantasy world.",
+        compose(pitched(DEEP), MAN, Emotion.NEUTRAL));
+  }
+
+  @Test
+  public void aChildsPitchNamesABoyOrAGirl() {
+    VoiceSpec boy = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 1, true);
+    VoiceSpec girl = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, 1, true);
+    assertEquals(
+        "Speaking English. A young boy's voice. High. Audio profile: Aga, a character in a"
+            + " medieval fantasy world.",
+        compose(pitched("High"), boy, Emotion.NEUTRAL));
+    assertEquals(
+        "Speaking English. A young girl's voice. High. Audio profile: Aga, a character in a"
+            + " medieval fantasy world.",
+        compose(pitched("High"), girl, Emotion.NEUTRAL));
+  }
+
+  @Test
+  public void noPitchMeansNoGenderDirection() {
+    assertFalse(compose(DWARF, WOMAN, Emotion.NEUTRAL).contains("woman"));
+  }
+
+  @Test
+  public void anUnknownGenderKeepsThePitchWithoutAGenderDirection() {
+    VoiceSpec unknown = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.UNKNOWN, 1);
+    assertEquals(
+        "Speaking English. High. Audio profile: Aga, a character in a medieval fantasy world.",
+        compose(pitched("High"), unknown, Emotion.NEUTRAL));
+  }
+
+  @Test
+  public void theAccentDetailFollowsTheAccent() {
+    CharacterProfile detailed =
         new CharacterProfile(
-            "Goblin",
-            "Strong East London accent, British English pronunciation",
-            "Crude and mischievous.",
-            "Quick.",
-            "Very high-pitched, squeaky voice",
+            null,
+            "Strong rough, harsh English accent, British English pronunciation",
+            "a rough, harsh British English, the hard edge of the outlaws",
+            null,
+            null,
+            null,
             null);
     assertEquals(
-        "Very high-pitched, squeaky voice. Audio profile: Goblin, a character in a medieval fantasy"
-            + " world. Accent: Strong East London accent, British English pronunciation."
-            + " Style: Crude and mischievous. Pace: Quick.",
-        GeminiSpeechStyle.compose(goblin, Emotion.NEUTRAL, null));
+        "Speaking English. Accent: Strong rough, harsh English accent, British English"
+            + " pronunciation. A rough, harsh British English, the hard edge of the outlaws.",
+        compose(detailed, MAN, Emotion.NEUTRAL));
+  }
+
+  @Test
+  public void anAccentDetailWithoutAnAccentIsNotSent() {
+    CharacterProfile orphan =
+        new CharacterProfile(null, null, "a lilt", "Bright", null, null, null);
+    assertEquals("Speaking English. Style: Bright.", compose(orphan, MAN, Emotion.NEUTRAL));
   }
 
   @Test
   public void appendsTheEmotionDirectionAfterTheProfile() {
-    assertEquals(
-        DWARF_PROFILE + " Sounding angry.", GeminiSpeechStyle.compose(DWARF, Emotion.ANGRY, null));
+    assertEquals(DWARF_PROFILE + " Sounding angry.", compose(DWARF, MAN, Emotion.ANGRY));
   }
 
   @Test
   public void appendsASpeedDirectionLast() {
     assertEquals(
         DWARF_PROFILE + " Sounding sad. Speaking at 150% of normal speed.",
-        GeminiSpeechStyle.compose(DWARF, Emotion.SAD, GeminiSpeechStyle.speedDirection(150)));
+        GeminiSpeechStyle.compose(
+            DWARF, MAN, Emotion.SAD, ENGLISH, GeminiSpeechStyle.speedDirection(150)));
   }
 
   @Test
   public void normalisesTrailingPunctuationToOneFullStop() {
     CharacterProfile ragged = new CharacterProfile("Imp;", "squeaky accent.", "shrill;  ", "fast,");
     assertEquals(
-        "Audio profile: Imp, a character in a medieval fantasy world. Accent: squeaky accent."
-            + " Style: shrill. Pace: fast.",
-        GeminiSpeechStyle.compose(ragged, null, null));
+        "Speaking English. Audio profile: Imp, a character in a medieval fantasy world. Accent:"
+            + " squeaky accent. Style: shrill. Pace: fast.",
+        compose(ragged, MAN, null));
   }
 
   @Test
   public void keepsAnExclamationOrQuestionMarkAsTheSentenceEnd() {
     CharacterProfile loud = new CharacterProfile(null, "loud accent!", "curious?", "brisk");
     assertEquals(
-        "Accent: loud accent! Style: curious? Pace: brisk.",
-        GeminiSpeechStyle.compose(loud, null, null));
+        "Speaking English. Accent: loud accent! Style: curious? Pace: brisk.",
+        compose(loud, MAN, null));
   }
 
   @Test
   public void skipsMissingAndBlankFields() {
     CharacterProfile sparse = new CharacterProfile(null, null, "Bright and light", "  ");
     assertEquals(
-        "Style: Bright and light.", GeminiSpeechStyle.compose(sparse, Emotion.NEUTRAL, null));
+        "Speaking English. Style: Bright and light.", compose(sparse, MAN, Emotion.NEUTRAL));
   }
 
   @Test
-  public void anEmptyProfileGivesAnEmptyStyle() {
+  public void anEmptyProfileStillNamesTheLanguage() {
     CharacterProfile empty = new CharacterProfile(null, null, null, null);
-    assertEquals("", GeminiSpeechStyle.compose(empty, null, null));
+    assertEquals("Speaking English.", compose(empty, null, null));
   }
 
   @Test
   public void neverCarriesBracketTags() {
-    assertFalse(GeminiSpeechStyle.compose(DWARF, Emotion.HAPPY, null).contains("["));
+    assertFalse(compose(DWARF, MAN, Emotion.HAPPY).contains("["));
   }
 }

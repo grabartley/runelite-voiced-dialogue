@@ -182,13 +182,15 @@ plugin (it logs the id and chosen voice/profile per line).
 
 Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
 carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
-delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them, with any `pitch` first, as a
-full character profile in one style string sent in `speech_metadata.style`, with
-the line's chat-head emotion after it:
+delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them as a full
+character profile in one style string sent in `speech_metadata.style`. It opens by naming the
+spoken language from the **Spoken Language** setting, then any `pitch`, and ends with the line's
+chat-head emotion:
 
 ```
-Audio profile: Benny, a character in a medieval fantasy world. Accent: Strong London
-English accent, British English pronunciation. Style: An ordinary citizen of
+Speaking English. Audio profile: Benny, a character in a medieval fantasy world. Accent:
+Strong London English accent, British English pronunciation. Common British English, the
+plain, standard speech of Gielinor's central kingdom of Misthalin. Style: An ordinary citizen of
 Gielinor. Down-to-earth, sincere, and approachable. Eager street vendor, loud and
 pitchy, hawking his newspapers to passers-by. Pace: Steady and conversational.
 Sounding happy.
@@ -206,25 +208,35 @@ different people, where a short style string flattens them together.
   default accent, so every accent leads with "Strong" and names its pronunciation.
   A delivery quirk (slurred, whispered, hissing) is never an accent: it goes in
   `style`, so the character keeps the accent of its race or region.
+- `accentDetail` is optional and sits next to an `accent`. It carries the colour of the accent in
+  prose ("A fantasy Norse accent, a Scandinavian-flavoured English in the manner of a Viking from
+  the old sagas.") and is rendered right after the accent. Like `voiceRegion`, it always comes
+  from the layer that set the winning accent. The strong accent phrase keeps 3.8 on the right
+  accent, and the detail keeps the character medieval rather than modern.
 - `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
   rhythm.
+- `replaceStyle: true` on a layer drops the styles of the less specific layers before its own, so
+  a region can replace the generic human style: the Wilderness trades "Down-to-earth, sincere, and
+  approachable" for its own outlaw style. More specific layers still add to it.
 - `name` is sent as the profile's name, so it is part of the cache key.
 - `pitch` is optional and opens the style string, ahead of the profile name ("Very high-pitched,
   squeaky, thin little voice, far above a normal adult voice"). Native library voices ignore
-  pitch described later in the style, so it leads. The most specific layer that sets it wins.
+  pitch described later in the style, so it leads. The most specific layer that sets it wins. A
+  pitch is always preceded by the speaker's gender ("A woman's voice.", "A young boy's voice."),
+  because by ear a bare "very deep" turns a female troll or dwarf into a man and a bare "very
+  high" turns a boy into a girl.
 - `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
   (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
   comes from the same layer as the winning accent, so an accent with no region (Welsh, Nigerian)
   clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
-- No meta-instructions ("word for word", "do not change voice"), no wording
-  instructions (slang, syntax: the model cannot reword a verbatim transcript), and
-  no square- or angle-bracket tags.
+- No meta-instructions ("word for word", "do not change voice") and no square- or angle-bracket
+  tags.
 
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
 does not start with "Strong" and end with its pronunciation, an `accent` over 100
-characters, a `voiceRegion` that is not in `tools/voice-regions.json`, and a `voiceRegion` on a
-layer with no `accent`.
+characters, a `voiceRegion` that is not in `tools/voice-regions.json`, a `voiceRegion` or `accentDetail` on a
+layer with no `accent`, and a `replaceStyle` with no `style` beside it.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners
@@ -235,9 +247,9 @@ use posh Received Pronunciation.
 
 An NPC can be several things at once (a Fremennik human, a ghost pirate), so
 **every** matching layer contributes. `style` accumulates across all contributing
-layers so the persona blends; `name`, `accent`, `pace`, and `pitch` are single-valued, so
-the most specific layer that sets each one wins, and `voiceRegion` always follows the layer
-that set the winning `accent`. A child marked by the table's `lifeStage` rather than by a child
+layers so the persona blends, unless a layer sets `replaceStyle`; `name`, `accent`, `pace`, and
+`pitch` are single-valued, so the most specific layer that sets each one wins, and `voiceRegion`
+and `accentDetail` always follow the layer that set the winning `accent`. A child marked by the table's `lifeStage` rather than by a child
 keyword takes the `child` category layer after the keyword categories and before `byId`.
 
 1. `default` - the global British fallback. **Must be complete** (all four of
@@ -250,7 +262,7 @@ keyword takes the `child` category layer after the keyword categories and before
    Sophanem/Menaphos -> Egyptian, Karamja -> West African, Fremennik -> Norse,
    Morytania -> Eastern European, Varlamore -> Italian, Wyrmscraig -> rural Irish),
    the central kingdoms use distinct English regional accents (Misthalin London,
-   Asgarnia West Country, Kandarin Scouse, Kourend Northern, Wilderness Geordie),
+   Asgarnia West Country, Kandarin Scouse, Kourend Northern, the Wilderness rough and harsh on Newcastle voices),
    and Tirannwn is Welsh.
 4. `byCategory[]` - an ordered list; **every** entry whose `keywords` word-match
    the display name contributes. This expresses categories the race buckets cannot

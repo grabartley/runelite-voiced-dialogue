@@ -13,6 +13,7 @@ public final class CharacterProfile {
 
   private final String name;
   private final String accent;
+  private final String accentDetail;
   private final String style;
   private final String pace;
   private final String pitch;
@@ -24,8 +25,20 @@ public final class CharacterProfile {
 
   public CharacterProfile(
       String name, String accent, String style, String pace, String pitch, String voiceRegion) {
+    this(name, accent, null, style, pace, pitch, voiceRegion);
+  }
+
+  public CharacterProfile(
+      String name,
+      String accent,
+      String accentDetail,
+      String style,
+      String pace,
+      String pitch,
+      String voiceRegion) {
     this.name = stripTrailingOrNull(name);
     this.accent = stripTrailingOrNull(accent);
+    this.accentDetail = stripTrailingOrNull(accentDetail);
     this.style = stripTrailingOrNull(style);
     this.pace = stripTrailingOrNull(pace);
     this.pitch = stripTrailingOrNull(pitch);
@@ -40,6 +53,9 @@ public final class CharacterProfile {
     String joined = name + '' + accent + '' + style + '' + pace;
     if (pitch != null) {
       joined += '\u0001' + pitch;
+    }
+    if (accentDetail != null) {
+      joined += '\u0002' + accentDetail;
     }
     return Integer.toHexString(joined.hashCode());
   }

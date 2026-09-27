@@ -137,6 +137,17 @@ public class CloudSpeechExecutorTest {
   }
 
   @Test
+  public void theStyleNamesTheSpokenLanguageFromTheSettings() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request());
+
+    assertTrue(spoken.style.startsWith("Speaking French. Audio profile: Troll"));
+  }
+
+  @Test
   public void aProviderWithoutASpeedFieldGetsTheSpeedInTheStyle() {
     speedInStyle = true;
     MutableTestConfig config = new MutableTestConfig();

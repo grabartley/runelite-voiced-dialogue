@@ -549,7 +549,11 @@ def profile_layers(profiles):
 
 
 def validate_directions(where, layer):
-    for field in ("name", "accent", "style", "pace", "pitch"):
+    if "accentDetail" in layer and "accent" not in layer:
+        raise ValueError(f"{where}.accentDetail is only read beside an accent in the same layer")
+    if "replaceStyle" in layer and not (layer["replaceStyle"] is True and "style" in layer):
+        raise ValueError(f"{where}.replaceStyle must be true and sit beside a style")
+    for field in ("name", "accent", "accentDetail", "style", "pace", "pitch"):
         value = layer.get(field)
         if value is None:
             continue

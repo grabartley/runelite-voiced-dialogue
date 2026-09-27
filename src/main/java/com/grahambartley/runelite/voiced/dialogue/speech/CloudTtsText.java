@@ -24,8 +24,16 @@ public final class CloudTtsText {
     return request.player() ? config.cloudPlayerSpeakingStyle() : config.cloudNpcSpeakingStyle();
   }
 
+  static String spokenLanguage(VoicedDialogueConfig config) {
+    return baseLanguage(config.cloudLanguage().label());
+  }
+
+  private static String baseLanguage(String language) {
+    return language == null || language.trim().isEmpty() ? "English" : language.trim();
+  }
+
   static String combineLanguage(String language, VoicedDialogueConfig.SpeakingStyle quirk) {
-    String base = language == null || language.trim().isEmpty() ? "English" : language.trim();
+    String base = baseLanguage(language);
     if (quirk == null || quirk.isNone()) {
       return base;
     }

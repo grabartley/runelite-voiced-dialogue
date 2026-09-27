@@ -51,10 +51,6 @@ final class AiStudioRequests {
         .getAsString();
   }
 
-  static boolean hasSpeechMetadata(JsonObject body) {
-    return textPart(body).has("speech_metadata");
-  }
-
   private static JsonObject textPart(JsonObject body) {
     return body.getAsJsonArray("contents")
         .get(0)

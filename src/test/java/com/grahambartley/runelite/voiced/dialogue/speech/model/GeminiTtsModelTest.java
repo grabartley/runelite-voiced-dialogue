@@ -43,17 +43,18 @@ public class GeminiTtsModelTest {
   @Test
   public void speechStyleCarriesProfileAndEmotion() {
     assertEquals(
-        "Audio profile: Gnome, a character in a medieval fantasy world. Accent: Irish accent."
-            + " Style: Cheerful. Pace: Quick pace. Sounding happy.",
-        model.speechStyle(GNOME, Emotion.HAPPY));
+        "Speaking English. Audio profile: Gnome, a character in a medieval fantasy world."
+            + " Accent: Irish accent. Style: Cheerful. Pace: Quick pace. Sounding happy.",
+        model.speechStyle(GNOME, null, Emotion.HAPPY, "English"));
   }
 
   @Test
   public void speechStyleWithSpeedAddsASpeedDirection() {
     assertEquals(
-        "Audio profile: Gnome, a character in a medieval fantasy world. Accent: Irish accent."
-            + " Style: Cheerful. Pace: Quick pace. Speaking at 80% of normal speed.",
-        model.speechStyle(GNOME, Emotion.NEUTRAL, 80));
+        "Speaking English. Audio profile: Gnome, a character in a medieval fantasy world."
+            + " Accent: Irish accent. Style: Cheerful. Pace: Quick pace. Speaking at 80% of normal"
+            + " speed.",
+        model.speechStyle(GNOME, null, Emotion.NEUTRAL, "English", 80));
   }
 
   @Test
