@@ -428,6 +428,23 @@ class VoiceRegionsTest(unittest.TestCase):
         self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-5"])
         self.assertEqual(regions["IRISH"]["FEMALE"], ["ie-f"])
 
+    def test_a_narrowed_gender_takes_its_child_voices_from_the_whole_accent(self):
+        regions = gen.build_voice_regions(
+            regions_source(onlyVoices={"male": ["ie-2", "ie-5"]}), LIBRARY)
+        self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-1", "ie-3", "ie-4"])
+
+    def test_a_voice_picked_as_an_adult_voices_no_child_in_any_region(self):
+        library = {"voices": LIBRARY["voices"] + [
+            {"id": "ie-6", "accent": "Dublin English", "gender": "male", "age": 40}]}
+        source = regions_source()
+        source["regions"]["DEEP_IRISH"] = {"libraryAccent": "Dublin English", "playerKeywords": [],
+                                           "exclude": [], "onlyVoices": {"male": ["ie-1", "ie-2"]}}
+        regions = gen.build_voice_regions(source, library)
+        self.assertEqual(regions["DEEP_IRISH"]["MALE"], ["ie-1", "ie-2"])
+        self.assertEqual(regions["DEEP_IRISH"]["CHILD_MALE"], ["ie-3", "ie-4"])
+        self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-3", "ie-4"])
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-5", "ie-6"])
+
     def test_only_voices_rejects_a_voice_outside_the_region(self):
         with self.assertRaisesRegex(ValueError, "onlyVoices"):
             gen.build_voice_regions(regions_source(onlyVoices={"male": ["gb-1"]}), LIBRARY)

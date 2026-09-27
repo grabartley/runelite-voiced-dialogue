@@ -734,8 +734,8 @@
     "en-gb-assistant-2"
    ],
    "CHILD_MALE": [
-    "en-gb-advisor-8",
-    "en-gb-assistant-2"
+    "en-gb-podcaster-4",
+    "en-gb-training-3"
    ],
    "FEMALE": [
     "en-gb-advisor-1",
@@ -799,7 +799,6 @@
     "en-gb-tutor-9"
    ],
    "CHILD_MALE": [
-    "en-gb-assistant-2",
     "en-gb-podcaster-4",
     "en-gb-training-3"
    ],

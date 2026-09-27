@@ -124,6 +124,17 @@ public class GeminiVoiceRegionsTest {
   }
 
   @Test
+  public void noChildSharesAVoiceWithTheTrolls() {
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    for (String region : new String[] {"DEEP_SOUTHERN_ENGLISH", "SOUTHERN_ENGLISH"}) {
+      for (int seed = 0; seed < 200; seed++) {
+        String child = bundled.childVoiceFor(region, NpcGender.MALE, seed);
+        assertFalse(region, child.equals("en-gb-advisor-8") || child.equals("en-gb-assistant-2"));
+      }
+    }
+  }
+
+  @Test
   public void anEmptyTableVoicesNothing() {
     GeminiVoiceRegions empty = new GeminiVoiceRegions(new JsonObject());
     assertNull(empty.voiceFor("IRISH", NpcGender.MALE, 1));

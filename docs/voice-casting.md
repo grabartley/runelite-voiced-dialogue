@@ -67,7 +67,10 @@ the pitch of every pooled voice, with and without that direction, found seven th
 the wrong gender with it (a Varlamore queen came out as a man), and each region's `exclude` list
 drops them. Trolls take `DEEP_SOUTHERN_ENGLISH`, the two southern English men who measure and sound
 deepest, since the full southern English pool is mostly light voices and a pitch direction only
-pulls a light voice down so far.
+pulls a light voice down so far. The region names them with `onlyVoices`. A voice named there was
+picked by ear as an adult, so it voices no child in any region, and a narrowed region's children
+take the youngest voices of the whole accent: a troll child sounds like a southern English boy,
+never like the trolls' deep men.
 
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the

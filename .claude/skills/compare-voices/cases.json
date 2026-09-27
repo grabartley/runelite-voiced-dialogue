@@ -394,6 +394,17 @@
       "source": "Transcript:Ali the Leaflet Dropper"
     },
     {
+      "key": "child_troll",
+      "group": "Children",
+      "kind": "npc",
+      "id": 2136,
+      "name": "Rory",
+      "gender": "Male",
+      "line": "I'm hungry!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Rory"
+    },
+    {
       "key": "player_male",
       "group": "Player and narrator",
       "kind": "player",

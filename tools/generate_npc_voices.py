@@ -462,6 +462,10 @@ def build_voice_regions(regions_source, library):
         raise ValueError(f"narratorVoice '{narrator}' is not in the voice library")
     regions = {}
     seen_keywords = {}
+    # A voice named in any onlyVoices was picked by ear as an adult (the trolls' deep men), so it
+    # never voices a child in any region.
+    adult_only = {voice_id for region in regions_source["regions"].values()
+                  for ids in (region.get("onlyVoices") or {}).values() for voice_id in ids}
     for key, region in regions_source["regions"].items():
         unknown = set(region.get("exclude") or []) - library_ids
         if unknown:
@@ -476,14 +480,18 @@ def build_voice_regions(regions_source, library):
         if unknown_genders:
             raise ValueError(f"voice region {key} onlyVoices names unknown genders "
                              f"{sorted(unknown_genders)}")
+        accent_pools = {gender: [] for gender in VOICE_GENDERS.values()}
         pools = {gender: [] for gender in VOICE_GENDERS.values()}
         for voice in library["voices"]:
             gender = VOICE_GENDERS.get(voice.get("gender"))
+            if (not gender or voice.get("accent") != region["libraryAccent"]
+                    or voice["id"] in excluded):
+                continue
+            accent_pools[gender].append(voice)
             allowed = only.get(voice.get("gender"))
-            if (gender and voice.get("accent") == region["libraryAccent"]
-                    and voice["id"] not in excluded
-                    and (allowed is None or voice["id"] in allowed)):
+            if allowed is None or voice["id"] in allowed:
                 pools[gender].append(voice)
+        narrowed = {VOICE_GENDERS[library_gender] for library_gender in only}
         for library_gender, ids in only.items():
             picked = {v["id"] for v in pools[VOICE_GENDERS[library_gender]]}
             missing = set(ids) - picked
@@ -495,13 +503,16 @@ def build_voice_regions(regions_source, library):
                 raise ValueError(f"voice region {key} has no {gender.lower()} library voices")
         entry = {"playerKeywords": [k.lower() for k in region.get("playerKeywords") or []]}
         for gender, voices in pools.items():
-            aged = sorted((v for v in voices if "age" in v), key=lambda v: (v["age"], v["id"]))
-            children = {v["id"] for v in aged[:CHILD_POOL_SIZE]}
+            # Children come from the whole accent, so a narrowed gender (two deep troll men) still
+            # gives its children young voices.
+            aged = sorted((v for v in accent_pools[gender] if "age" in v),
+                          key=lambda v: (v["age"], v["id"]))
+            youngest = {v["id"] for v in aged[:CHILD_POOL_SIZE]}
             adults = {v["id"] for v in voices}
-            if len(adults) - len(children) >= MIN_ADULT_VOICES:
-                adults -= children
+            if gender not in narrowed and len(adults) - len(youngest) >= MIN_ADULT_VOICES:
+                adults -= youngest
             entry[gender] = sorted(adults)
-            entry[CHILD_POOL_PREFIX + gender] = sorted(children)
+            entry[CHILD_POOL_PREFIX + gender] = sorted(youngest - adult_only)
         regions[key] = entry
     return regions
 

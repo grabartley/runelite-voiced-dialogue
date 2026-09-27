@@ -14260,7 +14260,8 @@
       "5302": {
         "name": "Eoin",
         "style": "Excitable elven child mid-game of tag; bubbly, breathless and playful, darting through words with youthful energy.",
-        "pace": "quick"
+        "pace": "quick",
+        "pitch": "Bright boyish voice, clearly a young lad, never squeaky"
       },
       "5303": {
         "name": "Iona",
@@ -14540,12 +14541,14 @@
       "8930": {
         "name": "Eoin",
         "style": "Excitable elven child mid-game of tag; bubbly, breathless and playful, darting through words with youthful energy.",
-        "pace": "quick"
+        "pace": "quick",
+        "pitch": "Bright boyish voice, clearly a young lad, never squeaky"
       },
       "8931": {
         "name": "Eoin",
         "style": "Excitable elven child mid-game of tag; bubbly, breathless and playful, darting through words with youthful energy.",
-        "pace": "quick"
+        "pace": "quick",
+        "pitch": "Bright boyish voice, clearly a young lad, never squeaky"
       },
       "8940": {
         "name": "Klank",

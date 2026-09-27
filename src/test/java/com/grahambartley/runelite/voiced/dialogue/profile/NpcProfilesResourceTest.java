@@ -303,6 +303,16 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void eoinKeepsABoyishPitchOverTheChildDefault() {
+    for (int id : new int[] {5302, 8930, 8931}) {
+      NpcProfileTable.Resolution eoin =
+          table.resolveNpc(id, table.matchName("Eoin"), "Elf", "tirannwn", true);
+      assertEquals(
+          "Bright boyish voice, clearly a young lad, never squeaky", eoin.profile().pitch());
+    }
+  }
+
+  @Test
   public void everyTrollTakesTheDeepTrollPoolWhereverItIsFrom() {
     assertEquals(
         "DEEP_SOUTHERN_ENGLISH", resolve(4130, "Dad", "Troll", null).profile().voiceRegion());
