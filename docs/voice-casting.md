@@ -199,7 +199,7 @@ least three voices, those child voices leave the adult pool, so no adult shares 
 child. The smaller regions (Liverpool, Bristol women, Manchester and Newcastle men) keep one shared
 pool, because an adult pool of one or two voices would repeat far more than a shared one. Every
 child, whether marked by a child keyword in its name or by the `child` life-stage marker in the bundled table, takes the `child` profile layer, whose
-`pitch` ("Very high-pitched, light voice, far above an adult voice") follows "A
+`pitch` ("Very high-pitched, light young child's voice, far above an adult voice") follows "A
 young boy's voice" or "A young girl's voice" and outranks the race's pitch, so a troll child sounds young rather than large.
 
 A child whose accent has no native voices keeps the prebuilt child pool. Its male pool holds one

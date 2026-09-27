@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import java.util.Locale;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Answers;
@@ -276,7 +275,7 @@ public class NpcProfilesResourceTest {
         "a gnome child keeps the Irish gnome accent", gnome.profile().accent().contains("Irish"));
     assertTrue(
         "the child delivery layers into the style",
-        gnome.profile().style().contains("A young child"));
+        gnome.profile().style().contains("young child's voice"));
 
     NpcProfileTable.Resolution troll = resolve(696, "Troll child", "Troll", null);
     assertTrue(
@@ -326,46 +325,12 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
-  public void aHumanTakesTheGenericStyleOnlyWhenNothingMoreSpecificDescribesThem() {
-    assertTrue(
-        resolve(null, "Man", "Human", "misthalin")
-            .profile()
-            .style()
-            .startsWith("A grounded medieval fantasy townsperson"));
+  public void wildernessFolkTakeTheirOwnStyleInPlaceOfTheOrdinaryCitizen() {
     CharacterProfile outlaw = resolve(null, "Bandit", "Human", "wilderness").profile();
-    assertTrue(outlaw.style().startsWith("A hardened denizen of the lawless Wilderness"));
-    assertFalse(outlaw.style().contains("townsperson"));
-    assertFalse(
-        resolve(1867, "Sir Amik Varze", "Human", "asgarnia")
-            .profile()
-            .style()
-            .contains("ordinary citizen"));
-  }
-
-  @Test
-  public void aCreatureCategoryReplacesTheRaceStyle() {
-    CharacterProfile fairy = resolve(1841, "Fairy Nuff", "Elf", null).profile();
-    assertTrue(fairy.style().startsWith("A small, sparkling fairy"));
-    assertFalse(fairy.style().contains("otherworldly elf"));
-  }
-
-  @Test
-  public void theFairyGodfatherIsACrimeBossRatherThanASparklingFairy() {
-    for (int id : new int[] {1840, 5837}) {
-      CharacterProfile godfather = resolve(id, "Fairy Godfather", "Elf", null).profile();
-      assertTrue(godfather.style().startsWith("A soft-spoken crime boss"));
-      assertFalse(godfather.style().contains("sparkling"));
-      assertTrue(godfather.pace().startsWith("Slow"));
-      assertEquals("ITALIAN", godfather.voiceRegion());
-    }
-  }
-
-  @Test
-  public void aTrollsDepthIsSaidOnceInItsPitch() {
-    CharacterProfile troll = resolve(4130, "Dad", "Troll", null).profile();
-    assertTrue(troll.pitch().startsWith("Very deep"));
-    assertFalse(troll.style().toLowerCase(Locale.ROOT).contains("deep"));
-    assertNull(troll.accentDetail());
+    assertFalse(outlaw.style().contains("approachable"));
+    assertTrue(outlaw.style().contains("lawless Wilderness"));
+    assertTrue(
+        resolve(null, "Man", "Human", "misthalin").profile().style().contains("approachable"));
   }
 
   @Test

@@ -194,10 +194,11 @@ Studio, a speed direction when **Speaking Pace** is not 100). The language is th
 Language** setting when the line is translated, and English when it is not:
 
 ```
-Speaking English. A man's voice. Audio profile: Benny, a character in a medieval fantasy world.
-Accent: Strong London English accent, British English pronunciation. Common British English, the
-plain, standard speech of Gielinor's central kingdom of Misthalin. Style: Eager street vendor,
-loud and pitchy, hawking his newspapers to passers-by. Pace: Steady and conversational.
+Speaking English. Audio profile: Benny, a character in a medieval fantasy world. Accent:
+Strong London English accent, British English pronunciation. Common British English, the
+plain, standard speech of Gielinor's central kingdom of Misthalin. Style: An ordinary citizen of
+Gielinor. Down-to-earth, sincere, and approachable. Eager street vendor, loud and
+pitchy, hawking his newspapers to passers-by. Pace: Steady and conversational.
 Sounding happy.
 ```
 
@@ -221,11 +222,9 @@ different people, where a short style string flattens them together.
   accent, and the detail keeps the character medieval rather than modern.
 - `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
   rhythm.
-- `replaceStyle: true` on a layer drops the styles of the less specific layers before its own.
-  A creature category sets it, because it says what the speaker is: a fairy is not "an ancient,
-  otherworldly elf". A `byId` entry sets it when the character contradicts the layers below it, as
-  the Fairy Godfather's crime boss does the fairy's sweet, breezy flitting. More specific layers
-  still add to it.
+- `replaceStyle: true` on a layer drops the styles of the less specific layers before its own, so
+  a region can replace the generic human style: the Wilderness trades "Down-to-earth, sincere, and
+  approachable" for its own outlaw style. More specific layers still add to it.
 - `name` is sent as the profile's name, so it is part of the cache key.
 - `pitch` is optional and leads the profile, right after the spoken language and the speaker's
   gender, ahead of the profile name ("Very high-pitched,
@@ -240,48 +239,6 @@ different people, where a short style string flattens them together.
   clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
 - No meta-instructions ("word for word", "do not change voice") and no square- or angle-bracket
   tags.
-
-### Say each thing once
-
-Every direction in the style is one the model acts on, so each fact about a speaker has exactly one
-home:
-
-| Fact | Home |
-|---|---|
-| gender | the gender direction, added from the voice spec; never written in a profile |
-| how high or deep the voice is | `pitch` |
-| the accent | `accent` |
-| the colour of the accent | `accentDetail`, only when it says something the accent does not |
-| who the speaker is | `style` |
-| rhythm and speed | `pace` |
-
-Three rules follow from the layers stacking:
-
-- **Generic filler is a fallback, never a layer.** The `default` style ("A grounded medieval
-  fantasy townsperson") is used only when no layer describes the speaker. The Human race carries
-  no style, so a knight, a guildmaster or a merchant is never also "an ordinary citizen".
-- **A layer that says what the speaker is replaces; a layer that says what they do adds.**
-  Creature categories (fairy, imp, ghost, ogre, dragon, TzHaar, vampyre, leprechaun) set
-  `replaceStyle`. Role categories (knight, noble, royalty, wizard, devotee, pirate, barbarian,
-  Fremennik) add to the race.
-- **A style never repeats its pitch, and a detail never repeats its accent.** Depth lives in the
-  troll's `pitch`, not again in its style, and "Irish" is not an accent detail for "Strong Irish
-  accent".
-
-Why: Gemini 3.8 follows every direction it is given. A repeated direction adds nothing, generic
-filler pulls distinct characters back toward the same plain person, and two layers that disagree
-("unhurried menace" beside "quick and fluttering") leave the model to pick one line by line.
-
-The workflow for any profile change:
-
-1. Edit `tools/profiles.json` and regenerate the bundled resource.
-2. Read the composed style of every NPC the change reaches, end to end. The `compare-voices` skill
-   records it in each case's `trace` in `results.json`, and **Debug Logging** logs it in the
-   client (`[TTS voice] cloud voice ... -> style '...'`). Look for a fact said twice, filler beside a
-   specific description, and layers that contradict each other.
-3. Render the `compare-voices` sheet against `main` and judge it by ear. The voice an NPC gets
-   never reads the style, so a wording change moves delivery only, and only the ear can judge
-   delivery.
 
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
@@ -298,8 +255,7 @@ use posh Received Pronunciation.
 
 An NPC can be several things at once (a Fremennik human, a ghost pirate), so
 **every** matching layer contributes. `style` accumulates across all contributing
-layers so the persona blends, unless a layer sets `replaceStyle` (see
-[Say each thing once](#say-each-thing-once)); `name`, `accent`, `pace`, and
+layers so the persona blends, unless a layer sets `replaceStyle`; `name`, `accent`, `pace`, and
 `pitch` are single-valued, so the most specific layer that sets each one wins, and `voiceRegion`
 and `accentDetail` always follow the layer that set the winning `accent`. A child marked by the table's `lifeStage` rather than by a child
 keyword takes the `child` category layer after the keyword categories and before `byId`.
