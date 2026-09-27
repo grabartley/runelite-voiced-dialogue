@@ -1,0 +1,420 @@
+{
+  "description": "Representative speakers for the compare-voices skill: one male and one female per voice outcome, each with a real in-game line from the OSRS wiki transcript named in source.",
+  "cases": [
+    {
+      "key": "southern_english_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 3105,
+      "name": "Hans",
+      "gender": "Male",
+      "line": "You are in Lumbridge Castle, in the Kingdom of Misthalin. Across the river, the road leads north to Varrock, and to the west lies Draynor Village.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Hans"
+    },
+    {
+      "key": "southern_english_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 120,
+      "name": "Aggie",
+      "gender": "Female",
+      "line": "I pick mine from the woods south of Varrock. The food shop in Port Sarim sometimes has some as well.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Aggie"
+    },
+    {
+      "key": "west_country_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 1791,
+      "name": "Wydin",
+      "gender": "Male",
+      "line": "We have this really exotic fruit all the way from Karamja. It's called a banana.",
+      "emotion": "HAPPY",
+      "source": "Transcript:Wydin"
+    },
+    {
+      "key": "west_country_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 4619,
+      "name": "Hetty",
+      "gender": "Female",
+      "line": "You need an eye of newt, a rat's tail, an onion... Oh and a piece of burnt meat.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Witch's Potion"
+    },
+    {
+      "key": "scouse_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 4256,
+      "name": "Edmond",
+      "gender": "Male",
+      "line": "If you're going into West Ardougne you'll need protection from the plague. My wife made a special gas mask for Elena with dwellberries rubbed into it.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Plague City"
+    },
+    {
+      "key": "scouse_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 4257,
+      "name": "Elena",
+      "gender": "Female",
+      "line": "Go and see my father, I'll make sure he adequately rewards you. Now I'd better leave while I still can.",
+      "emotion": "SCARED",
+      "source": "Transcript:Plague City"
+    },
+    {
+      "key": "mancunian_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 7236,
+      "name": "Guildmaster Lars",
+      "gender": "Male",
+      "line": "My name is Lars, and I am the founder of the woodcutting guild. I originally grew up in a Shayzien camp, and was raised on the battlefield.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Guildmaster Lars"
+    },
+    {
+      "key": "mancunian_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 6895,
+      "name": "Captain Ginea",
+      "gender": "Female",
+      "line": "Gangs. It's the gangs from the slums in the east. Those ruffians are always hatching schemes, whether it's smuggling or extortion or even plain street violence.",
+      "emotion": "ANGRY",
+      "source": "Transcript:Captain Ginea"
+    },
+    {
+      "key": "geordie_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 6599,
+      "name": "Mandrith",
+      "gender": "Male",
+      "line": "I collect valuable resources and pawn off access to them to foolish adventurers, like yourself.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Mandrith"
+    },
+    {
+      "key": "geordie_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 7663,
+      "name": "Krystilia",
+      "gender": "Female",
+      "line": "Before I assign you anything, I want to make something clear. My tasks have to be done in the Wilderness. Only kills inside the Wilderness will count.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Krystilia"
+    },
+    {
+      "key": "italian_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 12884,
+      "name": "Regulus Cento",
+      "gender": "Male",
+      "line": "Nilsal, adventurer. The name is Regulus Cento, one of the quetzal keepers for the Royal Family of Varlamore.",
+      "emotion": "HAPPY",
+      "source": "Transcript:Regulus Cento"
+    },
+    {
+      "key": "italian_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 13120,
+      "name": "Guildmaster Apatura",
+      "gender": "Female",
+      "line": "Well, I'm Apatura. Let me welcome you to our small corner of Varlamore.",
+      "emotion": "HAPPY",
+      "source": "Transcript:Guildmaster Apatura"
+    },
+    {
+      "key": "egyptian_arabic_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 3533,
+      "name": "Ali Morrisane",
+      "gender": "Male",
+      "line": "Those boxes from your friend Aubury have a very odd locking mechanism.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Ali Morrisane"
+    },
+    {
+      "key": "egyptian_arabic_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 4274,
+      "name": "Leela",
+      "gender": "Female",
+      "line": "My suggestion is that you pretend to be interested in joining her bandits. From there, you should be able to steer the conversation towards the key.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Prince Ali Rescue"
+    },
+    {
+      "key": "polish_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 1269,
+      "name": "Dr Fenkenstrain",
+      "gender": "Male",
+      "line": "I'm sorry, but I don't think you have the aptitude for this position.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Creature of Fenkenstrain"
+    },
+    {
+      "key": "polish_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 504,
+      "name": "Alice",
+      "gender": "Female",
+      "line": "The curse of undeath was so cruel; all the men out here succumbed, but Lyra and I were left alive.",
+      "emotion": "SAD",
+      "source": "Transcript:Animal Magnetism"
+    },
+    {
+      "key": "japanese_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 2462,
+      "name": "Shanomi",
+      "gender": "Male",
+      "line": "A skilled warrior also am I. Harrallak mistakes does not make. Potential in my invention he sees and opportunity grasps.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Shanomi"
+    },
+    {
+      "key": "japanese_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "missing": "no Human Female with ethnicity easternlands in npc-voices.json (only males Shanomi and Ak-Haranu)"
+    },
+    {
+      "key": "irish_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 11430,
+      "name": "Brimstail",
+      "gender": "Male",
+      "line": "It's always a pleasure to catch up with an another mage! Especially one who has helped me so much!",
+      "emotion": "HAPPY",
+      "source": "Transcript:Brimstail"
+    },
+    {
+      "key": "irish_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 1431,
+      "name": "Femi",
+      "gender": "Female",
+      "line": "Could you help me lift these boxes? They are really heavy!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Femi"
+    },
+    {
+      "key": "scottish_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 1400,
+      "name": "Nulodion",
+      "gender": "Male",
+      "line": "Hmmmmmm... I shouldn't really, but as you helped us so much, well, I could sort something out. I'll warn you though, they don't come cheap!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Nulodion"
+    },
+    {
+      "key": "scottish_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 2366,
+      "name": "Agmundi",
+      "gender": "Female",
+      "line": "If she only worked a little harder, like me, she wouldn't have to live in the sewers of the city. Shame really.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Agmundi"
+    },
+    {
+      "key": "australian_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 6001,
+      "name": "Orlando Smith",
+      "gender": "Male",
+      "line": "But to be deadset with you, I wasn't paying much attention to me boss over there and I've done a bit of a rush job.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Orlando Smith"
+    },
+    {
+      "key": "australian_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "missing": "byId 6001 (Orlando Smith) is the only Australian NPC and is male"
+    },
+    {
+      "key": "new_zealand_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "id": 1325,
+      "name": "Hari",
+      "gender": "Male",
+      "line": "I had to find a very special type of canoe to get me up the river though, would you like to know more?",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Hari"
+    },
+    {
+      "key": "new_zealand_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "missing": "byId 1325 (Hari) is the only New Zealand NPC and is male"
+    },
+    {
+      "key": "fremennik_male",
+      "group": "No voice region (race pool)",
+      "kind": "npc",
+      "id": 3894,
+      "name": "Sigmund The Merchant",
+      "gender": "Male",
+      "line": "Hello outerlander. By the laws of our tribe, I am afraid I may not speak to you without the express permission of the chieftain.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Sigmund The Merchant"
+    },
+    {
+      "key": "fremennik_female",
+      "group": "No voice region (race pool)",
+      "kind": "npc",
+      "id": 3933,
+      "name": "Yrsa",
+      "gender": "Female",
+      "line": "I'm sorry outerlander, I cannot sell you any clothes. Our customs forbid it.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Yrsa"
+    },
+    {
+      "key": "monkey_male",
+      "group": "No voice region (race pool)",
+      "kind": "npc",
+      "id": 6812,
+      "name": "Awowogei",
+      "gender": "Male",
+      "line": "I've instructed my people to allow you full access to our Island, but beware I do not command the undead beneath us.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Awowogei"
+    },
+    {
+      "key": "monkey_female",
+      "group": "No voice region (race pool)",
+      "kind": "npc",
+      "id": 5253,
+      "name": "Hamab",
+      "gender": "Female",
+      "line": "Would you like to buy or sell some crafting equipment?",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Hamab"
+    },
+    {
+      "key": "goblin_male",
+      "group": "Pitch: goblins high, trolls low",
+      "kind": "npc",
+      "id": 669,
+      "name": "General Bentnoze",
+      "gender": "Male",
+      "line": "We decide to celebrate goblin new century by changing colour of our armour. Brown get boring after a bit. We want change.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Goblin Diplomacy"
+    },
+    {
+      "key": "goblin_female",
+      "group": "Pitch: goblins high, trolls low",
+      "kind": "npc",
+      "id": 2318,
+      "name": "Zanik",
+      "gender": "Female",
+      "line": "A giant frog found its way into the mines, but I helped the guards to drive it off!",
+      "emotion": "HAPPY",
+      "source": "Transcript:Zanik"
+    },
+    {
+      "key": "troll_male",
+      "group": "Pitch: goblins high, trolls low",
+      "kind": "npc",
+      "id": 4130,
+      "name": "Dad",
+      "gender": "Male",
+      "line": "What tiny human do in troll arena? Dad challenge human to fight!",
+      "emotion": "ANGRY",
+      "source": "Transcript:Troll Stronghold"
+    },
+    {
+      "key": "troll_female",
+      "group": "Pitch: goblins high, trolls low",
+      "kind": "npc",
+      "id": 641,
+      "name": "Aga",
+      "gender": "Female",
+      "line": "I not know if he love Aga, He say he will show he love by bringing me flower Trollweiss.",
+      "emotion": "SAD",
+      "source": "Transcript:Troll Romance"
+    },
+    {
+      "key": "child_misthalin_boy",
+      "group": "Children",
+      "kind": "npc",
+      "id": 1919,
+      "name": "Schoolboy",
+      "gender": "Male",
+      "line": "I wanna be an archaeologist when I grow up!",
+      "emotion": "HAPPY",
+      "source": "Transcript:Schoolboy"
+    },
+    {
+      "key": "child_misthalin_girl",
+      "group": "Children",
+      "kind": "npc",
+      "id": 1914,
+      "name": "Schoolgirl",
+      "gender": "Female",
+      "line": "Teacher! Can we go to the Natural History exhibit now?",
+      "emotion": "HAPPY",
+      "source": "Transcript:Schoolgirl"
+    },
+    {
+      "key": "child_other",
+      "group": "Children",
+      "kind": "npc",
+      "id": 5956,
+      "name": "Ali the Leaflet Dropper",
+      "gender": "Male",
+      "line": "I don't have time to talk right now! Ali Morrisane is paying me to hand out these flyers.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Ali the Leaflet Dropper"
+    },
+    {
+      "key": "player_male",
+      "group": "Player and narrator",
+      "kind": "player",
+      "gender": "MALE",
+      "line": "So do I get to go to the Duke's Party?",
+      "source": "Transcript:Cook's Assistant"
+    },
+    {
+      "key": "player_female",
+      "group": "Player and narrator",
+      "kind": "player",
+      "gender": "FEMALE",
+      "line": "Well, maybe one day I'll be important enough to sit on the Duke's table.",
+      "source": "Transcript:Cook's Assistant"
+    },
+    {
+      "key": "narrator",
+      "group": "Player and narrator",
+      "kind": "narrator",
+      "line": "Traiborn digs around in the pockets of his robes. After a few moments he triumphantly presents you with a spinach roll.",
+      "source": "Transcript:Demon Slayer"
+    }
+  ]
+}

@@ -222,3 +222,12 @@ share a cached frame, and duplicating the seed in both places would only widen t
 
 Cache keys are live user state. Players hold thousands of cached clips on disk, and a key change
 silently re-bills every one of them, so the fragment above is fixed rather than tidy.
+
+## Checking a change by ear
+
+Casting is judged by ear, so a change that affects voices as a whole also gets a listening pass
+before it ships: the TTS model, the pools or regions, the style layout, profile layers, pitch,
+pacing, emotion, or provider payloads. The `compare-voices` skill in `.claude/skills` renders a
+male and a female speaker for every voice outcome through a baseline ref and the current branch,
+using the plugin's own resolution and backends, and builds a side-by-side sheet for a go / no-go
+call on each. It sits on top of the unit tests, not in place of them.

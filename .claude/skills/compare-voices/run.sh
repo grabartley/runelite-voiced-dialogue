@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Renders every case in cases.json through a baseline ref and through the current
+# working tree, then builds a side-by-side QA sheet. Usage:
+#   run.sh <baseline-ref> <out-dir> [openrouter|aistudio]
+# Keys come from $VOICE_QA_KEY_FILE, else the first RuneLite profile holding an OpenRouter key.
+set -euo pipefail
+
+BASE_REF=${1:?baseline ref, e.g. origin/main}
+OUT=$(mkdir -p "${2:?output directory}" && cd "$2" && pwd)
+PROVIDER=${3:-openrouter}
+SKILL=$(cd "$(dirname "$0")" && pwd)
+REPO=$(git -C "$SKILL" rev-parse --show-toplevel)
+HARNESS=src/test/java/com/grahambartley/runelite/voiced/dialogue/ClipHarnessTest.java
+BASELINE="$OUT/baseline"
+
+KEY_FILE=${VOICE_QA_KEY_FILE:-}
+if [ -z "$KEY_FILE" ]; then
+  KEY_FILE=$(grep -l "^voicedDialogue.openRouterApiKey=" "$HOME"/.runelite/profiles2/*.properties | head -1 || true)
+fi
+[ -f "$KEY_FILE" ] || { echo "No key file found; set VOICE_QA_KEY_FILE" >&2; exit 1; }
+
+cleanup() {
+  rm -f "$REPO/$HARNESS" "$REPO/clip-harness.json"
+  if [ -d "$BASELINE" ]; then
+    git -C "$REPO" worktree remove --force "$BASELINE" || true
+  fi
+}
+trap cleanup EXIT
+
+git -C "$REPO" fetch -q origin || true
+git -C "$REPO" worktree add -q --detach "$BASELINE" "$BASE_REF"
+
+render() {
+  local checkout=$1 label=$2
+  cp "$SKILL/ClipHarnessTest.java" "$checkout/$HARNESS"
+  python3 - "$SKILL/cases.json" "$OUT/$label" "$KEY_FILE" "$PROVIDER" "${PLAYER_ACCENT:-}" > "$checkout/clip-harness.json" <<'PY'
+import json, sys
+cases, out, keys, provider, accent = sys.argv[1:]
+job = {"mode": "render", "outDir": out, "keyFile": keys, "provider": provider,
+       "cases": json.load(open(cases))["cases"]}
+if accent:
+    job["playerAccent"] = accent
+print(json.dumps(job))
+PY
+  (cd "$checkout" && ./gradlew test --rerun --tests '*ClipHarnessTest' -q)
+  rm -f "$checkout/$HARNESS" "$checkout/clip-harness.json"
+}
+
+render "$BASELINE" before
+render "$REPO" after
+python3 "$SKILL/sheet.py" "$SKILL/cases.json" "$OUT" "$BASE_REF" "$(git -C "$REPO" rev-parse --abbrev-ref HEAD) (working tree)" "$PROVIDER"
