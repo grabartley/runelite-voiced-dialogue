@@ -14,6 +14,7 @@ import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenR
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.sentBody;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.shutDownQuietly;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.startedServer;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.style;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.truncatedAudio;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterTtsBackend.WARM_UP_CONNECTIONS;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -23,6 +24,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +34,7 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.RawPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
@@ -118,11 +121,45 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void everyEmotionSendsOnlyTheSpokenLineAsInput() throws Exception {
     for (Emotion emotion : EnumSet.allOf(Emotion.class)) {
-      enqueuePcm(server, (short) 1);
       assertEquals(
           "Hello & welcome",
           bodyForEmotion(backend(keyedConfig()), server, emotion).get("input").getAsString());
     }
+  }
+
+  @Test
+  public void emotionRidesInTheSpeechStyle() throws Exception {
+    assertEquals(
+        TestFixtures.TROLL_STYLE + " Sounding fearful.",
+        style(bodyForEmotion(backend(keyedConfig()), server, Emotion.SCARED)));
+    assertEquals(
+        TestFixtures.TROLL_STYLE,
+        style(bodyForEmotion(backend(keyedConfig()), server, Emotion.NEUTRAL)));
+  }
+
+  @Test
+  public void aBlankProfileStillSendsTheLanguageDirection() throws Exception {
+    enqueuePcm(server, (short) 1);
+    CharacterProfile blank = new CharacterProfile(null, null, null, null);
+    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
+
+    backend(keyedConfig())
+        .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
+
+    assertEquals("Speaking English. A man's voice.", style(sentBody(server)));
+  }
+
+  @Test
+  public void nonDefaultSpeedUsesTheSpeedFieldAndLeavesTheStyleAlone() throws Exception {
+    MutableTestConfig config = keyedConfig();
+    config.speedPercent = 150;
+    enqueuePcm(server, (short) 1);
+
+    backend(config).synthesize(req());
+
+    JsonObject body = sentBody(server);
+    assertEquals(1.5, body.get("speed").getAsDouble(), 1e-9);
+    assertEquals(TestFixtures.TROLL_STYLE, style(body));
   }
 
   @Test
@@ -177,12 +214,17 @@ public class OpenRouterTtsBackendTest {
             TestFixtures.TROLL_PROFILE,
             false,
             false);
-    backend(keyedConfig()).synthesize(female);
+    OpenRouterTtsBackend backend = backend(keyedConfig());
+    backend.synthesize(female);
 
     assertEquals(
         "the voice is whatever the map resolves for the spec",
         new GeminiVoiceMap().voiceFor(female.voice(), null),
         sentBody(server).get("voice").getAsString());
+    assertNotEquals(
+        "the backend keys each resolved voice apart",
+        backend.cacheVariant(req()),
+        backend.cacheVariant(female));
   }
 
   @Test

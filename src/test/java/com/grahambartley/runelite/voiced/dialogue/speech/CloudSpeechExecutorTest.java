@@ -208,7 +208,7 @@ public class CloudSpeechExecutorTest {
   public void cacheVariantFoldsInVoiceButNotModelSoRendersNeverCollide() {
     CloudSpeechExecutor executor = executor();
 
-    SynthesisRequest humanMale = humanMaleLine();
+    SynthesisRequest humanMale = line(false, false);
     SynthesisRequest elfFemale =
         new SynthesisRequest(
             "a",
@@ -262,7 +262,7 @@ public class CloudSpeechExecutorTest {
   public void cacheVariantChangesWithSpeedSoStaleAudioIsNeverServed() {
     MutableTestConfig config = new MutableTestConfig();
     CloudSpeechExecutor executor = executor(config);
-    SynthesisRequest line = humanMaleLine();
+    SynthesisRequest line = line(false, false);
 
     String atDefaultPace = executor.cacheVariant(line);
     config.speedPercent = 150;
@@ -276,7 +276,7 @@ public class CloudSpeechExecutorTest {
   public void globalQuirkPartitionsTheCacheKey() {
     MutableTestConfig config = new MutableTestConfig();
     CloudSpeechExecutor executor = executor(config);
-    SynthesisRequest line = humanMaleLine();
+    SynthesisRequest line = line(false, false);
 
     String plain = executor.cacheVariant(line);
     assertFalse("plain English with no style adds no language fragment", plain.contains("|l"));
@@ -292,11 +292,8 @@ public class CloudSpeechExecutorTest {
     config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
     CloudSpeechExecutor executor = executor(config);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-    SynthesisRequest playerLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, true);
-    SynthesisRequest npcLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
+    SynthesisRequest playerLine = line(false, true);
+    SynthesisRequest npcLine = line(false, false);
 
     assertNotEquals(
         "a player-styled and an NPC-styled line of the same text get distinct cache keys",
@@ -310,11 +307,8 @@ public class CloudSpeechExecutorTest {
     config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     CloudSpeechExecutor executor = executor(config);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-    SynthesisRequest playerLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, true);
-    SynthesisRequest npcLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
+    SynthesisRequest playerLine = line(false, true);
+    SynthesisRequest npcLine = line(false, false);
 
     assertFalse(
         "the player line, player style None, carries no language fragment so it skips translation",
@@ -328,7 +322,7 @@ public class CloudSpeechExecutorTest {
   public void nonEnglishTargetFoldsLanguageIntoTheCacheVariant() {
     MutableTestConfig config = new MutableTestConfig();
     CloudSpeechExecutor executor = executor(config);
-    SynthesisRequest line = humanMaleLine();
+    SynthesisRequest line = line(false, false);
 
     String english = executor.cacheVariant(line);
     assertFalse("English (default) adds no language fragment", english.contains("|l"));
@@ -345,12 +339,8 @@ public class CloudSpeechExecutorTest {
     MutableTestConfig config = new MutableTestConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     CloudSpeechExecutor executor = executor(config);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-
-    SynthesisRequest dialogue =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
-    SynthesisRequest publicChat =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, true, false);
+    SynthesisRequest dialogue = line(false, false);
+    SynthesisRequest publicChat = line(true, false);
 
     assertTrue(
         "a translated dialogue line still folds the language in",
@@ -394,14 +384,14 @@ public class CloudSpeechExecutorTest {
         false);
   }
 
-  private static SynthesisRequest humanMaleLine() {
+  private static SynthesisRequest line(boolean skipTranslation, boolean player) {
     return new SynthesisRequest(
         "a",
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
         TestFixtures.TROLL_PROFILE,
-        false,
-        false);
+        skipTranslation,
+        player);
   }
 
   private final class StubOps implements CloudSpeechExecutor.Ops {

@@ -1,6 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
-import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.bodyForEmotion;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.enqueuePcm;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.keyedConfig;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.req;
@@ -13,12 +12,10 @@ import static org.junit.Assert.assertFalse;
 
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
-import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.speech.TestFixtures;
 import okhttp3.OkHttpClient;
@@ -80,18 +77,6 @@ public class OpenRouterProviderTest {
   }
 
   @Test
-  public void emotionRidesInTheSpeechStyle() throws Exception {
-    enqueuePcm(server, (short) 1);
-    assertEquals(
-        TestFixtures.TROLL_STYLE + " Sounding fearful.",
-        style(bodyForEmotion(backend(keyedConfig()), server, Emotion.SCARED)));
-    enqueuePcm(server, (short) 1);
-    assertEquals(
-        TestFixtures.TROLL_STYLE,
-        style(bodyForEmotion(backend(keyedConfig()), server, Emotion.NEUTRAL)));
-  }
-
-  @Test
   public void profileAndEmotionTravelInProviderOptionsNotInTheInput() throws Exception {
     enqueuePcm(server, (short) 1);
 
@@ -112,31 +97,6 @@ public class OpenRouterProviderTest {
         "the speech options merge into the throughput routing block",
         "throughput",
         body.getAsJsonObject("provider").get("sort").getAsString());
-  }
-
-  @Test
-  public void aBlankProfileStillSendsTheLanguageDirection() throws Exception {
-    enqueuePcm(server, (short) 1);
-    CharacterProfile blank = new CharacterProfile(null, null, null, null);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-
-    backend(keyedConfig())
-        .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
-
-    assertEquals("Speaking English. A man's voice.", style(sentBody(server)));
-  }
-
-  @Test
-  public void nonDefaultSpeedUsesTheSpeedFieldAndLeavesTheStyleAlone() throws Exception {
-    MutableTestConfig config = keyedConfig();
-    config.speedPercent = 150;
-    enqueuePcm(server, (short) 1);
-
-    backend(config).synthesize(req());
-
-    JsonObject body = sentBody(server);
-    assertEquals(1.5, body.get("speed").getAsDouble(), 1e-9);
-    assertEquals(TestFixtures.TROLL_STYLE, style(body));
   }
 
   @Test
