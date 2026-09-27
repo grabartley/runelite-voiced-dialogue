@@ -1,0 +1,21 @@
+{
+  "_comment": "Hand-curated voice regions for the cloud (Gemini 3.8) backend. Each region names one Extended Voice Library accent; tools/generate_npc_voices.py builds its male and female voice pools from the tools/voice-library.json snapshot and writes them to src/main/resources/voice-regions.json. A profile layer in tools/profiles.json names a region with 'voiceRegion' next to its 'accent', and an NPC whose winning accent carries a region is voiced from that region's pool for its gender, keeping one voice for life. 'playerKeywords' match the player's typed accent (case-insensitive, whole words) so the player is voiced from the first matching region in file order; the broad SOUTHERN_ENGLISH region comes last so a more specific region always wins. 'narratorVoice' is the narrator's fixed library voice; the generator removes it from every pool so no character can sound like the narrator. 'exclude' drops voices whose delivery reads as the wrong gender even when the style names the gender, found by measuring every pooled voice's pitch with and without the gender direction. Optional 'onlyVoices' narrows a gender's adult pool to named voices: DEEP_SOUTHERN_ENGLISH keeps the two deepest southern English men for trolls. A voice named in any 'onlyVoices' voices no child anywhere, and a narrowed gender's child pool comes from the whole accent.",
+  "narratorVoice": "en-gb-storyteller-2",
+  "regions": {
+    "WEST_COUNTRY": {"libraryAccent": "Bristol English", "playerKeywords": ["west country", "bristol", "cornish", "somerset", "devon"], "exclude": []},
+    "SCOUSE": {"libraryAccent": "Liverpool English", "playerKeywords": ["scouse", "liverpool", "liverpudlian"], "exclude": []},
+    "MANCUNIAN": {"libraryAccent": "Manchester English", "playerKeywords": ["manchester", "mancunian", "yorkshire", "northern english"], "exclude": []},
+    "GEORDIE": {"libraryAccent": "Newcastle English", "playerKeywords": ["geordie", "newcastle"], "exclude": []},
+    "SCOTTISH": {"libraryAccent": "Glasgow English", "playerKeywords": ["scottish", "scots", "glasgow", "edinburgh"], "exclude": []},
+    "IRISH": {"libraryAccent": "Dublin English", "playerKeywords": ["irish", "dublin", "ireland"], "exclude": ["en-ie-storyteller-4"]},
+    "AUSTRALIAN": {"libraryAccent": "Sydney English", "playerKeywords": ["australian", "aussie", "sydney"], "exclude": ["en-au-assistant-7"]},
+    "NEW_ZEALAND": {"libraryAccent": "Auckland New Zealand English", "playerKeywords": ["new zealand", "kiwi", "maori", "auckland"], "exclude": ["en-nz-tutor-6"]},
+    "ITALIAN": {"libraryAccent": "Italian", "playerKeywords": ["italian"], "exclude": ["it-it-training-1"]},
+    "EGYPTIAN_ARABIC": {"libraryAccent": "Egyptian Arabic", "playerKeywords": ["egyptian", "arabic", "arab", "middle eastern"], "exclude": []},
+    "POLISH": {"libraryAccent": "Polish", "playerKeywords": ["polish", "eastern european", "transylvanian"], "exclude": ["pl-pl-training-6"]},
+    "JAPANESE": {"libraryAccent": "Tokyo Japanese", "playerKeywords": ["japanese"], "exclude": ["ja-jp-csagent-9"]},
+    "NORSE": {"libraryAccent": "Dutch", "playerKeywords": ["norse", "scandinavian", "viking", "fremennik"], "exclude": ["nl-nl-training-1"]},
+    "DEEP_SOUTHERN_ENGLISH": {"libraryAccent": "Winchester English", "playerKeywords": [], "exclude": [], "onlyVoices": {"male": ["en-gb-advisor-8", "en-gb-assistant-2"]}},
+    "SOUTHERN_ENGLISH": {"libraryAccent": "Winchester English", "playerKeywords": ["southern english", "london", "cockney", "received pronunciation", "posh", "cambridge"], "exclude": []}
+  }
+}

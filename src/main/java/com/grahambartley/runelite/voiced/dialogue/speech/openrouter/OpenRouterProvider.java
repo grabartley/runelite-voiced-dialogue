@@ -2,11 +2,14 @@ package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import com.google.gson.JsonObject;
 import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
 import okhttp3.Request;
 
 final class OpenRouterProvider {
 
   static final String THROUGHPUT_SORT = "throughput";
+
+  static final String GOOGLE_AI_STUDIO = "google-ai-studio";
 
   static final String APP_TITLE = "RuneLite Voiced Dialogue";
 
@@ -15,8 +18,19 @@ final class OpenRouterProvider {
   private OpenRouterProvider() {}
 
   static void apply(JsonObject body) {
+    apply(body, null);
+  }
+
+  static void apply(JsonObject body, JsonObject speechMetadata) {
     JsonObject provider = new JsonObject();
     provider.addProperty("sort", THROUGHPUT_SORT);
+    if (speechMetadata != null) {
+      JsonObject googleOptions = new JsonObject();
+      googleOptions.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
+      JsonObject options = new JsonObject();
+      options.add(GOOGLE_AI_STUDIO, googleOptions);
+      provider.add("options", options);
+    }
     body.add("provider", provider);
   }
 

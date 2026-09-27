@@ -10,7 +10,13 @@ class NpcIdentity {
 
   Integer worldId;
 
+  Integer baseId;
+
   NpcAttributes attributes;
 
   NpcProfileTable.NameMatch nameMatch;
+
+  boolean child() {
+    return (attributes != null && attributes.isChild()) || nameMatch.child();
+  }
 }

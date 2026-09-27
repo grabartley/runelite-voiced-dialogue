@@ -33,7 +33,7 @@ public class AiStudioRetryInfoTest {
   public void aQuotaFailureAheadOfTheHintDoesNotHideIt() {
     byte[] body =
         AiStudioResponses.quotaFailure(
-                "GenerateRequestsPerDayPerProjectPerModel", "", "100", "gemini-3.1-flash-tts")
+                "GenerateRequestsPerDayPerProjectPerModel", "", "100", "gemini-3.8-flash-tts")
             .getBytes(UTF_8);
 
     assertEquals(2_917_000, AiStudioRetryInfo.retryDelayMillis(gson, body));

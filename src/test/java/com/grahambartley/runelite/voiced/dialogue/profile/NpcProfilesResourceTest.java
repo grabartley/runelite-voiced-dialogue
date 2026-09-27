@@ -3,10 +3,14 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Answers;
 
 public class NpcProfilesResourceTest {
 
@@ -14,7 +18,7 @@ public class NpcProfilesResourceTest {
 
   private NpcProfileTable.Resolution resolve(
       Integer npcId, String npcName, String race, String ethnicity) {
-    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity);
+    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false);
   }
 
   private boolean isChild(String npcName) {
@@ -88,20 +92,20 @@ public class NpcProfilesResourceTest {
             .accent()
             .contains("Transylvanian"));
     assertTrue(
-        "gorillas sound deep and booming, not chattery island monkey",
-        resolve(null, "Gorilla", "Gorilla", null).profile().accent().contains("booming"));
+        "gorillas sound deep, not chattery island monkey",
+        resolve(null, "Gorilla", "Gorilla", null).profile().accent().contains("deep"));
     assertTrue(
         "tortugans sound Bajan / Barbados",
-        resolve(null, "Elder Korel", "Tortugan", null).profile().accent().contains("Barbados"));
+        resolve(null, "Elder Korel", "Tortugan", null).profile().accent().contains("Bajan"));
     assertTrue(
-        "Citizens of Arceuus sound refined and faintly echoing",
-        resolve(null, "Tyss", "Arceuus", null).profile().accent().contains("beyond the room"));
+        "Citizens of Arceuus sound refined and cool",
+        resolve(null, "Tyss", "Arceuus", null).profile().accent().contains("cool Received"));
     assertTrue(
-        "the aranei sound soft-spoken and breathy",
-        resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("breathy"));
+        "the aranei sound soft-spoken",
+        resolve(null, "Aranei scout", "Aranei", null).profile().accent().contains("soft"));
     assertTrue(
         "dogs vocalise their lines rather than pronouncing them",
-        resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barked"));
+        resolve(null, "Stray dog", "Dog", null).profile().accent().contains("barks"));
     assertTrue(
         "crabs sound bright and West Country seaside",
         resolve(null, "Crab", "Crab", null).profile().accent().contains("West Country"));
@@ -143,14 +147,14 @@ public class NpcProfilesResourceTest {
   @Test
   public void dogsKeepTheirVocalisedDeliveryWhereverTheyAreFound() {
     CharacterProfile p = resolve(null, "Stray dog", "Dog", "morytania").profile();
-    assertTrue("the dog delivery holds over the region", p.accent().contains("barked"));
-    assertFalse("the Morytanian accent does not apply", p.accent().contains("gothic"));
+    assertTrue("the dog delivery holds over the region", p.accent().contains("barks"));
+    assertFalse("the Morytanian accent does not apply", p.accent().contains("Eastern European"));
   }
 
   @Test
   public void arceuusCitizensKeepTheirOwnAccentRatherThanTheKourendOne() {
     CharacterProfile p = resolve(null, "Regath", "Arceuus", "kourend").profile();
-    assertTrue("the Arceuus accent holds over the region", p.accent().contains("beyond the room"));
+    assertTrue("the Arceuus accent holds over the region", p.accent().contains("cool Received"));
     assertFalse("the rustic Kourend accent does not apply", p.accent().contains("rustic"));
   }
 
@@ -161,8 +165,7 @@ public class NpcProfilesResourceTest {
     assertTrue("the race layer contributes", r.source().contains("race:Arceuus"));
     assertTrue("her librarian persona survives", r.profile().style().contains("chief librarian"));
     assertTrue(
-        "she still speaks with the Arceuus accent",
-        r.profile().accent().contains("beyond the room"));
+        "she still speaks with the Arceuus accent", r.profile().accent().contains("cool Received"));
   }
 
   @Test
@@ -243,6 +246,15 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void aClearedPlayerSettingFallsBackToTheSameDeliveryAsTheSettingDefaults() {
+    VoicedDialogueConfig defaults = mock(VoicedDialogueConfig.class, Answers.CALLS_REAL_METHODS);
+    CharacterProfile fallback = table.resolvePlayer(null, null, null);
+    assertEquals(defaults.playerAccent(), fallback.accent());
+    assertEquals(defaults.playerPersona(), fallback.style());
+    assertEquals(defaults.playerPace(), fallback.pace());
+  }
+
+  @Test
   public void theNarratorProfileResolvesFromTheBundledTable() {
     CharacterProfile narrator = table.resolveNarrator();
     assertTrue(
@@ -262,7 +274,7 @@ public class NpcProfilesResourceTest {
         "a gnome child keeps the Irish gnome accent", gnome.profile().accent().contains("Irish"));
     assertTrue(
         "the child delivery layers into the style",
-        gnome.profile().style().contains("A young child's voice"));
+        gnome.profile().style().contains("young child's voice"));
 
     NpcProfileTable.Resolution troll = resolve(696, "Troll child", "Troll", null);
     assertTrue(
@@ -272,6 +284,96 @@ public class NpcProfilesResourceTest {
     assertTrue(
         "a Menaphite child keeps the Egyptian accent",
         menaphite.profile().accent().contains("Egyptian"));
+  }
+
+  @Test
+  public void regionalAccentsCarryTheirNativeVoiceRegion() {
+    assertEquals("SCOTTISH", resolve(null, "Dwarf", "Dwarf", null).profile().voiceRegion());
+    assertEquals("IRISH", resolve(null, "Gnome", "Gnome", null).profile().voiceRegion());
+    assertEquals("IRISH", resolve(null, "Tool Leprechaun", "Human", null).profile().voiceRegion());
+    assertEquals(
+        "SOUTHERN_ENGLISH", resolve(null, "Man", "Human", "misthalin").profile().voiceRegion());
+    assertEquals("WEST_COUNTRY", resolve(null, "Man", "Human", "asgarnia").profile().voiceRegion());
+    assertEquals("ITALIAN", resolve(null, "Man", "Human", "varlamore").profile().voiceRegion());
+    assertEquals(
+        "EGYPTIAN_ARABIC", resolve(null, "Man", "Human", "menaphite").profile().voiceRegion());
+    assertEquals("NORSE", resolve(null, "Villager", "Human", "fremennik").profile().voiceRegion());
+    assertEquals(
+        "NORSE", resolve(null, "Fremennik warrior", "Human", null).profile().voiceRegion());
+  }
+
+  @Test
+  public void eoinKeepsABoyishPitchOverTheChildDefault() {
+    for (int id : new int[] {5302, 8930, 8931}) {
+      NpcProfileTable.Resolution eoin =
+          table.resolveNpc(id, table.matchName("Eoin"), "Elf", "tirannwn", true);
+      assertEquals(
+          "Bright boyish voice, clearly a young lad, never squeaky", eoin.profile().pitch());
+    }
+  }
+
+  @Test
+  public void everyTrollTakesTheDeepTrollPoolWhereverItIsFrom() {
+    assertEquals(
+        "DEEP_SOUTHERN_ENGLISH", resolve(4130, "Dad", "Troll", null).profile().voiceRegion());
+    assertEquals(
+        "DEEP_SOUTHERN_ENGLISH", resolve(641, "Aga", "Troll", "asgarnia").profile().voiceRegion());
+  }
+
+  @Test
+  public void theNarratorCarriesTheStorytellerDetailAndThePlayerTakesNone() {
+    assertTrue(
+        table.resolveNarrator().accentDetail().contains("a storyteller reading a tale aloud"));
+    assertNull(table.resolvePlayer(null, null, null).accentDetail());
+  }
+
+  @Test
+  public void anEthnicityAccentCarriesItsMedievalDetail() {
+    assertTrue(
+        resolve(null, "Villager", "Human", "fremennik")
+            .profile()
+            .accentDetail()
+            .contains("a Viking from the old sagas"));
+    assertTrue(
+        resolve(null, "Man", "Human", "misthalin")
+            .profile()
+            .accentDetail()
+            .contains("Gielinor's central kingdom of Misthalin"));
+  }
+
+  @Test
+  public void wildernessFolkTakeTheirOwnStyleInPlaceOfTheOrdinaryCitizen() {
+    CharacterProfile outlaw = resolve(null, "Bandit", "Human", "wilderness").profile();
+    assertFalse(outlaw.style().contains("approachable"));
+    assertTrue(outlaw.style().contains("lawless Wilderness"));
+    assertTrue(
+        resolve(null, "Man", "Human", "misthalin").profile().style().contains("approachable"));
+  }
+
+  @Test
+  public void aDeliveryQuirkRidesInTheStyle() {
+    assertTrue(
+        resolve(7663, "Krystilia", "Human", "wilderness")
+            .profile()
+            .style()
+            .contains("A witchy, cackling edge."));
+  }
+
+  @Test
+  public void smallAndLargeCreaturesCarryTheirPitch() {
+    assertTrue(
+        resolve(null, "Hudo", "Goblin", null).profile().pitch().startsWith("Very high-pitched"));
+    assertTrue(resolve(null, "Imp", "Demon", null).profile().pitch().startsWith("Very high"));
+    assertTrue(resolve(null, "Troll", "Troll", null).profile().pitch().startsWith("Very deep"));
+    assertTrue(resolve(null, "Dwarf", "Dwarf", null).profile().pitch().startsWith("Very deep"));
+    assertNull(resolve(null, "Man", "Human", "misthalin").profile().pitch());
+  }
+
+  @Test
+  public void accentsWithNoNativeVoicesKeepTheRacePool() {
+    assertNull(resolve(null, "Elf", "Human", "tirannwn").profile().voiceRegion());
+    assertNull(resolve(null, "Man", "Human", "karamja").profile().voiceRegion());
+    assertNull(resolve(null, "KGP Agent", "Penguin", null).profile().voiceRegion());
   }
 
   @Test

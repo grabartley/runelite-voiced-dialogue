@@ -1,8 +1,10 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -12,13 +14,21 @@ public final class GeminiVoiceMap {
 
   static final String DEFAULT_CHILD_VOICE = "Puck";
 
-  static final String NARRATOR_VOICE = "Callirrhoe";
+  static final String FALLBACK_NARRATOR_VOICE = "Callirrhoe";
+
+  static final int PLAYER_SEED = 0;
 
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
   private final Map<NpcGender, String[]> childVoices;
+  private final GeminiVoiceRegions regions;
 
   public GeminiVoiceMap() {
+    this(GeminiVoiceRegions.bundled());
+  }
+
+  GeminiVoiceMap(GeminiVoiceRegions regions) {
+    this.regions = regions;
     playerVoices = new EnumMap<>(NpcGender.class);
     playerVoices.put(NpcGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NpcGender.FEMALE, new String[] {"Aoede", "Autonoe"});
@@ -38,7 +48,7 @@ public final class GeminiVoiceMap {
     put(NpcRace.UNDEAD, male("Enceladus", "Schedar"), female("Achernar", "Sulafat"));
     put(NpcRace.DEMON, male("Algenib", "Rasalgethi"), female("Gacrux", "Despina"));
     put(NpcRace.WIZARD, male("Sadaltager", "Charon"), female("Sulafat", "Vindemiatrix"));
-    put(NpcRace.TORTUGAN, male("Achird", "Iapetus"), female("Sulafat", "Vindemiatrix"));
+    put(NpcRace.TORTUGAN, male("Achird"), female("Sulafat", "Vindemiatrix"));
 
     put(NpcRace.ICYENE, male("Alnilam", "Schedar"), female("Kore", "Despina"));
     put(NpcRace.ARCEUUS, male("Iapetus", "Rasalgethi"), female("Vindemiatrix", "Erinome"));
@@ -63,20 +73,32 @@ public final class GeminiVoiceMap {
     npcVoices.put(race, byGender);
   }
 
-  public String voiceFor(VoiceSpec spec) {
+  public String voiceFor(VoiceSpec spec, CharacterProfile profile) {
     if (spec == null) {
       return DEFAULT_VOICE;
     }
     if (spec.narrator()) {
-      return NARRATOR_VOICE;
+      String narrator = regions.narratorVoice();
+      return narrator != null ? narrator : FALLBACK_NARRATOR_VOICE;
     }
     NpcGender gender = normalizeGender(spec.gender());
     if (spec.player()) {
-      return anchor(playerVoices.get(gender));
+      String accent = profile == null ? null : profile.accent();
+      String regional = regions.voiceFor(regions.regionForAccent(accent), gender, PLAYER_SEED);
+      return regional != null ? regional : anchor(playerVoices.get(gender));
     }
+    String region = profile != null && spec.hasVoiceSeed() ? profile.voiceRegion() : null;
     if (spec.child()) {
+      String regional = regions.childVoiceFor(region, gender, spec.voiceSeed());
+      if (regional != null) {
+        return regional;
+      }
       String[] pool = childVoices.get(gender);
       return (pool == null || pool.length == 0) ? DEFAULT_CHILD_VOICE : pick(pool, spec);
+    }
+    String regional = regions.voiceFor(region, gender, spec.voiceSeed());
+    if (regional != null) {
+      return regional;
     }
     Map<NpcGender, String[]> byGender = npcVoices.get(spec.race());
     if (byGender == null) {
@@ -96,8 +118,7 @@ public final class GeminiVoiceMap {
     if (!spec.hasVoiceSeed()) {
       return pool[0];
     }
-    int index = Math.floorMod(Integer.hashCode(spec.voiceSeed()), pool.length);
-    return pool[index];
+    return GeminiVoiceRegions.pick(Arrays.asList(pool), spec.voiceSeed());
   }
 
   private static NpcGender normalizeGender(NpcGender gender) {

@@ -9,12 +9,12 @@
 
 **Gielinor talks back.** Voiced Dialogue speaks every dialogue box aloud with cloud AI voices, in real time, as you play.
 
-Bring your own API key. You pay only for the audio you generate, about **$0.0025 a line**, and every line you have already heard replays free from your cache.
+Bring your own API key. You pay only for the audio you generate, about **$0.001 a line**, and every line you have already heard replays free from your cache.
 
 ## What it does
 
-- **14,103 NPCs already voiced**, matched by race and gender. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
-- **Accents with lore behind them.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
+- **14,103 NPCs already voiced by nearly 600 unique voices**, most of them native speakers from Google's library of over 2,000, matched by race, gender and accent, and each NPC keeps its voice for life. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
+- **Accents with lore behind them, voiced by native speakers where they exist.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
 - **6,447 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
@@ -38,14 +38,14 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 
 | Line length | Google AI Studio | OpenRouter |
 |---|---|---|
-| Short (20 chars) | **0.7s** | 1.7s |
-| Medium (100 chars) | **0.8s** | 6.3s |
-| Long (400 chars) | **0.8s** | 19.5s |
-| Very long (500+ chars) | **0.8s** | 37.2s |
+| Short (20 chars) | **1.2s** | 1.9s |
+| Medium (100 chars) | **1.4s** | 3.6s |
+| Long (400 chars) | **1.3s** | 10.1s |
+| Very long (500+ chars) | **1.2s** | 12.6s |
 
-**Google AI Studio** streams audio as it is generated, so a line starts in under a second no matter how long it is. While the speech model is in preview, a billed key begins at **up to 100 fresh lines a day**, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use.
+**Google AI Studio** streams audio as it is generated, so a line starts in just over a second no matter how long it is. Google caps how many fresh lines a key can voice each day, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use; your key's current limit is on its AI Studio rate-limit page.
 
-**OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A quest speech can leave you waiting the better part of a minute.
+**OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A long quest speech can leave you waiting over ten seconds.
 
 Switch any time with **Voice Provider**. Cached lines are instant and free on both.
 
@@ -59,7 +59,7 @@ Switch any time with **Voice Provider**. Cached lines are instant and free on bo
 ### OpenRouter
 
 1. Sign up at [openrouter.ai](https://openrouter.ai).
-2. Top up on the [Credits page](https://openrouter.ai/settings/credits). **€5 covers over 2,000 lines.**
+2. Top up on the [Credits page](https://openrouter.ai/settings/credits). **€5 covers over 4,000 lines.**
 3. Create a key on the [API Keys page](https://openrouter.ai/settings/keys) and copy it.
 4. In RuneLite, set **Voice Provider** to **OpenRouter** and paste the key into **OpenRouter API Key**.
 5. Talk to any NPC.
@@ -92,9 +92,9 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | British (Cambridge) | Accent for your character's voice. |
-| **Your Persona** | friendly and plucky | Persona and delivery style for your character. |
-| **Your Delivery Pace** | Normal | How your character paces their words. |
+| **Your Accent** | Strong educated southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, and more) voices you with a native speaker from it. |
+| **Your Persona** | Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm. | Persona and delivery style for your character. |
+| **Your Delivery Pace** | Lively and bouncy, with an upbeat, energetic rhythm. | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
 | **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, each in their own voice. Everyone within earshot is voiced, and they overlap, so a market square sounds like a market square. Chatter fades with distance and cuts out once the speaker walks out of range. One NPC's lines queue behind each other rather than overlapping themselves, and animal noises are left unvoiced. These play without you clicking a dialogue, so a busy area costs real calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. Silent while you are in a conversation. |

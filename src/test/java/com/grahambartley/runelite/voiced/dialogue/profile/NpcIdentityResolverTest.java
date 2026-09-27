@@ -16,6 +16,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import org.junit.Test;
 
 public class NpcIdentityResolverTest {
@@ -46,6 +47,29 @@ public class NpcIdentityResolverTest {
     assertEquals(Integer.valueOf(3501), identity.worldId());
     assertSame(attributes, identity.attributes());
     assertTrue("the child keyword category matched", identity.nameMatch().child());
+  }
+
+  @Test
+  public void aTransformedNpcKeepsItsBaseIdForItsVoice() {
+    NPC npc = mock(NPC.class);
+    NPCComposition base = mock(NPCComposition.class);
+    when(npc.getId()).thenReturn(8001);
+    when(base.getId()).thenReturn(8000);
+    when(npc.getComposition()).thenReturn(base);
+    when(finder.findByName("Juliet")).thenReturn(npc);
+
+    NpcIdentity identity = resolver.resolve("Juliet");
+
+    assertEquals(Integer.valueOf(8001), identity.worldId());
+    assertEquals(Integer.valueOf(8000), identity.baseId());
+  }
+
+  @Test
+  public void anNpcWithNoBaseCompositionUsesItsOwnId() {
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(3501);
+
+    assertEquals(Integer.valueOf(3501), resolver.resolve(npc).baseId());
   }
 
   @Test

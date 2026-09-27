@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 public final class NpcProfileTable {
 
   private static final String TABLE_RESOURCE = "/npc-voices.json";
+
+  private static final Pattern ENDS_SENTENCE = Pattern.compile("[.!?]$");
 
   @Value
   @Accessors(fluent = true)
@@ -106,12 +109,13 @@ public final class NpcProfileTable {
     return new NameMatch(matches);
   }
 
-  public Resolution resolveNpc(Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
-    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity));
+  public Resolution resolveNpc(
+      Integer npcId, NameMatch nameMatch, String race, String ethnicity, boolean child) {
+    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity, child));
   }
 
   private List<MatchedLayer> collectLayers(
-      Integer npcId, NameMatch nameMatch, String race, String ethnicity) {
+      Integer npcId, NameMatch nameMatch, String race, String ethnicity, boolean child) {
     List<MatchedLayer> matched = new ArrayList<>();
 
     Layer raceLayer = race == null ? null : layers.byRace().get(race.toLowerCase(Locale.ROOT));
@@ -130,6 +134,13 @@ public final class NpcProfileTable {
     for (CategoryRule rule : nameMatch.rules) {
       matched.add(new MatchedLayer(rule.layer(), "keyword:" + rule.id()));
     }
+    if (child && !nameMatch.child()) {
+      for (CategoryRule rule : layers.byCategory()) {
+        if (rule.child()) {
+          matched.add(new MatchedLayer(rule.layer(), "lifeStage:" + rule.id()));
+        }
+      }
+    }
     Layer idLayer = npcId == null ? null : layers.byId().get(npcId);
     if (idLayer != null) {
       matched.add(new MatchedLayer(idLayer, "id:" + npcId));
@@ -141,7 +152,10 @@ public final class NpcProfileTable {
     CharacterProfile defaultProfile = layers.defaultProfile();
     String name = defaultProfile.name();
     String accent = defaultProfile.accent();
+    String accentDetail = defaultProfile.accentDetail();
+    String voiceRegion = defaultProfile.voiceRegion();
     String pace = defaultProfile.pace();
+    String pitch = defaultProfile.pitch();
     List<String> styleParts = new ArrayList<>();
     List<String> sources = new ArrayList<>();
     for (MatchedLayer entry : matched) {
@@ -151,19 +165,33 @@ public final class NpcProfileTable {
       }
       if (layer.accent() != null) {
         accent = layer.accent();
+        accentDetail = layer.accentDetail();
+        voiceRegion = layer.voiceRegion();
       }
       if (layer.pace() != null) {
         pace = layer.pace();
       }
+      if (layer.pitch() != null) {
+        pitch = layer.pitch();
+      }
       if (layer.style() != null) {
-        styleParts.add(layer.style());
+        if (layer.replaceStyle()) {
+          styleParts.clear();
+        }
+        styleParts.add(asSentence(layer.style()));
       }
       sources.add(entry.source);
     }
     String style = styleParts.isEmpty() ? defaultProfile.style() : String.join(" ", styleParts);
     String source = sources.isEmpty() ? "default" : String.join("+", sources);
 
-    return new Resolution(new CharacterProfile(name, accent, style, pace), source);
+    return new Resolution(
+        new CharacterProfile(name, accent, accentDetail, style, pace, pitch, voiceRegion), source);
+  }
+
+  private static String asSentence(String style) {
+    String trimmed = style.trim();
+    return ENDS_SENTENCE.matcher(trimmed).find() ? trimmed : trimmed + ".";
   }
 
   public CharacterProfile resolvePlayer(String accent, String style, String pace) {
@@ -212,11 +240,15 @@ public final class NpcProfileTable {
     if (layer == null) {
       return base;
     }
+    boolean ownAccent = layer.accent() != null;
     return new CharacterProfile(
         layer.name() != null ? layer.name() : base.name(),
-        layer.accent() != null ? layer.accent() : base.accent(),
+        ownAccent ? layer.accent() : base.accent(),
+        ownAccent ? layer.accentDetail() : base.accentDetail(),
         layer.style() != null ? layer.style() : base.style(),
-        layer.pace() != null ? layer.pace() : base.pace());
+        layer.pace() != null ? layer.pace() : base.pace(),
+        null,
+        null);
   }
 
   private static boolean isBlank(String value) {

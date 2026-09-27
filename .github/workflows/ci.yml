@@ -46,6 +46,9 @@ jobs:
           detailed_summary: true
           include_passed: true
 
+      - name: Run generator tests
+        run: python3 -m unittest discover -s tools -p "test_*.py"
+
       - name: Build shadow JAR
         run: ./gradlew shadowJar
 
