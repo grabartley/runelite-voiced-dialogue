@@ -395,7 +395,7 @@ style for that class, or both is what turns the hop on.
 A cache-missed live line plays as it downloads: the backend's `synthesizeStreaming` decodes the
 response incrementally and feeds each chunk to the player through a `PcmSink`, so audio starts on
 the first decoded chunk instead of after the whole body. On Google AI Studio that decodes each SSE
-audio event as it arrives, and audio starts after roughly 0.8s whatever the line's length.
+audio event as it arrives, and audio starts after roughly 1.2s whatever the line's length.
 OpenRouter reads the raw PCM body per network read, but sends nothing until the whole clip is
 generated, so its first chunk only lands once the line is finished and the wait grows with the
 line's length: measured at ~1.7s for a 20-character line and ~15s for a 400-character one. Streaming
