@@ -5,9 +5,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
@@ -16,10 +19,26 @@ public class GeminiVoiceMapTest {
 
   private final GeminiVoiceMap map = new GeminiVoiceMap();
 
-  private static final Set<String> CHILD_MALE_POOL = new HashSet<>(java.util.Arrays.asList("Puck"));
+  private static final String[] REGION_KEYS = {
+    "SOUTHERN_ENGLISH",
+    "WEST_COUNTRY",
+    "SCOUSE",
+    "MANCUNIAN",
+    "GEORDIE",
+    "SCOTTISH",
+    "IRISH",
+    "AUSTRALIAN",
+    "NEW_ZEALAND",
+    "ITALIAN",
+    "EGYPTIAN_ARABIC",
+    "POLISH",
+    "JAPANESE"
+  };
+
+  private static final Set<String> CHILD_MALE_POOL = new HashSet<>(Arrays.asList("Puck"));
 
   private static final Set<String> CHILD_FEMALE_POOL =
-      new HashSet<>(java.util.Arrays.asList("Leda", "Zephyr"));
+      new HashSet<>(Arrays.asList("Leda", "Zephyr"));
 
   private static final NpcRace[] MAPPED_RACES = {
     NpcRace.HUMAN,
@@ -43,7 +62,7 @@ public class GeminiVoiceMapTest {
 
   private static final Set<String> GEMINI_VOICE_CATALOG =
       new HashSet<>(
-          java.util.Arrays.asList(
+          Arrays.asList(
               "Zephyr",
               "Puck",
               "Charon",
@@ -80,7 +99,7 @@ public class GeminiVoiceMapTest {
     for (NpcRace race : NpcRace.values()) {
       for (NpcGender gender :
           new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE, NpcGender.UNKNOWN}) {
-        String voice = map.voiceFor(VoiceSpec.npc(race, gender));
+        String voice = map.voiceFor(VoiceSpec.npc(race, gender), null);
         assertNotNull(race + "/" + gender + " resolves", voice);
         assertFalse(race + "/" + gender + " is non-blank", voice.trim().isEmpty());
       }
@@ -103,42 +122,45 @@ public class GeminiVoiceMapTest {
     Set<String> voices = new HashSet<>();
     for (NpcRace race : MAPPED_RACES) {
       for (int seed = 0; seed < 64; seed++) {
-        voices.add(map.voiceFor(VoiceSpec.npc(race, gender, seed)));
-        voices.add(map.voiceFor(VoiceSpec.npc(race, gender, seed, true)));
+        voices.add(map.voiceFor(VoiceSpec.npc(race, gender, seed), null));
+        voices.add(map.voiceFor(VoiceSpec.npc(race, gender, seed, true), null));
       }
     }
-    voices.add(map.voiceFor(VoiceSpec.player(gender)));
-    voices.add(map.voiceFor(VoiceSpec.follower(gender)));
+    voices.add(map.voiceFor(VoiceSpec.player(gender), null));
+    voices.add(map.voiceFor(VoiceSpec.follower(gender), null));
     return voices;
   }
 
   @Test
   public void sameSpecIsStableAcrossCalls() {
     VoiceSpec spec = VoiceSpec.npc(NpcRace.DWARF, NpcGender.MALE, 4242);
-    assertEquals("a given NPC always voices the same way", map.voiceFor(spec), map.voiceFor(spec));
+    assertEquals(
+        "a given NPC always voices the same way",
+        map.voiceFor(spec, null),
+        map.voiceFor(spec, null));
   }
 
   @Test
   public void sameRaceGenderDifferentNpcsCanGetDifferentVoices() {
     Set<String> seen = new HashSet<>();
     for (int seed = 0; seed < 16; seed++) {
-      seen.add(map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, seed)));
+      seen.add(map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, seed), null));
     }
     assertTrue("the per-NPC seed spreads across the sub-pool", seen.size() > 1);
   }
 
   @Test
   public void unknownRaceFallsBackInsteadOfThrowing() {
-    String male = map.voiceFor(VoiceSpec.npc(NpcRace.UNKNOWN, NpcGender.MALE, 7));
-    String female = map.voiceFor(VoiceSpec.npc(NpcRace.UNKNOWN, NpcGender.FEMALE, 7));
+    String male = map.voiceFor(VoiceSpec.npc(NpcRace.UNKNOWN, NpcGender.MALE, 7), null);
+    String female = map.voiceFor(VoiceSpec.npc(NpcRace.UNKNOWN, NpcGender.FEMALE, 7), null);
     assertNotNull(male);
     assertNotNull(female);
   }
 
   @Test
   public void playerVoiceRespectsGenderAndStaysGenderCorrect() {
-    String playerMale = map.voiceFor(VoiceSpec.player(NpcGender.MALE));
-    String playerFemale = map.voiceFor(VoiceSpec.player(NpcGender.FEMALE));
+    String playerMale = map.voiceFor(VoiceSpec.player(NpcGender.MALE), null);
+    String playerFemale = map.voiceFor(VoiceSpec.player(NpcGender.FEMALE), null);
     assertFalse("player male and female differ", playerMale.equals(playerFemale));
     assertTrue("player male is in the male pool", voicesFor(NpcGender.MALE).contains(playerMale));
     assertTrue(
@@ -147,13 +169,13 @@ public class GeminiVoiceMapTest {
 
   @Test
   public void followerVoiceRespectsGenderAndIsStableAcrossCalls() {
-    String followerMale = map.voiceFor(VoiceSpec.follower(NpcGender.MALE));
-    String followerFemale = map.voiceFor(VoiceSpec.follower(NpcGender.FEMALE));
+    String followerMale = map.voiceFor(VoiceSpec.follower(NpcGender.MALE), null);
+    String followerFemale = map.voiceFor(VoiceSpec.follower(NpcGender.FEMALE), null);
 
     assertNotNull(followerMale);
     assertNotNull(followerFemale);
     assertFalse("follower male and female differ", followerMale.equals(followerFemale));
-    assertEquals(followerMale, map.voiceFor(VoiceSpec.follower(NpcGender.MALE)));
+    assertEquals(followerMale, map.voiceFor(VoiceSpec.follower(NpcGender.MALE), null));
   }
 
   @Test
@@ -161,28 +183,41 @@ public class GeminiVoiceMapTest {
     for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
       assertFalse(
           "the follower would otherwise sound exactly like its owner",
-          map.voiceFor(VoiceSpec.follower(gender)).equals(map.voiceFor(VoiceSpec.player(gender))));
+          map.voiceFor(VoiceSpec.follower(gender), null)
+              .equals(map.voiceFor(VoiceSpec.player(gender), null)));
     }
   }
 
   @Test
   public void theFollowerIsNeverTheNarrator() {
     assertFalse(
-        map.voiceFor(VoiceSpec.follower(NpcGender.MALE)).equals(GeminiVoiceMap.NARRATOR_VOICE));
+        map.voiceFor(VoiceSpec.follower(NpcGender.MALE), null)
+            .equals(map.voiceFor(VoiceSpec.NARRATOR, null)));
     assertFalse(
-        map.voiceFor(VoiceSpec.follower(NpcGender.FEMALE)).equals(GeminiVoiceMap.NARRATOR_VOICE));
+        map.voiceFor(VoiceSpec.follower(NpcGender.FEMALE), null)
+            .equals(map.voiceFor(VoiceSpec.NARRATOR, null)));
   }
 
   @Test
   public void anUnknownFollowerGenderStillResolvesToARealVoice() {
-    assertTrue(GEMINI_VOICE_CATALOG.contains(map.voiceFor(VoiceSpec.follower(NpcGender.UNKNOWN))));
+    assertTrue(
+        GEMINI_VOICE_CATALOG.contains(map.voiceFor(VoiceSpec.follower(NpcGender.UNKNOWN), null)));
   }
 
   @Test
   public void theNarratorVoiceIsHeldOutOfEveryCharacterPool() {
-    String narrator = map.voiceFor(VoiceSpec.NARRATOR);
+    String narrator = map.voiceFor(VoiceSpec.NARRATOR, null);
 
-    assertEquals(GeminiVoiceMap.NARRATOR_VOICE, narrator);
+    assertEquals(GeminiVoiceRegions.bundled().narratorVoice(), narrator);
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    for (String region : REGION_KEYS) {
+      for (int seed = 0; seed < 400; seed++) {
+        for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+          assertFalse(narrator.equals(bundled.voiceFor(region, gender, seed)));
+          assertFalse(narrator.equals(bundled.childVoiceFor(region, gender, seed)));
+        }
+      }
+    }
     assertFalse(
         "no character can ever voice as the narrator",
         voicesFor(NpcGender.MALE).contains(narrator));
@@ -197,7 +232,7 @@ public class GeminiVoiceMapTest {
     emitted.addAll(voicesFor(NpcGender.MALE));
     emitted.addAll(voicesFor(NpcGender.FEMALE));
     emitted.add(GeminiVoiceMap.DEFAULT_VOICE);
-    emitted.add(map.voiceFor(VoiceSpec.NARRATOR));
+    emitted.add(GeminiVoiceMap.FALLBACK_NARRATOR_VOICE);
     Set<String> bogus = new HashSet<>(emitted);
     bogus.removeAll(GEMINI_VOICE_CATALOG);
     assertTrue(
@@ -206,15 +241,15 @@ public class GeminiVoiceMapTest {
 
   @Test
   public void nullSpecResolvesToTheDefaultVoice() {
-    assertEquals(GeminiVoiceMap.DEFAULT_VOICE, map.voiceFor(null));
+    assertEquals(GeminiVoiceMap.DEFAULT_VOICE, map.voiceFor(null, null));
   }
 
   @Test
   public void childSpecsOfEveryRaceResolveOnlyWithinTheChildPools() {
     for (NpcRace race : NpcRace.values()) {
       for (int seed = 0; seed < 64; seed++) {
-        String male = map.voiceFor(VoiceSpec.npc(race, NpcGender.MALE, seed, true));
-        String female = map.voiceFor(VoiceSpec.npc(race, NpcGender.FEMALE, seed, true));
+        String male = map.voiceFor(VoiceSpec.npc(race, NpcGender.MALE, seed, true), null);
+        String female = map.voiceFor(VoiceSpec.npc(race, NpcGender.FEMALE, seed, true), null);
         assertTrue(
             race + " child male resolves in the child-male pool, got " + male,
             CHILD_MALE_POOL.contains(male));
@@ -230,18 +265,20 @@ public class GeminiVoiceMapTest {
     assertEquals(
         "Puck",
         map.voiceFor(
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, VoiceSpec.UNSPECIFIED_SEED, true)));
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, VoiceSpec.UNSPECIFIED_SEED, true), null));
     assertEquals(
         "Leda",
         map.voiceFor(
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, VoiceSpec.UNSPECIFIED_SEED, true)));
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, VoiceSpec.UNSPECIFIED_SEED, true),
+            null));
   }
 
   @Test
   public void unknownGenderChildUsesTheChildMaleAnchor() {
     String voice =
         map.voiceFor(
-            VoiceSpec.npc(NpcRace.TROLL, NpcGender.UNKNOWN, VoiceSpec.UNSPECIFIED_SEED, true));
+            VoiceSpec.npc(NpcRace.TROLL, NpcGender.UNKNOWN, VoiceSpec.UNSPECIFIED_SEED, true),
+            null);
     assertEquals("Puck", voice);
   }
 
@@ -264,7 +301,7 @@ public class GeminiVoiceMapTest {
   public void sameRaceGenderDifferentChildrenSpreadAcrossTheChildPool() {
     Set<String> seen = new HashSet<>();
     for (int seed = 0; seed < 16; seed++) {
-      seen.add(map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, seed, true)));
+      seen.add(map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, seed, true), null));
     }
     assertTrue("the per-NPC seed spreads children across the child sub-pool", seen.size() > 1);
   }
@@ -272,8 +309,9 @@ public class GeminiVoiceMapTest {
   @Test
   public void adultSpecsKeepTheirAdultRaceAnchors() {
     assertEquals(
-        GeminiVoiceMap.DEFAULT_VOICE, map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE)));
-    assertEquals("Despina", map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE)));
+        GeminiVoiceMap.DEFAULT_VOICE,
+        map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE), null));
+    assertEquals("Despina", map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE), null));
   }
 
   @Test
@@ -283,10 +321,10 @@ public class GeminiVoiceMapTest {
     Set<String> arceuusMale = new HashSet<>();
     Set<String> arceuusFemale = new HashSet<>();
     for (int seed = 0; seed < 64; seed++) {
-      elfMale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ELF, NpcGender.MALE, seed)));
-      elfFemale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE, seed)));
-      arceuusMale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.MALE, seed)));
-      arceuusFemale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.FEMALE, seed)));
+      elfMale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ELF, NpcGender.MALE, seed), null));
+      elfFemale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE, seed), null));
+      arceuusMale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.MALE, seed), null));
+      arceuusFemale.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.FEMALE, seed), null));
     }
     assertEquals("Arceuus males draw the elf male pool", elfMale, arceuusMale);
     assertEquals("Arceuus females draw the elf female pool", elfFemale, arceuusFemale);
@@ -297,8 +335,8 @@ public class GeminiVoiceMapTest {
     Set<String> male = new HashSet<>();
     Set<String> female = new HashSet<>();
     for (int seed = 0; seed < 16; seed++) {
-      male.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.MALE, seed)));
-      female.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.FEMALE, seed)));
+      male.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.MALE, seed), null));
+      female.add(map.voiceFor(VoiceSpec.npc(NpcRace.ARCEUUS, NpcGender.FEMALE, seed), null));
     }
     assertTrue("two Arceuus males of the same gender can differ", male.size() > 1);
     assertTrue("two Arceuus females of the same gender can differ", female.size() > 1);
@@ -331,8 +369,8 @@ public class GeminiVoiceMapTest {
     Set<String> male = new HashSet<>();
     Set<String> female = new HashSet<>();
     for (int seed = 0; seed < 64; seed++) {
-      male.add(map.voiceFor(VoiceSpec.npc(race, NpcGender.MALE, seed)));
-      female.add(map.voiceFor(VoiceSpec.npc(race, NpcGender.FEMALE, seed)));
+      male.add(map.voiceFor(VoiceSpec.npc(race, NpcGender.MALE, seed), null));
+      female.add(map.voiceFor(VoiceSpec.npc(race, NpcGender.FEMALE, seed), null));
     }
     assertEquals(race + " males draw their stated pool", expectedMale, male);
     assertEquals(race + " females draw their stated pool", expectedFemale, female);
@@ -343,7 +381,90 @@ public class GeminiVoiceMapTest {
     assertTrue("no " + race + " voice serves both genders: " + overlap, overlap.isEmpty());
   }
 
+  private static final GeminiVoiceMap REGIONAL =
+      new GeminiVoiceMap(
+          new GeminiVoiceRegions(
+              new JsonParser()
+                  .parse(
+                      "{\"IRISH\":{\"playerKeywords\":[\"irish\"],\"MALE\":[\"ie-m-1\",\"ie-m-2\"],"
+                          + "\"FEMALE\":[]}}")
+                  .getAsJsonObject()));
+
+  private static CharacterProfile inRegion(String region) {
+    return new CharacterProfile("Npc", "Strong accent", null, "Plain.", "Steady.", null, region);
+  }
+
+  @Test
+  public void anNpcWithARegionIsVoicedFromThatRegionsPool() {
+    String voice =
+        REGIONAL.voiceFor(VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE, 99), inRegion("IRISH"));
+    assertTrue(voice, voice.startsWith("ie-m-"));
+  }
+
+  @Test
+  public void aRegionalNpcKeepsOneVoiceOnEveryLine() {
+    VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 1234);
+    String first = REGIONAL.voiceFor(spec, inRegion("IRISH"));
+    for (int i = 0; i < 10; i++) {
+      assertEquals(first, REGIONAL.voiceFor(spec, inRegion("IRISH")));
+    }
+  }
+
+  @Test
+  public void aRegionWithNoVoicesForTheGenderFallsBackToTheRacePool() {
+    assertEquals(
+        map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, 5), null),
+        REGIONAL.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, 5), inRegion("IRISH")));
+  }
+
+  @Test
+  public void aChildWithARegionTakesThatRegionsYoungestVoices() {
+    GeminiVoiceMap withChildren =
+        new GeminiVoiceMap(
+            new GeminiVoiceRegions(
+                new JsonParser()
+                    .parse(
+                        "{\"IRISH\":{\"MALE\":[\"ie-m-1\",\"ie-m-2\"],\"CHILD_MALE\":[\"ie-young\"]}}")
+                    .getAsJsonObject()));
+    assertEquals(
+        "ie-young",
+        withChildren.voiceFor(
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 5, true), inRegion("IRISH")));
+  }
+
+  @Test
+  public void aChildWhoseRegionHasNoYoungVoicesKeepsTheChildPool() {
+    String voice =
+        REGIONAL.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 5, true), inRegion("IRISH"));
+    assertTrue(CHILD_MALE_POOL.contains(voice));
+  }
+
+  @Test
+  public void theNarratorIgnoresRegions() {
+    assertEquals(
+        GeminiVoiceMap.FALLBACK_NARRATOR_VOICE,
+        REGIONAL.voiceFor(VoiceSpec.NARRATOR, inRegion("IRISH")));
+  }
+
+  @Test
+  public void thePlayerIsVoicedFromTheRegionTheirTypedAccentNames() {
+    CharacterProfile irish =
+        new CharacterProfile("Adventurer", "Strong Dublin Irish accent", "Plain.", "Steady.");
+    String voice = REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), irish);
+    assertTrue(voice, voice.startsWith("ie-m-"));
+    assertEquals(voice, REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), irish));
+  }
+
+  @Test
+  public void aPlayerAccentNamingNoRegionKeepsThePlayerVoice() {
+    CharacterProfile welsh =
+        new CharacterProfile("Adventurer", "Strong Welsh accent", "Plain.", "Steady.");
+    assertEquals(
+        map.voiceFor(VoiceSpec.player(NpcGender.MALE), null),
+        REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), welsh));
+  }
+
   private static Set<String> pool(String... voices) {
-    return new HashSet<>(java.util.Arrays.asList(voices));
+    return new HashSet<>(Arrays.asList(voices));
   }
 }

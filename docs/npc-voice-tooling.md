@@ -1,7 +1,7 @@
 # NPC voice table tooling
 
 Offline tooling that produces the bundled `src/main/resources/npc-voices.json`
-lookup table. **None of this runs inside the plugin.** At runtime the plugin only
+lookup table and the `src/main/resources/voice-regions.json` voice pools. **None of this runs inside the plugin.** At runtime the plugin only
 reads the generated JSON and does in-memory map lookups keyed by NPC id, so there
 are no network calls or large downloads when choosing a voice.
 
@@ -14,8 +14,17 @@ are no network calls or large downloads when choosing a voice.
   gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
   rare NPC the wiki gets wrong or does not cover, and for marking named children.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
-  (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
+  (Gemini) backend (name, accent, accentDetail, style, replaceStyle, pace, pitch, voiceRegion).
+  Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
+- `tools/voice-regions.json` - hand-curated **voice regions**: each names one Gemini Extended
+  Voice Library accent, the player-accent keywords that select it, any voices excluded because they
+  read as the wrong gender, and optionally `onlyVoices` to narrow a gender to named voices (the
+  trolls' deep southern English pool).
+- `tools/voice-library.json` - a committed snapshot of the Extended Voice Library, refreshed with
+  `GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`. The generator builds each region's
+  male and female pools from it into `src/main/resources/voice-regions.json`, so a voice only
+  changes when the snapshot or the regions change and are shipped.
 
 ## Data source
 
@@ -138,10 +147,11 @@ the `_meta` counts) with no wiki drift:
 python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json
 ```
 
-Then build and test:
+Then build and test, including the generator's own tests, which CI also runs:
 
 ```bash
 ./gradlew test spotlessCheck
+python3 -m unittest discover -s tools -p "test_*.py"
 ```
 
 Commit the regenerated `src/main/resources/npc-voices.json` alongside any
@@ -164,7 +174,9 @@ local-only correction, or to pin a talkable monster the wiki splits into
 
 The optional `name` field is documentation only. `ethnicity` is also optional (set a byEthnicity key, or omit to clear a wrong one). The optional
 `lifeStage` field marks a named child (`"lifeStage": "child"` is the only value) so it voices
-from the youthful cloud voice sub-pool instead of its adult race anchor;
+from its region's youngest native voices (or the prebuilt child pool when its accent has no
+region) and takes the `child` profile layer, with its style and child pitch, just as a
+keyword-named child does;
 generically named children (Child, Schoolboy, Street urchin, ...) are caught by
 the `child` keyword category in `profiles.json` instead and need no override. Find
 an NPC's id with the RuneLite developer tools, the wiki, or **Debug Logging** in the
@@ -173,10 +185,87 @@ plugin (it logs the id and chosen voice/profile per line).
 ## Character voice profiles (cloud)
 
 Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundled resource
-carries a `profiles` section that steers **how** the cloud (Gemini) backend
-delivers each line: accent, style, and pace, rendered into a Gemini `AUDIO
-PROFILE` / `DIRECTOR'S NOTES` block prepended to the spoken text. Chat-head
-emotion is layered on top as a separate inline tag, so the two compose.
+carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
+delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them as a full
+character profile in one style string sent in `speech_metadata.style`. It opens by naming the
+spoken language and the speaker's gender ("A woman's voice.", "A young boy's voice."; none for
+the narrator, whose storyteller voice is fixed), then any `pitch`, and ends with the line's chat-head emotion (and, on Google AI
+Studio, a speed direction when **Speaking Pace** is not 100). The language is the **Spoken
+Language** setting when the line is translated, and English when it is not:
+
+```
+Speaking English. Audio profile: Benny, a character in a medieval fantasy world. Accent:
+Strong London English accent, British English pronunciation. Common British English, the
+plain, standard speech of Gielinor's central kingdom of Misthalin. Style: An ordinary citizen of
+Gielinor. Down-to-earth, sincere, and approachable. Eager street vendor, loud and
+pitchy, hawking his newspapers to passers-by. Pace: Steady and conversational.
+Sounding happy.
+```
+
+The text the model receives is the spoken line alone, since Gemini 3.8 speaks its
+input verbatim. By ear, the full profile keeps NPCs that share a voice sounding like
+different people, where a short style string flattens them together.
+
+- `accent` is a strong, explicit accent phrase that names the pronunciation:
+  "Strong London English accent, British English pronunciation", "Strong Glasgow
+  Scottish accent, Scottish English pronunciation", "Strong Italian accent,
+  Italian-accented English pronunciation". Gemini 3.8 treats a soft phrase
+  ("Plain southern English accent") as optional and falls back to a generic
+  default accent, so every accent leads with "Strong" (or "Very strong," where by ear the accent
+  needs more push, as for the Tortugans) and names its pronunciation.
+  A delivery quirk (slurred, whispered, hissing) is never an accent: it goes in
+  `style`, so the character keeps the accent of its race or region.
+- `accentDetail` is optional and sits next to an `accent`. It carries the colour of the accent in
+  prose ("A fantasy Norse accent, a Scandinavian-flavoured English in the manner of a Viking from
+  the old sagas.") and is rendered right after the accent. Like `voiceRegion`, it always comes
+  from the layer that set the winning accent. The strong accent phrase keeps 3.8 on the right
+  accent, and the detail keeps the character medieval rather than modern.
+- `style` and `pace` are descriptive delivery prose: persona, tone, timbre, volume,
+  rhythm.
+- `replaceStyle: true` on a layer drops the styles of the less specific layers before its own, so
+  a region can replace the generic human style: the Wilderness trades "Down-to-earth, sincere, and
+  approachable" for its own outlaw style. More specific layers still add to it.
+- `name` is sent as the profile's name, so it is part of the cache key.
+- `pitch` is optional and leads the profile, right after the spoken language and the speaker's
+  gender, ahead of the profile name ("Very high-pitched,
+  squeaky, thin little voice, far above a normal adult voice"). Native library voices ignore
+  pitch described later in the style, so it leads. The most specific layer that sets it wins. The
+  gender before it matters: by ear a bare "very deep" turns a female troll or dwarf into a man, a
+  bare "very high" turns a boy into a girl, and a few library voices drift toward the other
+  gender unless it is named.
+- `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
+  (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
+  comes from the same layer as the winning accent, so an accent with no region (Welsh, Nigerian)
+  clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
+- No meta-instructions ("word for word", "do not change voice") and no square- or angle-bracket
+  tags.
+
+### Repetition is deliberate
+
+The composed style repeats itself: a troll's depth is in its `pitch` and again in its race style,
+an `accentDetail` can restate its accent, and every human carries the generic "ordinary citizen"
+line under their own description. **Leave it.** Gemini 3.8 treats each mention of a trait as a
+push toward it, so repetition works as emphasis. The wording is tuned by ear. By ear, a
+version that says each fact once sounds generic: trolls lose depth, characters flatten toward the
+same plain person, and misgendered and modern-sounding voices return.
+
+The cost is small. The style is billed as text input, about $0.0001 a line for a long style
+against about $0.001 for the audio, and the README latency figures already include full styles.
+
+So a profile edit follows these rules:
+
+- Keep the existing wording and every depth or pitch cue, even where it reads as redundant.
+- Make one wording change at a time, render the `compare-voices` cases it touches against the
+  current branch, and keep it only if it passes by ear.
+- Contradiction is a different problem from repetition: two layers that disagree (a fairy's
+  "quick and fluttering" under the Fairy Godfather's "unhurried menace") are fixed on that one
+  NPC, and only after hearing the change.
+
+The generator enforces the mechanical part: `validate_profiles` rejects a tag
+bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
+does not start with "Strong" or "Very strong," and end with its pronunciation, an `accent` over 100
+characters, a `voiceRegion` that is not in `tools/voice-regions.json`, a `voiceRegion` or `accentDetail` on a
+layer with no `accent`, and a `replaceStyle` with no `style` beside it.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners
@@ -187,8 +276,10 @@ use posh Received Pronunciation.
 
 An NPC can be several things at once (a Fremennik human, a ghost pirate), so
 **every** matching layer contributes. `style` accumulates across all contributing
-layers so the persona blends; `name`, `accent`, and `pace` are single-valued, so
-the most specific layer that sets each one wins.
+layers so the persona blends, unless a layer sets `replaceStyle`; `name`, `accent`, `pace`, and
+`pitch` are single-valued, so the most specific layer that sets each one wins, and `voiceRegion`
+and `accentDetail` always follow the layer that set the winning `accent`. A child marked by the table's `lifeStage` rather than by a child
+keyword takes the `child` category layer after the keyword categories and before `byId`.
 
 1. `default` - the global British fallback. **Must be complete** (all four of
    `name`, `accent`, `style`, `pace`). Every other layer is sparse.
@@ -198,17 +289,19 @@ the most specific layer that sets each one wins.
    they are. Every league region has an accent: the far lands follow the
    real-world cultures they are based on (Desert -> Middle Eastern,
    Sophanem/Menaphos -> Egyptian, Karamja -> West African, Fremennik -> Norse,
-   Morytania -> Eastern European gothic, Varlamore -> Mediterranean), the central
-   kingdoms use distinct English regional accents (Misthalin, Asgarnia West
-   Country, Kandarin Liverpudlian, Kourend, Wilderness), and Tirannwn is Welsh.
+   Morytania -> Eastern European, Varlamore -> Italian, Wyrmscraig -> rural Irish),
+   the central kingdoms use distinct English regional accents (Misthalin London,
+   Asgarnia West Country, Kandarin Scouse, Kourend Northern, the Wilderness rough and harsh on Newcastle voices),
+   and Tirannwn is Welsh.
 4. `byCategory[]` - an ordered list; **every** entry whose `keywords` word-match
    the display name contributes. This expresses categories the race buckets cannot
    (leprechaun -> Irish, vampyre -> Dracula-esque, gnome, imp, ghost, pirate,
    royalty, knight, noble, wizard, ...). Matching is case-insensitive and bounded
    on word edges, so `imp` matches "Imp" but not "important". A category may also
    carry `"lifeStage": "child"`: besides layering its style, it marks every matching NPC
-   as a child so the voice resolver picks from the youthful voice sub-pool (the
-   `child` category keys on child/schoolboy/schoolgirl/urchin).
+   as a child so the voice resolver picks from its region's youngest native voices, or
+   the prebuilt child pool when it has no region (the `child` category keys on
+   child/schoolboy/schoolgirl/urchin).
 5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id. Sparse:
    carry only what is unique to the character (usually `name` + `style`); its
    style is added on top of the blend, and accent and pace inherit unless it sets

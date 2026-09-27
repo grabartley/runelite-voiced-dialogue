@@ -2,7 +2,6 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import java.util.EnumSet;
@@ -21,53 +20,28 @@ public class GeminiEmotionStyleTest {
         GeminiEmotionStyle.SUPPORTED);
   }
 
-  private Object[] tagCases() {
+  private Object[] directionCases() {
     return new Object[] {
-      new Object[] {Emotion.HAPPY, "happy"},
-      new Object[] {Emotion.SAD, "sad"},
-      new Object[] {Emotion.ANGRY, "angry"},
-      new Object[] {Emotion.SCARED, "fearful"},
+      new Object[] {Emotion.HAPPY, "Sounding happy"},
+      new Object[] {Emotion.SAD, "Sounding sad"},
+      new Object[] {Emotion.ANGRY, "Sounding angry"},
+      new Object[] {Emotion.SCARED, "Sounding fearful"},
     };
   }
 
   @Test
-  @Parameters(method = "tagCases")
-  public void mapsEachNonNeutralEmotionToItsConservativeTag(Emotion emotion, String expected) {
-    assertEquals(expected, GeminiEmotionStyle.tagFor(emotion));
+  @Parameters(method = "directionCases")
+  public void mapsEachNonNeutralEmotionToAStyleDirection(Emotion emotion, String expected) {
+    assertEquals(expected, GeminiEmotionStyle.directionFor(emotion));
   }
 
-  private Object[] noTagEmotions() {
+  private Object[] undirectedEmotions() {
     return new Object[] {Emotion.NEUTRAL, null};
   }
 
   @Test
-  @Parameters(method = "noTagEmotions")
-  public void neutralAndNullHaveNoTag(Emotion emotion) {
-    assertNull(GeminiEmotionStyle.tagFor(emotion));
-  }
-
-  private Object[] applyCases() {
-    return new Object[] {
-      new Object[] {"Get out!", Emotion.ANGRY, "[angry] Get out!"},
-      new Object[] {"Help me!", Emotion.SCARED, "[fearful] Help me!"},
-    };
-  }
-
-  @Test
-  @Parameters(method = "applyCases")
-  public void applyPrependsTheBracketedTag(String text, Emotion emotion, String expected) {
-    assertEquals(expected, GeminiEmotionStyle.apply(text, emotion));
-  }
-
-  private Object[] untouchedEmotions() {
-    return new Object[] {Emotion.NEUTRAL, null};
-  }
-
-  @Test
-  @Parameters(method = "untouchedEmotions")
-  public void applyLeavesNeutralInputUntouched(Emotion emotion) {
-    String text = "Well met, traveller.";
-    assertSame(
-        "neutral returns the same string instance", text, GeminiEmotionStyle.apply(text, emotion));
+  @Parameters(method = "undirectedEmotions")
+  public void neutralAndNullAddNoDirection(Emotion emotion) {
+    assertNull(GeminiEmotionStyle.directionFor(emotion));
   }
 }

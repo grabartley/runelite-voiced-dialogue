@@ -66,6 +66,15 @@ CATEGORY_RACE_RULES = [(r["keyword"], r["race"]) for r in MAPPING["categoryRaceR
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
 DEFAULT_PROFILES = os.path.join("tools", "profiles.json")
+DEFAULT_VOICE_REGIONS = os.path.join("tools", "voice-regions.json")
+DEFAULT_VOICE_LIBRARY = os.path.join("tools", "voice-library.json")
+DEFAULT_VOICE_REGIONS_OUT = os.path.join("src", "main", "resources", "voice-regions.json")
+VOICE_GENDERS = {"male": "MALE", "female": "FEMALE"}
+CHILD_POOL_SIZE = 3
+# A region gives children voices of their own only while adults keep at least this many; smaller
+# regions share one pool between children and adults.
+MIN_ADULT_VOICES = 3
+CHILD_POOL_PREFIX = "CHILD_"
 # Full NPC id -> name dump, used only to cross-reference ids the wiki pages do not
 # list (variants) onto wiki data by name. The wiki remains the source of truth.
 DEFAULT_SUMMARY_URL = (
@@ -76,6 +85,14 @@ VALID_RACES = set(MAPPING["races"])
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
+
+MAX_DIRECTION_LENGTH = {"accent": 100}
+ACCENT_LEADS = ("Strong ", "Very strong, ")
+ACCENT_ENDING = re.compile(r",\s*[^,]+ pronunciation$")
+ACCENT_RULE_EXEMPT = {"byRace.Dog"}
+FORBIDDEN_DIRECTION = re.compile(
+    r"[\[\]<>]|audio\s*profile|director'?s\s*notes|#+\s*transcript|transcript\s*#+|word\s+for\s+word",
+    re.IGNORECASE)
 
 # Wiki race text -> the voice buckets (VoiceProfile), ordered, first hit wins. The rules, the
 # category rules above and the league region map below are shared with the plugin's auto-learn
@@ -438,6 +455,90 @@ def apply_overrides(table, overrides):
     return len(override_npcs)
 
 
+def build_voice_regions(regions_source, library):
+    library_ids = {voice["id"] for voice in library["voices"]}
+    narrator = regions_source["narratorVoice"]
+    if narrator not in library_ids:
+        raise ValueError(f"narratorVoice '{narrator}' is not in the voice library")
+    regions = {}
+    seen_keywords = {}
+    # A voice named in any onlyVoices was picked by ear as an adult (the trolls' deep men), so it
+    # never voices a child in any region.
+    adult_only = {voice_id for region in regions_source["regions"].values()
+                  for ids in (region.get("onlyVoices") or {}).values() for voice_id in ids}
+    for key, region in regions_source["regions"].items():
+        unknown = set(region.get("exclude") or []) - library_ids
+        if unknown:
+            raise ValueError(f"voice region {key} excludes unknown voices {sorted(unknown)}")
+        for keyword in region.get("playerKeywords") or []:
+            owner = seen_keywords.setdefault(keyword.lower(), key)
+            if owner != key:
+                raise ValueError(f"player keyword '{keyword}' is in both {owner} and {key}")
+        excluded = set(region.get("exclude") or []) | {narrator}
+        only = region.get("onlyVoices") or {}
+        unknown_genders = set(only) - set(VOICE_GENDERS)
+        if unknown_genders:
+            raise ValueError(f"voice region {key} onlyVoices names unknown genders "
+                             f"{sorted(unknown_genders)}")
+        accent_pools = {gender: [] for gender in VOICE_GENDERS.values()}
+        pools = {gender: [] for gender in VOICE_GENDERS.values()}
+        for voice in library["voices"]:
+            gender = VOICE_GENDERS.get(voice.get("gender"))
+            if (not gender or voice.get("accent") != region["libraryAccent"]
+                    or voice["id"] in excluded):
+                continue
+            accent_pools[gender].append(voice)
+            allowed = only.get(voice.get("gender"))
+            if allowed is None or voice["id"] in allowed:
+                pools[gender].append(voice)
+        narrowed = {VOICE_GENDERS[library_gender] for library_gender in only}
+        for library_gender, ids in only.items():
+            picked = {v["id"] for v in pools[VOICE_GENDERS[library_gender]]}
+            missing = set(ids) - picked
+            if missing:
+                raise ValueError(f"voice region {key} onlyVoices {sorted(missing)} are not "
+                                 f"{library_gender} {region['libraryAccent']} voices")
+        for gender, voices in pools.items():
+            if not voices:
+                raise ValueError(f"voice region {key} has no {gender.lower()} library voices")
+        entry = {"playerKeywords": [k.lower() for k in region.get("playerKeywords") or []]}
+        for gender, voices in pools.items():
+            # Children come from the whole accent, so a narrowed gender (two deep troll men) still
+            # gives its children young voices.
+            aged = sorted((v for v in accent_pools[gender] if "age" in v),
+                          key=lambda v: (v["age"], v["id"]))
+            youngest = {v["id"] for v in aged[:CHILD_POOL_SIZE]}
+            adults = {v["id"] for v in voices}
+            if gender not in narrowed and len(adults) - len(youngest) >= MIN_ADULT_VOICES:
+                adults -= youngest
+            entry[gender] = sorted(adults)
+            entry[CHILD_POOL_PREFIX + gender] = sorted(youngest - adult_only)
+        regions[key] = entry
+    return regions
+
+
+FIXED_VOICE_LAYERS = ("player", "narrator")
+
+
+def validate_voice_regions(profiles, regions):
+    for key in FIXED_VOICE_LAYERS:
+        for field in ("pitch", "voiceRegion"):
+            if field in (profiles.get(key) or {}):
+                raise ValueError(f"{key}.{field} is not read: that speaker's voice is chosen apart "
+                                 "from the profile layers")
+    if "accentDetail" in (profiles.get("player") or {}):
+        raise ValueError("player.accentDetail is not read: the player's accent is typed in the "
+                         "settings, so no detail can follow it")
+    for where, layer in profile_layers(profiles):
+        region = layer.get("voiceRegion")
+        if region is None:
+            continue
+        if region not in regions:
+            raise ValueError(f"{where}.voiceRegion '{region}' is not a region in voice-regions.json")
+        if not layer.get("accent"):
+            raise ValueError(f"{where}.voiceRegion must sit next to the accent it voices")
+
+
 def validate_profiles(profiles):
     if not isinstance(profiles, dict):
         raise ValueError("profiles.json must be a JSON object")
@@ -457,7 +558,42 @@ def validate_profiles(profiles):
             int(key)
         except (TypeError, ValueError):
             raise ValueError(f"byId key '{key}' is not a numeric NPC id")
+    for where, layer in profile_layers(profiles):
+        validate_directions(where, layer)
     return profiles
+
+
+def profile_layers(profiles):
+    for key in ("default", "player", "narrator"):
+        if isinstance(profiles.get(key), dict):
+            yield key, profiles[key]
+    for section in ("byRace", "byEthnicity", "byId"):
+        for key, layer in (profiles.get(section) or {}).items():
+            if not key.startswith("_") and isinstance(layer, dict):
+                yield f"{section}.{key}", layer
+    for entry in (profiles.get("byCategory") or []):
+        yield f"byCategory.{entry.get('id', '?')}", entry
+
+
+def validate_directions(where, layer):
+    if "accentDetail" in layer and "accent" not in layer:
+        raise ValueError(f"{where}.accentDetail is only read beside an accent in the same layer")
+    if "replaceStyle" in layer and not (layer["replaceStyle"] is True and "style" in layer):
+        raise ValueError(f"{where}.replaceStyle must be true and sit beside a style")
+    for field in ("name", "accent", "accentDetail", "style", "pace", "pitch"):
+        value = layer.get(field)
+        if value is None:
+            continue
+        if FORBIDDEN_DIRECTION.search(value):
+            raise ValueError(f"{where}.{field} carries a tag or prompt marker: {value!r}")
+        if field == "accent" and where not in ACCENT_RULE_EXEMPT and not (
+                value.startswith(ACCENT_LEADS) and ACCENT_ENDING.search(value)):
+            raise ValueError(
+                f"{where}.accent must start with 'Strong' or 'Very strong,' and end with "
+                f"', <variety> pronunciation': {value!r}")
+        limit = MAX_DIRECTION_LENGTH.get(field)
+        if limit is not None and len(value) > limit:
+            raise ValueError(f"{where}.{field} is longer than {limit} characters: {value!r}")
 
 
 def load_json(path):
@@ -472,6 +608,9 @@ def main():
     parser.add_argument("--summary", default=DEFAULT_SUMMARY_URL,
                         help="Full id->name NPC dump (URL) for name cross-reference; '' to skip.")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--voice-regions", default=DEFAULT_VOICE_REGIONS)
+    parser.add_argument("--voice-library", default=DEFAULT_VOICE_LIBRARY)
+    parser.add_argument("--voice-regions-out", default=DEFAULT_VOICE_REGIONS_OUT)
     parser.add_argument("--limit", type=int, default=None,
                         help="Cap the number of NPC pages (for quick test runs).")
     parser.add_argument("--base", default=None,
@@ -481,6 +620,9 @@ def main():
     args = parser.parse_args()
 
     profiles = validate_profiles(load_json(args.profiles))
+    voice_regions_source = load_json(args.voice_regions)
+    voice_regions = build_voice_regions(voice_regions_source, load_json(args.voice_library))
+    validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 
     if args.base:
@@ -547,6 +689,18 @@ def main():
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")
+    with open(args.voice_regions_out, "w", encoding="utf-8") as fh:
+        json.dump({
+            "_meta": {
+                "description": "Gemini Extended Voice Library pools per voice region and gender, "
+                               "baked into the plugin. Generated offline by "
+                               "tools/generate_npc_voices.py from tools/voice-regions.json and the "
+                               "tools/voice-library.json snapshot. Do not hand-edit.",
+            },
+            "narratorVoice": voice_regions_source["narratorVoice"],
+            "regions": voice_regions,
+        }, fh, indent=1, ensure_ascii=False)
         fh.write("\n")
 
     print(f"Wrote {len(npcs)} NPC entries from {pages_with_ids} pages to {args.out}", file=sys.stderr)

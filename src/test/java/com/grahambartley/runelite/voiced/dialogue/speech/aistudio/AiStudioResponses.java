@@ -102,7 +102,7 @@ final class AiStudioResponses {
         "GenerateRequestsPerDayPerProjectPerModel",
         "generativelanguage.googleapis.com/generate_requests_per_model_per_day",
         "100",
-        "gemini-3.1-flash-tts");
+        "gemini-3.8-flash-tts");
   }
 
   static String statedRetryDelay(String retryDelay) {

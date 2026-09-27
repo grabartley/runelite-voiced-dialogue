@@ -23,24 +23,26 @@ and `regenerate-npc-voices` for the generation/commit flow.
 Getting the accent right means knowing what each key *sounds* like. British-family
 keys are low-contrast; the foreign ones are jarring if mis-assigned:
 
-| key | accent |
-|-----|--------|
-| `misthalin` | Common British (plain, standard, ≈ the default) |
-| `asgarnia` | West Country British burr (also the classic **pirate** "arr" sound) |
-| `kandarin` | Liverpudlian / Scouse |
-| `kourend` | Broad rustic British |
-| `wilderness` | Rough, harsh British (outlaws) |
-| `tirannwn` | Welsh |
-| `fremennik` | Norse / Viking |
-| `morytania` | Eastern European gothic |
-| `kharidian` | Middle Eastern / Arabic |
-| `menaphite` | Egyptian |
-| `karamja` | West African / Nigerian |
-| `varlamore` | Italian |
-| `easternlands` | Japanese |
+| key | accent | native voices (`voiceRegion`) |
+|-----|--------|-----|
+| `misthalin` | Strong London English | southern English |
+| `asgarnia` | Strong West Country English (also the classic **pirate** "arr" sound) | West Country |
+| `kandarin` | Strong Liverpool Scouse | Scouse |
+| `kourend` | Strong rustic Northern English | Mancunian |
+| `wilderness` | Strong rough, harsh English (outlaws) | Geordie (Newcastle voices) |
+| `tirannwn` | Strong lilting Welsh | none (race voices) |
+| `fremennik` | Strong Norse Scandinavian | Norse (Dutch voices) |
+| `morytania` | Strong Eastern European | Polish |
+| `kharidian` | Strong Arabic Middle Eastern | Egyptian Arabic |
+| `menaphite` | Strong Egyptian | Egyptian Arabic |
+| `karamja` | Strong Nigerian West African | none (race voices) |
+| `varlamore` | Strong Italian | Italian |
+| `easternlands` | Strong Japanese | Japanese |
+| `wyrmscraig` | Strong rural Irish | Irish |
 
-`null` (no ethnicity) → the `default` profile: "Common British, plain earthy
-peasant", essentially the same sound as `misthalin`.
+`null` (no ethnicity) → the `default` profile: "Strong working-class English
+accent", voiced from the southern English native voices, essentially the same
+sound as `misthalin`.
 
 ## Process, per NPC
 
@@ -69,7 +71,7 @@ peasant", essentially the same sound as `misthalin`.
 3. **Pin it in `overrides.json`.** Set `"ethnicity": "<region>"` or
    `"ethnicity": null` on every id for that character. Add `race`/`gender` if you
    corrected them. Keep one-line objects so the diff stays small.
-4. **Verify against the wiki before committing** — see the mandatory checklist in
+4. **Verify against the wiki before committing**: see the mandatory checklist in
    `regenerate-npc-voices`. Every changed NPC in the final `npc-voices.json` must
    be hand-confirmed against wiki data, and a change table presented.
 
@@ -89,8 +91,8 @@ peasant", essentially the same sound as `misthalin`.
 
 ## Sanity references
 
-- Karim (2877) / Ellis (3231) — Al-Kharid natives, `kharidian`.
-- Ak-Haranu (2989) — `easternlands` (explicit non-region accent).
-- Pirate Pete / Bill Teach — Mos Le'Harmless pirates → `asgarnia`.
-- Sir Percival — Camelot knight → `null` (posh via role, not an accent).
-- Kree'arra — aviansie → `race: Demon`, `ethnicity: null`.
+- Karim (2877) / Ellis (3231): Al-Kharid natives, `kharidian`.
+- Ak-Haranu (2989): `easternlands` (explicit non-region accent).
+- Pirate Pete / Bill Teach: Mos Le'Harmless pirates → `asgarnia`.
+- Sir Percival: Camelot knight → `null` (posh via role, not an accent).
+- Kree'arra: aviansie → `race: Demon`, `ethnicity: null`.

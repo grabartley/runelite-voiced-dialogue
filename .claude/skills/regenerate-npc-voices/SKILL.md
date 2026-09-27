@@ -1,6 +1,6 @@
 ---
 name: regenerate-npc-voices
-description: Regenerate the bundled NPC voice + profile table (src/main/resources/npc-voices.json) from the OSRS Wiki. Use when refreshing NPC coverage (newly released NPCs), after editing tools/overrides.json or tools/profiles.json, or after changing the generator's mapping rules.
+description: Regenerate the bundled NPC voice + profile table (src/main/resources/npc-voices.json) from the OSRS Wiki, and the region voice pools (src/main/resources/voice-regions.json). Use when refreshing NPC coverage (newly released NPCs), after editing tools/overrides.json or tools/profiles.json, or after changing the generator's mapping rules.
 ---
 
 # Regenerate the NPC voice table
@@ -17,7 +17,12 @@ python3 tools/generate_npc_voices.py        # needs network access to the wiki
 ```
 
 Quick partial run for testing: `--limit 500`. Commit the regenerated
-`npc-voices.json` alongside any `overrides.json` / `profiles.json` edits.
+`npc-voices.json` and `voice-regions.json` alongside any `overrides.json` /
+`profiles.json` / `voice-regions.json` edits. The generator also writes
+`src/main/resources/voice-regions.json` from `tools/voice-regions.json` and the
+`tools/voice-library.json` snapshot; refresh that snapshot only on purpose
+(`GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`), since a changed
+pool can move NPCs onto different voices.
 
 For an overrides/profiles-only change, prefer `--base src/main/resources/npc-voices.json`
 (offline, no wiki fetch) so the diff is exactly your intended edits with **no
@@ -27,12 +32,14 @@ online run is only for a deliberate table/coverage refresh.
 After regenerating, update the NPC counts in `README.md` to match the new
 table: the total entry count (`_meta.count`) and the bespoke-personality count
 (`profiles.byId` length). Read both from the regenerated `npc-voices.json` and
-edit the README figures in the same commit so they never drift.
+edit the README figures in the same commit so they never drift. When the voice pools change, also
+recount the README's unique voices: every id in `voice-regions.json` (pools, child pools and the
+narrator) plus the prebuilt names in `GeminiVoiceMap`.
 
 ## Mandatory: verify every changed NPC before committing
 
-Any NPC whose entry changes in the regenerated `npc-voices.json` — via override
-edits, wiki drift, a summary refresh, or a logic change — must be **100% hand
+Any NPC whose entry changes in the regenerated `npc-voices.json`, via override
+edits, wiki drift, a summary refresh, or a logic change, must be **100% hand
 verified against the OSRS Wiki** before commit. The burden of verification is on
 you; do not rubber-stamp the diff.
 

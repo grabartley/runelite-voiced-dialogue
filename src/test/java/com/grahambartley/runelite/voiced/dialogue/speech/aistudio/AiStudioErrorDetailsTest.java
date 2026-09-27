@@ -20,7 +20,7 @@ public class AiStudioErrorDetailsTest {
   @Test
   public void eachReaderSeesOnlyTheTypeItAskedFor() {
     byte[] body =
-        AiStudioResponses.quotaFailure("GenerateRequestsPerDay", "", "100", "gemini-3.1-flash-tts")
+        AiStudioResponses.quotaFailure("GenerateRequestsPerDay", "", "100", "gemini-3.8-flash-tts")
             .getBytes(UTF_8);
 
     assertEquals(1, ofType(body, QUOTA_FAILURE).size());

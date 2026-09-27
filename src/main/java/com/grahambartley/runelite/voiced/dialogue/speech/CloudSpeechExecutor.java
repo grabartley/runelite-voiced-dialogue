@@ -6,7 +6,6 @@ import com.grahambartley.runelite.voiced.dialogue.audio.PcmCompleteness;
 import com.grahambartley.runelite.voiced.dialogue.audio.PcmSink;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
-import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiEmotionStyle;
 import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -31,7 +30,9 @@ public final class CloudSpeechExecutor {
 
     String translate(String text, String language, String apiKey);
 
-    default void profileApplied(CharacterProfile profile) {}
+    default boolean speedInStyle() {
+      return false;
+    }
 
     PreparedSpeech buildRequests(SpokenLine line, SynthesisRequest request);
 
@@ -74,14 +75,24 @@ public final class CloudSpeechExecutor {
   public static final class SpokenLine {
     public final String apiKey;
     public final String input;
+    public final String style;
+    public final String voice;
     public final boolean translating;
     public final double speedRatio;
     public final int speedPercent;
 
     public SpokenLine(
-        String apiKey, String input, boolean translating, double speedRatio, int speedPercent) {
+        String apiKey,
+        String input,
+        String style,
+        String voice,
+        boolean translating,
+        double speedRatio,
+        int speedPercent) {
       this.apiKey = apiKey;
       this.input = input;
+      this.style = style;
+      this.voice = voice;
       this.translating = translating;
       this.speedRatio = speedRatio;
       this.speedPercent = speedPercent;
@@ -129,7 +140,6 @@ public final class CloudSpeechExecutor {
   private final CloudBackendSupport support;
   private final GeminiTtsModel model;
   private final String providerName;
-  private final String cacheModelId;
   private final Ops ops;
   private final RateLimitBackoff backoff = new RateLimitBackoff();
 
@@ -138,13 +148,11 @@ public final class CloudSpeechExecutor {
       CloudBackendSupport support,
       GeminiTtsModel model,
       String providerName,
-      String cacheModelId,
       Ops ops) {
     this.config = config;
     this.support = support;
     this.model = model;
     this.providerName = providerName;
-    this.cacheModelId = cacheModelId;
     this.ops = ops;
   }
 
@@ -158,8 +166,7 @@ public final class CloudSpeechExecutor {
 
   public String cacheVariant(SynthesisRequest request) {
     return CloudCacheKeyBuilder.build(
-        cacheModelId,
-        model.voiceFor(request.voice()),
+        model.voiceFor(request.voice(), request.profile()),
         support.speedPercent(),
         request.profile(),
         CloudTtsText.effectiveSpokenLanguage(config, request),
@@ -210,19 +217,22 @@ public final class CloudSpeechExecutor {
       }
       spokenText = translated;
     }
-    String styledInput = model.styleInput(spokenText, request.emotion());
     CharacterProfile profile = request.profile();
-    String input = profile.renderPromptBlock() + styledInput;
-    ops.profileApplied(profile);
     int speed = support.speedPercent();
     double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
+    boolean speedInStyle = ops.speedInStyle() && speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT;
+    String spokenLanguage =
+        translating ? CloudTtsText.spokenLanguage(config) : CloudTtsText.DEFAULT_LANGUAGE;
+    String style =
+        speedInStyle
+            ? model.speechStyle(profile, request.voice(), request.emotion(), spokenLanguage, speed)
+            : model.speechStyle(profile, request.voice(), request.emotion(), spokenLanguage);
+
+    String voice = model.voiceFor(request.voice(), profile);
 
     if (config.debugMode()) {
-      String tag = GeminiEmotionStyle.tagFor(request.emotion());
       log.info(
-          "[TTS voice] cloud emotion {} -> {}",
-          request.emotion(),
-          tag == null ? "no tag (neutral input)" : "inline tag [" + tag + "]");
+          "[TTS voice] cloud voice {} emotion {} -> style '{}'", voice, request.emotion(), style);
       log.info(
           "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
           profile.name(),
@@ -234,7 +244,7 @@ public final class CloudSpeechExecutor {
     }
 
     return ops.buildRequests(
-        new SpokenLine(apiKey, input, translating, speedRatio, speed), request);
+        new SpokenLine(apiKey, spokenText, style, voice, translating, speedRatio, speed), request);
   }
 
   private Pcm runBuffered(PreparedSpeech prepared) {
