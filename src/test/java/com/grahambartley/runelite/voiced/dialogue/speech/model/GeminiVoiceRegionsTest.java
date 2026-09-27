@@ -46,6 +46,26 @@ public class GeminiVoiceRegionsTest {
   }
 
   @Test
+  public void anExcludedVoiceIsNeverPicked() {
+    for (int seed = 0; seed < 200; seed++) {
+      String owners = REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, seed);
+      assertFalse(owners.equals(REGIONS.voiceExcluding("SCOTTISH", NpcGender.MALE, seed, owners)));
+    }
+  }
+
+  @Test
+  public void excludingAVoiceOutsideThePoolPicksAsUsual() {
+    assertEquals(
+        REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, 9),
+        REGIONS.voiceExcluding("SCOTTISH", NpcGender.MALE, 9, "ie-m-1"));
+  }
+
+  @Test
+  public void excludingThePoolsOnlyVoiceLeavesNoVoice() {
+    assertNull(REGIONS.voiceExcluding("SOUTHERN_ENGLISH", NpcGender.MALE, 3, "en-m-1"));
+  }
+
+  @Test
   public void differentNpcsSpreadAcrossThePool() {
     Set<String> voices = new HashSet<>();
     for (int seed = 0; seed < 200; seed++) {

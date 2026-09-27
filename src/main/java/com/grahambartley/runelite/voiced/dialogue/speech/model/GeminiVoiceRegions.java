@@ -88,6 +88,16 @@ final class GeminiVoiceRegions {
     return pick(pool(pools, region, gender), seed);
   }
 
+  String voiceExcluding(String region, NpcGender gender, int seed, String excluded) {
+    List<String> pool = pool(pools, region, gender);
+    if (pool == null || !pool.contains(excluded)) {
+      return pick(pool, seed);
+    }
+    List<String> remaining = new ArrayList<>(pool);
+    remaining.remove(excluded);
+    return pick(remaining, seed);
+  }
+
   String childVoiceFor(String region, NpcGender gender, int seed) {
     return pick(pool(childPools, region, gender), seed);
   }

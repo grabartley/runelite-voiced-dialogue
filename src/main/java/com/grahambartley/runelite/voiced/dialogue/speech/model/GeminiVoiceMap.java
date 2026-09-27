@@ -18,6 +18,8 @@ public final class GeminiVoiceMap {
 
   static final int PLAYER_SEED = 0;
 
+  static final int FOLLOWER_SEED = 1;
+
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
   private final Map<NpcGender, String[]> followerVoices;
@@ -88,12 +90,14 @@ public final class GeminiVoiceMap {
     }
     NpcGender gender = NpcGender.orDefault(spec.gender());
     if (spec.player()) {
-      String accent = profile == null ? null : profile.accent();
-      String regional = regions.voiceFor(regions.regionForAccent(accent), gender, PLAYER_SEED);
+      String regional = regions.voiceFor(accentRegion(profile), gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
     }
     if (spec.follower()) {
-      return anchor(followerVoices.get(gender));
+      String region = accentRegion(profile);
+      String ownersVoice = regions.voiceFor(region, gender, PLAYER_SEED);
+      String regional = regions.voiceExcluding(region, gender, FOLLOWER_SEED, ownersVoice);
+      return regional != null ? regional : anchor(followerVoices.get(gender));
     }
     String region = profile != null && spec.hasVoiceSeed() ? profile.voiceRegion() : null;
     if (spec.child()) {
@@ -113,6 +117,10 @@ public final class GeminiVoiceMap {
       return pick(playerVoices.get(gender), spec);
     }
     return pick(byGender.get(gender), spec);
+  }
+
+  private String accentRegion(CharacterProfile profile) {
+    return regions.regionForAccent(profile == null ? null : profile.accent());
   }
 
   private static String anchor(String[] pool) {

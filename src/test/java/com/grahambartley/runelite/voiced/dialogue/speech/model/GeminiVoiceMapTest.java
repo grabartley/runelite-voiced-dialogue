@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -463,6 +464,62 @@ public class GeminiVoiceMapTest {
         map.voiceFor(VoiceSpec.player(NpcGender.MALE), null),
         REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), welsh));
   }
+
+  private static CharacterProfile accented(String accent) {
+    return new CharacterProfile("Companion", accent, "Plain.", "Steady.");
+  }
+
+  @Test
+  public void theFollowerIsVoicedFromTheRegionItsTypedAccentNames() {
+    String voice = REGIONAL.voiceFor(VoiceSpec.follower(NpcGender.MALE), accented("Irish"));
+    assertTrue(voice, voice.startsWith("ie-m-"));
+  }
+
+  @Test
+  public void aFollowerSharingItsOwnersRegionStillSoundsDifferent() {
+    CharacterProfile irish = accented("Strong Dublin Irish accent");
+    assertNotEquals(
+        REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), irish),
+        REGIONAL.voiceFor(VoiceSpec.follower(NpcGender.MALE), irish));
+  }
+
+  @Test
+  public void aFollowerAccentNamingNoRegionKeepsTheFollowerVoice() {
+    assertEquals(
+        map.voiceFor(VoiceSpec.follower(NpcGender.MALE), null),
+        REGIONAL.voiceFor(VoiceSpec.follower(NpcGender.MALE), accented("Strong Welsh accent")));
+  }
+
+  @Test
+  public void aFollowerWhoseRegionHoldsOnlyItsOwnersVoiceKeepsTheFollowerVoice() {
+    GeminiVoiceMap single =
+        new GeminiVoiceMap(
+            new GeminiVoiceRegions(
+                new JsonParser()
+                    .parse("{\"IRISH\":{\"playerKeywords\":[\"irish\"],\"MALE\":[\"ie-m-1\"]}}")
+                    .getAsJsonObject()));
+    assertEquals(
+        map.voiceFor(VoiceSpec.follower(NpcGender.MALE), null),
+        single.voiceFor(VoiceSpec.follower(NpcGender.MALE), accented("Irish")));
+  }
+
+  @Test
+  public void inEveryBundledRegionTheFollowerIsNeitherItsOwnerNorTheNarrator() {
+    String narrator = map.voiceFor(VoiceSpec.NARRATOR, null);
+    for (String accent : BUNDLED_REGION_ACCENTS) {
+      for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+        String follower = map.voiceFor(VoiceSpec.follower(gender), accented(accent));
+        assertNotEquals(accent, map.voiceFor(VoiceSpec.follower(gender), null), follower);
+        assertNotEquals(accent, map.voiceFor(VoiceSpec.player(gender), accented(accent)), follower);
+        assertNotEquals(accent, narrator, follower);
+      }
+    }
+  }
+
+  private static final String[] BUNDLED_REGION_ACCENTS = {
+    "West Country", "Scouse", "Mancunian", "Geordie", "Scottish", "Irish", "Australian",
+    "New Zealand", "Italian", "Egyptian", "Polish", "Japanese", "Norse", "Southern English"
+  };
 
   private static Set<String> pool(String... voices) {
     return new HashSet<>(Arrays.asList(voices));

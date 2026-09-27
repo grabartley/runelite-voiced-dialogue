@@ -24,10 +24,13 @@ this order:
 1. The narrator takes its fixed voice.
 2. The player takes a native voice from the first region whose keyword their typed accent names,
    or the player pool when it names none.
-3. A child with a voice region takes that region's child pool: the three youngest native voices
+3. The follower resolves its typed accent the same way, skipping the voice the player would take
+   from that region so it never sounds like its owner. With no region, or no other voice left in
+   it, it takes its own fixed voice.
+4. A child with a voice region takes that region's child pool: the three youngest native voices
    of its gender. A child with no region takes the prebuilt child pool.
-4. An NPC with a voice region takes a voice from that region's pool for its gender.
-5. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
+5. An NPC with a voice region takes a voice from that region's pool for its gender.
+6. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
 
 The counts are the adult pools, after any child voices a region can spare have moved to its child
 pool.
@@ -137,12 +140,13 @@ being described twice.
 | Penguin | Puck, Zubenelgenubi | Zephyr, Laomedeia |
 
 The player, the follower, children, and the narrator resolve outside the race table. A child with
-a voice region and a player whose accent names one take native voices instead (see above):
+a voice region, and a player or follower whose accent names one, take native voices instead (see
+above):
 
 | Speaker | Male | Female |
 |---|---|---|
 | Player whose accent names no region | Achird, Iapetus | Aoede, Autonoe |
-| Follower | Iapetus | Laomedeia |
+| Follower whose accent names no region | Iapetus | Laomedeia |
 | Child with no voice region | Puck | Leda, Zephyr |
 | Narrator | `en-gb-storyteller-2` | `en-gb-storyteller-2` |
 
@@ -241,9 +245,10 @@ auditioned and rejected.
 
 The follower is a speaker class of its own. It is a composed player model with no NPC id, no race
 and no row in the bundled table, so it is configured by hand the way the player is, from four
-settings of its own, and it anchors to its own voice per gender rather than the player's. Anchoring
-somewhere else is the point: a follower that reused the player path would sound exactly like its
-owner walking beside them.
+settings of its own. Its accent picks a native voice by the same keywords as the player's, but
+never the voice the player would take from that region, and with no region it anchors to its own
+voice per gender rather than the player's. Keeping the two apart is the point: a follower that
+reused the player's voice would sound exactly like its owner walking beside them.
 
 Its gender seeds from the outfit built in Follower Buddy, so a companion dressed as a woman gets a
 woman's voice without being asked twice, and the setting pins it when the player wants otherwise.
