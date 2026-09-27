@@ -209,9 +209,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     @Override
     public CloudSpeechExecutor.PreparedSpeech buildRequests(
         CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
-      String languageCode = line.translating ? config.cloudLanguage().code() : null;
-      JsonObject payload =
-          buildPayload(line.input, model.speechMetadata(line.style), line.voice, languageCode);
+      JsonObject payload = buildPayload(line.input, model.speechMetadata(line.style), line.voice);
       byte[] body = gson.toJson(payload).getBytes(StandardCharsets.UTF_8);
       return new CloudSpeechExecutor.PreparedSpeech(
           buildHttpRequest(endpoint, line.apiKey, body),
@@ -301,8 +299,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     }
   }
 
-  private static JsonObject buildPayload(
-      String input, JsonObject speechMetadata, String voice, String languageCode) {
+  private static JsonObject buildPayload(String input, JsonObject speechMetadata, String voice) {
     JsonObject textPart = new JsonObject();
     textPart.addProperty("text", input);
     textPart.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
@@ -319,9 +316,6 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     voiceConfig.add("prebuiltVoiceConfig", prebuiltVoice);
     JsonObject speechConfig = new JsonObject();
     speechConfig.add("voiceConfig", voiceConfig);
-    if (languageCode != null) {
-      speechConfig.addProperty("languageCode", languageCode);
-    }
     JsonArray modalities = new JsonArray();
     modalities.add("AUDIO");
     JsonObject generationConfig = new JsonObject();

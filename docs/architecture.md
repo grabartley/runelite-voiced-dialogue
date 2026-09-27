@@ -371,11 +371,14 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   provider's translator (`OpenRouterTranslator` or `AiStudioTranslator`)
   translates each line through the Gemini flash-lite model (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,
-  which then carries a BCP-47 `language_code` derived from the base language. The language (with any
+  which opens its style with "Speaking <language>". OpenRouter also sends a BCP-47 `language_code`
+  derived from the base language; Google AI Studio sends none, because it rejects a language code
+  outside a library voice's own locale, and the speech model speaks its input verbatim either way,
+  so the translation call does the translating. The language (with any
   quirk) is folded into the cache key, so a line is translated and billed at most once per
   language/quirk; a failed translation fails the line gracefully rather than voicing the wrong
   language. **Spoken Language** is a fixed dropdown (the `SpokenLanguage` enum in `VoicedDialogueConfig`,
-  one entry per supported language), so every selection carries a known-good BCP-47 `language_code`;
+  one entry per supported language), so every selection carries a known-good BCP-47 code;
   the enum is the single source of truth for both the options and their codes.
 - **Player / NPC Speaking Style.** Two independent settings, one for your own lines (**Player
   Speaking Style**) and one for NPC lines (**NPC Speaking Style**), drawn from the same option set

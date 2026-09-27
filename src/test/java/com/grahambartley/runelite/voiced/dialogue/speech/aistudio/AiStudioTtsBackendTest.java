@@ -483,14 +483,15 @@ public class AiStudioTtsBackendTest {
     JsonObject speechBody = AiStudioRequests.body(speech);
     assertEquals(
         "the translated text is what gets voiced", "Bonjour", AiStudioRequests.text(speechBody));
-    assertEquals(
-        "a translated line carries the BCP-47 code so it is pronounced natively",
-        "fr-FR",
+    assertFalse(
+        "library voices reject a language code outside their own locale, so none is sent",
         speechBody
             .getAsJsonObject("generationConfig")
             .getAsJsonObject("speechConfig")
-            .get("languageCode")
-            .getAsString());
+            .has("languageCode"));
+    assertTrue(
+        "the style names the spoken language instead",
+        AiStudioRequests.style(speechBody).startsWith("Speaking French."));
   }
 
   @Test
