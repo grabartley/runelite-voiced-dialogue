@@ -48,7 +48,7 @@ public final class GeminiVoiceMap {
     put(NpcRace.UNDEAD, male("Enceladus", "Schedar"), female("Achernar", "Sulafat"));
     put(NpcRace.DEMON, male("Algenib", "Rasalgethi"), female("Gacrux", "Despina"));
     put(NpcRace.WIZARD, male("Sadaltager", "Charon"), female("Sulafat", "Vindemiatrix"));
-    put(NpcRace.TORTUGAN, male("Achird", "Iapetus"), female("Sulafat", "Vindemiatrix"));
+    put(NpcRace.TORTUGAN, male("Achird"), female("Sulafat", "Vindemiatrix"));
 
     put(NpcRace.ICYENE, male("Alnilam", "Schedar"), female("Kore", "Despina"));
     put(NpcRace.ARCEUUS, male("Iapetus", "Rasalgethi"), female("Vindemiatrix", "Erinome"));

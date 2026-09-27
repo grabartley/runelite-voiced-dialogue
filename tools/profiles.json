@@ -66,9 +66,8 @@
     },
     "Gorilla": {
       "name": "Gorilla",
-      "accent": "Strong deep English accent, British English pronunciation",
-      "accentDetail": "Deep, booming English, the low rumbling growl of a huge silverback ape.",
-      "voiceRegion": "SOUTHERN_ENGLISH",
+      "accent": "Strong deep Caribbean island accent, Caribbean English pronunciation",
+      "accentDetail": "Deep, booming island English, the low rumbling growl of a huge silverback ape of the tropical isles.",
       "style": "An enormous, powerful gorilla. A very deep, booming, guttural voice that rumbles from the chest, primal and commanding, with a slow, heavy weight behind every word.",
       "pace": "Slow and ponderous, each utterance landing with deliberate heft.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
@@ -118,7 +117,7 @@
     },
     "Tortugan": {
       "name": "Tortugan Islander",
-      "accent": "Strong Bajan Caribbean accent, Bajan English pronunciation",
+      "accent": "Very strong, broad Bajan Caribbean accent, thick island Bajan English pronunciation",
       "accentDetail": "A warm Caribbean accent, the lilting Bajan English of Barbados, melodic and unhurried with a gentle sing-song rhythm.",
       "style": "A turtle-like islander of the Great Conch. Peaceful, self-reliant and easy-going, with a sun-warmed, seafaring calm that turns firm and steady when the island is threatened.",
       "pace": "Relaxed and unhurried, with a natural island lilt."
@@ -311,6 +310,9 @@
       "id": "knight",
       "keywords": ["knight", "paladin", "squire", "templar", "sir"],
       "name": "Knight",
+      "accent": "Strong refined Received Pronunciation accent, British English pronunciation",
+      "accentDetail": "Posh, cultured British English, the well-bred Received Pronunciation of a noble knight of the realm.",
+      "voiceRegion": "SOUTHERN_ENGLISH",
       "style": "A noble knight of the realm; honourable, disciplined, and gallant, speaking in a crisp, formal, well-bred register weighted with chivalric duty.",
       "pace": "Firm and measured, crisp and commanding."
     },
@@ -5405,7 +5407,7 @@
     "15097": {"name": "Rum-dashed Ralph", "style": "A boozy sailor full of swagger; loose, rambling, jovially slurred and unsteady.", "pace": "slow"},
     "337": {"name": "Sergeant Damien", "style": "A barking military drill sergeant; loud, brusque, clipped commands and relentless demands.", "pace": "fast"},
     "6743": {"name": "Sergeant Damien", "style": "A barking military drill sergeant; loud, brusque, clipped commands and relentless demands.", "pace": "fast"},
-    "1840": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy."},
+    "1840": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy.", "accent": "Strong Italian accent, Italian-accented English pronunciation", "accentDetail": "The velvet, unhurried menace of an old Italian mafia don.", "voiceRegion": "ITALIAN", "pitch": "Low, husky, gravelly voice"},
     "5837": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy."},
     "5436": {"name": "Niles", "style": "A quizzical riddler running a guessing game; brisk, testing, mildly playful."},
     "5439": {"name": "Niles", "style": "A quizzical riddler running a guessing game; brisk, testing, mildly playful."},

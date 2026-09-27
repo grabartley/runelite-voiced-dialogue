@@ -88,8 +88,9 @@ to it. A voice does not enter a pool on the strength of its catalog entry.
   pool, and the same NPC lands on the same voice on every line and in every session. The seed is
   the NPC's base composition id, which a transforming NPC keeps when its active id changes, so a
   quest character does not change voice mid-quest. Every pool picks by rendezvous hashing, so
-  adding or removing a voice moves only the NPCs on that voice. Race pools hold two voices, so
-  their spread is variety rather than a guarantee that any two NPCs differ. A spec carrying no
+  adding or removing a voice moves only the NPCs on that voice. Race pools hold two voices, apart
+  from the Tortugan male pool, which holds one by ear, so their spread is variety rather than a
+  guarantee that any two NPCs differ. A spec carrying no
   seed anchors to index 0 and never takes a region voice.
 - **Every spec resolves.** An unknown gender is voiced as male. Four further fallbacks exist and
   none is reachable today, so they are defence in depth rather than live behaviour: a null spec
@@ -114,7 +115,7 @@ being described twice.
 | Undead | Enceladus, Schedar | Achernar, Sulafat |
 | Demon | Algenib, Rasalgethi | Gacrux, Despina |
 | Wizard | Sadaltager, Charon | Sulafat, Vindemiatrix |
-| Tortugan | Achird, Iapetus | Sulafat, Vindemiatrix |
+| Tortugan | Achird | Sulafat, Vindemiatrix |
 | Icyene | Alnilam, Schedar | Kore, Despina |
 | Aranei | Enceladus, Iapetus | Achernar, Erinome |
 | Dog | Fenrir, Orus | Pulcherrima, Gacrux |
@@ -154,9 +155,9 @@ anchor is the breathy voice, which reads hollow rather than merely low.
 Most races have a pool assembled for them. These are cast by reference to a pool that already
 exists instead, and the reference is itself the casting decision:
 
-- **Tortugans** take the player male pool unchanged and the wizard female pool unchanged:
-  friendly and clear in one, warm and gentle in the other, which is the relaxed mid-depth that
-  suits warm island folk.
+- **Tortugans** take Achird alone for men, the voice that by ear carries a very strong, broad
+  Bajan accent best, and the wizard female pool unchanged: warm and gentle, the relaxed mid-depth
+  that suits warm island folk.
 - **Citizens of Arceuus** take the elf pool unchanged, and the elf pool is itself cast off the
   human one: it keeps Iapetus and Erinome, drops the human anchors Charon and Despina, and adds
   Rasalgethi and Vindemiatrix. The catalog groups Charon and Rasalgethi together, so this split

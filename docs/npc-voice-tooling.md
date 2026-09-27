@@ -208,7 +208,8 @@ different people, where a short style string flattens them together.
   Scottish accent, Scottish English pronunciation", "Strong Italian accent,
   Italian-accented English pronunciation". Gemini 3.8 treats a soft phrase
   ("Plain southern English accent") as optional and falls back to a generic
-  default accent, so every accent leads with "Strong" and names its pronunciation.
+  default accent, so every accent leads with "Strong" (or "Very strong," where by ear the accent
+  needs more push, as for the Tortugans) and names its pronunciation.
   A delivery quirk (slurred, whispered, hissing) is never an accent: it goes in
   `style`, so the character keeps the accent of its race or region.
 - `accentDetail` is optional and sits next to an `accent`. It carries the colour of the accent in
@@ -238,7 +239,7 @@ different people, where a short style string flattens them together.
 
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
-does not start with "Strong" and end with its pronunciation, an `accent` over 100
+does not start with "Strong" or "Very strong," and end with its pronunciation, an `accent` over 100
 characters, a `voiceRegion` that is not in `tools/voice-regions.json`, a `voiceRegion` or `accentDetail` on a
 layer with no `accent`, and a `replaceStyle` with no `style` beside it.
 

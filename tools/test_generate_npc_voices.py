@@ -283,6 +283,10 @@ class ValidateProfilesTest(unittest.TestCase):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles.json")
         gen.validate_profiles(gen.load_json(path))
 
+    def test_a_very_strong_accent_is_accepted(self):
+        gen.validate_profiles(profiles_with(byRace={"Tortugan": {
+            "accent": "Very strong, broad Bajan Caribbean accent, thick island Bajan English pronunciation"}}))
+
     def test_accent_detail_needs_an_accent_beside_it(self):
         profiles = profiles_with(byId={"1": {"accentDetail": "A rough, harsh burr."}})
         with self.assertRaisesRegex(ValueError, "byId.1.accentDetail"):
