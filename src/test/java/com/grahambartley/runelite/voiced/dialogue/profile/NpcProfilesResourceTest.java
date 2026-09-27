@@ -5,10 +5,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import java.util.Locale;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Answers;
 
 public class NpcProfilesResourceTest {
 
@@ -241,6 +244,16 @@ public class NpcProfilesResourceTest {
     CharacterProfile p = table.resolvePlayer(null, null, null);
     assertTrue("the player has a name label", p.name() != null && !p.name().isEmpty());
     assertTrue("the player accent is British by default", p.accent().contains("British"));
+  }
+
+  @Test
+  public void aClearedPlayerSettingFallsBackToTheSameDeliveryAsTheSettingDefaults() {
+    VoicedDialogueConfig defaults = mock(VoicedDialogueConfig.class, Answers.CALLS_REAL_METHODS);
+    CharacterProfile fallback = table.resolvePlayer(null, null, null);
+    assertEquals(defaults.playerAccent(), fallback.accent());
+    assertEquals(defaults.playerPersona(), fallback.style());
+    assertEquals(defaults.playerPace(), fallback.pace());
+    assertTrue(fallback.style().startsWith("Plucky"));
   }
 
   @Test

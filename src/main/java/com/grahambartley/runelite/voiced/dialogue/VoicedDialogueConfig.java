@@ -281,7 +281,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 2,
       section = voicesSection)
   default String playerPersona() {
-    return "Friendly, plucky, warm, and enthusiastic.";
+    return "Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm.";
   }
 
   @ConfigItem(
@@ -291,7 +291,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 3,
       section = voicesSection)
   default String playerPace() {
-    return "Normal.";
+    return "Lively and bouncy, with an upbeat, energetic rhythm.";
   }
 
   @ConfigItem(
