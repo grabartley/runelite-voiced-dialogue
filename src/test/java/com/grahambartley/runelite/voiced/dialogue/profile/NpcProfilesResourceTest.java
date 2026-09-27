@@ -252,7 +252,6 @@ public class NpcProfilesResourceTest {
     assertEquals(defaults.playerAccent(), fallback.accent());
     assertEquals(defaults.playerPersona(), fallback.style());
     assertEquals(defaults.playerPace(), fallback.pace());
-    assertTrue(fallback.style().startsWith("Plucky"));
   }
 
   @Test
@@ -301,6 +300,14 @@ public class NpcProfilesResourceTest {
     assertEquals("NORSE", resolve(null, "Villager", "Human", "fremennik").profile().voiceRegion());
     assertEquals(
         "NORSE", resolve(null, "Fremennik warrior", "Human", null).profile().voiceRegion());
+  }
+
+  @Test
+  public void everyTrollTakesTheDeepTrollPoolWhereverItIsFrom() {
+    assertEquals(
+        "DEEP_SOUTHERN_ENGLISH", resolve(4130, "Dad", "Troll", null).profile().voiceRegion());
+    assertEquals(
+        "DEEP_SOUTHERN_ENGLISH", resolve(641, "Aga", "Troll", "asgarnia").profile().voiceRegion());
   }
 
   @Test

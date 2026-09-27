@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
@@ -110,6 +111,16 @@ public class GeminiVoiceRegionsTest {
         bundled.regionForAccent(
             "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation"));
     assertNull(bundled.regionForAccent("Strong Southern American accent"));
+  }
+
+  @Test
+  public void theBundledTrollPoolHoldsOnlyTheTwoDeepestSouthernEnglishMen() {
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    Set<String> voiced = new HashSet<>();
+    for (int seed = 0; seed < 200; seed++) {
+      voiced.add(bundled.voiceFor("DEEP_SOUTHERN_ENGLISH", NpcGender.MALE, seed));
+    }
+    assertEquals(new HashSet<>(Arrays.asList("en-gb-advisor-8", "en-gb-assistant-2")), voiced);
   }
 
   @Test

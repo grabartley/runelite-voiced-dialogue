@@ -95,6 +95,16 @@ public class GeminiSpeechStyleTest {
   }
 
   @Test
+  public void thePlayersLineNamesTheirVoicesGender() {
+    assertTrue(
+        compose(DWARF, VoiceSpec.player(NpcGender.MALE), Emotion.NEUTRAL)
+            .startsWith("Speaking English. A man's voice. Audio profile:"));
+    assertTrue(
+        compose(DWARF, VoiceSpec.player(NpcGender.FEMALE), Emotion.NEUTRAL)
+            .startsWith("Speaking English. A woman's voice. Audio profile:"));
+  }
+
+  @Test
   public void theNarratorsLineNamesNoGender() {
     assertEquals(
         "Speaking English. Style: Bright.",
