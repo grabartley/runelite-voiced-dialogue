@@ -56,7 +56,7 @@ final class GeminiSpeechStyle {
   }
 
   private static String voiceAnchor(VoiceSpec voice) {
-    if (voice == null || voice.gender() == NpcGender.UNKNOWN) {
+    if (voice.gender() == NpcGender.UNKNOWN) {
       return null;
     }
     boolean female = voice.gender() == NpcGender.FEMALE;

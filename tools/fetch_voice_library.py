@@ -4,8 +4,8 @@
 Offline tooling, not part of the plugin runtime. Lists every voice from
 GET /v1beta/voices with a Google AI Studio key taken from the GEMINI_API_KEY
 environment variable, keeps the id, accent, locale, gender and pitch fields plus the
-speaker's age parsed from the description, and writes them sorted by id so a refresh produces a minimal diff. tools/generate_npc_voices.py
-builds the bundled region voice pools from this snapshot.
+speaker's age parsed from the description, and writes them sorted by id so a refresh
+produces a minimal diff. tools/generate_npc_voices.py builds the bundled region voice pools from this snapshot.
 
 Usage
 -----

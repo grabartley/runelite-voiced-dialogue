@@ -54,7 +54,7 @@ page = f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport
 <title>Voice QA Sheet</title><style>
 :root{{--bg:#fafaf8;--fg:#1c1c1a;--card:#fff;--line:#ddd;--mut:#666;--go:#1e7d3a;--no:#b3261e}}
 @media (prefers-color-scheme:dark){{:root:not([data-theme="light"]){{--bg:#161615;--fg:#eee;--card:#222220;--line:#3a3a38;--mut:#aaa;--go:#5cc27a;--no:#f08a80}}}}
-:root[data-theme="dark"]{{--bg:#161615;--fg:#eee;--card:#222220;--line:#3a3a38;--mut:#aaa}}
+:root[data-theme="dark"]{{--bg:#161615;--fg:#eee;--card:#222220;--line:#3a3a38;--mut:#aaa;--go:#5cc27a;--no:#f08a80}}
 body{{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;margin:0;padding:16px;max-width:980px;margin:auto}}
 .card{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}}
 h3{{margin:0 0 4px;font-size:16px}} small{{color:var(--mut);font-weight:normal}}

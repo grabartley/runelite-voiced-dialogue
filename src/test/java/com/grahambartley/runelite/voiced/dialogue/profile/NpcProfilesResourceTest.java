@@ -291,14 +291,14 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
-  public void theNarratorKeepsMainsStorytellerWordingAndThePlayerTakesNoDetail() {
+  public void theNarratorCarriesTheStorytellerDetailAndThePlayerTakesNone() {
     assertTrue(
         table.resolveNarrator().accentDetail().contains("a storyteller reading a tale aloud"));
     assertNull(table.resolvePlayer(null, null, null).accentDetail());
   }
 
   @Test
-  public void mainsAccentDetailRidesBesideTheStrongAccent() {
+  public void anEthnicityAccentCarriesItsMedievalDetail() {
     assertTrue(
         resolve(null, "Villager", "Human", "fremennik")
             .profile()
@@ -321,7 +321,7 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
-  public void aQuirkMovedOutOfTheAccentKeepsMainsWording() {
+  public void aDeliveryQuirkRidesInTheStyle() {
     assertTrue(
         resolve(7663, "Krystilia", "Human", "wilderness")
             .profile()

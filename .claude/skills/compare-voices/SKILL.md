@@ -79,5 +79,6 @@ example the female Japanese, Australian, New Zealand, TzHaar and ogre slots.
   the line clearly carries one of `HAPPY`, `SAD`, `ANGRY` or `SCARED`.
 - The harness uses `VoiceManager.resolveNpc`, `resolveNarrator` and `resolve(Speaker.PLAYER, …)`
   and the backend constructors. If any of those signatures change, update the harness in the
-  same PR. The baseline ref must also compile against it, so compare against a ref recent enough
-  to share those entry points.
+  same PR. The baseline ref must also compile against it: the harness finds `voiceFor` by
+  reflection so it covers both the `voiceFor(VoiceSpec)` and `voiceFor(VoiceSpec, CharacterProfile)`
+  signatures, and the other entry points must exist on the baseline.
