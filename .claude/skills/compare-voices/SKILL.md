@@ -37,6 +37,8 @@ buttons. **Copy results** puts the verdicts on the clipboard to paste back into 
   `~/.runelite/profiles2/` that holds an OpenRouter key. Keys are read by the harness and never
   printed.
 - The player speaks with the config's default accent. Set `PLAYER_ACCENT` to test a typed accent.
+- Set `VOICE_QA_ONLY` to a regular expression to render only the cases whose key or group matches,
+  for example `VOICE_QA_ONLY='^More races$|narrator'`.
 - Use a Java 17 shell, the same one used for `./gradlew build`. The sheet builder compresses clips
   with macOS `afconvert`.
 - Put `<out-dir>` in a scratch location, never inside the repo.
@@ -58,9 +60,12 @@ real line taken from the OSRS wiki transcript named in `source`.
 | Pitch | Goblins (high) and Trolls (low) |
 | Children | a table child, a child picked by name keyword, and a child from another region |
 | Player and narrator | both player voice types and a narration box |
+| More races | every other race with its own profile: elves, gorillas, undead, demons, wizards, Tortugans, Icyene, Arceuus, Aranei, dogs, crabs, penguins |
+| More origins | Welsh (Tirannwn), Nigerian (Karamja), Wyrmscraig and Menaphite humans |
+| Categories and roles | name-keyword layers: leprechauns, vampyres, TzHaar, imps, fairies, ogres, ghosts, pirates, barbarians, wizards, monks, royalty, knights and nobles |
 
-A slot that no real NPC can fill carries `missing` with the reason and is shown greyed out. The
-Japanese, Australian and New Zealand accents have no female NPC in the game.
+A slot that no real NPC can fill carries `missing` with the reason and is shown greyed out, for
+example the female Japanese, Australian, New Zealand, TzHaar and ogre slots.
 
 ## Keep the cases current
 

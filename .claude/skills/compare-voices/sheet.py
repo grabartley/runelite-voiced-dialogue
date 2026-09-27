@@ -2,6 +2,8 @@ import json, base64, subprocess, os, html, sys
 # Usage: sheet.py <cases.json> <out-dir> <before-label> <after-label> <provider>
 CASES, D, BEFORE, AFTER, PROVIDER = sys.argv[1:]
 cases = json.load(open(CASES))['cases']
+rendered = {r['key'] for r in json.load(open(f'{D}/after/results.json'))}
+cases = [c for c in cases if c['key'] in rendered or (c.get('missing') and any(k.startswith(c['key'].rsplit('_', 1)[0]) for k in rendered))]
 res = {b: {r['key']: r for r in json.load(open(f'{D}/{b}/results.json'))} for b in ('before', 'after')}
 
 def audio(b, key):

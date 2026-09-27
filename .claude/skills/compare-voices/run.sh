@@ -2,6 +2,7 @@
 # Renders every case in cases.json through a baseline ref and through the current
 # working tree, then builds a side-by-side QA sheet. Usage:
 #   run.sh <baseline-ref> <out-dir> [openrouter|aistudio]
+# Set VOICE_QA_ONLY to a regular expression to render only the cases whose key or group matches.
 # Keys come from $VOICE_QA_KEY_FILE, else the first RuneLite profile holding an OpenRouter key.
 set -euo pipefail
 
@@ -33,11 +34,13 @@ git -C "$REPO" worktree add -q --detach "$BASELINE" "$BASE_REF"
 render() {
   local checkout=$1 label=$2
   cp "$SKILL/ClipHarnessTest.java" "$checkout/$HARNESS"
-  python3 - "$SKILL/cases.json" "$OUT/$label" "$KEY_FILE" "$PROVIDER" "${PLAYER_ACCENT:-}" > "$checkout/clip-harness.json" <<'PY'
-import json, sys
-cases, out, keys, provider, accent = sys.argv[1:]
+  python3 - "$SKILL/cases.json" "$OUT/$label" "$KEY_FILE" "$PROVIDER" "${PLAYER_ACCENT:-}" "${VOICE_QA_ONLY:-}" > "$checkout/clip-harness.json" <<'PY'
+import json, re, sys
+cases, out, keys, provider, accent, only = sys.argv[1:]
+selected = [c for c in json.load(open(cases))["cases"]
+            if not only or re.search(only, c["key"]) or re.search(only, c["group"])]
 job = {"mode": "render", "outDir": out, "keyFile": keys, "provider": provider,
-       "cases": json.load(open(cases))["cases"]}
+       "cases": selected}
 if accent:
     job["playerAccent"] = accent
 print(json.dumps(job))

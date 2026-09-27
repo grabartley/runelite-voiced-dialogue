@@ -415,6 +415,644 @@
       "kind": "narrator",
       "line": "Traiborn digs around in the pockets of his robes. After a few moments he triumphantly presents you with a spinach roll.",
       "source": "Transcript:Demon Slayer"
+    },
+    {
+      "key": "elf_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 3432,
+      "name": "Arianwyn",
+      "gender": "Male",
+      "line": "Many years ago, all elves lived in harmony within the crystal city of Prifddinas alongside our goddess, Seren.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Mourning's End Part I"
+    },
+    {
+      "key": "elf_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 5304,
+      "name": "Eluned",
+      "gender": "Female",
+      "line": "That I do. It is elvish tradition to plant a specially enchanted crystal seed at the graves of our ancestors. The seed will create guardians to protect the area.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Roving Elves"
+    },
+    {
+      "key": "gorilla_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 7099,
+      "name": "Kruk",
+      "gender": "Male",
+      "line": "However, I'm afraid that this is the end of the line for you.",
+      "emotion": "ANGRY",
+      "source": "Transcript:Monkey Madness II"
+    },
+    {
+      "key": "gorilla_female",
+      "group": "More races",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female gorilla NPC in the table"
+    },
+    {
+      "key": "undead_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 2986,
+      "name": "Necrovarus",
+      "gender": "Male",
+      "line": "Get out of my sight! Or I promise you that you will regret your insolence for the rest of eternity!",
+      "emotion": "ANGRY",
+      "source": "Transcript:Ghosts Ahoy"
+    },
+    {
+      "key": "undead_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 2985,
+      "name": "Velorina",
+      "gender": "Female",
+      "line": "Take pity on me, please, eternity stretches out before me and I am helpless in its grasp.",
+      "emotion": "SAD",
+      "source": "Transcript:Ghosts Ahoy"
+    },
+    {
+      "key": "demon_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 229,
+      "name": "Demon butler",
+      "gender": "Male",
+      "line": "Greetings! I am Alathazdrar, butler to the Demon Lords, and I offer thee my services for a mere 10000 coins!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Demon butler"
+    },
+    {
+      "key": "demon_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 9404,
+      "name": "Lithil",
+      "gender": "Female",
+      "line": "Alright! I heard there were other demons in Morytania, other than that oaf, Mazchna. I've come looking for them.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Lithil"
+    },
+    {
+      "key": "wizard_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 3562,
+      "name": "Professor Oddenstein",
+      "gender": "Male",
+      "line": "Oh, he isn't normally a chicken, or at least he wasn't until he helped me test my pouletmorph machine.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Ernest the Chicken"
+    },
+    {
+      "key": "wizard_female",
+      "group": "More races",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female Wizard-race NPC in the table"
+    },
+    {
+      "key": "tortugan_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 14998,
+      "name": "Elder Korel",
+      "gender": "Male",
+      "line": "That's not surprising, but it's good that she did. She would have been unlikely to survive that injury on her own.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Troubled Tortugans"
+    },
+    {
+      "key": "tortugan_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 14990,
+      "name": "Floopa",
+      "gender": "Female",
+      "line": "Help? No, I'll be fine now. I can sort the rest out myself.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Troubled Tortugans"
+    },
+    {
+      "key": "icyene_male",
+      "group": "More races",
+      "kind": "npc",
+      "gender": "Male",
+      "missing": "only male Icyene ids are the non-speaking Zilyana pet"
+    },
+    {
+      "key": "icyene_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 15941,
+      "name": "Efaritay Hallow",
+      "gender": "Female",
+      "line": "No. Sugadinti suggested that we rename Morytania back to Hallowvale, but I declined. Hallowvale will never exist again. It is nothing more than a memory now.",
+      "emotion": "SAD",
+      "source": "Transcript:Efaritay Hallow"
+    },
+    {
+      "key": "arceuus_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 7050,
+      "name": "Tyss",
+      "gender": "Male",
+      "line": "Tread carefully in this hallowed place, traveller. The magicks of the Dark Altar are not to be treated lightly.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Tyss"
+    },
+    {
+      "key": "arceuus_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 7042,
+      "name": "Aretha",
+      "gender": "Female",
+      "line": "However, the Soul Altar provides a beacon, drawing the souls to this place where they may join the River.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Aretha"
+    },
+    {
+      "key": "aranei_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 16269,
+      "name": "Mysterious Stranger",
+      "gender": "Male",
+      "line": "Greetings, friend. I have something for you, if you desire.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Mysterious Stranger"
+    },
+    {
+      "key": "aranei_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 8208,
+      "name": "Mysterious Stranger",
+      "gender": "Female",
+      "line": "The Theatre is owned by Lady Verzik Vitur, a vampyre noble. I represent a party that has certain... interests in Verzik.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Mysterious Stranger"
+    },
+    {
+      "key": "dog_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 9195,
+      "name": "Floki",
+      "gender": "Male",
+      "line": "Woof woof!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Floki"
+    },
+    {
+      "key": "dog_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 16504,
+      "name": "Stray dog",
+      "gender": "Female",
+      "line": "Bark bark bark!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:A Ruff Situation"
+    },
+    {
+      "key": "crab_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 16469,
+      "name": "Crab",
+      "gender": "Male",
+      "line": "I'm still waiting for the bit where this wasn't a terrible idea.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Crab Quest"
+    },
+    {
+      "key": "crab_female",
+      "group": "More races",
+      "kind": "npc",
+      "id": 16484,
+      "name": "Crab",
+      "gender": "Female",
+      "line": "So I look at him from afar when he doesn't know I'm around. Yet among a thousand crabs on the beach, he's the only one I see.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Crab Quest"
+    },
+    {
+      "key": "penguin_male",
+      "group": "More races",
+      "kind": "npc",
+      "id": 841,
+      "name": "KGP Agent",
+      "gender": "Male",
+      "line": "Once inside, go into the room to the left. You'll be debriefed there. No dawdling!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Cold War"
+    },
+    {
+      "key": "penguin_female",
+      "group": "More races",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female penguin NPC in the table"
+    },
+    {
+      "key": "welsh_male",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 3437,
+      "name": "General Hining",
+      "gender": "Male",
+      "line": "Yes, is there anything I can help with? I'm General of what's left of this army and I'm rather busy.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Regicide"
+    },
+    {
+      "key": "welsh_female",
+      "group": "More origins",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no speaking Human female with ethnicity tirannwn in the table (only a Prifddinas pet id)"
+    },
+    {
+      "key": "nigerian_male",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 4625,
+      "name": "Trufitus",
+      "gender": "Male",
+      "line": "Greetings Bwana! I am Trufitus Shakaya of the Tai Bwo Wannai village.",
+      "emotion": "HAPPY",
+      "source": "Transcript:Trufitus"
+    },
+    {
+      "key": "nigerian_female",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 6418,
+      "name": "Layleen",
+      "gender": "Female",
+      "line": "Hello there... thanks for helping out Trufitus commune with the gods Bwana. We've been able to return to the village thanks to your help.",
+      "emotion": "HAPPY",
+      "source": "Transcript:Layleen"
+    },
+    {
+      "key": "wyrmscraig_male",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 16318,
+      "name": "Cormac",
+      "gender": "Male",
+      "line": "We're learnin' to live a bit differently now that the Angel's gone... It feels a little odd, but we be makin' the best of it.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Cormac"
+    },
+    {
+      "key": "wyrmscraig_female",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 16325,
+      "name": "Catriona",
+      "gender": "Female",
+      "line": "I hear you found Keenan. Shame about what happened, but not surprising. Hopefully this is the last time that sort of thing happens.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Catriona"
+    },
+    {
+      "key": "menaphite_male",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 3875,
+      "name": "Jex",
+      "gender": "Male",
+      "line": "Of course. The lesser gods, or avatars as some call them, were born from the dreams of Tumeken. They are Apmeken, Het, Crondis and Scabaras.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Jex"
+    },
+    {
+      "key": "menaphite_female",
+      "group": "More origins",
+      "kind": "npc",
+      "id": 3890,
+      "name": "Nathifa",
+      "gender": "Female",
+      "line": "Not great. I'd just gone over there to purchase some goods from the market. When I got back to the gates, they'd been sealed shut.",
+      "emotion": "SAD",
+      "source": "Transcript:Nathifa"
+    },
+    {
+      "key": "leprechaun_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 0,
+      "name": "Tool Leprechaun",
+      "gender": "Male",
+      "line": "Ah, 'tis a foine day to be sure! Were yez wantin' me to store yer tools, or maybe ye might be wantin' yer stuff back from me?",
+      "emotion": "HAPPY",
+      "source": "Transcript:Tool Leprechaun"
+    },
+    {
+      "key": "leprechaun_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female leprechaun NPC in the table"
+    },
+    {
+      "key": "vampyre_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 3733,
+      "name": "Vanstrom Klause",
+      "gender": "Male",
+      "line": "That someone is not you. I am in charge of blood tithing. I alone decide how it is to be carried out.",
+      "emotion": "ANGRY",
+      "source": "Transcript:Sins of the Father"
+    },
+    {
+      "key": "vampyre_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 3740,
+      "name": "Vanescula Drakan",
+      "gender": "Female",
+      "line": "You may not like what I did, but whether you accept it or not, Lowerniel was only defeated thanks to me.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Vanescula Drakan"
+    },
+    {
+      "key": "tzhaar_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 2180,
+      "name": "TzHaar-Mej-Jal",
+      "gender": "Male",
+      "line": "Indeed, JalYt. You want to sell it back? I swap it for 8,000 TokKul if you want.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:TzHaar-Mej-Jal"
+    },
+    {
+      "key": "tzhaar_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "TzHaar are all tabled Male; no female TzHaar"
+    },
+    {
+      "key": "dragon_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "gender": "Male",
+      "missing": "no speaking NPC named dragon/wyvern/wyrm/drake with a 6+ word line (Prince Black Dragon pet only says 'You're overthinking this.' and also hits the royalty keyword)"
+    },
+    {
+      "key": "dragon_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female speaking dragon NPC"
+    },
+    {
+      "key": "imp_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 15646,
+      "name": "Imp",
+      "gender": "Male",
+      "line": "One day I get big revenge. Master's lair will be mine!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Imp (Demonic Pacts League)"
+    },
+    {
+      "key": "imp_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female imp NPC in the table"
+    },
+    {
+      "key": "fairy_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1840,
+      "name": "Fairy Godfather",
+      "gender": "Male",
+      "line": "Ah, iz-a you. I make-a you an offer, eh? Iz-a good offer. You can't-a refuse it.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Fairy Godfather"
+    },
+    {
+      "key": "fairy_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1841,
+      "name": "Fairy Nuff",
+      "gender": "Female",
+      "line": "Well, the gold that you humans are so fond of has no real value in Zanaris, so I ask my patients to pay me in gems.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Fairy Nuff"
+    },
+    {
+      "key": "ogre_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 4403,
+      "name": "Ogre trader",
+      "gender": "Male",
+      "line": "Arr, small thing wants my food, does it? I'll teach you to deal with ogres!",
+      "emotion": "ANGRY",
+      "source": "Transcript:Ogre trader"
+    },
+    {
+      "key": "ogre_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "gender": "Female",
+      "missing": "no female ogre NPC in the table"
+    },
+    {
+      "key": "ghost_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 922,
+      "name": "Restless ghost",
+      "gender": "Male",
+      "line": "WOW! This is INCREDIBLE! I didn't expect anyone to ever understand me again!",
+      "emotion": "HAPPY",
+      "source": "Transcript:The Restless Ghost"
+    },
+    {
+      "key": "ghost_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 10608,
+      "name": "Spirit Angler",
+      "gender": "Female",
+      "line": "Sorry, I'm quite busy preparing to face Tempoross. Captain Pudi by the dock can answer any questions you might have.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Spirit Angler"
+    },
+    {
+      "key": "pirate_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 601,
+      "name": "Pirate Pete",
+      "gender": "Male",
+      "line": "I may have a quest, but you don't look like you'd be able to handle the kind of monsters I have problems with.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Pirate Pete"
+    },
+    {
+      "key": "pirate_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 7650,
+      "name": "Pirate Jackie the Fruit",
+      "gender": "Female",
+      "line": "Arr, ye have that, I see yer list. I s'pose ye'll be wantin' yer reward then!",
+      "emotion": "HAPPY",
+      "source": "Transcript:Pirate Jackie the Fruit"
+    },
+    {
+      "key": "barbarian_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 7285,
+      "name": "Barbarian guard",
+      "gender": "Male",
+      "line": "If you're a barbarian you need to be able to drink like one. We barbarians like a good drink.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Barbarian guard"
+    },
+    {
+      "key": "barbarian_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 3262,
+      "name": "Barbarian",
+      "gender": "Female",
+      "line": "Ha ha ha! Little adventurer wants to buy me a drink, how sweet.",
+      "emotion": "HAPPY",
+      "source": "Transcript:Barbarian"
+    },
+    {
+      "key": "wizard_role_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 5081,
+      "name": "Wizard Traiborn",
+      "gender": "Male",
+      "line": "Those pesky thingummywuts. They get everywhere. They leave a terrible mess too.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Wizard Traiborn"
+    },
+    {
+      "key": "wizard_role_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 11436,
+      "name": "Wizard Persten",
+      "gender": "Female",
+      "line": "No offence taken! My research tends to take me far from the Wizards' Tower. I've been all across Gielinor and even to some other planes of existence!",
+      "emotion": "HAPPY",
+      "source": "Transcript:Wizard Persten"
+    },
+    {
+      "key": "monk_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 2577,
+      "name": "Abbot Langley",
+      "gender": "Male",
+      "line": "We like it that way actually! We get disturbed less. We still get rather a large amount of travellers looking for sanctuary and healing here as it is!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Abbot Langley"
+    },
+    {
+      "key": "monk_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1617,
+      "name": "Priestess Zul-Gwenwynig",
+      "gender": "Female",
+      "line": "Once I have brought you to the shrine, I will leave you there as an offering to Zulrah. You cannot use the boat to return.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Priestess Zul-Gwenwynig"
+    },
+    {
+      "key": "royalty_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1399,
+      "name": "King Roald",
+      "gender": "Male",
+      "line": "You will have to excuse me, then. I am very busy as I have a kingdom to run!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:King Roald"
+    },
+    {
+      "key": "royalty_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1390,
+      "name": "Queen Ellamaria",
+      "gender": "Female",
+      "line": "I shall not allow you to climb my trellis, peasant. Only providing your assistance to my project might cause me to reconsider.",
+      "emotion": "ANGRY",
+      "source": "Transcript:Queen Ellamaria"
+    },
+    {
+      "key": "knight_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1867,
+      "name": "Sir Amik Varze",
+      "gender": "Male",
+      "line": "Well adventurer, now that you are a White Knight, I expect you should be out there hunting Black Knights for us!",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Sir Amik Varze"
+    },
+    {
+      "key": "knight_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 1757,
+      "name": "Void Knight",
+      "gender": "Female",
+      "line": "I'm a Void Knight, one of the order of Guthix. We are warriors of balance who do Guthix's work here in Gielinor.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Void Knight"
+    },
+    {
+      "key": "noble_male",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 10966,
+      "name": "Lord Kandur Hosidius",
+      "gender": "Male",
+      "line": "Hosidius is home to the farmers and chefs of Kourend. We are the main food supplier to the kingdom and we ensure that her people are fed.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Lord Kandur Hosidius"
+    },
+    {
+      "key": "noble_female",
+      "group": "Categories and roles",
+      "kind": "npc",
+      "id": 7908,
+      "name": "Lady Shauna Piscarilius",
+      "gender": "Female",
+      "line": "That's why I formed the Saviours of Kourend. We take the laws into our own hands and fight against all who would damage this city, no matter who they are.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Lady Shauna Piscarilius"
     }
   ]
 }
