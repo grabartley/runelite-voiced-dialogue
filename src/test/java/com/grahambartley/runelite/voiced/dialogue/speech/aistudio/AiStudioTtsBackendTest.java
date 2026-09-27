@@ -213,7 +213,8 @@ public class AiStudioTtsBackendTest {
         .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
 
     assertEquals(
-        "Speaking English.", AiStudioRequests.style(AiStudioRequests.body(server.takeRequest())));
+        "Speaking English. A man's voice.",
+        AiStudioRequests.style(AiStudioRequests.body(server.takeRequest())));
   }
 
   @Test

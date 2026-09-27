@@ -303,7 +303,7 @@ public class OpenRouterTtsBackendTest {
     backend(keyedConfig())
         .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
 
-    assertEquals("Speaking English.", sentStyle(sentBody()));
+    assertEquals("Speaking English. A man's voice.", sentStyle(sentBody()));
   }
 
   @Test

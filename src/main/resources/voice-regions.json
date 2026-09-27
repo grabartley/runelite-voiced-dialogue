@@ -233,7 +233,6 @@
     "en-ie-podcaster-4",
     "en-ie-podcaster-5",
     "en-ie-storyteller-1",
-    "en-ie-storyteller-4",
     "en-ie-storyteller-6",
     "en-ie-techagent-2",
     "en-ie-techagent-4",
@@ -264,7 +263,6 @@
     "en-au-advisor-1",
     "en-au-advisor-3",
     "en-au-advisor-6",
-    "en-au-assistant-7",
     "en-au-concierge-1",
     "en-au-concierge-7",
     "en-au-concierge-8",
@@ -345,8 +343,7 @@
     "en-nz-concierge-2",
     "en-nz-csagent-2",
     "en-nz-csagent-7",
-    "en-nz-training-3",
-    "en-nz-tutor-6"
+    "en-nz-training-3"
    ],
    "CHILD_FEMALE": [
     "en-nz-commercial-3",
@@ -403,7 +400,6 @@
     "it-it-csagent-7",
     "it-it-podcaster-1",
     "it-it-techagent-4",
-    "it-it-training-1",
     "it-it-training-3",
     "it-it-training-4",
     "it-it-training-5",
@@ -590,7 +586,6 @@
     "pl-pl-techagent-8",
     "pl-pl-training-2",
     "pl-pl-training-4",
-    "pl-pl-training-6",
     "pl-pl-training-8",
     "pl-pl-tutor-2",
     "pl-pl-tutor-5",
@@ -619,7 +614,6 @@
     "ja-jp-csagent-1",
     "ja-jp-csagent-3",
     "ja-jp-csagent-7",
-    "ja-jp-csagent-9",
     "ja-jp-podcaster-1",
     "ja-jp-podcaster-11",
     "ja-jp-podcaster-4",
@@ -703,7 +697,6 @@
     "nl-nl-storyteller-2",
     "nl-nl-techagent-2",
     "nl-nl-techagent-6",
-    "nl-nl-training-1",
     "nl-nl-training-2",
     "nl-nl-tutor-2",
     "nl-nl-tutor-4"
@@ -732,6 +725,55 @@
     "nl-nl-concierge-2",
     "nl-nl-techagent-3",
     "nl-nl-tutor-6"
+   ]
+  },
+  "DEEP_SOUTHERN_ENGLISH": {
+   "playerKeywords": [],
+   "MALE": [
+    "en-gb-advisor-8",
+    "en-gb-assistant-2"
+   ],
+   "CHILD_MALE": [
+    "en-gb-advisor-8",
+    "en-gb-assistant-2"
+   ],
+   "FEMALE": [
+    "en-gb-advisor-1",
+    "en-gb-advisor-4",
+    "en-gb-advisor-6",
+    "en-gb-assistant-1",
+    "en-gb-commercial-2",
+    "en-gb-commercial-5",
+    "en-gb-commercial-6",
+    "en-gb-commercial-9",
+    "en-gb-concierge-2",
+    "en-gb-concierge-4",
+    "en-gb-concierge-5",
+    "en-gb-concierge-6",
+    "en-gb-concierge-7",
+    "en-gb-csagent-10",
+    "en-gb-csagent-2",
+    "en-gb-csagent-4",
+    "en-gb-podcaster-10",
+    "en-gb-podcaster-2",
+    "en-gb-podcaster-3",
+    "en-gb-training-2",
+    "en-gb-tutor-1",
+    "en-gb-tutor-10",
+    "en-gb-tutor-11",
+    "en-gb-tutor-12",
+    "en-gb-tutor-13",
+    "en-gb-tutor-19",
+    "en-gb-tutor-20",
+    "en-gb-tutor-21",
+    "en-gb-tutor-4",
+    "en-gb-tutor-6",
+    "en-gb-tutor-7"
+   ],
+   "CHILD_FEMALE": [
+    "en-gb-commercial-1",
+    "en-gb-csagent-6",
+    "en-gb-csagent-8"
    ]
   },
   "SOUTHERN_ENGLISH": {

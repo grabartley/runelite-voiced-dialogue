@@ -18,7 +18,9 @@ are no network calls or large downloads when choosing a voice.
   Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
 - `tools/voice-regions.json` - hand-curated **voice regions**: each names one Gemini Extended
-  Voice Library accent, the player-accent keywords that select it, and any voices excluded by ear.
+  Voice Library accent, the player-accent keywords that select it, any voices excluded because they
+  read as the wrong gender, and optionally `onlyVoices` to narrow a gender to named voices (the
+  trolls' deep southern English pool).
 - `tools/voice-library.json` - a committed snapshot of the Extended Voice Library, refreshed with
   `GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`. The generator builds each region's
   male and female pools from it into `src/main/resources/voice-regions.json`, so a voice only
@@ -186,7 +188,8 @@ Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundl
 carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
 delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them as a full
 character profile in one style string sent in `speech_metadata.style`. It opens by naming the
-spoken language, then any `pitch`, and ends with the line's chat-head emotion (and, on Google AI
+spoken language and the speaker's gender ("A woman's voice.", "A young boy's voice."; none for
+the narrator, whose storyteller voice is fixed), then any `pitch`, and ends with the line's chat-head emotion (and, on Google AI
 Studio, a speed direction when **Speaking Pace** is not 100). The language is the **Spoken
 Language** setting when the line is translated, and English when it is not:
 
@@ -226,10 +229,10 @@ different people, where a short style string flattens them together.
 - `pitch` is optional and leads the profile, right after the spoken language and the speaker's
   gender, ahead of the profile name ("Very high-pitched,
   squeaky, thin little voice, far above a normal adult voice"). Native library voices ignore
-  pitch described later in the style, so it leads. The most specific layer that sets it wins. A
-  pitch is always preceded by the speaker's gender ("A woman's voice.", "A young boy's voice."),
-  because by ear a bare "very deep" turns a female troll or dwarf into a man and a bare "very
-  high" turns a boy into a girl.
+  pitch described later in the style, so it leads. The most specific layer that sets it wins. The
+  gender before it matters: by ear a bare "very deep" turns a female troll or dwarf into a man, a
+  bare "very high" turns a boy into a girl, and a few library voices drift toward the other
+  gender unless it is named.
 - `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
   (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
   comes from the same layer as the winning accent, so an accent with no region (Welsh, Nigerian)

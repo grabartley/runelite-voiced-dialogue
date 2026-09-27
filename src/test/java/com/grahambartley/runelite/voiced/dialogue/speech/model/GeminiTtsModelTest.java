@@ -18,6 +18,8 @@ public class GeminiTtsModelTest {
   private static final CharacterProfile GNOME =
       new CharacterProfile("Gnome", "Irish accent", "Cheerful", "Quick pace");
 
+  private static final VoiceSpec GNOME_MAN = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 1);
+
   private final GeminiTtsModel model = new GeminiTtsModel();
 
   @Test
@@ -42,18 +44,20 @@ public class GeminiTtsModelTest {
   @Test
   public void speechStyleCarriesProfileAndEmotion() {
     assertEquals(
-        "Speaking English. Audio profile: Gnome, a character in a medieval fantasy world."
+        "Speaking English. A man's voice. Audio profile: Gnome, a character in a medieval fantasy"
+            + " world."
             + " Accent: Irish accent. Style: Cheerful. Pace: Quick pace. Sounding happy.",
-        model.speechStyle(GNOME, null, Emotion.HAPPY, "English"));
+        model.speechStyle(GNOME, GNOME_MAN, Emotion.HAPPY, "English"));
   }
 
   @Test
   public void speechStyleWithSpeedAddsASpeedDirection() {
     assertEquals(
-        "Speaking English. Audio profile: Gnome, a character in a medieval fantasy world."
+        "Speaking English. A man's voice. Audio profile: Gnome, a character in a medieval fantasy"
+            + " world."
             + " Accent: Irish accent. Style: Cheerful. Pace: Quick pace. Speaking at 80% of normal"
             + " speed.",
-        model.speechStyle(GNOME, null, Emotion.NEUTRAL, "English", 80));
+        model.speechStyle(GNOME, GNOME_MAN, Emotion.NEUTRAL, "English", 80));
   }
 
   @Test

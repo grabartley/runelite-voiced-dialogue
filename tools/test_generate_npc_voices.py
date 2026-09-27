@@ -422,6 +422,20 @@ class VoiceRegionsTest(unittest.TestCase):
         self.assertEqual(regions["IRISH"]["MALE"], ["ie-1", "ie-2", "ie-3", "ie-4", "ie-5"])
         self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-1", "ie-3", "ie-4"])
 
+    def test_only_voices_narrows_a_gender_to_the_named_voices(self):
+        regions = gen.build_voice_regions(
+            regions_source(onlyVoices={"male": ["ie-2", "ie-5"]}), LIBRARY)
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-5"])
+        self.assertEqual(regions["IRISH"]["FEMALE"], ["ie-f"])
+
+    def test_only_voices_rejects_a_voice_outside_the_region(self):
+        with self.assertRaisesRegex(ValueError, "onlyVoices"):
+            gen.build_voice_regions(regions_source(onlyVoices={"male": ["gb-1"]}), LIBRARY)
+
+    def test_only_voices_rejects_an_unknown_gender(self):
+        with self.assertRaisesRegex(ValueError, "unknown genders"):
+            gen.build_voice_regions(regions_source(onlyVoices={"boys": ["ie-1"]}), LIBRARY)
+
     def test_neutral_voices_are_left_out(self):
         regions = gen.build_voice_regions(regions_source(), LIBRARY)
         self.assertNotIn("ie-n", regions["IRISH"]["MALE"] + regions["IRISH"]["FEMALE"])

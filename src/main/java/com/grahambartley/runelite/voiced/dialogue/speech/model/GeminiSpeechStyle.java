@@ -36,10 +36,8 @@ final class GeminiSpeechStyle {
       String paceDirection) {
     List<String> directions = new ArrayList<>();
     addDirection(directions, "Speaking " + language);
-    if (clean(profile.pitch()) != null) {
-      addDirection(directions, voiceAnchor(voice));
-      addDirection(directions, profile.pitch());
-    }
+    addDirection(directions, voiceAnchor(voice));
+    addDirection(directions, profile.pitch());
     String name = clean(profile.name());
     if (name != null) {
       directions.add(sentence("Audio profile: " + name + CHARACTER_FRAME));
@@ -56,7 +54,7 @@ final class GeminiSpeechStyle {
   }
 
   private static String voiceAnchor(VoiceSpec voice) {
-    if (voice.gender() == NpcGender.UNKNOWN) {
+    if (voice.narrator() || voice.gender() == NpcGender.UNKNOWN) {
       return null;
     }
     boolean female = voice.gender() == NpcGender.FEMALE;

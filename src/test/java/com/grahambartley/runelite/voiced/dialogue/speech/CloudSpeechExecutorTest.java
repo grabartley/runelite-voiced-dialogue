@@ -144,7 +144,7 @@ public class CloudSpeechExecutorTest {
 
     executor(config).synthesize(request());
 
-    assertTrue(spoken.style.startsWith("Speaking French. Audio profile: Troll"));
+    assertTrue(spoken.style.startsWith("Speaking French. A man's voice. Audio profile: Troll"));
   }
 
   @Test

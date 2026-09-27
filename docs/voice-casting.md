@@ -35,17 +35,18 @@ pool.
 | Region | Library accent | Male | Female | Voices |
 |---|---|---|---|---|
 | `SOUTHERN_ENGLISH` | Winchester | 11 | 31 | commoners, Misthalin, Received Pronunciation, Cockney, most British creatures |
+| `DEEP_SOUTHERN_ENGLISH` | Winchester, the two deepest men only | 2 | 31 | trolls |
 | `WEST_COUNTRY` | Bristol | 7 | 3 | Asgarnia, pirates, crabs |
 | `SCOUSE` | Liverpool | 4 | 2 | Kandarin |
 | `MANCUNIAN` | Manchester | 5 | 8 | Kourend, Yorkshire barbarians, Northern bespoke NPCs |
 | `GEORDIE` | Newcastle | 5 | 8 | the Wilderness |
 | `SCOTTISH` | Glasgow | 6 | 4 | dwarves |
-| `IRISH` | Dublin | 34 | 36 | gnomes, leprechauns, Wyrmscraig, Irish bespoke NPCs |
-| `ITALIAN` | Italian | 22 | 24 | Varlamore |
+| `IRISH` | Dublin | 34 | 35 | gnomes, leprechauns, Wyrmscraig, Irish bespoke NPCs |
+| `ITALIAN` | Italian | 22 | 23 | Varlamore |
 | `EGYPTIAN_ARABIC` | Egyptian Arabic | 43 | 41 | the Kharidian desert, Menaphos and Sophanem |
-| `POLISH` | Polish | 28 | 28 | Morytania, vampyres, Romani bespoke NPCs |
-| `NORSE` | Dutch | 14 | 13 | the Fremennik |
-| `JAPANESE` | Tokyo Japanese | 28 | 36 | the Eastern Lands |
+| `POLISH` | Polish | 28 | 27 | Morytania, vampyres, Romani bespoke NPCs |
+| `NORSE` | Dutch | 13 | 13 | the Fremennik |
+| `JAPANESE` | Tokyo Japanese | 27 | 36 | the Eastern Lands |
 | `AUSTRALIAN`, `NEW_ZEALAND` | Sydney, Auckland | | | bespoke NPCs |
 
 Accents with no native speakers in the library (Welsh, Nigerian, Bajan and Caribbean, the Russian
@@ -59,6 +60,14 @@ the profile, right after the spoken language and the speaker's gender ("Very hig
 voice."): by ear, a native voice ignores pitch described later in the style but follows it when it
 leads. Goblins, gnomes, monkeys, crabs, imps and fairies are high; trolls, gorillas, demons,
 dragons, TzHaar, ogres and dwarves are low.
+
+Every line names the speaker's gender before anything else in the profile ("A man's voice.", "A
+woman's voice."), because a few library voices drift toward the other gender unless told. Measuring
+the pitch of every pooled voice, with and without that direction, found seven that still read as
+the wrong gender with it (a Varlamore queen came out as a man), and each region's `exclude` list
+drops them. Trolls take `DEEP_SOUTHERN_ENGLISH`, the two southern English men who measure and sound
+deepest, since the full southern English pool is mostly light voices and a pitch direction only
+pulls a light voice down so far.
 
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the

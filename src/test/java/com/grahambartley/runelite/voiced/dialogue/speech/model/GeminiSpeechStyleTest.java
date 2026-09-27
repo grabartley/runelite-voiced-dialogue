@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
@@ -18,6 +19,8 @@ public class GeminiSpeechStyleTest {
 
   private static final VoiceSpec WOMAN = VoiceSpec.npc(NpcRace.TROLL, NpcGender.FEMALE, 1);
 
+  private static final VoiceSpec UNKNOWN = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.UNKNOWN, 1);
+
   private static final CharacterProfile DWARF =
       new CharacterProfile(
           "Keldagrim Dwarf",
@@ -26,7 +29,8 @@ public class GeminiSpeechStyleTest {
           "Firm and forthright.");
 
   private static final String DWARF_PROFILE =
-      "Speaking English. Audio profile: Keldagrim Dwarf, a character in a medieval fantasy world."
+      "Speaking English. A man's voice. Audio profile: Keldagrim Dwarf, a character in a medieval"
+          + " fantasy world."
           + " Accent: Strong Glasgow Scottish accent, Scottish English pronunciation."
           + " Style: A stout, hard-bitten mountain dwarf. Rough, gravelly, and blunt."
           + " Pace: Firm and forthright.";
@@ -52,7 +56,7 @@ public class GeminiSpeechStyleTest {
         "Speaking French. Style: Bright.",
         GeminiSpeechStyle.compose(
             new CharacterProfile(null, null, "Bright", null),
-            MAN,
+            UNKNOWN,
             Emotion.NEUTRAL,
             "French",
             null));
@@ -85,8 +89,16 @@ public class GeminiSpeechStyleTest {
   }
 
   @Test
-  public void noPitchMeansNoGenderDirection() {
-    assertFalse(compose(DWARF, WOMAN, Emotion.NEUTRAL).contains("woman"));
+  public void everyLineNamesTheGenderEvenWithoutAPitch() {
+    assertTrue(
+        compose(DWARF, WOMAN, Emotion.NEUTRAL).startsWith("Speaking English. A woman's voice."));
+  }
+
+  @Test
+  public void theNarratorsLineNamesNoGender() {
+    assertEquals(
+        "Speaking English. Style: Bright.",
+        compose(new CharacterProfile(null, null, "Bright", null), VoiceSpec.NARRATOR, null));
   }
 
   @Test
@@ -111,14 +123,14 @@ public class GeminiSpeechStyleTest {
     assertEquals(
         "Speaking English. Accent: Strong rough, harsh English accent, British English"
             + " pronunciation. A rough, harsh British English, the hard edge of the outlaws.",
-        compose(detailed, MAN, Emotion.NEUTRAL));
+        compose(detailed, UNKNOWN, Emotion.NEUTRAL));
   }
 
   @Test
   public void anAccentDetailWithoutAnAccentIsNotSent() {
     CharacterProfile orphan =
         new CharacterProfile(null, null, "a lilt", "Bright", null, null, null);
-    assertEquals("Speaking English. Style: Bright.", compose(orphan, MAN, Emotion.NEUTRAL));
+    assertEquals("Speaking English. Style: Bright.", compose(orphan, UNKNOWN, Emotion.NEUTRAL));
   }
 
   @Test
@@ -140,7 +152,7 @@ public class GeminiSpeechStyleTest {
     assertEquals(
         "Speaking English. Audio profile: Imp, a character in a medieval fantasy world. Accent:"
             + " squeaky accent. Style: shrill. Pace: fast.",
-        compose(ragged, MAN, null));
+        compose(ragged, UNKNOWN, null));
   }
 
   @Test
@@ -148,20 +160,20 @@ public class GeminiSpeechStyleTest {
     CharacterProfile loud = new CharacterProfile(null, "loud accent!", "curious?", "brisk");
     assertEquals(
         "Speaking English. Accent: loud accent! Style: curious? Pace: brisk.",
-        compose(loud, MAN, null));
+        compose(loud, UNKNOWN, null));
   }
 
   @Test
   public void skipsMissingAndBlankFields() {
     CharacterProfile sparse = new CharacterProfile(null, null, "Bright and light", "  ");
     assertEquals(
-        "Speaking English. Style: Bright and light.", compose(sparse, MAN, Emotion.NEUTRAL));
+        "Speaking English. Style: Bright and light.", compose(sparse, UNKNOWN, Emotion.NEUTRAL));
   }
 
   @Test
   public void anEmptyProfileStillNamesTheLanguage() {
     CharacterProfile empty = new CharacterProfile(null, null, null, null);
-    assertEquals("Speaking English.", compose(empty, null, null));
+    assertEquals("Speaking English.", compose(empty, UNKNOWN, null));
   }
 
   @Test

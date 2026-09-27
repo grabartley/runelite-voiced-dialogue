@@ -471,12 +471,25 @@ def build_voice_regions(regions_source, library):
             if owner != key:
                 raise ValueError(f"player keyword '{keyword}' is in both {owner} and {key}")
         excluded = set(region.get("exclude") or []) | {narrator}
+        only = region.get("onlyVoices") or {}
+        unknown_genders = set(only) - set(VOICE_GENDERS)
+        if unknown_genders:
+            raise ValueError(f"voice region {key} onlyVoices names unknown genders "
+                             f"{sorted(unknown_genders)}")
         pools = {gender: [] for gender in VOICE_GENDERS.values()}
         for voice in library["voices"]:
             gender = VOICE_GENDERS.get(voice.get("gender"))
+            allowed = only.get(voice.get("gender"))
             if (gender and voice.get("accent") == region["libraryAccent"]
-                    and voice["id"] not in excluded):
+                    and voice["id"] not in excluded
+                    and (allowed is None or voice["id"] in allowed)):
                 pools[gender].append(voice)
+        for library_gender, ids in only.items():
+            picked = {v["id"] for v in pools[VOICE_GENDERS[library_gender]]}
+            missing = set(ids) - picked
+            if missing:
+                raise ValueError(f"voice region {key} onlyVoices {sorted(missing)} are not "
+                                 f"{library_gender} {region['libraryAccent']} voices")
         for gender, voices in pools.items():
             if not voices:
                 raise ValueError(f"voice region {key} has no {gender.lower()} library voices")
