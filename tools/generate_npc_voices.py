@@ -71,6 +71,9 @@ DEFAULT_VOICE_LIBRARY = os.path.join("tools", "voice-library.json")
 DEFAULT_VOICE_REGIONS_OUT = os.path.join("src", "main", "resources", "voice-regions.json")
 VOICE_GENDERS = {"male": "MALE", "female": "FEMALE"}
 CHILD_POOL_SIZE = 3
+# A region gives children voices of their own only while adults keep at least this many; smaller
+# regions share one pool between children and adults.
+MIN_ADULT_VOICES = 3
 CHILD_POOL_PREFIX = "CHILD_"
 # Full NPC id -> name dump, used only to cross-reference ids the wiki pages do not
 # list (variants) onto wiki data by name. The wiki remains the source of truth.
@@ -479,9 +482,13 @@ def build_voice_regions(regions_source, library):
                 raise ValueError(f"voice region {key} has no {gender.lower()} library voices")
         entry = {"playerKeywords": [k.lower() for k in region.get("playerKeywords") or []]}
         for gender, voices in pools.items():
-            entry[gender] = sorted(v["id"] for v in voices)
             aged = sorted((v for v in voices if "age" in v), key=lambda v: (v["age"], v["id"]))
-            entry[CHILD_POOL_PREFIX + gender] = sorted(v["id"] for v in aged[:CHILD_POOL_SIZE])
+            children = {v["id"] for v in aged[:CHILD_POOL_SIZE]}
+            adults = {v["id"] for v in voices}
+            if len(adults) - len(children) >= MIN_ADULT_VOICES:
+                adults -= children
+            entry[gender] = sorted(adults)
+            entry[CHILD_POOL_PREFIX + gender] = sorted(children)
         regions[key] = entry
     return regions
 

@@ -177,7 +177,10 @@ The library holds no child voices; its youngest speakers are in their early twen
 youngest native voices told to sound like a child beat the prebuilt child voices, which read young
 but carry the General American base. So a child whose accent has a voice region takes one of the
 three youngest native voices of its gender in that region, and the generator builds those child
-pools from the ages the library states. Every child, whether marked by a child keyword in its name
+pools from the ages the library states. Where the region can spare them and still leave adults at
+least three voices, those child voices leave the adult pool, so no adult shares a voice with a
+child. The smaller regions (Liverpool, Bristol women, Manchester and Newcastle men) keep one shared
+pool, because an adult pool of one or two voices would repeat far more than a shared one. Every child, whether marked by a child keyword in its name
 or by the `child` life-stage marker in the bundled table, takes the `child` profile layer, whose
 `pitch` ("Very high-pitched, light young child's voice, far above an adult voice") opens the style
 and outranks the race's pitch, so a troll child sounds young rather than large.

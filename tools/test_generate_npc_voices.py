@@ -389,6 +389,18 @@ class VoiceRegionsTest(unittest.TestCase):
         self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-1", "ie-3", "ie-4"])
         self.assertEqual(regions["IRISH"]["CHILD_FEMALE"], [])
 
+    def test_a_region_that_can_spare_them_keeps_child_voices_out_of_the_adult_pool(self):
+        library = {"voices": LIBRARY["voices"] + [
+            {"id": "ie-6", "accent": "Dublin English", "gender": "male", "age": 40}]}
+        regions = gen.build_voice_regions(regions_source(), library)
+        self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-1", "ie-3", "ie-4"])
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-5", "ie-6"])
+
+    def test_a_region_too_small_to_spare_them_shares_child_voices_with_adults(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(regions["IRISH"]["MALE"], ["ie-1", "ie-2", "ie-3", "ie-4", "ie-5"])
+        self.assertEqual(regions["IRISH"]["CHILD_MALE"], ["ie-1", "ie-3", "ie-4"])
+
     def test_neutral_voices_are_left_out(self):
         regions = gen.build_voice_regions(regions_source(), LIBRARY)
         self.assertNotIn("ie-n", regions["IRISH"]["MALE"] + regions["IRISH"]["FEMALE"])
