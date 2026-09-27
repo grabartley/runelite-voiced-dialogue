@@ -56,9 +56,6 @@ public final class GeminiTtsModel {
   }
 
   public JsonObject speechMetadata(String style) {
-    if (style.isEmpty()) {
-      return null;
-    }
     JsonObject metadata = new JsonObject();
     metadata.addProperty(STYLE, style);
     return metadata;

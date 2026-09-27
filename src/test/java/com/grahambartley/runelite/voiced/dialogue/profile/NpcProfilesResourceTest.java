@@ -291,6 +291,13 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void theNarratorKeepsMainsStorytellerWordingAndThePlayerTakesNoDetail() {
+    assertTrue(
+        table.resolveNarrator().accentDetail().contains("a storyteller reading a tale aloud"));
+    assertNull(table.resolvePlayer(null, null, null).accentDetail());
+  }
+
+  @Test
   public void mainsAccentDetailRidesBesideTheStrongAccent() {
     assertTrue(
         resolve(null, "Villager", "Human", "fremennik")

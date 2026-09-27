@@ -148,6 +148,26 @@ public class CloudSpeechExecutorTest {
   }
 
   @Test
+  public void untranslatedTextIsStyledAsEnglishWhateverTheSpokenLanguage() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(rejection());
+
+    executor(config)
+        .synthesize(
+            new SynthesisRequest(
+                "Hello",
+                VoiceSpec.player(NpcGender.MALE),
+                Emotion.NEUTRAL,
+                TestFixtures.TROLL_PROFILE,
+                true,
+                true));
+
+    assertEquals("Hello", spoken.input);
+    assertTrue(spoken.style.startsWith("Speaking English. "));
+  }
+
+  @Test
   public void aProviderWithoutASpeedFieldGetsTheSpeedInTheStyle() {
     speedInStyle = true;
     MutableTestConfig config = new MutableTestConfig();

@@ -62,7 +62,7 @@ goats, golems and fishing spots (skip these).
   prints `ALIGN FAIL` to stderr and you must extend `decode_npc()` (see below).
 - **Gender is not in the npc config.** The cache gives you the id + name + menu
   options, not gender. Get gender from the wiki infobox where it exists, and
-  otherwise infer from the character and **flag it for confirmation** — names lie
+  otherwise infer from the character and **flag it for confirmation**: names lie
   (Wyrmscraig's `Ffion` is a male NPC despite the name). Never set a gender you
   can't back up without marking it as needing a check.
 - Cross-check any id against the wiki infobox when one exists; the two should

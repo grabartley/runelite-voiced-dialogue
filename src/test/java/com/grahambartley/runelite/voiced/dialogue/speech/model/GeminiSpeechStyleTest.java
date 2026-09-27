@@ -34,7 +34,7 @@ public class GeminiSpeechStyleTest {
   private static final String DEEP = "Very deep, booming voice";
 
   private static CharacterProfile pitched(String pitch) {
-    return new CharacterProfile("Aga", null, null, null, pitch, null);
+    return new CharacterProfile("Aga", null, null, null, null, pitch, null);
   }
 
   private static String compose(CharacterProfile profile, VoiceSpec voice, Emotion emotion) {

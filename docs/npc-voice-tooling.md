@@ -1,7 +1,7 @@
 # NPC voice table tooling
 
 Offline tooling that produces the bundled `src/main/resources/npc-voices.json`
-lookup table. **None of this runs inside the plugin.** At runtime the plugin only
+lookup table and the `src/main/resources/voice-regions.json` voice pools. **None of this runs inside the plugin.** At runtime the plugin only
 reads the generated JSON and does in-memory map lookups keyed by NPC id, so there
 are no network calls or large downloads when choosing a voice.
 
@@ -14,7 +14,8 @@ are no network calls or large downloads when choosing a voice.
   gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
   rare NPC the wiki gets wrong or does not cover, and for marking named children.
 - `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
-  (Gemini) backend (accent, style, pace). Embedded verbatim into the output under
+  (Gemini) backend (name, accent, accentDetail, style, replaceStyle, pace, pitch, voiceRegion).
+  Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
 - `tools/voice-regions.json` - hand-curated **voice regions**: each names one Gemini Extended
   Voice Library accent, the player-accent keywords that select it, and any voices excluded by ear.
@@ -144,10 +145,11 @@ the `_meta` counts) with no wiki drift:
 python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json
 ```
 
-Then build and test:
+Then build and test, including the generator's own tests, which CI also runs:
 
 ```bash
 ./gradlew test spotlessCheck
+python3 -m unittest discover -s tools -p "test_*.py"
 ```
 
 Commit the regenerated `src/main/resources/npc-voices.json` alongside any
@@ -184,8 +186,9 @@ Alongside the `npcId -> {race, gender, ethnicity?, lifeStage?}` table, the bundl
 carries a `profiles` section that steers **how** the cloud (Gemini 3.8) backend
 delivers each line: accent, style, and pace. `GeminiSpeechStyle` renders them as a full
 character profile in one style string sent in `speech_metadata.style`. It opens by naming the
-spoken language from the **Spoken Language** setting, then any `pitch`, and ends with the line's
-chat-head emotion:
+spoken language, then any `pitch`, and ends with the line's chat-head emotion (and, on Google AI
+Studio, a speed direction when **Speaking Pace** is not 100). The language is the **Spoken
+Language** setting when the line is translated, and English when it is not:
 
 ```
 Speaking English. Audio profile: Benny, a character in a medieval fantasy world. Accent:
@@ -219,7 +222,8 @@ different people, where a short style string flattens them together.
   a region can replace the generic human style: the Wilderness trades "Down-to-earth, sincere, and
   approachable" for its own outlaw style. More specific layers still add to it.
 - `name` is sent as the profile's name, so it is part of the cache key.
-- `pitch` is optional and opens the style string, ahead of the profile name ("Very high-pitched,
+- `pitch` is optional and leads the profile, right after the spoken language and the speaker's
+  gender, ahead of the profile name ("Very high-pitched,
   squeaky, thin little voice, far above a normal adult voice"). Native library voices ignore
   pitch described later in the style, so it leads. The most specific layer that sets it wins. A
   pitch is always preceded by the speaker's gender ("A woman's voice.", "A young boy's voice."),

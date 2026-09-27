@@ -37,7 +37,8 @@ buttons. **Copy results** puts the verdicts on the clipboard to paste back into 
   `~/.runelite/profiles2/` that holds an OpenRouter key. Keys are read by the harness and never
   printed.
 - The player speaks with the config's default accent. Set `PLAYER_ACCENT` to test a typed accent.
-- Use a Java 17 shell, the same one used for `./gradlew build`.
+- Use a Java 17 shell, the same one used for `./gradlew build`. The sheet builder compresses clips
+  with macOS `afconvert`.
 - Put `<out-dir>` in a scratch location, never inside the repo.
 
 A full run is about 80 short lines, so it costs a few cents and takes a few minutes.

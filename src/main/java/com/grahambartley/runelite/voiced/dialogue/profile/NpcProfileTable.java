@@ -240,11 +240,15 @@ public final class NpcProfileTable {
     if (layer == null) {
       return base;
     }
+    boolean ownAccent = layer.accent() != null;
     return new CharacterProfile(
         layer.name() != null ? layer.name() : base.name(),
-        layer.accent() != null ? layer.accent() : base.accent(),
+        ownAccent ? layer.accent() : base.accent(),
+        ownAccent ? layer.accentDetail() : base.accentDetail(),
         layer.style() != null ? layer.style() : base.style(),
-        layer.pace() != null ? layer.pace() : base.pace());
+        layer.pace() != null ? layer.pace() : base.pace(),
+        null,
+        null);
   }
 
   private static boolean isBlank(String value) {

@@ -31,6 +31,14 @@ final class GeminiVoiceRegions {
 
   private static final long HASH_MULTIPLIER = 0x9E3779B97F4A7C15L;
 
+  private static final long UNSIGNED_INT_MASK = 0xFFFFFFFFL;
+
+  private static final int SEED_SHIFT = 32;
+
+  private static final int FIRST_MIX_SHIFT = 31;
+
+  private static final int SECOND_MIX_SHIFT = 29;
+
   static final String CHILD_POOL_PREFIX = "CHILD_";
 
   private static final NpcGender[] VOICED_GENDERS = {NpcGender.MALE, NpcGender.FEMALE};
@@ -122,11 +130,11 @@ final class GeminiVoiceRegions {
   }
 
   private static long weight(int seed, String voice) {
-    long mixed = (((long) seed) << 32) ^ (voice.hashCode() & 0xFFFFFFFFL);
+    long mixed = (((long) seed) << SEED_SHIFT) ^ (voice.hashCode() & UNSIGNED_INT_MASK);
     mixed *= HASH_MULTIPLIER;
-    mixed ^= mixed >>> 31;
+    mixed ^= mixed >>> FIRST_MIX_SHIFT;
     mixed *= HASH_MULTIPLIER;
-    return mixed ^ (mixed >>> 29);
+    return mixed ^ (mixed >>> SECOND_MIX_SHIFT);
   }
 
   private static List<String> strings(JsonObject object, String key) {

@@ -502,6 +502,9 @@ def validate_voice_regions(profiles, regions):
             if field in (profiles.get(key) or {}):
                 raise ValueError(f"{key}.{field} is not read: that speaker's voice is chosen apart "
                                  "from the profile layers")
+    if "accentDetail" in (profiles.get("player") or {}):
+        raise ValueError("player.accentDetail is not read: the player's accent is typed in the "
+                         "settings, so no detail can follow it")
     for where, layer in profile_layers(profiles):
         region = layer.get("voiceRegion")
         if region is None:

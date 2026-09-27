@@ -478,6 +478,11 @@ class VoiceRegionsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "byId.5.voiceRegion must sit next to"):
             gen.validate_voice_regions(profiles, {"IRISH": {}})
 
+    def test_player_accent_detail_is_rejected(self):
+        profiles = profiles_with(player={"accentDetail": "A plain adventurer."})
+        with self.assertRaisesRegex(ValueError, "player.accentDetail"):
+            gen.validate_voice_regions(profiles, {})
+
     def test_the_bundled_regions_and_profiles_agree(self):
         tools = os.path.dirname(os.path.abspath(__file__))
         regions = gen.build_voice_regions(

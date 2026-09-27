@@ -71,7 +71,7 @@ sound as `misthalin`.
 3. **Pin it in `overrides.json`.** Set `"ethnicity": "<region>"` or
    `"ethnicity": null` on every id for that character. Add `race`/`gender` if you
    corrected them. Keep one-line objects so the diff stays small.
-4. **Verify against the wiki before committing** — see the mandatory checklist in
+4. **Verify against the wiki before committing**: see the mandatory checklist in
    `regenerate-npc-voices`. Every changed NPC in the final `npc-voices.json` must
    be hand-confirmed against wiki data, and a change table presented.
 
@@ -91,8 +91,8 @@ sound as `misthalin`.
 
 ## Sanity references
 
-- Karim (2877) / Ellis (3231) — Al-Kharid natives, `kharidian`.
-- Ak-Haranu (2989) — `easternlands` (explicit non-region accent).
-- Pirate Pete / Bill Teach — Mos Le'Harmless pirates → `asgarnia`.
-- Sir Percival — Camelot knight → `null` (posh via role, not an accent).
-- Kree'arra — aviansie → `race: Demon`, `ethnicity: null`.
+- Karim (2877) / Ellis (3231): Al-Kharid natives, `kharidian`.
+- Ak-Haranu (2989): `easternlands` (explicit non-region accent).
+- Pirate Pete / Bill Teach: Mos Le'Harmless pirates → `asgarnia`.
+- Sir Percival: Camelot knight → `null` (posh via role, not an accent).
+- Kree'arra: aviansie → `race: Demon`, `ethnicity: null`.

@@ -39,7 +39,9 @@ takes sustained delivery from a structured `speech_metadata.style` field, so the
 spoken line alone and `GeminiSpeechStyle` renders the profile as one style string: the spoken
 language from the **Spoken Language** setting, then any `pitch` direction preceded by the
 speaker's gender, then labelled fields ("Audio profile: <name>, a character in a medieval fantasy
-world. Accent: ... <accent detail> Style: ... Pace: ..."), then the emotion direction. By ear, the full profile keeps NPCs that share a voice
+world. Accent: ... <accent detail> Style: ... Pace: ..."), then the emotion direction, and on Google
+AI Studio a speed direction when Speaking Pace is not 100. The language is the Spoken Language
+setting when the line is translated, and English when it is not. By ear, the full profile keeps NPCs that share a voice
 distinct, and a strong accent phrase naming its pronunciation keeps every accent from falling back
 to a generic default. `CloudSpeechExecutor` builds the string once per line for both providers;
 each provider only places it (see below). The profile sets the character and the emotion

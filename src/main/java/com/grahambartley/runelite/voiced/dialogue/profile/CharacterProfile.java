@@ -20,12 +20,7 @@ public final class CharacterProfile {
   private final String voiceRegion;
 
   public CharacterProfile(String name, String accent, String style, String pace) {
-    this(name, accent, style, pace, null, null);
-  }
-
-  public CharacterProfile(
-      String name, String accent, String style, String pace, String pitch, String voiceRegion) {
-    this(name, accent, null, style, pace, pitch, voiceRegion);
+    this(name, accent, null, style, pace, null, null);
   }
 
   public CharacterProfile(

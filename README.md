@@ -59,7 +59,7 @@ Switch any time with **Voice Provider**. Cached lines are instant and free on bo
 ### OpenRouter
 
 1. Sign up at [openrouter.ai](https://openrouter.ai).
-2. Top up on the [Credits page](https://openrouter.ai/settings/credits). **€5 covers over 2,000 lines.**
+2. Top up on the [Credits page](https://openrouter.ai/settings/credits). **€5 covers over 4,000 lines.**
 3. Create a key on the [API Keys page](https://openrouter.ai/settings/keys) and copy it.
 4. In RuneLite, set **Voice Provider** to **OpenRouter** and paste the key into **OpenRouter API Key**.
 5. Talk to any NPC.

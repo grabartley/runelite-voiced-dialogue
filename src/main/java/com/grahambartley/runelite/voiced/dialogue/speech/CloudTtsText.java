@@ -4,12 +4,14 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 
 public final class CloudTtsText {
 
+  static final String DEFAULT_LANGUAGE = "English";
+
   private CloudTtsText() {}
 
   static boolean needsTranslation(String language) {
     return language != null
         && !language.trim().isEmpty()
-        && !language.trim().equalsIgnoreCase("English");
+        && !language.trim().equalsIgnoreCase(DEFAULT_LANGUAGE);
   }
 
   static String effectiveSpokenLanguage(VoicedDialogueConfig config, SynthesisRequest request) {
@@ -29,7 +31,7 @@ public final class CloudTtsText {
   }
 
   private static String baseLanguage(String language) {
-    return language == null || language.trim().isEmpty() ? "English" : language.trim();
+    return language == null || language.trim().isEmpty() ? DEFAULT_LANGUAGE : language.trim();
   }
 
   static String combineLanguage(String language, VoicedDialogueConfig.SpeakingStyle quirk) {

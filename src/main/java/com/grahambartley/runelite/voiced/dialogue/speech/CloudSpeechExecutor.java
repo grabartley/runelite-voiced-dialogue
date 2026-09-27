@@ -221,7 +221,8 @@ public final class CloudSpeechExecutor {
     int speed = support.speedPercent();
     double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
     boolean speedInStyle = ops.speedInStyle() && speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT;
-    String spokenLanguage = CloudTtsText.spokenLanguage(config);
+    String spokenLanguage =
+        translating ? CloudTtsText.spokenLanguage(config) : CloudTtsText.DEFAULT_LANGUAGE;
     String style =
         speedInStyle
             ? model.speechStyle(profile, request.voice(), request.emotion(), spokenLanguage, speed)

@@ -50,11 +50,12 @@ pool.
 
 Accents with no native speakers in the library (Welsh, Nigerian, Bajan and Caribbean, the Russian
 penguins, the West Midlands ogres) keep their race pool and carry the accent through the
-profile's style alone. The library has no countryside Irish voices, so gnomes and leprechauns take
-Dublin voices and the style's "rural Irish" accent pulls them toward the country. Pitch is not
+profile's accent and accent detail alone. The library has no countryside Irish voices, so gnomes
+and leprechauns take Dublin voices and the accent's "rural Irish" phrasing pulls them toward the
+country. Pitch is not
 filtered, since the library's male voices are overwhelmingly low and a pitch filter would empty
-most pools. A creature's depth or squeak rides in the profile's `pitch` field instead, which opens
-the style string ("Very high-pitched, squeaky, thin little voice, far above a normal adult
+most pools. A creature's depth or squeak rides in the profile's `pitch` field instead, which leads
+the profile, right after the spoken language and the speaker's gender ("Very high-pitched, squeaky, thin little voice, far above a normal adult
 voice."): by ear, a native voice ignores pitch described later in the style but follows it when it
 leads. Goblins, gnomes, monkeys, crabs, imps and fairies are high; trolls, gorillas, demons,
 dragons, TzHaar, ogres and dwarves are low.
@@ -125,7 +126,7 @@ and a player whose accent names one take native voices instead (see above):
 
 | Speaker | Male | Female |
 |---|---|---|
-| Player | Achird, Iapetus | Aoede, Autonoe |
+| Player whose accent names no region | Achird, Iapetus | Aoede, Autonoe |
 | Child with no voice region | Puck | Leda, Zephyr |
 | Narrator | `en-gb-storyteller-2` | `en-gb-storyteller-2` |
 
@@ -186,10 +187,10 @@ three youngest native voices of its gender in that region, and the generator bui
 pools from the ages the library states. Where the region can spare them and still leave adults at
 least three voices, those child voices leave the adult pool, so no adult shares a voice with a
 child. The smaller regions (Liverpool, Bristol women, Manchester and Newcastle men) keep one shared
-pool, because an adult pool of one or two voices would repeat far more than a shared one. Every child, whether marked by a child keyword in its name
-or by the `child` life-stage marker in the bundled table, takes the `child` profile layer, whose
-`pitch` ("Very high-pitched, light young child's voice, far above an adult voice") opens the style
-and outranks the race's pitch, so a troll child sounds young rather than large.
+pool, because an adult pool of one or two voices would repeat far more than a shared one. Every
+child, whether marked by a child keyword in its name or by the `child` life-stage marker in the bundled table, takes the `child` profile layer, whose
+`pitch` ("Very high-pitched, light young child's voice, far above an adult voice") follows "A
+young boy's voice" or "A young girl's voice" and outranks the race's pitch, so a troll child sounds young rather than large.
 
 A child whose accent has no native voices keeps the prebuilt child pool. Its male pool holds one
 voice, deliberately: it is the only prebuilt male voice that reads as a young boy, and a second
@@ -198,7 +199,7 @@ that merely reads high is worse than the repetition. The female pool holds two.
 ## The player
 
 The **Player Voice** setting picks a gender. When the typed **Your Accent** names a region's
-keyword ("Irish", "Glasgow", "southern", and so on, listed in `tools/voice-regions.json`), the
+keyword ("Irish", "Glasgow", "London", and so on, listed in `tools/voice-regions.json`), the
 player takes a fixed native voice from that region for the gender; regions are tried in file order
 and the broad southern English region comes last, so a more specific accent always wins. Otherwise
 the player takes index 0 of the player pool: there is one player, so nothing needs spreading on a

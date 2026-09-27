@@ -305,9 +305,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       String input, JsonObject speechMetadata, String voice, String languageCode) {
     JsonObject textPart = new JsonObject();
     textPart.addProperty("text", input);
-    if (speechMetadata != null) {
-      textPart.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
-    }
+    textPart.add(GeminiTtsModel.SPEECH_METADATA, speechMetadata);
     JsonArray parts = new JsonArray();
     parts.add(textPart);
     JsonObject content = new JsonObject();

@@ -58,6 +58,7 @@ public class CharacterProfileTest {
         new CharacterProfile(
             "Wizard",
             "Distinguished elderly British accent",
+            null,
             "Warm and knowing",
             "Measured pace",
             "Very deep voice",
