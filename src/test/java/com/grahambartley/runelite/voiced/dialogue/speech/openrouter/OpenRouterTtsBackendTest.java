@@ -1,6 +1,20 @@
 package com.grahambartley.runelite.voiced.dialogue.speech.openrouter;
 
 import static com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp.HTTP_TOO_MANY_REQUESTS;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.FAST_RETRY;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.body;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.bodyForEmotion;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.completeAudio;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.concat;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.enqueueChat;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.enqueuePcm;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.keyedConfig;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.line;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.req;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.sentBody;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.shutDownQuietly;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.startedServer;
+import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.truncatedAudio;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterTtsBackend.WARM_UP_CONNECTIONS;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -9,26 +23,21 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.RawPcmDecoder;
 import com.grahambartley.runelite.voiced.dialogue.audio.TestPcm;
-import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
 import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
-import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.speech.TestFixtures;
 import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiVoiceMap;
@@ -53,62 +62,37 @@ public class OpenRouterTtsBackendTest {
 
   private MockWebServer server;
   private OkHttpClient client;
-  private final Gson gson = new Gson();
+  private int notices;
+  private final SpendTracker spend = new SpendTracker();
 
   @Before
   public void setUp() throws Exception {
-    server = new MockWebServer();
-    server.start();
+    server = startedServer();
     client = new OkHttpClient();
   }
 
   @After
-  public void tearDown() throws Exception {
-    try {
-      server.shutdown();
-    } catch (Exception ignored) {
-    }
-  }
-
-  private static final RetryTuning FAST_RETRY =
-      new RetryTuning(Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofSeconds(1), 10, 0);
-
-  private static MutableTestConfig keyedConfig() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.openRouterKey = "sk-or-abc";
-    return config;
+  public void tearDown() {
+    shutDownQuietly(server);
   }
 
   private OpenRouterTtsBackend backend(VoicedDialogueConfig config) {
-    return new OpenRouterTtsBackend(
-        client, config, gson, server.url("/api/v1/audio/speech").toString());
+    return OpenRouterRequests.backend(client, server, config);
   }
 
-  private OpenRouterTtsBackend backendWith(VoicedDialogueConfig config, RetryTuning tuning) {
-    return new OpenRouterTtsBackend(
-        client, config, gson, server.url("/api/v1/audio/speech").toString(), tuning);
+  private OpenRouterTtsBackend backend(VoicedDialogueConfig config, RetryTuning tuning) {
+    return OpenRouterRequests.backend(client, server, config, tuning);
   }
 
-  private void enqueuePcm(short... samples) {
-    server.enqueue(
-        new MockResponse()
-            .setResponseCode(HTTP_OK)
-            .setBody(new Buffer().write(TestPcm.raw(samples))));
+  private OpenRouterTtsBackend noticedBackend(OpenRouterTtsBackend backend) {
+    backend.setNotice(msg -> notices++);
+    return backend;
   }
 
-  private void enqueueChat(String content) {
-    server.enqueue(
-        new MockResponse().setResponseCode(HTTP_OK).setBody(TestFixtures.chatResponse(content)));
-  }
-
-  private static SynthesisRequest req() {
-    return new SynthesisRequest(
-        "Hello & welcome",
-        VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-        Emotion.NEUTRAL,
-        TestFixtures.TROLL_PROFILE,
-        false,
-        false);
+  private OpenRouterTtsBackend costedBackend(VoicedDialogueConfig config) {
+    OpenRouterTtsBackend backend = backend(config);
+    backend.setSpendTracker(spend);
+    return backend;
   }
 
   @Test
@@ -134,53 +118,17 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void everyEmotionSendsOnlyTheSpokenLineAsInput() throws Exception {
     for (Emotion emotion : EnumSet.allOf(Emotion.class)) {
-      enqueuePcm((short) 1);
-      assertEquals("Hello & welcome", bodyForEmotion(emotion).get("input").getAsString());
+      enqueuePcm(server, (short) 1);
+      assertEquals(
+          "Hello & welcome",
+          bodyForEmotion(backend(keyedConfig()), server, emotion).get("input").getAsString());
     }
-  }
-
-  @Test
-  public void emotionRidesInTheSpeechStyle() throws Exception {
-    enqueuePcm((short) 1);
-    assertEquals(
-        TestFixtures.TROLL_STYLE + " Sounding fearful.", sentStyle(bodyForEmotion(Emotion.SCARED)));
-    enqueuePcm((short) 1);
-    assertEquals(TestFixtures.TROLL_STYLE, sentStyle(bodyForEmotion(Emotion.NEUTRAL)));
-  }
-
-  private static String sentStyle(JsonObject body) {
-    return body.getAsJsonObject("provider")
-        .getAsJsonObject("options")
-        .getAsJsonObject("google-ai-studio")
-        .getAsJsonObject("speech_metadata")
-        .get("style")
-        .getAsString();
-  }
-
-  private JsonObject bodyForEmotion(Emotion emotion) throws Exception {
-    enqueuePcm((short) 1);
-
-    SynthesisRequest request =
-        new SynthesisRequest(
-            "Hello & welcome",
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            emotion,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
-    backend(keyedConfig()).synthesize(request);
-
-    return sentBody();
-  }
-
-  private JsonObject sentBody() throws Exception {
-    return new JsonParser().parse(server.takeRequest().getBody().readUtf8()).getAsJsonObject();
   }
 
   @Test
   public void successfulResponseDecodesRawPcmAt24k() {
     short[] samples = {0, 16384, -16384, 32767};
-    enqueuePcm(samples);
+    enqueuePcm(server, samples);
 
     Pcm pcm = backend(keyedConfig()).synthesize(req());
 
@@ -193,7 +141,7 @@ public class OpenRouterTtsBackendTest {
   public void sendsBearerAuthAndJsonBody() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.openRouterKey = "sk-or-secret";
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
 
     backend(config).synthesize(req());
 
@@ -210,7 +158,7 @@ public class OpenRouterTtsBackendTest {
         "RuneLite Voiced Dialogue",
         recorded.getHeader("X-Title"));
 
-    JsonObject body = new JsonParser().parse(recorded.getBody().readUtf8()).getAsJsonObject();
+    JsonObject body = body(recorded);
     assertEquals("google/gemini-3.8-flash-tts", body.get("model").getAsString());
     assertEquals("Hello & welcome", body.get("input").getAsString());
     assertEquals("pcm", body.get("response_format").getAsString());
@@ -219,7 +167,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void voiceFieldComesFromTheGeminiVoiceMap() throws Exception {
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
 
     SynthesisRequest female =
         new SynthesisRequest(
@@ -234,165 +182,21 @@ public class OpenRouterTtsBackendTest {
     assertEquals(
         "the voice is whatever the map resolves for the spec",
         new GeminiVoiceMap().voiceFor(female.voice(), null),
-        sentBody().get("voice").getAsString());
-  }
-
-  @Test
-  public void cacheVariantFoldsInVoiceButNotModelSoRendersNeverCollide() {
-    OpenRouterTtsBackend backend = backend(new MutableTestConfig());
-
-    SynthesisRequest humanMale =
-        new SynthesisRequest(
-            "a",
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
-    SynthesisRequest elfFemale =
-        new SynthesisRequest(
-            "a",
-            VoiceSpec.npc(NpcRace.ELF, NpcGender.FEMALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
-
-    String variant = backend.cacheVariant(humanMale);
-    assertFalse(
-        "the variant leaves the model out so a model swap keeps every cached clip",
-        variant.contains("gemini"));
-    assertTrue(
-        "the variant carries the resolved Gemini voice",
-        variant.contains(new GeminiVoiceMap().voiceFor(humanMale.voice(), null)));
-    assertNotEquals(
-        "two specs that map to different voices never share a variant",
-        backend.cacheVariant(humanMale),
-        backend.cacheVariant(elfFemale));
-  }
-
-  @Test
-  public void profileAndEmotionTravelInProviderOptionsNotInTheInput() throws Exception {
-    enqueuePcm((short) 1);
-
-    backend(keyedConfig())
-        .synthesize(
-            new SynthesisRequest(
-                "You no take candle!",
-                VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE),
-                Emotion.ANGRY,
-                TestFixtures.TROLL_PROFILE,
-                false,
-                false));
-
-    JsonObject body = sentBody();
-    assertEquals("You no take candle!", body.get("input").getAsString());
-    assertEquals(TestFixtures.TROLL_STYLE + " Sounding angry.", sentStyle(body));
-    assertEquals(
-        "the speech options merge into the throughput routing block",
-        "throughput",
-        body.getAsJsonObject("provider").get("sort").getAsString());
-  }
-
-  @Test
-  public void aBlankProfileStillSendsTheLanguageDirection() throws Exception {
-    enqueuePcm((short) 1);
-    CharacterProfile blank = new CharacterProfile(null, null, null, null);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-
-    backend(keyedConfig())
-        .synthesize(new SynthesisRequest("Hi", voice, Emotion.NEUTRAL, blank, false, false));
-
-    assertEquals("Speaking English. A man's voice.", sentStyle(sentBody()));
-  }
-
-  @Test
-  public void nonDefaultSpeedUsesTheSpeedFieldAndLeavesTheStyleAlone() throws Exception {
-    MutableTestConfig config = keyedConfig();
-    config.speedPercent = 150;
-    enqueuePcm((short) 1);
-
-    backend(config).synthesize(req());
-
-    JsonObject body = sentBody();
-    assertEquals(1.5, body.get("speed").getAsDouble(), 1e-9);
-    assertEquals(TestFixtures.TROLL_STYLE, sentStyle(body));
-  }
-
-  @Test
-  public void cacheVariantFoldsInProfileSoDifferentProfilesNeverCollide() {
-    OpenRouterTtsBackend backend = backend(new MutableTestConfig());
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.TROLL, NpcGender.MALE);
-    SynthesisRequest withProfile =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
-    SynthesisRequest otherProfile =
-        new SynthesisRequest(
-            "a",
-            voice,
-            Emotion.NEUTRAL,
-            new CharacterProfile("Goblin", "East London.", "Mischievous.", "Quick."),
-            false,
-            false);
-
-    assertTrue(
-        "every line carries a profile, so every variant carries its fragment",
-        backend.cacheVariant(withProfile).contains("|p"));
-    assertTrue(
-        "the fragment is the profile content key, which is what keeps cached audio addressable",
-        backend.cacheVariant(withProfile).endsWith("|p" + TestFixtures.TROLL_PROFILE.cacheKey()));
-    assertNotEquals(
-        "two different profiles never share a variant",
-        backend.cacheVariant(withProfile),
-        backend.cacheVariant(otherProfile));
-  }
-
-  @Test
-  public void cacheVariantChangesWithSpeedSoStaleAudioIsNeverServed() {
-    MutableTestConfig config = new MutableTestConfig();
-    OpenRouterTtsBackend backend = backend(config);
-    SynthesisRequest line =
-        new SynthesisRequest(
-            "a",
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
-
-    String atDefaultPace = backend.cacheVariant(line);
-    config.speedPercent = 150;
-    assertNotEquals(
-        "a non-default pace must re-key so cached normal-pace audio is not served",
-        atDefaultPace,
-        backend.cacheVariant(line));
+        sentBody(server).get("voice").getAsString());
   }
 
   @Test
   public void aLongLineIsSentWholeAndKeyedTheSameAsAShortOne() throws Exception {
     MutableTestConfig config = keyedConfig();
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
     String longLine = "This is a long sentence. More text that must not be dropped by any cap.";
-    SynthesisRequest request =
-        new SynthesisRequest(
-            longLine,
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
+    SynthesisRequest request = line(longLine);
     OpenRouterTtsBackend backend = backend(config);
 
     backend.synthesize(request);
 
-    assertEquals("the whole line is sent", longLine, sentBody().get("input").getAsString());
-    SynthesisRequest shortLine =
-        new SynthesisRequest(
-            "ab",
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
+    assertEquals("the whole line is sent", longLine, sentBody(server).get("input").getAsString());
+    SynthesisRequest shortLine = line("ab");
     assertEquals(
         "line length never enters the cache key, so no line is re-keyed by its length",
         backend.cacheVariant(shortLine),
@@ -403,35 +207,23 @@ public class OpenRouterTtsBackendTest {
   public void speedParamIsSentOnlyWhenNonDefault() throws Exception {
     MutableTestConfig config = keyedConfig();
 
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
     backend(config).synthesize(req());
-    assertFalse("normal pace sends no speed param", sentBody().has("speed"));
+    assertFalse("normal pace sends no speed param", sentBody(server).has("speed"));
 
     config.speedPercent = 150;
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
     backend(config).synthesize(req());
     assertEquals(
         "a non-default pace is sent as a fractional speed",
         1.5,
-        sentBody().get("speed").getAsDouble(),
+        sentBody(server).get("speed").getAsDouble(),
         0.0001);
   }
 
   @Test
-  public void everyRequestRoutesForThroughput() throws Exception {
-    enqueuePcm((short) 1);
-
-    backend(keyedConfig()).synthesize(req());
-
-    assertEquals(
-        "every TTS call asks for the fastest provider",
-        "throughput",
-        sentBody().getAsJsonObject("provider").get("sort").getAsString());
-  }
-
-  @Test
   public void englishWithNoQuirkBypassesTheTranslationModel() throws Exception {
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
 
     assertNotNull(backend(keyedConfig()).synthesize(req()));
     assertEquals("English + no quirk makes exactly one (speech) call", 1, server.getRequestCount());
@@ -446,18 +238,10 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    enqueueChat("no cap, well met");
-    enqueuePcm((short) 1);
+    enqueueChat(server, "no cap, well met");
+    enqueuePcm(server, (short) 1);
 
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Well met.",
-                VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-                Emotion.NEUTRAL,
-                TestFixtures.TROLL_PROFILE,
-                false,
-                false));
+    backend(config).synthesize(line("Well met."));
 
     RecordedRequest translation = server.takeRequest();
     assertTrue(
@@ -467,7 +251,7 @@ public class OpenRouterTtsBackendTest {
         "the quirk is carried in the system prompt as a styled English target",
         translation.getBody().readUtf8().contains("Gen Z slang"));
 
-    JsonObject speech = sentBody();
+    JsonObject speech = sentBody(server);
     assertEquals(
         "the rewritten line is what is voiced",
         "no cap, well met",
@@ -479,49 +263,21 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void globalQuirkPartitionsTheCacheKey() {
-    MutableTestConfig config = new MutableTestConfig();
-    OpenRouterTtsBackend backend = backend(config);
-    SynthesisRequest line =
-        new SynthesisRequest(
-            "a",
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
-
-    String plain = backend.cacheVariant(line);
-    assertFalse("plain English with no style adds no language fragment", plain.contains("|l"));
-
-    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    assertNotEquals(
-        "a style must not collide with the unstyled line", plain, backend.cacheVariant(line));
-  }
-
-  @Test
   public void speakerClassPicksTheStyleForTranslation() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
 
-    enqueuePcm((short) 1);
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Well met.", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false));
+    enqueuePcm(server, (short) 1);
+    backend(config).synthesize(line("Well met."));
     assertEquals("an NPC line with NPC style None skips translation", 1, server.getRequestCount());
     assertTrue(
         "the NPC line's only request is the speech call",
         server.takeRequest().getPath().endsWith("/audio/speech"));
 
-    enqueueChat("no cap, well met");
-    enqueuePcm((short) 1);
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Well met.", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, true));
+    enqueueChat(server, "no cap, well met");
+    enqueuePcm(server, (short) 1);
+    backend(config).synthesize(line("Well met.", Emotion.NEUTRAL, false, true));
     RecordedRequest translation = server.takeRequest();
     assertTrue(
         "the player line routes through translation because the player style is set",
@@ -535,88 +291,19 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void perSpeakerClassStylePartitionsTheCacheKey() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
-    OpenRouterTtsBackend backend = backend(config);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-    SynthesisRequest playerLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, true);
-    SynthesisRequest npcLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
-
-    assertNotEquals(
-        "a player-styled and an NPC-styled line of the same text get distinct cache keys",
-        backend.cacheVariant(playerLine),
-        backend.cacheVariant(npcLine));
-  }
-
-  @Test
-  public void styleOnOneClassLeavesTheOtherClassUntranslated() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.NONE;
-    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    OpenRouterTtsBackend backend = backend(config);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-    SynthesisRequest playerLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, true);
-    SynthesisRequest npcLine =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
-
-    assertFalse(
-        "the player line, player style None, carries no language fragment so it skips translation",
-        backend.cacheVariant(playerLine).contains("|l"));
-    assertTrue(
-        "the NPC line, NPC style Gen Z, folds the styled language into its key",
-        backend.cacheVariant(npcLine).contains("|l"));
-  }
-
-  @Test
-  public void nonEnglishTargetFoldsLanguageIntoTheCacheVariant() {
-    MutableTestConfig config = new MutableTestConfig();
-    OpenRouterTtsBackend backend = backend(config);
-    SynthesisRequest line =
-        new SynthesisRequest(
-            "a",
-            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-            Emotion.NEUTRAL,
-            TestFixtures.TROLL_PROFILE,
-            false,
-            false);
-
-    String english = backend.cacheVariant(line);
-    assertFalse("English (default) adds no language fragment", english.contains("|l"));
-
-    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    String french = backend.cacheVariant(line);
-    assertNotEquals(
-        "the same line in another language must not share a cache key", english, french);
-    assertTrue("the language is folded in", french.contains("|lfrench"));
-  }
-
-  @Test
   public void nonEnglishTargetTranslatesBeforeVoicingAndSetsLanguageCode() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    enqueueChat("Bonjour");
-    enqueuePcm((short) 1);
+    enqueueChat(server, "Bonjour");
+    enqueuePcm(server, (short) 1);
 
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Hello",
-                VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-                Emotion.NEUTRAL,
-                TestFixtures.TROLL_PROFILE,
-                false,
-                false));
+    backend(config).synthesize(line("Hello"));
 
     RecordedRequest first = server.takeRequest();
     assertTrue("the translation hop runs first", first.getPath().endsWith("/chat/completions"));
     RecordedRequest second = server.takeRequest();
     assertTrue("then the speech call", second.getPath().endsWith("/audio/speech"));
-    JsonObject body = new JsonParser().parse(second.getBody().readUtf8()).getAsJsonObject();
+    JsonObject body = body(second);
     assertEquals(
         "the spoken transcript is the translation, not the source",
         "Bonjour",
@@ -632,17 +319,9 @@ public class OpenRouterTtsBackendTest {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
     config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
 
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Hello",
-                VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-                Emotion.NEUTRAL,
-                TestFixtures.TROLL_PROFILE,
-                true,
-                false));
+    backend(config).synthesize(line("Hello", Emotion.NEUTRAL, true, false));
 
     assertEquals(
         "skip-translation makes exactly one (speech) call, never the translation model",
@@ -650,7 +329,7 @@ public class OpenRouterTtsBackendTest {
         server.getRequestCount());
     RecordedRequest speech = server.takeRequest();
     assertTrue("the only request is the speech call", speech.getPath().endsWith("/audio/speech"));
-    JsonObject body = new JsonParser().parse(speech.getBody().readUtf8()).getAsJsonObject();
+    JsonObject body = body(speech);
     assertEquals(
         "the transcript is the source text exactly as typed, untranslated",
         "Hello",
@@ -662,48 +341,15 @@ public class OpenRouterTtsBackendTest {
   public void normalLineStillTranslatesWhenSkipTranslationIsOff() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    enqueueChat("Bonjour");
-    enqueuePcm((short) 1);
+    enqueueChat(server, "Bonjour");
+    enqueuePcm(server, (short) 1);
 
-    backend(config)
-        .synthesize(
-            new SynthesisRequest(
-                "Hello",
-                VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
-                Emotion.NEUTRAL,
-                TestFixtures.TROLL_PROFILE,
-                false,
-                false));
+    backend(config).synthesize(line("Hello"));
 
     assertTrue(
         "a normal request still runs the translation hop first",
         server.takeRequest().getPath().endsWith("/chat/completions"));
     assertTrue("then the speech call", server.takeRequest().getPath().endsWith("/audio/speech"));
-  }
-
-  @Test
-  public void skipTranslationOmitsTheLanguageFragmentFromTheCacheVariant() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    OpenRouterTtsBackend backend = backend(config);
-    VoiceSpec voice = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
-
-    SynthesisRequest dialogue =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, false);
-    SynthesisRequest publicChat =
-        new SynthesisRequest("a", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, true, false);
-
-    assertTrue(
-        "a translated dialogue line still folds the language in",
-        backend.cacheVariant(dialogue).contains("|lfrench"));
-    assertFalse(
-        "a skip-translation line keeps the plain pre-translation key",
-        backend.cacheVariant(publicChat).contains("|l"));
-    assertNotEquals(
-        "so an untranslated public-chat clip never collides with a translated dialogue line of the"
-            + " same text",
-        backend.cacheVariant(dialogue),
-        backend.cacheVariant(publicChat));
   }
 
   @Test
@@ -713,13 +359,11 @@ public class OpenRouterTtsBackendTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("translation down"));
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(config);
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(config));
 
     assertNull("a failed translation fails the line gracefully", backend.synthesize(req()));
     assertEquals("only the translation call was attempted", 1, server.getRequestCount());
-    assertEquals("the failure surfaces one notice", 1, notices[0]);
+    assertEquals("the failure surfaces one notice", 1, notices);
   }
 
   @Test
@@ -731,7 +375,7 @@ public class OpenRouterTtsBackendTest {
     backend.synthesize(req());
     assertTrue("a 429 opens a back-off window so prefetch holds off", backend.isThrottled());
 
-    enqueuePcm((short) 1);
+    enqueuePcm(server, (short) 1);
     backend.synthesize(req());
     assertFalse("a clean call clears the back-off", backend.isThrottled());
   }
@@ -740,14 +384,12 @@ public class OpenRouterTtsBackendTest {
   public void nonSuccessResponseReturnsNullWithOneNotice() {
     server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("Unauthorized"));
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
 
     Pcm pcm = backend.synthesize(req());
 
     assertNull("a non-2xx fails the line gracefully", pcm);
-    assertEquals("the failure surfaces a one-time notice", 1, notices[0]);
+    assertEquals("the failure surfaces a one-time notice", 1, notices);
   }
 
   @Test
@@ -785,15 +427,13 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void transientEmptyBodyIsRetriedOnceAndRecovers() {
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
-    enqueuePcm((short) 1, (short) 2, (short) 3);
+    enqueuePcm(server, (short) 1, (short) 2, (short) 3);
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
 
     assertNotNull("a single empty 200 is recovered by the retry", backend.synthesize(req()));
     assertEquals("the line was attempted twice", 2, server.getRequestCount());
-    assertEquals("a recovered line surfaces no failure notice", 0, notices[0]);
+    assertEquals("a recovered line surfaces no failure notice", 0, notices);
   }
 
   @Test
@@ -801,45 +441,17 @@ public class OpenRouterTtsBackendTest {
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
     server.enqueue(new MockResponse().setResponseCode(HTTP_OK).setBody(""));
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
 
     assertNull("two empty bodies in a row fail the line", backend.synthesize(req()));
     assertEquals("it retries exactly once, never storms", 2, server.getRequestCount());
-    assertEquals("the persistent failure surfaces one notice", 1, notices[0]);
-  }
-
-  private static short[] truncatedAudio() {
-    short[] s = new short[36_000];
-    Arrays.fill(s, (short) 12_000);
-    return s;
-  }
-
-  private static short[] completeAudio() {
-    short[] s = new short[40_800];
-    Arrays.fill(s, 0, 36_000, (short) 12_000);
-    return s;
-  }
-
-  private static float[] concat(List<float[]> chunks) {
-    int total = 0;
-    for (float[] chunk : chunks) {
-      total += chunk.length;
-    }
-    float[] out = new float[total];
-    int pos = 0;
-    for (float[] chunk : chunks) {
-      System.arraycopy(chunk, 0, out, pos, chunk.length);
-      pos += chunk.length;
-    }
-    return out;
+    assertEquals("the persistent failure surfaces one notice", 1, notices);
   }
 
   @Test
   public void streamingFeedsChunksAndReturnsTheCompleteLineForCaching() {
     short[] samples = completeAudio();
-    enqueuePcm(samples);
+    enqueuePcm(server, samples);
 
     List<float[]> fed = new ArrayList<>();
     Pcm result = backend(keyedConfig()).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
@@ -869,7 +481,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void streamingPlaysATruncatedLineOnceButDoesNotCacheOrRetryIt() {
-    enqueuePcm(truncatedAudio());
+    enqueuePcm(server, truncatedAudio());
 
     List<float[]> fed = new ArrayList<>();
     Pcm result = backend(keyedConfig()).synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
@@ -884,58 +496,14 @@ public class OpenRouterTtsBackendTest {
   public void streamingFailsANon2xxFastWithoutPlaying() {
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR).setBody("boom"));
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
     List<float[]> fed = new ArrayList<>();
     Pcm result = backend.synthesizeStreaming(req(), (chunk, rate) -> fed.add(chunk));
 
     assertNull("a non-2xx streamed line is not voiced", result);
     assertTrue("nothing played", fed.isEmpty());
     assertEquals("non-2xx fails fast with no retry", 1, server.getRequestCount());
-    assertEquals("and surfaces one notice", 1, notices[0]);
-  }
-
-  @Test
-  public void theDefaultStreamingImplementationFallsBackToBufferedAsOneChunk() {
-    Pcm whole = new Pcm(new float[] {0.1f, -0.2f, 0.3f}, 24_000);
-    SynthesisBackend buffered =
-        new SynthesisBackend() {
-          @Override
-          public String id() {
-            return "buffered-only";
-          }
-
-          @Override
-          public boolean isAvailable() {
-            return true;
-          }
-
-          @Override
-          public EnumSet<Emotion> supportedEmotions() {
-            return EnumSet.of(Emotion.NEUTRAL);
-          }
-
-          @Override
-          public Pcm synthesize(SynthesisRequest request) {
-            return whole;
-          }
-        };
-
-    List<float[]> fed = new ArrayList<>();
-    int[] rate = {0};
-    Pcm result =
-        buffered.synthesizeStreaming(
-            req(),
-            (chunk, r) -> {
-              fed.add(chunk);
-              rate[0] = r;
-            });
-
-    assertEquals("the buffered result is returned unchanged", whole, result);
-    assertEquals("the whole line is delivered as a single chunk", 1, fed.size());
-    assertArrayEquals(whole.getSamples(), fed.get(0), 0f);
-    assertEquals("at the line's own sample rate", 24_000, rate[0]);
+    assertEquals("and surfaces one notice", 1, notices);
   }
 
   @Test
@@ -954,31 +522,27 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void truncatedAudioIsRetriedOnceAndRecovers() {
-    enqueuePcm(truncatedAudio());
-    enqueuePcm(completeAudio());
+    enqueuePcm(server, truncatedAudio());
+    enqueuePcm(server, completeAudio());
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
 
     assertNotNull("a truncated line is recovered by the retry", backend.synthesize(req()));
     assertEquals("the line was attempted twice", 2, server.getRequestCount());
-    assertEquals("a recovered line surfaces no failure notice", 0, notices[0]);
+    assertEquals("a recovered line surfaces no failure notice", 0, notices);
   }
 
   @Test
   public void repeatedTruncatedAudioFailsRatherThanCachingAClippedLine() {
-    enqueuePcm(truncatedAudio());
-    enqueuePcm(truncatedAudio());
+    enqueuePcm(server, truncatedAudio());
+    enqueuePcm(server, truncatedAudio());
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
 
     assertNull(
         "a persistently truncated line is never voiced or cached", backend.synthesize(req()));
     assertEquals("it retries exactly once, never storms", 2, server.getRequestCount());
-    assertEquals("the persistent failure surfaces one notice", 1, notices[0]);
+    assertEquals("the persistent failure surfaces one notice", 1, notices);
   }
 
   @Test
@@ -997,32 +561,28 @@ public class OpenRouterTtsBackendTest {
     OpenRouterTtsBackend backend = backend(new MutableTestConfig());
 
     String[] last = {null};
-    int[] notices = {0};
     backend.setNotice(
         msg -> {
-          notices[0]++;
+          notices++;
           last[0] = msg;
         });
 
     assertNull(backend.synthesize(req()));
     assertEquals("no HTTP request when unavailable", 0, server.getRequestCount());
-    assertEquals("the missing-key notice fires", 1, notices[0]);
+    assertEquals("the missing-key notice fires", 1, notices);
     assertEquals(
         "it surfaces the shared no-key message", OpenRouterTtsBackend.NO_KEY_NOTICE, last[0]);
   }
 
   @Test
   public void missingKeyNoticeFiresOnEveryAttempt() {
-    OpenRouterTtsBackend backend = backend(new MutableTestConfig());
-
-    int[] notices = {0};
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(new MutableTestConfig()));
 
     for (int i = 0; i < 3; i++) {
       assertNull("each no-key line fails gracefully", backend.synthesize(req()));
     }
 
-    assertEquals("the no-key notice is not deduped: it fires on every attempt", 3, notices[0]);
+    assertEquals("the no-key notice is not deduped: it fires on every attempt", 3, notices);
     assertEquals("still never hits the network", 0, server.getRequestCount());
   }
 
@@ -1031,29 +591,25 @@ public class OpenRouterTtsBackendTest {
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig()));
 
     backend.synthesize(req());
     backend.synthesize(req());
 
-    assertEquals("repeated failures warn once", 1, notices[0]);
+    assertEquals("repeated failures warn once", 1, notices);
   }
 
   @Test
   public void networkTimeoutIsRetriedOnceAndRecovers() {
     server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE));
-    enqueuePcm((short) 1, (short) 2, (short) 3);
+    enqueuePcm(server, (short) 1, (short) 2, (short) 3);
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backendWith(keyedConfig(), FAST_RETRY);
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig(), FAST_RETRY));
 
     assertNotNull(
         "a timed-out line is recovered by the backed-off retry", backend.synthesize(req()));
     assertEquals("the line was attempted twice", 2, server.getRequestCount());
-    assertEquals("a recovered line surfaces no failure notice", 0, notices[0]);
+    assertEquals("a recovered line surfaces no failure notice", 0, notices);
   }
 
   @Test
@@ -1061,25 +617,20 @@ public class OpenRouterTtsBackendTest {
     server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE));
     server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE));
 
-    int[] notices = {0};
-    OpenRouterTtsBackend backend = backendWith(keyedConfig(), FAST_RETRY);
-    backend.setNotice(msg -> notices[0]++);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig(), FAST_RETRY));
 
     assertNull("two timeouts in a row fail the line gracefully", backend.synthesize(req()));
     assertEquals("it retries exactly once, never storms", 2, server.getRequestCount());
-    assertEquals("the persistent timeout surfaces one notice", 1, notices[0]);
+    assertEquals("the persistent timeout surfaces one notice", 1, notices);
   }
 
   @Test
   public void unreachableHostFailsFastAndGracefully() throws Exception {
-    OpenRouterTtsBackend backend = backendWith(keyedConfig(), FAST_RETRY);
+    OpenRouterTtsBackend backend = noticedBackend(backend(keyedConfig(), FAST_RETRY));
     server.shutdown();
 
-    int[] notices = {0};
-    backend.setNotice(msg -> notices[0]++);
-
     assertNull("an unreachable host fails the line gracefully", backend.synthesize(req()));
-    assertEquals("the failure surfaces one notice", 1, notices[0]);
+    assertEquals("the failure surfaces one notice", 1, notices);
   }
 
   @Test
@@ -1103,7 +654,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void callBudgetIsClampedToTheClientCeiling() {
-    OpenRouterTtsBackend backend = backendWith(new MutableTestConfig(), FAST_RETRY);
+    OpenRouterTtsBackend backend = backend(new MutableTestConfig(), FAST_RETRY);
 
     assertEquals(
         "an uncapped line cannot exceed the configured ceiling",
@@ -1160,7 +711,7 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void warmedConnectionIsReusedByTheNextSpokenLine() throws Exception {
     OpenRouterTtsBackend backend = warmedBackend(keyedConfig());
-    enqueuePcm((short) 0, (short) 16384, (short) -16384, (short) 0);
+    enqueuePcm(server, (short) 0, (short) 16384, (short) -16384, (short) 0);
 
     assertNotNull("the warmed backend still synthesizes normally", backend.synthesize(req()));
 
@@ -1192,14 +743,12 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void aVoicedLineCountsOnceAgainstTheCharactersActuallySent() throws Exception {
-    enqueuePcm((short) 1, (short) 2);
-    SpendTracker spend = new SpendTracker();
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setSpendTracker(spend);
+    enqueuePcm(server, (short) 1, (short) 2);
+    OpenRouterTtsBackend backend = costedBackend(keyedConfig());
 
     assertNotNull(backend.synthesize(req()));
 
-    JsonObject sent = sentBody();
+    JsonObject sent = sentBody(server);
 
     SpendTracker.ProviderSpend recorded = spend.snapshot().get(0);
     assertEquals(VoicedDialogueConfig.TtsProvider.OPENROUTER, recorded.provider());
@@ -1213,10 +762,8 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void aPrefetchedLineCountsAsWarmingRatherThanAsAVoicedLine() {
-    enqueuePcm((short) 1, (short) 2);
-    SpendTracker spend = new SpendTracker();
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setSpendTracker(spend);
+    enqueuePcm(server, (short) 1, (short) 2);
+    OpenRouterTtsBackend backend = costedBackend(keyedConfig());
 
     backend.synthesize(req().asPrefetch());
 
@@ -1228,10 +775,8 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void aStreamedLineCountsOnceWhenTheFirstAudioArrives() {
-    enqueuePcm((short) 1, (short) 2, (short) 3, (short) 4);
-    SpendTracker spend = new SpendTracker();
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setSpendTracker(spend);
+    enqueuePcm(server, (short) 1, (short) 2, (short) 3, (short) 4);
+    OpenRouterTtsBackend backend = costedBackend(keyedConfig());
 
     backend.synthesizeStreaming(req(), (samples, rate) -> {});
 
@@ -1242,9 +787,7 @@ public class OpenRouterTtsBackendTest {
   @Test
   public void aFailedLineThatReturnsNoAudioCostsNothing() {
     server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("bad key"));
-    SpendTracker spend = new SpendTracker();
-    OpenRouterTtsBackend backend = backend(keyedConfig());
-    backend.setSpendTracker(spend);
+    OpenRouterTtsBackend backend = costedBackend(keyedConfig());
 
     assertNull(backend.synthesize(req()));
 
@@ -1253,9 +796,7 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void aLineNeverSentForWantOfAKeyCostsNothing() {
-    SpendTracker spend = new SpendTracker();
-    OpenRouterTtsBackend backend = backend(new MutableTestConfig());
-    backend.setSpendTracker(spend);
+    OpenRouterTtsBackend backend = costedBackend(new MutableTestConfig());
 
     assertNull(backend.synthesize(req()));
 
@@ -1266,11 +807,9 @@ public class OpenRouterTtsBackendTest {
   public void theTranslationHopIsCountedInItsOwnBucket() {
     MutableTestConfig config = keyedConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
-    enqueueChat("Bonjour");
-    enqueuePcm((short) 1, (short) 2);
-    SpendTracker spend = new SpendTracker();
-    OpenRouterTtsBackend backend = backend(config);
-    backend.setSpendTracker(spend);
+    enqueueChat(server, "Bonjour");
+    enqueuePcm(server, (short) 1, (short) 2);
+    OpenRouterTtsBackend backend = costedBackend(config);
 
     assertNotNull(backend.synthesize(req()));
 
