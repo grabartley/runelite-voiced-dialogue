@@ -1,5 +1,5 @@
 {
-  "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own; 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
+  "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own (creature categories that say what the speaker is, and a byId whose character contradicts the layers below it); the default style is a fallback used only when no layer sets a style, so the Human race carries none. Say each fact once: depth or height in 'pitch' and never again in 'style', and an 'accentDetail' only when it adds colour the accent does not (see docs/npc-voice-tooling.md, 'Say each thing once'); 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
   "default": {
     "name": "Gielinor Commoner",
     "accent": "Strong working-class English accent, British English pronunciation",
@@ -27,7 +27,6 @@
       "accent": "Strong working-class English accent, British English pronunciation",
       "accentDetail": "Common British English, the plain, earthy speech of an ordinary medieval commoner, not posh or refined.",
       "voiceRegion": "SOUTHERN_ENGLISH",
-      "style": "An ordinary citizen of Gielinor. Down-to-earth, sincere, and approachable.",
       "pace": "Steady and conversational."
     },
     "Elf": {
@@ -52,7 +51,7 @@
       "accent": "Strong East London accent, British English pronunciation",
       "accentDetail": "Scrappy British English with an East London edge.",
       "voiceRegion": "SOUTHERN_ENGLISH",
-      "style": "A small, crude, mischievous goblin. High-pitched, reedy, and nasal, sniggering and excitable, never quite trustworthy.",
+      "style": "A small, crude, mischievous goblin. Reedy and nasal, sniggering and excitable, never quite trustworthy.",
       "pace": "Quick and jittery, words tumbling out in bursts.",
       "pitch": "Very high-pitched, squeaky, thin little voice, far above a normal adult voice"
     },
@@ -68,7 +67,7 @@
       "name": "Gorilla",
       "accent": "Strong deep Caribbean island accent, Caribbean English pronunciation",
       "accentDetail": "Deep, booming island English, the low rumbling growl of a huge silverback ape of the tropical isles.",
-      "style": "An enormous, powerful gorilla. A very deep, booming, guttural voice that rumbles from the chest, primal and commanding, with a slow, heavy weight behind every word.",
+      "style": "An enormous, powerful gorilla. Guttural and rumbling from the chest, primal and commanding, with a slow, heavy weight behind every word.",
       "pace": "Slow and ponderous, each utterance landing with deliberate heft.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
     },
@@ -84,9 +83,8 @@
     "Troll": {
       "name": "Troll",
       "accent": "Strong South London Brixton accent, British English pronunciation",
-      "accentDetail": "British English, South London Brixton accent.",
       "voiceRegion": "DEEP_SOUTHERN_ENGLISH",
-      "style": "A huge, slow, simple-minded troll, good-natured but dim. A very deep, low, booming, rumbling voice, lumbering and pleased with itself, easily confused.",
+      "style": "A huge, slow, simple-minded troll, good-natured but dim. Lumbering and pleased with itself, easily confused.",
       "pace": "Slow and heavy, with long thinking pauses.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
     },
@@ -103,7 +101,7 @@
       "accent": "Strong menacing English accent, British English pronunciation",
       "accentDetail": "Deep, resonant British English with a menacing edge.",
       "voiceRegion": "SOUTHERN_ENGLISH",
-      "style": "A vast, malevolent demon from the abyss. Booming, guttural, and contemptuous, radiating ancient threat.",
+      "style": "A vast, malevolent demon from the abyss. Guttural and contemptuous, radiating ancient threat.",
       "pace": "Slow and deliberate, each word landing like a hammer.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
     },
@@ -176,9 +174,9 @@
       "keywords": ["leprechaun"],
       "name": "Leprechaun",
       "accent": "Strong Dublin Irish accent, Irish English pronunciation",
-      "accentDetail": "Irish English, as heard in Dublin.",
       "voiceRegion": "IRISH",
       "style": "A jaunty, twinkle-eyed leprechaun. Playful, lilting, and full of cheek, forever amused at its own jokes.",
+      "replaceStyle": true,
       "pace": "Quick and lively, with a bouncing, sing-song rhythm."
     },
     {
@@ -189,6 +187,7 @@
       "accentDetail": "Aristocratic Eastern European, a Transylvanian accent in the manner of Dracula.",
       "voiceRegion": "POLISH",
       "style": "An ancient, predatory vampyre noble. Silken, cold, and menacing, dripping with disdain for lesser mortals.",
+      "replaceStyle": true,
       "pace": "Slow and hypnotic, savouring every word with quiet menace."
     },
     {
@@ -209,6 +208,7 @@
       "accentDetail": "Deep, rumbling British English, slow and elemental.",
       "voiceRegion": "SOUTHERN_ENGLISH",
       "style": "A living creature of molten rock from the city of TzHaar. Vast, stony, and rumbling, calm but immense, speaking of honour and combat.",
+      "replaceStyle": true,
       "pace": "Very slow and ponderous, like grinding stone.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
     },
@@ -219,7 +219,8 @@
       "accent": "Strong resonant English accent, British English pronunciation",
       "accentDetail": "Vast, resonant British English, ancient and imperious.",
       "voiceRegion": "SOUTHERN_ENGLISH",
-      "style": "An ancient, colossal dragon. Booming, regal, and contemptuous of mortals, every word freighted with age and power.",
+      "style": "An ancient, colossal dragon. Regal and contemptuous of mortals, every word freighted with age and power.",
+      "replaceStyle": true,
       "pace": "Slow and grand, rolling and unhurried.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
     },
@@ -230,7 +231,8 @@
       "accent": "Strong squeaky English accent, British English pronunciation",
       "accentDetail": "Squeaky, high-pitched British English, fast and impish.",
       "voiceRegion": "SOUTHERN_ENGLISH",
-      "style": "A tiny, hyperactive imp. Shrill, gleeful, and mischievous, cackling and impossible to pin down.",
+      "style": "A tiny, hyperactive imp. Gleeful and mischievous, cackling and impossible to pin down.",
+      "replaceStyle": true,
       "pace": "Extremely fast and erratic, words spilling over each other.",
       "pitch": "Very high-pitched, squeaky, thin little voice, far above a normal adult voice"
     },
@@ -242,6 +244,7 @@
       "accentDetail": "Light, airy British English, bright and delicate.",
       "voiceRegion": "SOUTHERN_ENGLISH",
       "style": "A small, sparkling fairy. Sweet, breezy, and quick, flitting from thought to thought with childlike delight.",
+      "replaceStyle": true,
       "pace": "Quick and light, with a fluttering, buoyant lilt.",
       "pitch": "Very high-pitched, squeaky, thin little voice, far above a normal adult voice"
     },
@@ -251,7 +254,8 @@
       "name": "Ogre",
       "accent": "Strong West Midlands accent, British English pronunciation",
       "accentDetail": "Big, dim British English with a West Midlands burr.",
-      "style": "A huge, slow-witted ogre with a very deep, low, booming voice. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
+      "style": "A huge, slow-witted ogre. Loud, blunt, and lumbering, friendly enough but not the sharpest.",
+      "replaceStyle": true,
       "pace": "Slow and heavy, with plodding, simple phrasing.",
       "pitch": "Very deep, low-pitched, booming voice, far below a normal adult voice"
     },
@@ -263,6 +267,7 @@
       "accentDetail": "Distant, breathy British English, Received Pronunciation, faint and mournful.",
       "voiceRegion": "SOUTHERN_ENGLISH",
       "style": "A lingering, sorrowful spirit. Wispy, far-off, and forlorn, half-faded from the world of the living.",
+      "replaceStyle": true,
       "pace": "Slow and drifting, trailing off into silence."
     },
     {
@@ -327,12 +332,12 @@
       "id": "child",
       "keywords": ["child", "schoolboy", "schoolgirl", "urchin"],
       "lifeStage": "child",
-      "style": "A young child's voice: bright, light, and high-pitched, with simple, open, unguarded delivery.",
-      "pitch": "Very high-pitched, light young child's voice, far above an adult voice"
+      "style": "A young child, bright, with simple, open, unguarded delivery.",
+      "pitch": "Very high-pitched, light voice, far above an adult voice"
     }
   ],
   "byEthnicity": {
-    "_comment": "Accent layer keyed by an NPC's ethnicity (where they are from, baked per-NPC into npcs[id].ethnicity; defaulted from the wiki leagueRegion and corrected in overrides.json for foreigners). Applied only to the plain folk (Human / unknown race) so it tints them with local colour, while distinctive races (dwarf, elf, troll, goblin, undead, demon, wizard) keep their racial accent wherever they are. A keyword category (vampyre, ghost) or a bespoke byId entry can still override. Sparse and mostly accent-only, so it does not dilute the persona blend; a region may also set a style, and with 'replaceStyle': true (only the Wilderness) that style replaces the generic human one. The desert and far lands follow the real-world cultures they are based on; the central British kingdoms use distinct English regional accents for variety. NPCs with no single ethnicity keep the common British default.",
+    "_comment": "Accent layer keyed by an NPC's ethnicity (where they are from, baked per-NPC into npcs[id].ethnicity; defaulted from the wiki leagueRegion and corrected in overrides.json for foreigners). Applied only to the plain folk (Human / unknown race) so it tints them with local colour, while distinctive races (dwarf, elf, troll, goblin, undead, demon, wizard) keep their racial accent wherever they are. A keyword category (vampyre, ghost) or a bespoke byId entry can still override. Sparse and mostly accent-only, so it does not dilute the persona blend; a region may also set a style of its own (only the Wilderness does). The desert and far lands follow the real-world cultures they are based on; the central British kingdoms use distinct English regional accents for variety. NPCs with no single ethnicity keep the common British default.",
     "misthalin": {
       "accent": "Strong London English accent, British English pronunciation",
       "accentDetail": "Common British English, the plain, standard speech of Gielinor's central kingdom of Misthalin.",
@@ -357,8 +362,7 @@
       "accent": "Strong rough, harsh English accent, British English pronunciation",
       "accentDetail": "A rough, harsh British English, the hard edge of the outlaws of the Wilderness.",
       "voiceRegion": "GEORDIE",
-      "style": "A hardened denizen of the lawless Wilderness, where only the ruthless survive; wary, rough-edged, and guarded.",
-      "replaceStyle": true
+      "style": "A hardened denizen of the lawless Wilderness, where only the ruthless survive; wary, rough-edged, and guarded."
     },
     "tirannwn": {
       "accent": "Strong lilting Welsh accent, Welsh English pronunciation",
@@ -412,8 +416,8 @@
     "2812": {"name": "Father Aereck", "style": "A gentle, earnest, soft-spoken parish priest; mild-mannered and a touch timid."},
     "10619": {"name": "Bob", "style": "A laid-back, chatty axe-shop owner; easygoing and casual, a bit of a rambler who loves to gab."},
     "1305": {"name": "Hairdresser", "style": "A bubbly, talkative Falador stylist; upbeat, breezy, and a little vain about appearances."},
-    "732": {"name": "Fred the Farmer", "style": "A gruff, plain-spoken working farmer; blunt, no-nonsense, and rustic.", "accent": "Strong West Country English accent, British English pronunciation", "accentDetail": "Rural West Country English.", "voiceRegion": "WEST_COUNTRY"},
-    "4628": {"name": "Gillie Groats", "style": "A cheery, down-to-earth milkmaid; simple, sweet, and chatty.", "accent": "Strong West Country English accent, British English pronunciation", "accentDetail": "Rural West Country English.", "voiceRegion": "WEST_COUNTRY"},
+    "732": {"name": "Fred the Farmer", "style": "A gruff, plain-spoken working farmer; blunt, no-nonsense, and rustic.", "accent": "Strong West Country English accent, British English pronunciation", "voiceRegion": "WEST_COUNTRY"},
+    "4628": {"name": "Gillie Groats", "style": "A cheery, down-to-earth milkmaid; simple, sweet, and chatty.", "accent": "Strong West Country English accent, British English pronunciation", "voiceRegion": "WEST_COUNTRY"},
     "2147": {"name": "Veos", "style": "An earnest, purposeful seafarer with a calm, faintly devout streak; steady and measured."},
     "3308": {"name": "Gielinor Guide", "style": "A warm, encouraging instructor for brand-new adventurers; clear, patient, and didactic."},
     "4243": {"name": "Reldo", "style": "A bookish, mild-mannered royal librarian; precise and slightly pedantic, quietly enthusiastic about history and lore."},
@@ -435,7 +439,7 @@
     "3893": {"name": "Doric", "style": "A hardy, plain-spoken dwarf smith; gruff but good-natured and welcoming to those who lend a hand.", "accent": "Strong Glasgow Scottish accent, Scottish English pronunciation", "accentDetail": "Gruff Scottish English, as heard in Glasgow.", "voiceRegion": "SCOTTISH"},
     "822": {"name": "Oziach", "style": "A blunt, no-nonsense armour seller; gruff and dismissive, unimpressed and curt with strangers."},
     "9636": {"name": "Drezel", "style": "A meek, devout monk; gentle, humble, and earnest, soft-spoken and grateful for any aid."},
-    "4280": {"name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish English.", "voiceRegion": "IRISH"},
+    "4280": {"name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Strong Irish accent, Irish English pronunciation", "voiceRegion": "IRISH"},
     "2989": {"name": "Ak-Haranu", "style": "A worldly, shrewd traveller from the distant Eastern Lands; courteous and composed, with a gambler's quiet, cunning confidence."},
     "120": {"name": "Aggie", "style": "Earthy village witch who dyes cloth; speaks knowingly and a touch curt, plain-spoken and unbothered."},
     "121": {"name": "Aggie", "style": "Earthy village witch who dyes cloth; speaks knowingly and a touch curt, plain-spoken and unbothered."},
@@ -460,7 +464,7 @@
     "1158": {"name": "Warrior", "style": "A big, dim, tactless adventurer who speaks bluntly and slowly, blurting out things he shouldn't."},
     "1159": {"name": "Monk", "style": "Calm and contemplative, a soft-spoken holy man who speaks with quiet, unhurried composure."},
     "1160": {"name": "Wizard", "style": "A scrawny, bookish mage who speaks in a knowing, slightly superior tone, careful with what he reveals."},
-    "1162": {"name": "Shamus", "style": "Playful, jovial little fellow, mischievous and chatty with a twinkling, sing-song manner.", "accent": "Strong lilting Irish brogue, Irish English pronunciation", "accentDetail": "lilting Irish brogue", "voiceRegion": "IRISH"},
+    "1162": {"name": "Shamus", "style": "Playful, jovial little fellow, mischievous and chatty with a twinkling, sing-song manner.", "accent": "Strong lilting Irish brogue, Irish English pronunciation", "voiceRegion": "IRISH"},
     "1165": {"name": "Monk of Entrana", "style": "Calm, gentle and serene; measured, peaceable and softly spoken."},
     "1166": {"name": "Monk of Entrana", "style": "Calm, gentle and serene; measured, peaceable and softly spoken."},
     "1167": {"name": "Monk of Entrana", "style": "Calm, gentle and serene; measured, peaceable and softly spoken."},
@@ -635,7 +639,7 @@
     "5084": {"name": "Sir Prysin", "style": "A knight of Varrock; formal and well-spoken, but easily flustered and apt to fret over his own blunders."},
     "5085": {"name": "Captain Rovin", "style": "Stern, officious captain of the guard, clipped and interrogating, all business about rank and rules."},
     "5118": {"name": "Sylas", "style": "Eccentric, addled old man; rambles and mutters, repeating his own words as if reassuring himself.", "pace": "repeats and trails off, muttering to himself"},
-    "5122": {"name": "Drain Pipe", "style": "Gruff voice carrying up from below, muffled and echoing as if through a pipe. Muffled and echoing, as if heard through a pipe."},
+    "5122": {"name": "Drain Pipe", "style": "Gruff voice carrying up from below, muffled and echoing as if through a pipe."},
     "5131": {"name": "Winkin", "style": "Chatty, cunning little entrepreneur; quick-tongued and self-satisfied about his shrinking schemes."},
     "5139": {"name": "Sigmund", "style": "Cold, sanctimonious and self-righteous, a sneering fanatic who speaks with superior, condescending zeal."},
     "5142": {"name": "Sigmund", "style": "Cold, sanctimonious and self-righteous, a sneering fanatic who speaks with superior, condescending zeal."},
@@ -777,7 +781,7 @@
     "15533": {"name": "Trader Stan", "style": "Smooth, persuasive merchant; confident sales patter and a salesman's flourish."},
     "15540": {"name": "Trader Stan", "style": "Smooth, persuasive merchant; confident sales patter and a salesman's flourish."},
     "15634": {"name": "Wizard Gary", "style": "Earnest young aspiring wizard; boyish, eager, keen to prove himself following his father's footsteps."},
-    "24723": {"name": "Drain Pipe", "style": "Gruff voice carrying up from below, muffled and echoing as if through a pipe. Muffled and echoing, as if heard through a pipe."},
+    "24723": {"name": "Drain Pipe", "style": "Gruff voice carrying up from below, muffled and echoing as if through a pipe."},
     "297": {"name": "Thordur", "style": "Weary, retired and laconic; speaks in unhurried, world-worn drawl content with solitude."},
     "298": {"name": "Thordur", "style": "Weary, retired and laconic; speaks in unhurried, world-worn drawl content with solitude."},
     "403": {"name": "Vannaka", "style": "Battle-hardened slayer master who speaks in clipped, businesslike commands; gruff, no-nonsense veteran with a commanding edge."},
@@ -791,7 +795,7 @@
     "707": {"name": "Ice block", "style": "Slow, dim-witted and lumbering; thick guttural grunts of a frozen troll."},
     "708": {"name": "Troll father", "style": "Speaks in simple, blunt, childlike phrasing, slow and literal-minded."},
     "709": {"name": "Troll mother", "style": "Speaks in simple, blunt, childlike phrasing, slow and literal-minded."},
-    "757": {"name": "Tool Leprechaun", "style": "A cheery, chatty tool-keeper; brisk and singsong in delivery.", "accent": "Strong lilting Irish brogue, Irish English pronunciation", "accentDetail": "lilting Irish brogue", "voiceRegion": "IRISH"},
+    "757": {"name": "Tool Leprechaun", "style": "A cheery, chatty tool-keeper; brisk and singsong in delivery.", "accent": "Strong lilting Irish brogue, Irish English pronunciation", "voiceRegion": "IRISH"},
     "759": {"name": "Drunken Dwarf's Leg", "style": "Dim, lumbering mountain troll. Slow, simple, blunt speech with little grasp of what's going on."},
     "760": {"name": "Drunken Dwarf's Leg", "style": "Dim, lumbering mountain troll. Slow, simple, blunt speech with little grasp of what's going on."},
     "814": {"name": "Guildmaster", "style": "Gruff, proud gatekeeper; firm and self-assured authority."},
@@ -1185,12 +1189,12 @@
     "10464": {"name": "Captain Bleemadge", "style": "Easygoing, chatty glider pilot; breezy and casual with a flyer's confidence."},
     "10465": {"name": "Captain Bleemadge", "style": "Easygoing, chatty glider pilot; breezy and casual with a flyer's confidence."},
     "10466": {"name": "Captain Bleemadge", "style": "Easygoing, chatty glider pilot; breezy and casual with a flyer's confidence."},
-    "10517": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "accentDetail": "Cockney", "voiceRegion": "SOUTHERN_ENGLISH"},
-    "10518": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "accentDetail": "Cockney", "voiceRegion": "SOUTHERN_ENGLISH"},
-    "10519": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "accentDetail": "Cockney", "voiceRegion": "SOUTHERN_ENGLISH"},
+    "10517": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "voiceRegion": "SOUTHERN_ENGLISH"},
+    "10518": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "voiceRegion": "SOUTHERN_ENGLISH"},
+    "10519": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "voiceRegion": "SOUTHERN_ENGLISH"},
     "10528": {"name": "Nomad", "style": "A powerful warrior-mage and self-styled host; commanding, grandiose and faintly menacing, every line delivered with theatrical authority."},
     "10529": {"name": "Nomad", "style": "A powerful warrior-mage and self-styled host; commanding, grandiose and faintly menacing, every line delivered with theatrical authority."},
-    "10530": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "accentDetail": "Cockney", "voiceRegion": "SOUTHERN_ENGLISH"},
+    "10530": {"name": "Zimberfizz", "style": "A captive imp minion; quick, cheeky and chattery, grumbling about his lot.", "accent": "Strong Cockney accent, British English pronunciation", "voiceRegion": "SOUTHERN_ENGLISH"},
     "10560": {"name": "Garl", "style": "A lone adventurer camped on the island; grounded and wary, speaking with cautious unease about something sinister."},
     "10630": {"name": "Dusuri", "style": "A dwarf shopkeeper running the star reward shop; plain, businesslike and matter-of-fact."},
     "10631": {"name": "Dusuri", "style": "A dwarf shopkeeper running the star reward shop; plain, businesslike and matter-of-fact."},
@@ -5344,10 +5348,10 @@
     "6584": {"name": "Uri", "style": "Shifty, theatrical clue-trail courier who delivers mock-cryptic spy one-liners with smug self-importance, then leaves."},
     "7311": {"name": "Uri", "style": "Shifty, theatrical clue-trail courier who delivers mock-cryptic spy one-liners with smug self-importance, then leaves."},
     "8638": {"name": "Uri", "style": "Shifty, theatrical clue-trail courier who delivers mock-cryptic spy one-liners with smug self-importance, then leaves."},
-    "0": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish", "voiceRegion": "IRISH"},
-    "7757": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish", "voiceRegion": "IRISH"},
-    "12109": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish", "voiceRegion": "IRISH"},
-    "12765": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish", "voiceRegion": "IRISH"},
+    "0": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "voiceRegion": "IRISH"},
+    "7757": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "voiceRegion": "IRISH"},
+    "12109": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "voiceRegion": "IRISH"},
+    "12765": {"name": "Tool Leprechaun", "style": "Chipper, helpful little caretaker of farming tools; cheery, brisk, faintly impish.", "accent": "Strong Irish accent, Irish English pronunciation", "voiceRegion": "IRISH"},
     "4810": {"name": "Rohak", "style": "An old dwarven father figure; gruff, weary, warm beneath a grumbling exterior."},
     "4811": {"name": "Rohak", "style": "An old dwarven father figure; gruff, weary, warm beneath a grumbling exterior."},
     "4812": {"name": "Rohak", "style": "An old dwarven father figure; gruff, weary, warm beneath a grumbling exterior."},
@@ -5407,8 +5411,8 @@
     "15097": {"name": "Rum-dashed Ralph", "style": "A boozy sailor full of swagger; loose, rambling, jovially slurred and unsteady.", "pace": "slow"},
     "337": {"name": "Sergeant Damien", "style": "A barking military drill sergeant; loud, brusque, clipped commands and relentless demands.", "pace": "fast"},
     "6743": {"name": "Sergeant Damien", "style": "A barking military drill sergeant; loud, brusque, clipped commands and relentless demands.", "pace": "fast"},
-    "1840": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy.", "accent": "Strong Italian accent, Italian-accented English pronunciation", "accentDetail": "The velvet, unhurried menace of an old Italian mafia don.", "voiceRegion": "ITALIAN", "pitch": "Low, husky, gravelly voice"},
-    "5837": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy."},
+    "1840": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy.", "replaceStyle": true, "pace": "Slow and soft, never raising his voice.", "accent": "Strong Italian accent, Italian-accented English pronunciation", "accentDetail": "The velvet, unhurried menace of an old Italian mafia don.", "voiceRegion": "ITALIAN", "pitch": "Low, husky, gravelly voice"},
+    "5837": {"name": "Fairy Godfather", "style": "A soft-spoken crime boss; measured, quietly commanding, every word a veiled threat wrapped in courtesy.", "replaceStyle": true, "pace": "Slow and soft, never raising his voice.", "accent": "Strong Italian accent, Italian-accented English pronunciation", "accentDetail": "The velvet, unhurried menace of an old Italian mafia don.", "voiceRegion": "ITALIAN", "pitch": "Low, husky, gravelly voice"},
     "5436": {"name": "Niles", "style": "A quizzical riddler running a guessing game; brisk, testing, mildly playful."},
     "5439": {"name": "Niles", "style": "A quizzical riddler running a guessing game; brisk, testing, mildly playful."},
     "14828": {"name": "Elder Coco", "style": "A wise turtle-like elder craftsman; slow, patient, sage and unhurried in counsel.", "pace": "slow"},
@@ -5729,7 +5733,7 @@
     "5847": {"name": "Zanaris choir", "style": "An overenthusiastic troupe that bursts into grand, overwrought, tuneless song at unsuspecting passersby."},
     "5856": {"name": "Fairy chef", "style": "A fussy, temperamental kitchen cook fiercely protective of her ingredients, then sheepishly apologetic."},
     "2565": {"name": "Mimm", "style": "A hungry, impatient restaurant customer; chatty and demanding about her order."},
-    "12163": {"name": "Woodcutting Leprechaun", "style": "A jolly, mischievous lucky helper; breezy, quick-witted and forever in a hurry to move on.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish", "voiceRegion": "IRISH"},
+    "12163": {"name": "Woodcutting Leprechaun", "style": "A jolly, mischievous lucky helper; breezy, quick-witted and forever in a hurry to move on.", "accent": "Strong Irish accent, Irish English pronunciation", "voiceRegion": "IRISH"},
     "14867": {"name": "One Eyed Rosalee", "style": "A rowdy, boastful pirate; swaggering, loud and salty as she brags over her drink."},
     "15036": {"name": "Captain Maclean", "style": "A stern, serious sea captain; clipped, commanding and all business."},
     "14878": {"name": "Cap'n Anne Boney", "style": "A fearsome, swaggering pirate captain; gruff, menacing and quick to threaten."},

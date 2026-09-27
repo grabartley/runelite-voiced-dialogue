@@ -23,7 +23,8 @@ The cloud (Gemini) backend voices each line from a bundled lookup,
 default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory keyword match -> byId[npcId]
 ```
 
-- `style` **accumulates** across all matching layers; `name`, `accent`, `pace` take the **most specific** layer that sets them.
+- `style` **accumulates** across all matching layers, unless a layer sets `replaceStyle: true`, which drops the less specific styles before its own. `name`, `accent`, `pace`, `pitch` take the **most specific** layer that sets them.
+- The `default` style is a **fallback**, used only when no layer sets a style. The Human race carries no style.
 - `byEthnicity` applies **only to plain folk** (Human / unknown race); distinctive races keep their racial accent everywhere.
 - `ethnicity` means **where the NPC is from** (defaulted from the wiki `leagueRegion`, i.e. where they are found). Accent follows ethnicity in most cases.
 
@@ -34,7 +35,7 @@ default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory keyword ma
    - Set `ethnicity` to a `byEthnicity` key to fix where they're from; **omit** `ethnicity` to inherit the wiki-inferred accent (from where they're found); set `ethnicity: null` to clear a wrong wiki-inferred one (a foreigner in Morytania -> `null` -> British default). Ethnicity is a no-op for non-human races (the racial accent wins), so only set it on Human/Unknown NPCs.
    - This is also how you make a non-region accent land via a dedicated ethnicity (e.g. Ak-Haranu -> `ethnicity: easternlands`).
 2. **A unique personality / a quirk accent that is not an ethnicity** -> `tools/profiles.json` `byId[id]`. Sparse: usually just `name` + `style`. Only set `accent`/`pace` for a genuine per-character quirk (most origin accents belong in `overrides.json` ethnicity instead, so you do not repeat an accent string across variant ids).
-3. **A whole new creature/lore accent** (vampyre, leprechaun, ...) -> add a `byCategory` entry (keywords match the display name, word-bounded, case-insensitive). Creature categories **define** the accent; **social-role** categories (royalty, knight, noble, monk, wizard) are **style-only** so the ethnicity accent shows through.
+3. **A whole new creature/lore accent** (vampyre, leprechaun, ...) -> add a `byCategory` entry (keywords match the display name, word-bounded, case-insensitive). Creature categories **define** the accent and set `replaceStyle: true`, because they say what the speaker is (a fairy is not an elf). **Social-role** categories (royalty, noble, monk, wizard) are **style-only** and add to the race, so the ethnicity accent shows through; knights are the exception and speak posh Received Pronunciation.
 4. **A new region/ethnicity accent** -> add a `byEthnicity` key and map a `leagueRegion` to it in `tools/generate_npc_voices.py` (`SINGLE_ETHNICITY` / `ethnicity_key`).
 
 ## Find the NPC id
@@ -58,6 +59,7 @@ blank on many genuine talkers (monster-infobox bosses, cave goblins). See
 - **Accent detail.** The strong accent phrase alone sounds modern. Add `accentDetail` beside it with the accent's colour in prose, so the character stays medieval: "A rough, harsh British English, the hard edge of the outlaws of the Wilderness." It is rendered right after the accent and follows whichever layer's accent wins.
 - **Native voice region.** When you set an `accent` whose accent has native speakers in `tools/voice-regions.json` (Irish, Scottish, southern English, West Country, Scouse, Mancunian, Geordie, Italian, Egyptian Arabic, Polish, Norse, Japanese, Australian, New Zealand), set the matching `voiceRegion` next to it so the NPC is voiced by a native speaker. Leave it off for accents with no native voices (Welsh, Nigerian, Caribbean): the NPC keeps its race pool.
 - **Gemini 3.8 profile shape.** Profile fields travel in `speech_metadata.style`, never in the spoken text, rendered as a full labelled profile (name, accent, accent detail, style, pace), which by ear keeps same-voice NPCs distinct. `accent` is a strong, explicit accent phrase that names its pronunciation ("Strong London English accent, British English pronunciation", "Strong Italian accent, Italian-accented English pronunciation"), because 3.8 falls back to a generic default accent on a soft phrase; a delivery quirk (slurred, whispered) goes in `style`, never `accent`; `style` and `pace` are descriptive delivery prose (persona, tone, timbre, rhythm). No meta-instructions ("word for word"), no `[tag]` or `<tag>` brackets. `validate_profiles` in the generator rejects brackets, prompt markers, an accent that does not start with "Strong" or "Very strong," and name its pronunciation, an accent over 100 characters, an `accentDetail` with no accent beside it or on `player`, and a `replaceStyle` with no style beside it.
+- **Say each thing once.** Gemini 3.8 acts on every direction, so repeats and contradictions change delivery. Gender is added from the voice spec, never written in a profile. Depth or height goes in `pitch` only, never again in `style`. An `accentDetail` must add colour the accent does not ("Irish" beside "Strong Irish accent" adds nothing). A `byId` whose character contradicts its race or category (the Fairy Godfather's crime boss against the fairy's breezy flitting) sets `replaceStyle: true` and its own `pace`. The table and the reasons are in `docs/npc-voice-tooling.md`, "Say each thing once".
 - No transient comments (no "for now", batch/PR/date references) in code or JSON.
 - Pitch comes from the profile's `pitch` field; race and category layers already set it for small and large creatures and for children.
 - Gemini 3.8 holds British, European, and foreign accents best on a native library voice (via `voiceRegion`), and holds them on the prebuilt voices when the accent is phrased strongly with its pronunciation ([#332](https://github.com/grabartley/runelite-voiced-dialogue/issues/332)); a soft phrase falls back to a generic default.
@@ -79,7 +81,11 @@ presented to the developer, before committing** (see `regenerate-npc-voices`, an
 
 Then confirm in-game with the `run-game-client` skill and **Debug Mode** on: the
 log line `[TTS profile] npc='...' ... -> '...' (source=..., accent='...')` shows
-the resolved profile and which layers won. Commit the regenerated
+the resolved profile and which layers won, and
+`[TTS voice] cloud voice ... -> style '...'` shows the exact style sent. Read that style end to
+end: nothing said twice, no generic filler beside a specific description, no two layers
+disagreeing. A change to a race, ethnicity, category or the `default` layer reaches many NPCs,
+so render the `compare-voices` sheet against `main` and judge it by ear before committing. Commit the regenerated
 `npc-voices.json` with the source edits. See `diagnose-npc-voice` to investigate a
 wrong voice first, and `regenerate-npc-voices` for the table mechanics.
 
