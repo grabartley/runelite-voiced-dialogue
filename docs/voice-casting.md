@@ -70,7 +70,9 @@ deepest, since the full southern English pool is mostly light voices and a pitch
 pulls a light voice down so far. The region names them with `onlyVoices`. A voice named there was
 picked by ear as an adult, so it voices no child in any region, and a narrowed region's children
 take the youngest voices of the whole accent: a troll child sounds like a southern English boy,
-never like the trolls' deep men.
+never like the trolls' deep men. The child pool drops such a voice without taking the next-youngest
+in its place, so no adult pool changes: `en-gb-assistant-2`, among the youngest southern English
+men, voices trolls only, and the southern English boys share the other two young voices.
 
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the
