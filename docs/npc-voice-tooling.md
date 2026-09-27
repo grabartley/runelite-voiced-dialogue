@@ -240,6 +240,27 @@ different people, where a short style string flattens them together.
 - No meta-instructions ("word for word", "do not change voice") and no square- or angle-bracket
   tags.
 
+### Repetition is deliberate
+
+The composed style repeats itself: a troll's depth is in its `pitch` and again in its race style,
+an `accentDetail` can restate its accent, and every human carries the generic "ordinary citizen"
+line under their own description. **Leave it.** Gemini 3.8 treats each mention of a trait as a
+push toward it, so repetition works as emphasis. The wording is tuned by ear against `main`. By ear, a
+version that says each fact once sounds generic: trolls lose depth, characters flatten toward the
+same plain person, and misgendered and modern-sounding voices return.
+
+The cost is small. The style is billed as text input, about $0.0001 a line for a long style
+against about $0.001 for the audio, and the README latency figures already include full styles.
+
+So a profile edit follows these rules:
+
+- Keep `main`'s wording and every depth or pitch cue, even where it reads as redundant.
+- Make one wording change at a time, render the `compare-voices` cases it touches against the
+  current branch, and keep it only if it passes by ear.
+- Contradiction is a different problem from repetition: two layers that disagree (a fairy's
+  "quick and fluttering" under the Fairy Godfather's "unhurried menace") are fixed on that one
+  NPC, and only after hearing the change.
+
 The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
 does not start with "Strong" or "Very strong," and end with its pronunciation, an `accent` over 100
