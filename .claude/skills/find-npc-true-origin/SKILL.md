@@ -31,7 +31,7 @@ keys are low-contrast; the foreign ones are jarring if mis-assigned:
 | `kourend` | Strong rustic Northern English | Mancunian |
 | `wilderness` | Strong rough Newcastle Geordie (outlaws) | Geordie |
 | `tirannwn` | Strong lilting Welsh | none (race voices) |
-| `fremennik` | Strong Norse Scandinavian | none (race voices) |
+| `fremennik` | Strong Norse Scandinavian | Norse (Dutch voices) |
 | `morytania` | Strong Eastern European | Polish |
 | `kharidian` | Strong Arabic Middle Eastern | Egyptian Arabic |
 | `menaphite` | Strong Egyptian | Egyptian Arabic |

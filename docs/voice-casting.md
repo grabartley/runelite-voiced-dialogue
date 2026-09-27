@@ -11,7 +11,9 @@ their own they can only put an accent on. Gemini 3.8 renders that as an American
 accent. Google's Extended Voice Library holds about two thousand more voices, many of them native
 speakers tagged by accent: 80 Dublin, 49 Winchester (southern English), 16 each for Glasgow,
 Manchester and Newcastle, 14 Bristol, 6 Liverpool, and native Italian, Egyptian Arabic, Polish,
-Japanese, Australian and New Zealand speakers, each of whom reads English text in English.
+Dutch, Japanese, Australian and New Zealand speakers, each of whom reads English text in English.
+The library has no Scandinavian speakers, and by ear its Dutch voices carry the Norse accent best,
+so the Fremennik take them.
 
 So an NPC whose accent has native speakers is voiced from them. Each profile layer that sets an
 `accent` can name a `voiceRegion` next to it (see
@@ -27,23 +29,27 @@ this order:
 4. An NPC with a voice region takes a voice from that region's pool for its gender.
 5. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
 
+The counts are the adult pools, after any child voices a region can spare have moved to its child
+pool.
+
 | Region | Library accent | Male | Female | Voices |
 |---|---|---|---|---|
-| `SOUTHERN_ENGLISH` | Winchester | 14 | 34 | commoners, Misthalin, Received Pronunciation, Cockney, most British creatures |
-| `WEST_COUNTRY` | Bristol | 10 | 3 | Asgarnia, pirates, crabs |
+| `SOUTHERN_ENGLISH` | Winchester | 11 | 31 | commoners, Misthalin, Received Pronunciation, Cockney, most British creatures |
+| `WEST_COUNTRY` | Bristol | 7 | 3 | Asgarnia, pirates, crabs |
 | `SCOUSE` | Liverpool | 4 | 2 | Kandarin |
-| `MANCUNIAN` | Manchester | 5 | 11 | Kourend, Yorkshire barbarians, Northern bespoke NPCs |
-| `GEORDIE` | Newcastle | 5 | 11 | the Wilderness |
-| `SCOTTISH` | Glasgow | 9 | 7 | dwarves |
-| `IRISH` | Dublin | 37 | 39 | gnomes, leprechauns, Wyrmscraig, Irish bespoke NPCs |
-| `ITALIAN` | Italian | 25 | 27 | Varlamore |
-| `EGYPTIAN_ARABIC` | Egyptian Arabic | 46 | 44 | the Kharidian desert, Menaphos and Sophanem |
-| `POLISH` | Polish | 31 | 31 | Morytania, vampyres, Romani bespoke NPCs |
-| `JAPANESE` | Tokyo Japanese | 31 | 39 | the Eastern Lands |
+| `MANCUNIAN` | Manchester | 5 | 8 | Kourend, Yorkshire barbarians, Northern bespoke NPCs |
+| `GEORDIE` | Newcastle | 5 | 8 | the Wilderness |
+| `SCOTTISH` | Glasgow | 6 | 4 | dwarves |
+| `IRISH` | Dublin | 34 | 36 | gnomes, leprechauns, Wyrmscraig, Irish bespoke NPCs |
+| `ITALIAN` | Italian | 22 | 24 | Varlamore |
+| `EGYPTIAN_ARABIC` | Egyptian Arabic | 43 | 41 | the Kharidian desert, Menaphos and Sophanem |
+| `POLISH` | Polish | 28 | 28 | Morytania, vampyres, Romani bespoke NPCs |
+| `NORSE` | Dutch | 14 | 13 | the Fremennik |
+| `JAPANESE` | Tokyo Japanese | 28 | 36 | the Eastern Lands |
 | `AUSTRALIAN`, `NEW_ZEALAND` | Sydney, Auckland | | | bespoke NPCs |
 
-Accents with no native speakers in the library (Welsh, Norse, Nigerian, Bajan and Caribbean, the
-Russian penguins, the West Midlands ogres) keep their race pool and carry the accent through the
+Accents with no native speakers in the library (Welsh, Nigerian, Bajan and Caribbean, the Russian
+penguins, the West Midlands ogres) keep their race pool and carry the accent through the
 profile's style alone. The library has no countryside Irish voices, so gnomes and leprechauns take
 Dublin voices and the style's "rural Irish" accent pulls them toward the country. Pitch is not
 filtered, since the library's male voices are overwhelmingly low and a pitch filter would empty

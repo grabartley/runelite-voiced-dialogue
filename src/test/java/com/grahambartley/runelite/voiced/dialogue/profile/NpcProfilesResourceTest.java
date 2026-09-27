@@ -285,6 +285,9 @@ public class NpcProfilesResourceTest {
     assertEquals("ITALIAN", resolve(null, "Man", "Human", "varlamore").profile().voiceRegion());
     assertEquals(
         "EGYPTIAN_ARABIC", resolve(null, "Man", "Human", "menaphite").profile().voiceRegion());
+    assertEquals("NORSE", resolve(null, "Villager", "Human", "fremennik").profile().voiceRegion());
+    assertEquals(
+        "NORSE", resolve(null, "Fremennik warrior", "Human", null).profile().voiceRegion());
   }
 
   @Test
@@ -300,7 +303,6 @@ public class NpcProfilesResourceTest {
   @Test
   public void accentsWithNoNativeVoicesKeepTheRacePool() {
     assertNull(resolve(null, "Elf", "Human", "tirannwn").profile().voiceRegion());
-    assertNull(resolve(null, "Man", "Human", "fremennik").profile().voiceRegion());
     assertNull(resolve(null, "Man", "Human", "karamja").profile().voiceRegion());
     assertNull(resolve(null, "KGP Agent", "Penguin", null).profile().voiceRegion());
   }

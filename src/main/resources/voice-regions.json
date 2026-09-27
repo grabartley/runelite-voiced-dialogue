@@ -685,6 +685,55 @@
     "ja-jp-csagent-8"
    ]
   },
+  "NORSE": {
+   "playerKeywords": [
+    "norse",
+    "scandinavian",
+    "viking",
+    "fremennik"
+   ],
+   "MALE": [
+    "nl-nl-advisor-2",
+    "nl-nl-assistant-1",
+    "nl-nl-assistant-3",
+    "nl-nl-assistant-5",
+    "nl-nl-assistant-6",
+    "nl-nl-assistant-7",
+    "nl-nl-concierge-1",
+    "nl-nl-storyteller-2",
+    "nl-nl-techagent-2",
+    "nl-nl-techagent-6",
+    "nl-nl-training-1",
+    "nl-nl-training-2",
+    "nl-nl-tutor-2",
+    "nl-nl-tutor-4"
+   ],
+   "CHILD_MALE": [
+    "nl-nl-advisor-4",
+    "nl-nl-tutor-7",
+    "nl-nl-tutor-8"
+   ],
+   "FEMALE": [
+    "nl-nl-advisor-1",
+    "nl-nl-advisor-3",
+    "nl-nl-assistant-2",
+    "nl-nl-assistant-4",
+    "nl-nl-csagent-1",
+    "nl-nl-storyteller-1",
+    "nl-nl-storyteller-3",
+    "nl-nl-techagent-1",
+    "nl-nl-techagent-4",
+    "nl-nl-techagent-5",
+    "nl-nl-tutor-1",
+    "nl-nl-tutor-3",
+    "nl-nl-tutor-5"
+   ],
+   "CHILD_FEMALE": [
+    "nl-nl-concierge-2",
+    "nl-nl-techagent-3",
+    "nl-nl-tutor-6"
+   ]
+  },
   "SOUTHERN_ENGLISH": {
    "playerKeywords": [
     "southern english",

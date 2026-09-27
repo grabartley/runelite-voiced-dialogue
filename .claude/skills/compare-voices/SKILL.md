@@ -53,7 +53,7 @@ real line taken from the OSRS wiki transcript named in `source`.
 | Group | What it covers |
 |-------|----------------|
 | Regional accents | every `voiceRegion` in `tools/voice-regions.json`, reached the way real NPCs reach it (ethnicity, race or `byId`) |
-| No voice region | speakers whose accent layer sets no region, so the race pool picks the voice (Fremennik, Monkey) |
+| No voice region | speakers whose accent layer sets no region, so the race pool picks the voice (Monkey) |
 | Pitch | Goblins (high) and Trolls (low) |
 | Children | a table child, a child picked by name keyword, and a child from another region |
 | Player and narrator | both player voice types and a narration box |

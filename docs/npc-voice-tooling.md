@@ -214,7 +214,7 @@ different people, where a short style string flattens them together.
   pitch described later in the style, so it leads. The most specific layer that sets it wins.
 - `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
   (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
-  comes from the same layer as the winning accent, so an accent with no region (Welsh, Norse)
+  comes from the same layer as the winning accent, so an accent with no region (Welsh, Nigerian)
   clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
 - No meta-instructions ("word for word", "do not change voice"), no wording
   instructions (slang, syntax: the model cannot reword a verbatim transcript), and

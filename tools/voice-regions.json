@@ -14,6 +14,7 @@
     "EGYPTIAN_ARABIC": {"libraryAccent": "Egyptian Arabic", "playerKeywords": ["egyptian", "arabic", "arab", "middle eastern"], "exclude": []},
     "POLISH": {"libraryAccent": "Polish", "playerKeywords": ["polish", "eastern european", "transylvanian"], "exclude": []},
     "JAPANESE": {"libraryAccent": "Tokyo Japanese", "playerKeywords": ["japanese"], "exclude": []},
+    "NORSE": {"libraryAccent": "Dutch", "playerKeywords": ["norse", "scandinavian", "viking", "fremennik"], "exclude": []},
     "SOUTHERN_ENGLISH": {"libraryAccent": "Winchester English", "playerKeywords": ["southern english", "london", "cockney", "received pronunciation", "posh", "cambridge"], "exclude": []}
   }
 }

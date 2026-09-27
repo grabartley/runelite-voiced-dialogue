@@ -105,6 +105,10 @@ public class GeminiVoiceRegionsTest {
         "SOUTHERN_ENGLISH",
         bundled.regionForAccent(
             "Strong educated southern English accent, British English pronunciation"));
+    assertEquals(
+        "NORSE",
+        bundled.regionForAccent(
+            "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation"));
     assertNull(bundled.regionForAccent("Strong Southern American accent"));
   }
 
@@ -118,7 +122,8 @@ public class GeminiVoiceRegionsTest {
   @Test
   public void theBundledTableCarriesNativeVoicesForEachGender() {
     GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
-    for (String region : new String[] {"IRISH", "SCOTTISH", "SOUTHERN_ENGLISH", "ITALIAN"}) {
+    for (String region :
+        new String[] {"IRISH", "SCOTTISH", "SOUTHERN_ENGLISH", "ITALIAN", "NORSE"}) {
       assertNotNull(region, bundled.voiceFor(region, NpcGender.MALE, 1));
       assertNotNull(region, bundled.voiceFor(region, NpcGender.FEMALE, 1));
     }

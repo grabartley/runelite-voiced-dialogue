@@ -274,7 +274,7 @@
     },
     {
       "key": "fremennik_male",
-      "group": "No voice region (race pool)",
+      "group": "Regional accents",
       "kind": "npc",
       "id": 3894,
       "name": "Sigmund The Merchant",
@@ -285,7 +285,7 @@
     },
     {
       "key": "fremennik_female",
-      "group": "No voice region (race pool)",
+      "group": "Regional accents",
       "kind": "npc",
       "id": 3933,
       "name": "Yrsa",

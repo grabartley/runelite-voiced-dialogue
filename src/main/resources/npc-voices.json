@@ -256,6 +256,7 @@
         ],
         "name": "Fremennik",
         "accent": "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation",
+        "voiceRegion": "NORSE",
         "style": "A hardy Fremennik Viking of the frozen north. Proud, hearty, and weathered, bred to longship, axe, and saga.",
         "pace": "Strong and steady, robust and deliberate."
       },
@@ -502,7 +503,8 @@
         "voiceRegion": "POLISH"
       },
       "fremennik": {
-        "accent": "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation"
+        "accent": "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation",
+        "voiceRegion": "NORSE"
       },
       "easternlands": {
         "accent": "Strong Japanese accent, Japanese-accented English pronunciation",
