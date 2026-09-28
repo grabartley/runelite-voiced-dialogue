@@ -265,6 +265,31 @@ name is named from its `NPCComposition` on the client thread. With no search, th
 edited, then prefix matches, and caps at 50 rows. `NpcListEntries` builds each listing as a pure
 function, one row per display name, carrying every id with that name.
 
+`SetVoiceMenu` adds a **Set-voice** entry to an NPC's right-click menu, following the core Hiscore
+plugin's **Lookup**: on each `MenuEntryAdded` for that NPC's `EXAMINE_NPC` entry, one per NPC, it
+creates a `MenuAction.RUNELITE` entry beside it. The **Set Voice Menu Option** setting is read on
+every menu build, so toggling it needs no restart.
+
+The entry only appears on NPCs that speak, judged by `VoiceManager.speaks` against the NPC's
+profile id, the same id its dialogue reads overrides under. `NpcDemographicAnalyzer.profileIdOf`
+picks that id without building the full identity, since menus rebuild every frame while the cursor
+rests on an NPC. The bundled voice table can't answer
+this, since it gives slayer monsters and silent bosses a race and gender too, and neither can a
+**Talk-to** option, which is missing on many speakers: bosses, the Dorgesh-Kaan cave goblins, and
+lots of quest characters. An NPC speaks when any of these hold:
+
+- It has a bespoke `byId` profile. Those were filled from the wiki's `Transcript:` pages, the
+  authoritative record of who has dialogue.
+- It was heard this session. `VoiceManager` keeps every heard profile id for the session, apart
+  from the panel's 30-slot `RecentNpcSpeakers` ring, so busy ambient chatter can't push a speaker
+  out.
+- The player has an override saved for it.
+- **Auto-learn New NPCs** has learned it, which only happens from a conversation option.
+
+Choosing the entry calls, on the EDT, `NpcVoicePanel.showNpc`, which opens the form with the
+clicked id preferred among its namesakes, and only then `ClientToolbar.openPanel`, so the panel
+activates on the new form.
+
 The form never reads the bundled profile. It edits voice type, accent, style and pace, and shows
 only what the player has saved for the selected id, with each blank field meaning the plugin's
 value. That keeps the bundled prompt text out of the panel. Only NPC names from the bundled table
@@ -286,6 +311,37 @@ one key per id:
 Writing ids, not a rule, means a regenerated table never widens an edit the player already saved.
 Save is enabled only when saving would change a stored override in the scope, and **Clear
 override** only when one exists.
+
+### Importing and exporting edits
+
+**Export** and **Import** sit under the list's search bar, so they stay put while a search is
+active. `NpcVoiceTransferCodec` writes every stored override as one JSON document:
+
+```json
+{
+  "format": "voiced-dialogue-npc-voices",
+  "version": 1,
+  "overrides": {
+    "11911": { "accent": "Strong Scottish accent", "voiceType": "TYPE_B" }
+  }
+}
+```
+
+Each entry is written and read by `NpcVoiceOverrideJson`, the same class the store uses for its
+config values, so the file and the stored keys cannot drift apart. Only the player's stored
+overrides go in the file, never bundled or learned profile values.
+
+Import parses and validates the whole document before writing anything. A malformed document, a
+different `format`, or a `version` other than 1 is rejected outright. An entry whose id is not a plain
+NPC number written the way an export writes it, an unknown `voiceType`, or no fields left after `DirectionSanitizer` is skipped and counted.
+`NpcVoiceImportPlan` then counts how many NPCs the import sets, how many of those already have an
+edit it replaces, and how many other edits **Replace all** would clear, for the confirm step.
+**Merge** writes only the ids in the file; **Replace all** first clears every edit whose id is not in
+the file. Every write goes through `NpcVoiceOverrideStore.set`, so sanitizing and the
+`ConfigManager` write stay in one place, and `VoiceManager` reads the store per line, so an import is
+heard on the next line. `NpcVoiceTransfer` runs the flow against a small dialogs interface, which
+`SwingTransferDialogs` implements with `JOptionPane`, `JFileChooser`, and the system clipboard. A
+file over 1 MB is refused unread.
 
 Chat-heads come from the OSRS Wiki file `<Name> chathead.png`, fetched by `ChatheadImages` on its own
 `tts-chathead` daemon thread and cached for the session. A name the wiki has no chat-head for keeps a

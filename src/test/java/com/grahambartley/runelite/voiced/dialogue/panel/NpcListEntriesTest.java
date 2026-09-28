@@ -169,4 +169,43 @@ public class NpcListEntriesTest {
     assertTrue(listing.heard().get(0).ids().contains(99));
     assertEquals(99, listing.heard().get(0).preferredId());
   }
+
+  @Test
+  public void anNpcOpenedFromTheGamePrefersTheClickedIdAmongItsNamesakes() {
+    NpcListEntry entry = entries.forNpc(GUARD + 2, "guard", Collections.emptyList(), ids());
+
+    assertEquals("Guard", entry.name());
+    assertEquals(GUARD + 2, entry.preferredId());
+    assertTrue(entry.ids().contains(GUARD));
+    assertTrue(entry.ids().contains(FALADOR_GUARD));
+    assertFalse(entry.heard());
+    assertFalse(entry.edited());
+  }
+
+  @Test
+  public void anNpcOpenedFromTheGameUnderAnUnbundledIdStillListsIt() {
+    NpcListEntry entry = entries.forNpc(424242, "Hans", Collections.emptyList(), ids());
+
+    assertEquals(424242, entry.preferredId());
+    assertEquals(Arrays.asList(HANS, 424242), entry.ids());
+  }
+
+  @Test
+  public void anNpcOpenedFromTheGameCarriesItsHeardAndEditedMarks() {
+    NpcListEntry entry =
+        entries.forNpc(
+            HANS, "Hans", Collections.singletonList(new HeardNpc(HANS, "Hans")), ids(HANS));
+
+    assertTrue(entry.heard());
+    assertTrue(entry.edited());
+  }
+
+  @Test
+  public void aNeverSeenNpcOpenedFromTheGameIsItsOwnEntry() {
+    NpcListEntry entry = entries.forNpc(515151, "Quiet hermit", Collections.emptyList(), ids());
+
+    assertEquals("Quiet hermit", entry.name());
+    assertEquals(Collections.singletonList(515151), entry.ids());
+    assertEquals(515151, entry.preferredId());
+  }
 }

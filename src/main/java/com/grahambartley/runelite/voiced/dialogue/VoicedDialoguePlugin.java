@@ -47,12 +47,14 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import javax.inject.Inject;
+import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.OverheadTextChanged;
 import net.runelite.client.RuneLite;
@@ -135,6 +137,8 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private NavigationButton navigationButton;
 
+  private SetVoiceMenu setVoiceMenu;
+
   private final AtomicLong spendEpoch = new AtomicLong();
 
   @Override
@@ -144,6 +148,14 @@ public class VoicedDialoguePlugin extends Plugin {
     voiceOverrideStore.load();
     voiceManager = VoiceManager.create(config, client, voiceOverrideStore);
     addNpcVoicePanel();
+    setVoiceMenu =
+        new SetVoiceMenu(
+            client,
+            config::setVoiceMenuOption,
+            voiceManager::profileIdOf,
+            voiceManager::speaks,
+            SwingUtilities::invokeLater,
+            this::openNpcVoice);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
     try {
@@ -273,7 +285,8 @@ public class VoicedDialoguePlugin extends Plugin {
             voiceOverrideStore,
             this::resolveNpcNames,
             okHttpClient,
-            chatheadExecutor);
+            chatheadExecutor,
+            gson);
     navigationButton =
         NavigationButton.builder()
             .tooltip("Voiced Dialogue: NPC voices")
@@ -282,6 +295,16 @@ public class VoicedDialoguePlugin extends Plugin {
             .panel(npcVoicePanel)
             .build();
     clientToolbar.addNavigation(navigationButton);
+  }
+
+  void openNpcVoice(int npcId, String name) {
+    NavigationButton button = navigationButton;
+    NpcVoicePanel panel = npcVoicePanel;
+    if (button == null || panel == null) {
+      return;
+    }
+    panel.showNpc(npcId, name);
+    clientToolbar.openPanel(button);
   }
 
   void resolveNpcNames(Set<Integer> npcIds, Consumer<Map<Integer, String>> onResolved) {
@@ -305,6 +328,7 @@ public class VoicedDialoguePlugin extends Plugin {
       clientToolbar.removeNavigation(navigationButton);
       navigationButton = null;
     }
+    setVoiceMenu = null;
     npcVoicePanel = null;
     if (chatheadExecutor != null) {
       chatheadExecutor.shutdown();
@@ -372,6 +396,13 @@ public class VoicedDialoguePlugin extends Plugin {
     }
     if (followerBuddy != null) {
       followerBuddy.onChatMessage(event);
+    }
+  }
+
+  @Subscribe
+  public void onMenuEntryAdded(MenuEntryAdded event) {
+    if (setVoiceMenu != null) {
+      setVoiceMenu.onMenuEntryAdded(event);
     }
   }
 

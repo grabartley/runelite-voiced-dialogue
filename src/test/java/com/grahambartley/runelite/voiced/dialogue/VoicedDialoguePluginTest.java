@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -37,7 +38,11 @@ import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.runelite.api.Client;
+import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -45,6 +50,7 @@ import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class VoicedDialoguePluginTest {
 
@@ -328,6 +334,64 @@ public class VoicedDialoguePluginTest {
     plugin.onProfileChanged(new ProfileChanged());
 
     verify(panel).refreshLater();
+  }
+
+  @Test
+  public void setVoiceShowsTheNpcThenOpensTheSidePanel() throws Exception {
+    ClientToolbar toolbar = mock(ClientToolbar.class);
+    NavigationButton button = NavigationButton.builder().tooltip("t").build();
+    NpcVoicePanel panel = mock(NpcVoicePanel.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "clientToolbar", toolbar);
+    setField(plugin, "navigationButton", button);
+    setField(plugin, "npcVoicePanel", panel);
+
+    plugin.openNpcVoice(3105, "Hans");
+
+    InOrder order = inOrder(toolbar, panel);
+    order.verify(panel).showNpc(3105, "Hans");
+    order.verify(toolbar).openPanel(button);
+  }
+
+  @Test
+  public void setVoiceAfterShutDownOpensNothing() throws Exception {
+    ClientToolbar toolbar = mock(ClientToolbar.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "clientToolbar", toolbar);
+
+    plugin.openNpcVoice(3105, "Hans");
+
+    verify(toolbar, never()).openPanel(any());
+  }
+
+  @Test
+  public void aMenuBuiltBeforeStartUpIsIgnored() {
+    MenuEntry examine = mock(MenuEntry.class);
+    when(examine.getType()).thenReturn(MenuAction.EXAMINE_NPC);
+
+    new VoicedDialoguePlugin().onMenuEntryAdded(new MenuEntryAdded(examine));
+
+    verify(examine, never()).getNpc();
+  }
+
+  @Test
+  public void aMenuBuiltAfterShutDownAddsNothing() throws Exception {
+    Client client = mock(Client.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "clientToolbar", mock(ClientToolbar.class));
+    setField(
+        plugin,
+        "setVoiceMenu",
+        new SetVoiceMenu(
+            client, () -> true, npc -> 1, id -> true, Runnable::run, (id, name) -> {}));
+
+    plugin.shutDown();
+    MenuEntry examine = mock(MenuEntry.class);
+    when(examine.getType()).thenReturn(MenuAction.EXAMINE_NPC);
+    when(examine.getNpc()).thenReturn(mock(NPC.class));
+    plugin.onMenuEntryAdded(new MenuEntryAdded(examine));
+
+    verify(client, never()).getMenu();
   }
 
   @Test

@@ -98,6 +98,10 @@ public final class NpcProfileTable {
     return table;
   }
 
+  public boolean hasBespokeProfile(int npcId) {
+    return layers.byId().containsKey(npcId);
+  }
+
   public NameMatch matchName(String npcName) {
     if (npcName == null || npcName.isEmpty()) {
       return NameMatch.NONE;
