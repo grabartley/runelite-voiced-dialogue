@@ -157,15 +157,23 @@ final class NpcDetailView extends JPanel {
     formChanged();
   }
 
-  NpcVoiceOverride formOver(NpcVoiceOverride saved) {
-    NpcVoiceOverride form =
+  NpcVoiceOverride overrideFor(NpcVoiceOverride saved) {
+    NpcVoiceOverride visible =
         new NpcVoiceOverride(
-            saved == null ? null : saved.name(),
+            null,
             blankToNull(accentField.getText()),
             blankToNull(styleField.getText()),
             blankToNull(paceField.getText()),
             ((VoiceTypeOption) voiceType.getSelectedItem()).voiceType());
-    return form.isEmpty() ? null : form;
+    if (visible.isEmpty()) {
+      return null;
+    }
+    return new NpcVoiceOverride(
+        saved == null ? null : saved.name(),
+        visible.accent(),
+        visible.style(),
+        visible.pace(),
+        visible.voiceType());
   }
 
   private void formChanged() {
@@ -177,7 +185,7 @@ final class NpcDetailView extends JPanel {
     for (int id : scopePicker.selectedIds()) {
       NpcVoiceOverride saved = store.get(id);
       anySaved |= saved != null;
-      wouldChange |= !Objects.equals(saved, formOver(saved));
+      wouldChange |= !Objects.equals(saved, overrideFor(saved));
     }
     saveButton.setEnabled(wouldChange);
     clearButton.setEnabled(anySaved);
@@ -189,7 +197,7 @@ final class NpcDetailView extends JPanel {
     for (int id : scopePicker.selectedIds()) {
       NpcVoiceOverride existing = store.get(id);
       boolean hadOverride = existing != null;
-      store.set(id, formOver(existing));
+      store.set(id, overrideFor(existing));
       if (store.get(id) != null) {
         saved++;
       } else if (hadOverride) {

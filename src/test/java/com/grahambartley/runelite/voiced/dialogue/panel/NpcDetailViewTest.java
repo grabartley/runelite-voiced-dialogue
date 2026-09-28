@@ -318,14 +318,14 @@ public class NpcDetailViewTest {
 
     assertEquals(
         new NpcVoiceOverride(null, "Strong Welsh accent", null, null, VoiceType.TYPE_A),
-        view.formOver(null));
+        view.overrideFor(null));
   }
 
   @Test
   public void aBlankFormIsNoOverride() {
     view.open(PanelFixtures.single("Hans", HANS));
 
-    assertNull(view.formOver(null));
+    assertNull(view.overrideFor(null));
   }
 
   @Test
@@ -353,5 +353,17 @@ public class NpcDetailViewTest {
     assertBlank();
     assertFalse(view.saveButton().isEnabled());
     assertTrue(view.clearButton().isEnabled());
+  }
+
+  @Test
+  public void aBlankSaveClearsEvenWhenANameIsStored() {
+    store.set(HANS, new NpcVoiceOverride("Hans the Elder", "Scottish", null, null, null));
+    view.open(PanelFixtures.single("Hans", HANS));
+
+    view.accentField().setText("");
+    view.saveButton().doClick();
+
+    assertNull(store.get(HANS));
+    assertEquals("Cleared 1 NPC.", view.statusText());
   }
 }
