@@ -31,6 +31,9 @@ public final class NpcVoicePanel extends PluginPanel {
   static final String DETAIL_CARD = "detail";
 
   private final NpcVoiceCatalog catalog;
+  private final RecentNpcSpeakers recentSpeakers;
+  private final NpcVoiceOverrideStore store;
+  private final NpcListEntries entries;
   private final NpcNameResolver nameResolver;
   private final Consumer<Runnable> uiThread;
   private final BooleanSupplier showing;
@@ -80,6 +83,9 @@ public final class NpcVoicePanel extends PluginPanel {
       NpcVoiceTransfer.Dialogs dialogs) {
     super(false);
     this.catalog = catalog;
+    this.recentSpeakers = recentSpeakers;
+    this.store = store;
+    this.entries = new NpcListEntries(catalog);
     this.nameResolver = nameResolver;
     this.uiThread = uiThread;
     this.showing = showing == null ? this::isShowing : showing;
@@ -96,7 +102,7 @@ public final class NpcVoicePanel extends PluginPanel {
                 this::refresh));
     listView =
         new NpcListView(
-            new NpcListEntries(catalog),
+            entries,
             recentSpeakers::newestFirst,
             store::overriddenIds,
             chatheads,
@@ -159,6 +165,11 @@ public final class NpcVoicePanel extends PluginPanel {
     if (LIST_CARD.equals(shownCard)) {
       listView.refresh();
     }
+  }
+
+  public void showNpc(int npcId, String name) {
+    catalog.remember(npcId, name);
+    openDetail(entries.forNpc(npcId, name, recentSpeakers.newestFirst(), store.overriddenIds()));
   }
 
   private void openDetail(NpcListEntry entry) {

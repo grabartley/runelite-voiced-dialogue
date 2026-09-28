@@ -156,6 +156,45 @@ public class NpcVoicePanelTest {
   }
 
   @Test
+  public void showingAnNpcOpensItsDetail() {
+    panel.onActivate();
+
+    panel.showNpc(HANS, "Hans");
+
+    assertEquals(NpcVoicePanel.DETAIL_CARD, panel.shownCard());
+    assertEquals("Hans", panel.detailView().titleText());
+    assertEquals(HANS, panel.detailView().npcPicker().getSelectedItem());
+  }
+
+  @Test
+  public void showingAnNpcLoadsItsSavedOverride() {
+    store.set(HANS, new NpcVoiceOverride(null, null, "Gruff", null, null));
+
+    panel.showNpc(HANS, "Hans");
+
+    assertEquals("Gruff", panel.detailView().styleField().getText());
+  }
+
+  @Test
+  public void showingAnUnknownNpcRemembersItsNameForTheList() {
+    panel.showNpc(515151, "Quiet hermit");
+
+    assertEquals("Quiet hermit", panel.detailView().titleText());
+    assertEquals("Quiet hermit", catalog.nameOf(515151));
+  }
+
+  @Test
+  public void showingAnNpcReplacesAnotherOpenDetail() {
+    speakers.record(HANS, "Hans");
+    panel.onActivate();
+    click(panel.listView().rows().get(0));
+
+    panel.showNpc(PanelFixtures.BOB, "Bob");
+
+    assertEquals("Bob", panel.detailView().titleText());
+  }
+
+  @Test
   public void theNavigationIconIsDrawn() {
     assertEquals(PanelIcons.NAVIGATION_SIZE, NpcVoicePanel.navigationIcon().getWidth());
   }

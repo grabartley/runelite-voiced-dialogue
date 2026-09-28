@@ -255,6 +255,32 @@ public class VoiceManagerTest {
     assertTrue(manager.recentSpeakers().newestFirst().isEmpty());
   }
 
+  @Test
+  public void aVoicedNpcIsEditedUnderItsBundledId() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    assertEquals(Integer.valueOf(DWARF_ID), manager.profileIdOf(worldNpc(DWARF_ID, "Dwarf")));
+  }
+
+  @Test
+  public void aTransformedNpcIsEditedUnderTheIdItsDialogueResolvesTo() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    NPC dwarf = transformedNpc(999_000_001, DWARF_ID, "Dwarf");
+
+    assertEquals(Integer.valueOf(DWARF_ID), manager.profileIdOf(dwarf));
+    overrideStore.set(
+        DWARF_ID, new NpcVoiceOverride(null, "Cockney", null, null, VoiceType.TYPE_B));
+    assertEquals("Cockney", manager.resolveNpc(dwarf).profile().accent());
+  }
+
+  @Test
+  public void anUnvoicedNpcIsEditedUnderItsOwnId() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    assertEquals(
+        Integer.valueOf(999_000_002), manager.profileIdOf(worldNpc(999_000_002, "Nobody")));
+  }
+
   private static NPC transformedNpc(int activeId, int baseId, String name) {
     NPCComposition composition = mock(NPCComposition.class);
     when(composition.getId()).thenReturn(baseId);

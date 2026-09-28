@@ -72,6 +72,16 @@ final class NpcListEntries {
     return new NpcListing(null, null, shown, truncated, unnamed);
   }
 
+  NpcListEntry forNpc(int npcId, String name, List<HeardNpc> heard, Set<Integer> editedIds) {
+    String display = catalog.displayName(name);
+    String key = key(display);
+    TreeSet<Integer> ids = new TreeSet<>(catalog.idsNamed(display));
+    ids.add(npcId);
+    boolean wasHeard = heard.stream().anyMatch(npc -> key(npc.name()).equals(key));
+    boolean edited = ids.stream().anyMatch(editedIds::contains);
+    return new NpcListEntry(display, new ArrayList<>(ids), wasHeard, edited, npcId);
+  }
+
   private NpcListEntry entry(String name, Context context) {
     String display = catalog.displayName(name);
     String key = key(display);

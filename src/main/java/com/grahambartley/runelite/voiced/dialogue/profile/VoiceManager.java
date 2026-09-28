@@ -63,6 +63,10 @@ public class VoiceManager {
     return demographicAnalyzer.isVoiced(npcId);
   }
 
+  public Integer profileIdOf(NPC npc) {
+    return identityResolver.resolve(npc).profileId();
+  }
+
   public void offerToLearning(String menuOption, NPC npc) {
     if (learningService == null
         || npc == null
