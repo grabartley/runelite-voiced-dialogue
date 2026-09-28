@@ -12,6 +12,7 @@ import com.grahambartley.runelite.voiced.dialogue.audio.AudioOutput;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingAudioPlayer;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.ProfileChanged;
 import org.junit.Test;
 
 public class VoicedDialoguePluginTest {
@@ -250,6 +252,46 @@ public class VoicedDialoguePluginTest {
     public boolean awaitTermination(long timeout, TimeUnit unit) {
       return shutdown;
     }
+  }
+
+  @Test
+  public void anOverrideKeyChangeRefreshesThatOverride() throws Exception {
+    ConfigManager configManager = mock(ConfigManager.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "voiceOverrideStore", new NpcVoiceOverrideStore(configManager));
+
+    plugin.onConfigChanged(configChanged("voicedDialogue", "npcVoice_5"));
+
+    verify(configManager).getConfiguration("voicedDialogue", "npcVoice_5");
+  }
+
+  @Test
+  public void anotherPluginsKeyChangeLeavesOverridesAlone() throws Exception {
+    ConfigManager configManager = mock(ConfigManager.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "voiceOverrideStore", new NpcVoiceOverrideStore(configManager));
+
+    plugin.onConfigChanged(configChanged("otherPlugin", "npcVoice_5"));
+
+    verify(configManager, never()).getConfiguration(anyString(), anyString());
+  }
+
+  @Test
+  public void aProfileSwitchReloadsEveryOverride() throws Exception {
+    ConfigManager configManager = mock(ConfigManager.class);
+    when(configManager.getConfigurationKeys("voicedDialogue.npcVoice_"))
+        .thenReturn(new ArrayList<>());
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "voiceOverrideStore", new NpcVoiceOverrideStore(configManager));
+
+    plugin.onProfileChanged(new ProfileChanged());
+
+    verify(configManager).getConfigurationKeys("voicedDialogue.npcVoice_");
+  }
+
+  @Test
+  public void aProfileSwitchBeforeStartUpIsIgnored() {
+    new VoicedDialoguePlugin().onProfileChanged(new ProfileChanged());
   }
 
   private static VoicedDialoguePlugin pluginWith(ConfigManager configManager, String openRouterKey)

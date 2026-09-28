@@ -83,11 +83,12 @@ public final class NpcProfileTable {
     this.loaded = true;
     log.info(
         "NPC profiles loaded: {} race, {} ethnicity, {} keyword categories, {} bespoke NPC"
-            + " overrides",
+            + " overrides, {} cache symbols",
         layers.byRace().size(),
         layers.byEthnicity().size(),
         layers.byCategory().size(),
-        layers.byId().size());
+        layers.byId().size(),
+        layers.symbols().size());
   }
 
   static NpcProfileTable fromProfilesJson(JsonObject profiles) {
@@ -115,8 +116,13 @@ public final class NpcProfileTable {
   }
 
   public Resolution resolveNpc(
-      Integer npcId, NameMatch nameMatch, String race, String ethnicity, boolean child) {
-    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity, child));
+      Integer npcId,
+      NameMatch nameMatch,
+      String race,
+      String ethnicity,
+      boolean child,
+      NpcVoiceOverride override) {
+    return mergeLayers(collectLayers(npcId, nameMatch, race, ethnicity, child), override);
   }
 
   private List<MatchedLayer> collectLayers(
@@ -153,7 +159,7 @@ public final class NpcProfileTable {
     return matched;
   }
 
-  private Resolution mergeLayers(List<MatchedLayer> matched) {
+  private Resolution mergeLayers(List<MatchedLayer> matched, NpcVoiceOverride override) {
     CharacterProfile defaultProfile = layers.defaultProfile();
     String name = defaultProfile.name();
     String accent = defaultProfile.accent();
@@ -186,6 +192,23 @@ public final class NpcProfileTable {
         styleParts.add(asSentence(layer.style()));
       }
       sources.add(entry.source);
+    }
+    if (override != null && override.hasProfileFields()) {
+      if (override.name() != null) {
+        name = override.name();
+      }
+      if (override.accent() != null) {
+        accent = override.accent();
+        accentDetail = null;
+      }
+      if (override.style() != null) {
+        styleParts.clear();
+        styleParts.add(asSentence(override.style()));
+      }
+      if (override.pace() != null) {
+        pace = override.pace();
+      }
+      sources.add("override");
     }
     String style = styleParts.isEmpty() ? defaultProfile.style() : String.join(" ", styleParts);
     String source = sources.isEmpty() ? "default" : String.join("+", sources);

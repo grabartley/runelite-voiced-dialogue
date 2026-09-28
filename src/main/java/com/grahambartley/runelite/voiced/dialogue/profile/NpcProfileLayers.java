@@ -26,6 +26,7 @@ class NpcProfileLayers {
           Collections.emptyMap(),
           Collections.emptyMap(),
           Collections.emptyList(),
+          Collections.emptyMap(),
           Collections.emptyMap());
 
   @Value
@@ -58,4 +59,5 @@ class NpcProfileLayers {
   Map<String, Layer> byEthnicity;
   List<CategoryRule> byCategory;
   Map<Integer, Layer> byId;
+  Map<Integer, String> symbols;
 }
