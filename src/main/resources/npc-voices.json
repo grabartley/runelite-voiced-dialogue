@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1746,
+    "overrides_applied": 1762,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
@@ -16,20 +16,20 @@
       "Dwarf": 517,
       "Elf": 354,
       "Gnome": 261,
-      "Goblin": 366,
+      "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9820,
+      "Human": 9811,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
       "Tortugan": 65,
-      "Troll": 469,
+      "Troll": 473,
       "Undead": 895,
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 1975,
-      "Male": 12128
+      "Female": 1974,
+      "Male": 12129
     },
     "ethnicity_counts": {
       "asgarnia": 684,
@@ -42,15 +42,15 @@
       "menaphite": 132,
       "misthalin": 1056,
       "morytania": 1032,
-      "tirannwn": 331,
-      "varlamore": 1017,
+      "tirannwn": 328,
+      "varlamore": 1019,
       "wilderness": 120,
       "wyrmscraig": 11
     },
     "life_stage_counts": {
       "child": 45
     },
-    "profiles_bespoke": 6447
+    "profiles_bespoke": 6451
   },
   "profiles": {
     "_comment": "Authoritative, hand-curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. Repetition across layers (depth in pitch and style, an accentDetail restating its accent, the generic human style under a bespoke one) is deliberate emphasis tuned by ear; do not tidy it (see docs/npc-voice-tooling.md, 'Repetition is deliberate'). This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own; 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -2479,6 +2479,10 @@
         "name": "Cave goblin",
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
       },
+      "2270": {
+        "name": "Cave goblin",
+        "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
+      },
       "2271": {
         "name": "Cave goblin",
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
@@ -2495,11 +2499,23 @@
         "name": "Cave goblin",
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
       },
+      "2275": {
+        "name": "Cave goblin",
+        "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
+      },
+      "2276": {
+        "name": "Cave goblin",
+        "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
+      },
       "2277": {
         "name": "Cave goblin",
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
       },
       "2278": {
+        "name": "Cave goblin",
+        "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
+      },
+      "2279": {
         "name": "Cave goblin",
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
       },
@@ -2520,6 +2536,10 @@
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
       },
       "2284": {
+        "name": "Cave goblin",
+        "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
+      },
+      "2285": {
         "name": "Cave goblin",
         "style": "Ordinary underground townsfolk. Timid and curious, plain and unassuming."
       },
@@ -15274,10 +15294,6 @@
         "name": "Servius, Teokan of Ralos",
         "style": "Dignified and devout, warm but commanding, the measured gravitas of a high priest."
       },
-      "12921": {
-        "name": "Pet snakeling",
-        "style": "Tiny serpent pet; soft, sibilant and playful, a small slithery hiss-tinged little voice."
-      },
       "12929": {
         "name": "Citizen",
         "style": "Shifty and evasive, speaks in quick, nervous, guarded bursts."
@@ -15307,8 +15323,8 @@
         "style": "Gruff, world-weary union frog, grumbles and gripes about the bosses."
       },
       "12940": {
-        "name": "Pet snakeling",
-        "style": "Tiny serpent pet; soft, sibilant and playful, a small slithery hiss-tinged little voice."
+        "name": "Gary",
+        "style": "Gruff, world-weary union frog, grumbles and gripes about the bosses."
       },
       "12943": {
         "name": "Dave",
@@ -34382,7 +34398,7 @@
     },
     "1839": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "1840": {
       "race": "Elf",
@@ -34402,7 +34418,7 @@
     },
     "1844": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "1845": {
       "race": "Human",
@@ -35978,47 +35994,47 @@
     },
     "2268": {
       "race": "Goblin",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2269": {
       "race": "Goblin",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2270": {
-      "race": "Human",
-      "gender": "Female",
+      "race": "Goblin",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2271": {
       "race": "Goblin",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2272": {
       "race": "Goblin",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2273": {
       "race": "Goblin",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2274": {
       "race": "Goblin",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2275": {
-      "race": "Human",
-      "gender": "Female",
+      "race": "Goblin",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2276": {
-      "race": "Human",
-      "gender": "Female",
+      "race": "Goblin",
+      "gender": "Male",
       "ethnicity": "misthalin"
     },
     "2277": {
@@ -36032,7 +36048,7 @@
       "ethnicity": "misthalin"
     },
     "2279": {
-      "race": "Human",
+      "race": "Goblin",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
@@ -36062,7 +36078,7 @@
       "ethnicity": "misthalin"
     },
     "2285": {
-      "race": "Human",
+      "race": "Goblin",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
@@ -68824,7 +68840,7 @@
     },
     "10547": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "10556": {
@@ -78072,16 +78088,15 @@
     },
     "12921": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "tirannwn"
+      "gender": "Female"
     },
     "12922": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "12923": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "12924": {
       "race": "Human",
@@ -78156,12 +78171,12 @@
     "12939": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "tirannwn"
+      "ethnicity": "varlamore"
     },
     "12940": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "tirannwn"
+      "ethnicity": "varlamore"
     },
     "12941": {
       "race": "Human",
@@ -86381,20 +86396,20 @@
       "gender": "Male"
     },
     "15230": {
-      "race": "Human",
+      "race": "Troll",
       "gender": "Male"
     },
     "15231": {
-      "race": "Human",
+      "race": "Troll",
       "gender": "Male"
     },
     "15232": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Troll",
+      "gender": "Female"
     },
     "15233": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Troll",
+      "gender": "Female"
     },
     "15234": {
       "race": "Human",
