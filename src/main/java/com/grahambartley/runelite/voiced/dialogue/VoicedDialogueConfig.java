@@ -372,12 +372,13 @@ public interface VoicedDialogueConfig extends Config {
   @ConfigItem(
       keyName = "followerAccent",
       name = "Companion Accent",
-      description = "Your companion's accent.",
+      description =
+          "Your companion's accent. Name it strongly, e.g. \"Strong Dublin Irish accent, Irish"
+              + " English pronunciation\".",
       position = 2,
       section = followerSection)
   default String followerAccent() {
-    return "Common British English, the plain, down-to-earth speech of a loyal travelling"
-        + " companion, not posh or refined.";
+    return "Strong working-class southern English accent, British English pronunciation";
   }
 
   @ConfigItem(

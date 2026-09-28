@@ -256,6 +256,14 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void aClearedFollowerAccentFallsBackToTheSettingDefault() {
+    VoicedDialogueConfig defaults = mock(VoicedDialogueConfig.class, Answers.CALLS_REAL_METHODS);
+    assertEquals(
+        defaults.followerAccent(),
+        table.resolveFollower(null, null, null, NpcGender.MALE).accent());
+  }
+
+  @Test
   public void theNarratorProfileResolvesFromTheBundledTable() {
     CharacterProfile narrator = table.resolveNarrator();
     assertTrue(

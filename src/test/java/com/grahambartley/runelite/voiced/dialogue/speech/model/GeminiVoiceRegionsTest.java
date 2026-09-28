@@ -5,14 +5,17 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
+import org.mockito.Answers;
 
 public class GeminiVoiceRegionsTest {
 
@@ -131,6 +134,14 @@ public class GeminiVoiceRegionsTest {
         bundled.regionForAccent(
             "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation"));
     assertNull(bundled.regionForAccent("Strong Southern American accent"));
+  }
+
+  @Test
+  public void theDefaultCompanionAccentNamesSouthernEnglish() {
+    VoicedDialogueConfig defaults = mock(VoicedDialogueConfig.class, Answers.CALLS_REAL_METHODS);
+    assertEquals(
+        "SOUTHERN_ENGLISH",
+        GeminiVoiceRegions.bundled().regionForAccent(defaults.followerAccent()));
   }
 
   @Test
