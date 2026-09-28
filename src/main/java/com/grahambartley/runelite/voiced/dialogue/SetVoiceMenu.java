@@ -13,7 +13,7 @@ import net.runelite.client.util.Text;
 
 final class SetVoiceMenu {
 
-  static final String OPTION = "Set voice";
+  static final String OPTION = "Set-voice";
 
   interface NpcOpener {
     void open(int npcId, String name);

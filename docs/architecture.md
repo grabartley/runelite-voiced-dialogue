@@ -218,7 +218,7 @@ name is named from its `NPCComposition` on the client thread. With no search, th
 edited, then prefix matches, and caps at 50 rows. `NpcListEntries` builds each listing as a pure
 function, one row per display name, carrying every id with that name.
 
-`SetVoiceMenu` adds a **Set voice** entry to an NPC's right-click menu, following the core Hiscore
+`SetVoiceMenu` adds a **Set-voice** entry to an NPC's right-click menu, following the core Hiscore
 plugin's **Lookup**: on each `MenuEntryAdded` for that NPC's `EXAMINE_NPC` entry, one per NPC, it
 creates a `MenuAction.RUNELITE` entry beside it. The **Set Voice Menu Option** setting is read on
 every menu build, so toggling it needs no restart.

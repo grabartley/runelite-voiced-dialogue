@@ -95,7 +95,7 @@ public class SetVoiceMenuTest {
     setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, speaker("Hans")));
 
     verify(menu).createMenuEntry(-1);
-    verify(created).setOption("Set voice");
+    verify(created).setOption("Set-voice");
     verify(created).setTarget(TARGET);
     verify(created).setIdentifier(7);
     verify(created).setType(MenuAction.RUNELITE);
