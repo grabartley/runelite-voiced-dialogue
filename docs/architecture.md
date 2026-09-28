@@ -216,8 +216,10 @@ name is named from its `NPCComposition` on the client thread. With no search, th
 edited, then prefix matches, and caps at 50 rows. `NpcListEntries` builds each listing as a pure
 function, one row per display name, carrying every id with that name.
 
-The form never reads the bundled profile. It shows only what the player has saved for the selected
-id, with each blank field meaning the plugin's value. That keeps the bundled prompt text out of the
+The form never reads the bundled profile. It edits voice type, accent, style and pace, and shows
+only what the player has saved for the selected id, with each blank field meaning the plugin's
+value. The store's `name` field has no input: a name changes only the prompt's character label,
+which style already covers, and saving keeps whatever name each id already stores. That keeps the bundled prompt text out of the
 panel. Only NPC names from the bundled table appear.
 
 `NpcScopePicker` resolves each scope to an explicit id list before saving, and Save writes that list

@@ -43,7 +43,6 @@ public class NpcDetailViewTest {
 
   private void assertBlank() {
     assertEquals(VoiceTypeOption.PLUGIN_DEFAULT, view.voiceType().getSelectedItem());
-    assertEquals("", view.nameField().getText());
     assertEquals("", view.accentField().getText());
     assertEquals("", view.styleField().getText());
     assertEquals("", view.paceField().getText());
@@ -68,7 +67,6 @@ public class NpcDetailViewTest {
     bundled.open(PanelFixtures.single("Hans", HANS));
 
     assertEquals(VoiceTypeOption.PLUGIN_DEFAULT, bundled.voiceType().getSelectedItem());
-    assertEquals("", bundled.nameField().getText());
     assertEquals("", bundled.accentField().getText());
     assertEquals("", bundled.styleField().getText());
     assertEquals("", bundled.paceField().getText());
@@ -222,12 +220,10 @@ public class NpcDetailViewTest {
       longText.append('x');
     }
 
-    view.nameField().setText(longText.toString());
     view.accentField().setText(longText.toString());
     view.styleField().setText(longText.toString());
     view.paceField().setText(longText.toString());
 
-    assertEquals(NpcDetailView.NAME_LIMIT, view.nameField().getText().length());
     assertEquals(NpcDetailView.ACCENT_LIMIT, view.accentField().getText().length());
     assertEquals(NpcDetailView.STYLE_LIMIT, view.styleField().getText().length());
     assertEquals(NpcDetailView.PACE_LIMIT, view.paceField().getText().length());
@@ -237,7 +233,7 @@ public class NpcDetailViewTest {
   public void blankFieldsShowThePluginDefaultPlaceholder() {
     assertEquals(
         NpcDetailView.PLACEHOLDER,
-        view.nameField().getClientProperty("JTextField.placeholderText"));
+        view.accentField().getClientProperty("JTextField.placeholderText"));
     assertEquals(NpcDetailView.PLACEHOLDER, view.styleField().placeholder());
   }
 
@@ -262,18 +258,6 @@ public class NpcDetailViewTest {
     assertEquals("1 NPC", NpcDetailView.npcCount(1));
     assertEquals("0 NPCs", NpcDetailView.npcCount(0));
     assertEquals("6 NPCs", NpcDetailView.npcCount(6));
-  }
-
-  @Test
-  public void formOverrideTrimsAndDropsBlanks() {
-    view.open(PanelFixtures.single("Hans", HANS));
-    view.nameField().setText("  Hans the Elder ");
-    view.paceField().setText("   ");
-    view.voiceType().setSelectedItem(VoiceTypeOption.TYPE_A);
-
-    assertEquals(
-        new NpcVoiceOverride("Hans the Elder", null, null, null, VoiceType.TYPE_A),
-        view.formOverride());
   }
 
   @Test
@@ -323,5 +307,51 @@ public class NpcDetailViewTest {
     view.reload();
 
     assertEquals("", view.paceField().getText());
+  }
+
+  @Test
+  public void theFormTrimsAndDropsBlanks() {
+    view.open(PanelFixtures.single("Hans", HANS));
+    view.accentField().setText("  Strong Welsh accent ");
+    view.paceField().setText("   ");
+    view.voiceType().setSelectedItem(VoiceTypeOption.TYPE_A);
+
+    assertEquals(
+        new NpcVoiceOverride(null, "Strong Welsh accent", null, null, VoiceType.TYPE_A),
+        view.formOver(null));
+  }
+
+  @Test
+  public void aBlankFormIsNoOverride() {
+    view.open(PanelFixtures.single("Hans", HANS));
+
+    assertNull(view.formOver(null));
+  }
+
+  @Test
+  public void savingKeepsEachNpcsOwnStoredName() {
+    store.set(GUARD, new NpcVoiceOverride("Old Tam", "Scottish", null, null, null));
+    store.set(11912, new NpcVoiceOverride("Young Rab", null, null, null, null));
+    openGuard();
+    view.accentField().setText("Strong Welsh accent");
+    view.scopePicker().select(NpcVoiceScope.THIS_CHARACTER);
+
+    view.saveButton().doClick();
+
+    assertEquals("Old Tam", store.get(GUARD).name());
+    assertEquals("Young Rab", store.get(11912).name());
+    assertNull(store.get(11913).name());
+    assertEquals("Strong Welsh accent", store.get(11913).accent());
+  }
+
+  @Test
+  public void aStoredNameAloneStillCountsAsAnEdit() {
+    store.set(HANS, new NpcVoiceOverride("Hans the Elder", null, null, null, null));
+
+    view.open(PanelFixtures.single("Hans", HANS));
+
+    assertBlank();
+    assertFalse(view.saveButton().isEnabled());
+    assertTrue(view.clearButton().isEnabled());
   }
 }

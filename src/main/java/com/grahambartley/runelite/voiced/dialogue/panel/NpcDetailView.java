@@ -32,7 +32,6 @@ import net.runelite.client.ui.FontManager;
 final class NpcDetailView extends JPanel {
 
   static final int CHATHEAD_SIZE = 48;
-  static final int NAME_LIMIT = 40;
   static final int ACCENT_LIMIT = 160;
   static final int STYLE_LIMIT = 400;
   static final int PACE_LIMIT = 120;
@@ -51,7 +50,6 @@ final class NpcDetailView extends JPanel {
   private final JComboBox<Integer> npcPicker = new JComboBox<>();
   private final JPanel npcPickerRow = new JPanel(new BorderLayout(0, 2));
   private final JComboBox<VoiceTypeOption> voiceType = new JComboBox<>(VoiceTypeOption.values());
-  private final JTextComponent nameField = field(NAME_LIMIT, "e.g. Grizzled Varrock guard");
   private final JTextComponent accentField = field(ACCENT_LIMIT, "e.g. Strong Scottish accent");
   private final PlaceholderTextArea styleField = new PlaceholderTextArea(PLACEHOLDER, 3);
   private final JTextComponent paceField = field(PACE_LIMIT, "e.g. Slow and deliberate");
@@ -97,7 +95,6 @@ final class NpcDetailView extends JPanel {
     voiceType.setToolTipText("Type A and Type B are the same voices as the Player Voice setting");
     voiceType.addActionListener(e -> formChanged());
     stack.add(labelled("Voice type", voiceType), 8);
-    stack.add(labelled("Character name", nameField), 8);
     stack.add(labelled("Accent", accentField), 8);
     styleField.setToolTipText("e.g. A gruff veteran who has seen too many goblin raids");
     limit(styleField, STYLE_LIMIT);
@@ -152,7 +149,6 @@ final class NpcDetailView extends JPanel {
     loading = true;
     NpcVoiceOverride saved = store.get(npcId);
     voiceType.setSelectedItem(VoiceTypeOption.of(saved == null ? null : saved.voiceType()));
-    nameField.setText(saved == null ? "" : orEmpty(saved.name()));
     accentField.setText(saved == null ? "" : orEmpty(saved.accent()));
     styleField.setText(saved == null ? "" : orEmpty(saved.style()));
     paceField.setText(saved == null ? "" : orEmpty(saved.pace()));
@@ -161,38 +157,39 @@ final class NpcDetailView extends JPanel {
     formChanged();
   }
 
-  NpcVoiceOverride formOverride() {
-    return new NpcVoiceOverride(
-        blankToNull(nameField.getText()),
-        blankToNull(accentField.getText()),
-        blankToNull(styleField.getText()),
-        blankToNull(paceField.getText()),
-        ((VoiceTypeOption) voiceType.getSelectedItem()).voiceType());
+  NpcVoiceOverride formOver(NpcVoiceOverride saved) {
+    NpcVoiceOverride form =
+        new NpcVoiceOverride(
+            saved == null ? null : saved.name(),
+            blankToNull(accentField.getText()),
+            blankToNull(styleField.getText()),
+            blankToNull(paceField.getText()),
+            ((VoiceTypeOption) voiceType.getSelectedItem()).voiceType());
+    return form.isEmpty() ? null : form;
   }
 
   private void formChanged() {
     if (loading) {
       return;
     }
-    NpcVoiceOverride form = emptyToNull(formOverride());
     boolean wouldChange = false;
     boolean anySaved = false;
     for (int id : scopePicker.selectedIds()) {
       NpcVoiceOverride saved = store.get(id);
       anySaved |= saved != null;
-      wouldChange |= !Objects.equals(saved, form);
+      wouldChange |= !Objects.equals(saved, formOver(saved));
     }
     saveButton.setEnabled(wouldChange);
     clearButton.setEnabled(anySaved);
   }
 
   private void save() {
-    NpcVoiceOverride form = emptyToNull(formOverride());
     int saved = 0;
     int cleared = 0;
     for (int id : scopePicker.selectedIds()) {
-      boolean hadOverride = store.get(id) != null;
-      store.set(id, form);
+      NpcVoiceOverride existing = store.get(id);
+      boolean hadOverride = existing != null;
+      store.set(id, formOver(existing));
       if (store.get(id) != null) {
         saved++;
       } else if (hadOverride) {
@@ -302,10 +299,6 @@ final class NpcDetailView extends JPanel {
     return count == 1 ? "1 NPC" : count + " NPCs";
   }
 
-  private static NpcVoiceOverride emptyToNull(NpcVoiceOverride override) {
-    return override.isEmpty() ? null : override;
-  }
-
   private static String blankToNull(String text) {
     String trimmed = text == null ? "" : text.trim();
     return trimmed.isEmpty() ? null : trimmed;
@@ -325,10 +318,6 @@ final class NpcDetailView extends JPanel {
 
   JComboBox<VoiceTypeOption> voiceType() {
     return voiceType;
-  }
-
-  JTextComponent nameField() {
-    return nameField;
   }
 
   JTextComponent accentField() {
