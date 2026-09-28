@@ -30,9 +30,8 @@ Pipeline
      symbol names one (FAI_VARROCK_GUARD02_F), since a page whose genders do not pair with
      its id groups gives every id the page's first gender.
   7. Merge the hand-curated overrides on top (authoritative, always win).
-  8. Emit the cache symbol of every id whose byId name another id shares, ignoring case,
-     under ``symbols``,
-     so one character's ids can be told apart from others with the same display name.
+  8. Emit under ``symbols`` the cache symbol of every id whose byId name another id shares,
+     ignoring case, so one character's ids can be told apart from others with that name.
   9. Embed tools/profiles.json under the ``profiles`` key and emit
      src/main/resources/npc-voices.json.
 
