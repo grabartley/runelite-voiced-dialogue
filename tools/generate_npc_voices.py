@@ -26,8 +26,11 @@ Pipeline
      (+ location/categories for the Menaphite cities) onto an ethnicity key.
   5. Cross-reference a full id -> name dump by name to cover variant ids the wiki
      pages do not list.
-  6. Merge the hand-curated overrides on top (authoritative, always win).
-  7. Embed tools/profiles.json under the ``profiles`` key and emit
+  6. Correct gender from the cache symbol RuneLite's NpcID class gives each id, where the
+     symbol names one (FAI_VARROCK_GUARD02_F), since a page whose genders do not pair with
+     its id groups gives every id the page's first gender.
+  7. Merge the hand-curated overrides on top (authoritative, always win).
+  8. Embed tools/profiles.json under the ``profiles`` key and emit
      src/main/resources/npc-voices.json.
 
 Usage
@@ -40,6 +43,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -62,6 +66,11 @@ INFOBOX_TEMPLATES = MAPPING["infoboxTemplates"]
 # Wiki page-category substring -> voice bucket, checked in order, first match wins. This is how
 # Infobox Monster NPCs (trolls like Kob, ghosts, TzHaar, ...) get a race the infobox does not carry.
 CATEGORY_RACE_RULES = [(r["keyword"], r["race"]) for r in MAPPING["categoryRaceRules"]]
+
+REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+NPC_ID_CLASS = "net.runelite.api.gameval.NpcID"
+NPC_ID_CONSTANT_RE = re.compile(r"static final int (\w+) = (\d+);")
+SYMBOL_GENDER_TOKENS = {"F": "Female", "FEMALE": "Female", "M": "Male", "MALE": "Male"}
 
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
@@ -404,6 +413,38 @@ def build_table_from_wiki(limit=None):
     return table, len(titles), pages_with_ids, name_map
 
 
+def resolve_runelite_api_jar():
+    out = subprocess.run(["./gradlew", "-q", "printRuneliteApiJar"], cwd=REPO_ROOT, check=True,
+                         capture_output=True, text=True).stdout
+    return out.strip().splitlines()[-1]
+
+
+def load_npc_symbols(api_jar):
+    out = subprocess.run(["javap", "-constants", "-cp", api_jar, NPC_ID_CLASS], check=True,
+                         capture_output=True, text=True).stdout
+    return parse_npc_symbols(out)
+
+
+def parse_npc_symbols(javap_output):
+    return {int(m.group(2)): m.group(1) for m in NPC_ID_CONSTANT_RE.finditer(javap_output)}
+
+
+def symbol_gender(symbol):
+    genders = {SYMBOL_GENDER_TOKENS[t] for t in symbol.split("_") if t in SYMBOL_GENDER_TOKENS}
+    return genders.pop() if len(genders) == 1 else None
+
+
+def apply_symbol_genders(table, symbols):
+    corrected = 0
+    for npc_id, symbol in symbols.items():
+        gender = symbol_gender(symbol)
+        entry = table.get(npc_id)
+        if gender and entry and entry["gender"] != gender:
+            table[npc_id] = dict(entry, gender=gender)
+            corrected += 1
+    return corrected
+
+
 def fill_from_summary(table, name_map, summary):
     """Cover ids the wiki pages don't list by matching a full id -> name dump to the wiki
     data by name. Catches variant ids whose name still resolves to a documented NPC."""
@@ -611,6 +652,9 @@ def main():
     parser.add_argument("--voice-regions", default=DEFAULT_VOICE_REGIONS)
     parser.add_argument("--voice-library", default=DEFAULT_VOICE_LIBRARY)
     parser.add_argument("--voice-regions-out", default=DEFAULT_VOICE_REGIONS_OUT)
+    parser.add_argument("--runelite-api", default=None,
+                        help="RuneLite api jar whose NpcID symbols correct gender; defaults to "
+                             "the jar the Gradle build resolves.")
     parser.add_argument("--limit", type=int, default=None,
                         help="Cap the number of NPC pages (for quick test runs).")
     parser.add_argument("--base", default=None,
@@ -645,6 +689,9 @@ def main():
                       file=sys.stderr)
             except Exception as exc:  # noqa: BLE001 - tooling, surface and continue
                 print(f"  (skipping name cross-ref: {exc})", file=sys.stderr)
+    api_jar = args.runelite_api or resolve_runelite_api_jar()
+    symbol_gendered = apply_symbol_genders(table, load_npc_symbols(api_jar))
+    print(f"  cache symbols corrected {symbol_gendered} genders from {api_jar}", file=sys.stderr)
     override_count = apply_overrides(table, overrides)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
@@ -670,6 +717,7 @@ def main():
             "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) "
                       "and Infobox Monster (race from page categories), "
                       "cross-referenced by name against a full id dump for variant ids, "
+                      "gender corrected from RuneLite NpcID cache symbols, "
                       "+ curated tools/overrides.json; profiles from tools/profiles.json.",
             "npc_pages": page_count,
             "count": len(npcs),

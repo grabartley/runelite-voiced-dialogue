@@ -110,6 +110,70 @@ class ApplyOverridesTest(unittest.TestCase):
         self.assertEqual(count, 2)
 
 
+class SymbolGenderTest(unittest.TestCase):
+    def test_parse_npc_symbols_reads_javap_constants(self):
+        javap = (
+            "public final class net.runelite.api.gameval.NpcID {\n"
+            "  public static final int FAI_VARROCK_GUARD02 = 11911;\n"
+            "  public static final int FAI_VARROCK_GUARD02_F = 11914;\n"
+            "  public net.runelite.api.gameval.NpcID();\n"
+            "}\n")
+        self.assertEqual(gen.parse_npc_symbols(javap),
+                         {11911: "FAI_VARROCK_GUARD02", 11914: "FAI_VARROCK_GUARD02_F"})
+
+    def test_female_tokens_name_female(self):
+        for symbol in ("FAI_VARROCK_GUARD02_F", "FAI_FALADOR_GUARD1_F", "VARLAMORE_FISHER_F_1",
+                       "DORGESH_FEMALE_BANKER", "GUARD1_F_VARIANT01"):
+            self.assertEqual(gen.symbol_gender(symbol), "Female", symbol)
+
+    def test_male_tokens_name_male(self):
+        for symbol in ("VARLAMORE_FISHER_M_1", "DORGESH_MALE_1", "VM_SCHOOL_TEACHER_MALE_AND_BOY"):
+            self.assertEqual(gen.symbol_gender(symbol), "Male", symbol)
+
+    def test_symbol_without_a_whole_gender_token_names_none(self):
+        for symbol in ("FAI_VARROCK_GUARD02", "FAI_FALADOR_GUARD1", "FEMALE2", "MAGE_OF_ZAMORAK",
+                       "FARMER", "HAM_MEMBER"):
+            self.assertIsNone(gen.symbol_gender(symbol), symbol)
+
+    def test_symbol_naming_both_genders_names_none(self):
+        self.assertIsNone(gen.symbol_gender("COUPLE_M_F"))
+        self.assertIsNone(gen.symbol_gender("TWINS_MALE_FEMALE"))
+
+    def test_symbol_gender_outranks_page_default(self):
+        guard = {"race": "Human", "gender": "Male", "ethnicity": "misthalin"}
+        table = {11911: guard, 11914: guard}
+        corrected = gen.apply_symbol_genders(
+            table, {11911: "FAI_VARROCK_GUARD02", 11914: "FAI_VARROCK_GUARD02_F"})
+        self.assertEqual(corrected, 1)
+        self.assertEqual(table[11914],
+                         {"race": "Human", "gender": "Female", "ethnicity": "misthalin"})
+        self.assertEqual(table[11911]["gender"], "Male")
+
+    def test_correction_does_not_touch_shared_sibling_entry(self):
+        shared = {"race": "Human", "gender": "Female"}
+        table = {13252: shared, 13254: shared}
+        gen.apply_symbol_genders(
+            table, {13252: "VARLAMORE_FISHER_M_1", 13254: "VARLAMORE_FISHER_F_1"})
+        self.assertEqual(table[13252]["gender"], "Male")
+        self.assertEqual(table[13254]["gender"], "Female")
+        self.assertEqual(shared["gender"], "Female")
+
+    def test_ids_missing_from_the_table_are_not_added(self):
+        table = {}
+        self.assertEqual(gen.apply_symbol_genders(table, {11914: "FAI_VARROCK_GUARD02_F"}), 0)
+        self.assertEqual(table, {})
+
+    def test_agreeing_gender_is_not_counted(self):
+        table = {11914: {"race": "Human", "gender": "Female"}}
+        self.assertEqual(gen.apply_symbol_genders(table, {11914: "FAI_VARROCK_GUARD02_F"}), 0)
+
+    def test_overrides_still_win_over_symbol_gender(self):
+        table = {11914: {"race": "Human", "gender": "Male"}}
+        gen.apply_symbol_genders(table, {11914: "FAI_VARROCK_GUARD02_F"})
+        gen.apply_overrides(table, wrap({"11914": {"gender": "Male"}}))
+        self.assertEqual(table[11914]["gender"], "Male")
+
+
 class RaceBucketTest(unittest.TestCase):
     def test_citizen_of_arceuus_buckets_to_its_own_race(self):
         self.assertEqual(gen.bucket_for_race("Citizen of Arceuus"), "Arceuus")

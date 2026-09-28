@@ -293,7 +293,7 @@ The body has to let someone implement without redoing the research:
 
 1. **Goal**, naming the quest, its number, its release date and the single worst symptom.
 2. **A resolved id table**: ids, page, race, gender, and **where each gender came from** (wiki
-   field, prose pronoun, or inferred from the name). Name the inferred ones as inferred. A name
+   field, `NpcID` cache symbol token such as `_F`, prose pronoun, or inferred from the name). Name the inferred ones as inferred. A name
    is not evidence of gender: Ffion of Wyrmscraig reads female and is male.
 3. **Out-of-scope ids, listed explicitly.** Every non-speaking id in the quest's id block, named
    so a reader can tell "decided against" from "never looked at".
