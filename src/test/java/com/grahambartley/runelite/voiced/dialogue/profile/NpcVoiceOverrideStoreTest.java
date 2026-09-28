@@ -160,8 +160,54 @@ public class NpcVoiceOverrideStoreTest {
   }
 
   @Test
-  public void clearingAnEmptyOverrideWritesNothing() {
+  public void settingAnEmptyOverrideWritesNothing() {
     store.set(14, new NpcVoiceOverride(null, null, null, null, null));
     verify(configManager, never()).setConfiguration(eq(GROUP), anyString(), anyString());
+  }
+
+  @Test
+  public void settingNoOverrideClearsTheEntry() {
+    store.set(15, new NpcVoiceOverride(null, null, null, "Brisk", null));
+    store.set(15, null);
+    assertNull(store.get(15));
+    verify(configManager).unsetConfiguration(GROUP, "npcVoice_15");
+  }
+
+  @Test
+  public void refreshPicksUpAKeyChangedOutsideTheStore() {
+    when(configManager.getConfiguration(GROUP, "npcVoice_16")).thenReturn("{\"pace\":\"Fast\"}");
+    store.refresh("npcVoice_16");
+    assertEquals(new NpcVoiceOverride(null, null, null, "Fast", null), store.get(16));
+  }
+
+  @Test
+  public void refreshDropsAKeyThatWasUnset() {
+    store.set(17, new NpcVoiceOverride(null, null, null, "Brisk", null));
+    when(configManager.getConfiguration(GROUP, "npcVoice_17")).thenReturn(null);
+    store.refresh("npcVoice_17");
+    assertNull(store.get(17));
+  }
+
+  @Test
+  public void refreshDropsAKeyThatBecameMalformed() {
+    store.set(18, new NpcVoiceOverride(null, null, null, "Brisk", null));
+    when(configManager.getConfiguration(GROUP, "npcVoice_18")).thenReturn("{broken");
+    store.refresh("npcVoice_18");
+    assertNull(store.get(18));
+  }
+
+  @Test
+  public void refreshSanitizesTheValueItReads() {
+    when(configManager.getConfiguration(GROUP, "npcVoice_19"))
+        .thenReturn("{\"style\":\"Warm\\n[Note]\"}");
+    store.refresh("npcVoice_19");
+    assertEquals("Warm Note", store.get(19).style());
+  }
+
+  @Test
+  public void refreshIgnoresKeysThatAreNotOverrides() {
+    store.refresh("playerAccent");
+    store.refresh(null);
+    verify(configManager, never()).getConfiguration(eq(GROUP), anyString());
   }
 }

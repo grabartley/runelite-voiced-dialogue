@@ -20,7 +20,7 @@ public final class NpcVoiceOverrideStore {
 
   private final ConfigManager configManager;
   private final DirectionSanitizer directionSanitizer;
-  private final Map<Integer, NpcVoiceOverride> overrides = new ConcurrentHashMap<>();
+  private volatile Map<Integer, NpcVoiceOverride> overrides = new ConcurrentHashMap<>();
 
   public NpcVoiceOverrideStore(ConfigManager configManager) {
     this(configManager, new DirectionSanitizer(new ProfanityFilter()));
@@ -32,22 +32,41 @@ public final class NpcVoiceOverrideStore {
   }
 
   public synchronized void load() {
-    overrides.clear();
+    Map<Integer, NpcVoiceOverride> loaded = new ConcurrentHashMap<>();
     for (String wholeKey : configManager.getConfigurationKeys(WHOLE_KEY_PREFIX)) {
-      String idPart = wholeKey.substring(WHOLE_KEY_PREFIX.length());
-      String key = KEY_PREFIX + idPart;
-      try {
-        int npcId = Integer.parseInt(idPart);
-        NpcVoiceOverride override =
-            sanitize(parse(configManager.getConfiguration(VoicedDialogueConfig.GROUP, key)));
-        if (!override.isEmpty()) {
-          overrides.put(npcId, override);
-        }
-      } catch (RuntimeException e) {
-        log.warn("Skipping malformed NPC voice override {}: {}", key, e.getMessage());
-      }
+      readInto(loaded, KEY_PREFIX + wholeKey.substring(WHOLE_KEY_PREFIX.length()));
     }
-    log.info("Loaded {} NPC voice overrides", overrides.size());
+    overrides = loaded;
+    log.info("Loaded {} NPC voice overrides", loaded.size());
+  }
+
+  public synchronized void refresh(String key) {
+    if (key != null && key.startsWith(KEY_PREFIX)) {
+      readInto(overrides, key);
+    }
+  }
+
+  private void readInto(Map<Integer, NpcVoiceOverride> target, String key) {
+    int npcId;
+    try {
+      npcId = Integer.parseInt(key.substring(KEY_PREFIX.length()));
+    } catch (NumberFormatException e) {
+      log.warn("Skipping NPC voice override with a non-numeric id: {}", key);
+      return;
+    }
+    target.remove(npcId);
+    String value = configManager.getConfiguration(VoicedDialogueConfig.GROUP, key);
+    if (value == null) {
+      return;
+    }
+    try {
+      NpcVoiceOverride override = sanitize(parse(value));
+      if (!override.isEmpty()) {
+        target.put(npcId, override);
+      }
+    } catch (RuntimeException e) {
+      log.warn("Skipping malformed NPC voice override {}: {}", key, e.getMessage());
+    }
   }
 
   public NpcVoiceOverride get(Integer npcId) {
@@ -55,8 +74,8 @@ public final class NpcVoiceOverrideStore {
   }
 
   public synchronized void set(int npcId, NpcVoiceOverride override) {
-    NpcVoiceOverride sanitized = sanitize(override);
-    if (sanitized.isEmpty()) {
+    NpcVoiceOverride sanitized = override == null ? null : sanitize(override);
+    if (sanitized == null || sanitized.isEmpty()) {
       clear(npcId);
       return;
     }

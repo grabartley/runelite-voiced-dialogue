@@ -201,7 +201,7 @@ public class VoiceManagerTest {
   }
 
   @Test
-  public void withNoOverridesResolutionIsUnchanged() {
+  public void clearingAnOverrideRestoresTheBundledResolution() {
     NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
     VoiceManager manager = newManager(PlayerVoice.TYPE_A);
     ResolvedSpeaker before = manager.resolveNpc(dwarf);

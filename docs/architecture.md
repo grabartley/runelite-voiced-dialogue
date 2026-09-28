@@ -182,7 +182,9 @@ keeps them in `ConfigManager`, one key per NPC id in the plugin's config group (
 value a small JSON object holding only the fields the player set, such as `{"gender":"Female"}`.
 Keeping them in config means they follow the player's RuneLite profile and profile sync; the store
 loads every key once on startup and again when the RuneLite profile changes, into an in-memory map
-the resolvers read, and a write updates the map and `ConfigManager` together. A malformed value is
+the resolvers read. A reload swaps in the complete new map, so a line resolving mid-reload never
+sees a half-filled one. A single key changed from outside the store, such as by a profile sync,
+is re-read on its `ConfigChanged` event, and a write updates the map and `ConfigManager` together. A malformed value is
 logged and skipped without failing the rest of the load.
 
 The id is the one the bundled profile resolves under (`NpcIdentity.profileId()`), so an override

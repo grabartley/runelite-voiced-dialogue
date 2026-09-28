@@ -382,6 +382,9 @@ public class VoicedDialoguePlugin extends Plugin {
 
   @Subscribe
   public void onConfigChanged(ConfigChanged event) {
+    if (VoicedDialogueConfig.GROUP.equals(event.getGroup()) && voiceOverrideStore != null) {
+      voiceOverrideStore.refresh(event.getKey());
+    }
     if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
         && VoicedDialogueConfig.OPENROUTER_API_KEY.equals(event.getKey())
         && creditMeter != null) {
