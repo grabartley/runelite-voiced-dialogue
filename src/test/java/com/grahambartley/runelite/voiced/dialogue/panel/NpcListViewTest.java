@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import org.junit.Test;
 
@@ -29,6 +30,8 @@ public class NpcListViewTest {
   private final List<NpcListEntry> opened = new ArrayList<>();
   private final List<Set<Integer>> unnamedRequests = new ArrayList<>();
 
+  private final JPanel actions = new JPanel();
+
   private final NpcListView view =
       new NpcListView(
           new NpcListEntries(catalog),
@@ -36,7 +39,8 @@ public class NpcListViewTest {
           () -> edited,
           PanelFixtures.offlineChatheads(),
           opened::add,
-          unnamedRequests::add);
+          unnamedRequests::add,
+          actions);
 
   private List<String> rowNames() {
     return view.rows().stream().map(NpcListRow::nameText).collect(Collectors.toList());
@@ -44,6 +48,16 @@ public class NpcListViewTest {
 
   private static void query(NpcListView listView, String text) throws Exception {
     SwingUtilities.invokeAndWait(() -> listView.setQuery(text));
+  }
+
+  @Test
+  public void theActionsStayOnTheListWhetherOrNotASearchIsActive() throws Exception {
+    view.refresh();
+    assertTrue(SwingUtilities.isDescendingFrom(actions, view));
+
+    query(view, "guard");
+    assertTrue(SwingUtilities.isDescendingFrom(actions, view));
+    assertTrue(actions.isVisible());
   }
 
   @Test
@@ -114,7 +128,8 @@ public class NpcListViewTest {
             Collections::emptySet,
             PanelFixtures.offlineChatheads(),
             e -> {},
-            ids -> {});
+            ids -> {},
+            new JPanel());
 
     query(many, "villager");
 

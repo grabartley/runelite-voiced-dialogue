@@ -1,12 +1,11 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
@@ -73,7 +72,7 @@ public final class NpcVoiceOverrideStore {
       return null;
     }
     try {
-      return sanitize(parse(value));
+      return sanitize(NpcVoiceOverrideJson.parse(new JsonParser().parse(value)));
     } catch (RuntimeException e) {
       log.warn("Skipping malformed NPC voice override {}: {}", key, e.getMessage());
       return null;
@@ -88,6 +87,10 @@ public final class NpcVoiceOverrideStore {
     return new HashSet<>(overrides.keySet());
   }
 
+  public Map<Integer, NpcVoiceOverride> all() {
+    return new TreeMap<>(overrides);
+  }
+
   public synchronized void set(int npcId, NpcVoiceOverride override) {
     NpcVoiceOverride sanitized = override == null ? null : sanitize(override);
     if (sanitized == null || sanitized.isEmpty()) {
@@ -96,7 +99,9 @@ public final class NpcVoiceOverrideStore {
     }
     overrides.put(npcId, sanitized);
     configManager.setConfiguration(
-        VoicedDialogueConfig.GROUP, KEY_PREFIX + npcId, toJson(sanitized).toString());
+        VoicedDialogueConfig.GROUP,
+        KEY_PREFIX + npcId,
+        NpcVoiceOverrideJson.toJson(sanitized).toString());
   }
 
   public synchronized void clear(int npcId) {
@@ -104,7 +109,7 @@ public final class NpcVoiceOverrideStore {
     configManager.unsetConfiguration(VoicedDialogueConfig.GROUP, KEY_PREFIX + npcId);
   }
 
-  private NpcVoiceOverride sanitize(NpcVoiceOverride override) {
+  NpcVoiceOverride sanitize(NpcVoiceOverride override) {
     return new NpcVoiceOverride(
         sanitize(override.name()),
         sanitize(override.accent()),
@@ -116,42 +121,5 @@ public final class NpcVoiceOverrideStore {
   private String sanitize(String field) {
     String sanitized = directionSanitizer.sanitize(field);
     return sanitized == null || sanitized.isEmpty() ? null : sanitized;
-  }
-
-  private static NpcVoiceOverride parse(String value) {
-    JsonObject json = new JsonParser().parse(value).getAsJsonObject();
-    return new NpcVoiceOverride(
-        optString(json, "name"),
-        optString(json, "accent"),
-        optString(json, "style"),
-        optString(json, "pace"),
-        parseVoiceType(optString(json, "voiceType")));
-  }
-
-  private static VoiceType parseVoiceType(String voiceType) {
-    return voiceType == null ? null : VoiceType.valueOf(voiceType);
-  }
-
-  private static String optString(JsonObject json, String field) {
-    JsonElement value = json.get(field);
-    return value == null || value.isJsonNull() ? null : value.getAsString();
-  }
-
-  private static JsonObject toJson(NpcVoiceOverride override) {
-    JsonObject json = new JsonObject();
-    addIfSet(json, "name", override.name());
-    addIfSet(json, "accent", override.accent());
-    addIfSet(json, "style", override.style());
-    addIfSet(json, "pace", override.pace());
-    if (override.voiceType() != null) {
-      json.addProperty("voiceType", override.voiceType().name());
-    }
-    return json;
-  }
-
-  private static void addIfSet(JsonObject json, String field, String value) {
-    if (value != null) {
-      json.addProperty(field, value);
-    }
   }
 }

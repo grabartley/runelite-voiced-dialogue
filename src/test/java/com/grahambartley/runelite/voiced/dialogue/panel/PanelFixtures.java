@@ -3,7 +3,10 @@ package com.grahambartley.runelite.voiced.dialogue.panel;
 import static org.mockito.Mockito.mock;
 
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceCatalog;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceImportPlan;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +64,53 @@ final class PanelFixtures {
 
   static NpcListEntry single(String name, int id) {
     return entry(name, Collections.singletonList(id), false, id);
+  }
+
+  static final class ScriptedDialogs implements NpcVoiceTransfer.Dialogs {
+    final List<String> copied = new ArrayList<>();
+    final List<String> infos = new ArrayList<>();
+    final List<String> errors = new ArrayList<>();
+    final List<String> summaries = new ArrayList<>();
+    Path exportFile;
+    Path importFile;
+    String pasted;
+    NpcVoiceImportPlan.Mode mode;
+
+    @Override
+    public void copyToClipboard(String text) {
+      copied.add(text);
+    }
+
+    @Override
+    public Path chooseExportFile() {
+      return exportFile;
+    }
+
+    @Override
+    public String pasteImport() {
+      return pasted;
+    }
+
+    @Override
+    public Path chooseImportFile() {
+      return importFile;
+    }
+
+    @Override
+    public NpcVoiceImportPlan.Mode confirmImport(String summary) {
+      summaries.add(summary);
+      return mode;
+    }
+
+    @Override
+    public void info(String message) {
+      infos.add(message);
+    }
+
+    @Override
+    public void error(String message) {
+      errors.add(message);
+    }
   }
 
   static final class RejectingExecutor extends AbstractExecutorService {

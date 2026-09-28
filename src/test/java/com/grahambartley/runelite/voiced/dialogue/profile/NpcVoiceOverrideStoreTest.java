@@ -13,8 +13,10 @@ import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.runelite.client.config.ConfigManager;
 import org.junit.Test;
@@ -230,5 +232,18 @@ public class NpcVoiceOverrideStoreTest {
     assertTrue(NpcVoiceOverrideStore.isOverrideKey("npcVoice_11911"));
     assertFalse(NpcVoiceOverrideStore.isOverrideKey("volume"));
     assertFalse(NpcVoiceOverrideStore.isOverrideKey(null));
+  }
+
+  @Test
+  public void allIsASnapshotSortedById() {
+    NpcVoiceOverride warm = new NpcVoiceOverride(null, null, "Warm", null, null);
+    store.set(9, warm);
+    store.set(2, warm);
+
+    Map<Integer, NpcVoiceOverride> all = store.all();
+    store.clear(9);
+
+    assertEquals(Arrays.asList(2, 9), new ArrayList<>(all.keySet()));
+    assertEquals(warm, all.get(2));
   }
 }

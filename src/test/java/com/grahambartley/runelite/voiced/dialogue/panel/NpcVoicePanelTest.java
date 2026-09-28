@@ -4,9 +4,12 @@ import static com.grahambartley.runelite.voiced.dialogue.panel.PanelFixtures.HAN
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceCatalog;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceImportPlan;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverride;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceTransferCodec;
 import com.grahambartley.runelite.voiced.dialogue.profile.RecentNpcSpeakers;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -16,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import javax.swing.JButton;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import org.junit.Test;
@@ -29,19 +33,22 @@ public class NpcVoicePanelTest {
   private final List<Consumer<Map<Integer, String>>> nameCallbacks = new ArrayList<>();
   private final List<Runnable> uiQueue = new ArrayList<>();
   private boolean showing = true;
+  private final PanelFixtures.ScriptedDialogs dialogs = new PanelFixtures.ScriptedDialogs();
 
   private final NpcVoicePanel panel =
       new NpcVoicePanel(
           catalog,
           speakers,
           store,
+          new NpcVoiceTransferCodec(store, new Gson()),
           (ids, done) -> {
             nameRequests.add(ids);
             nameCallbacks.add(done);
           },
           PanelFixtures.offlineChatheads(),
           uiQueue::add,
-          () -> showing);
+          () -> showing,
+          dialogs);
 
   private void drainUi() {
     List<Runnable> queued = new ArrayList<>(uiQueue);
@@ -219,5 +226,19 @@ public class NpcVoicePanelTest {
     panel.onActivate();
 
     assertEquals("Half typed", panel.detailView().styleField().getText());
+  }
+
+  @Test
+  public void anImportShowsTheImportedNpcsUnderEditedStraightAway() {
+    panel.onActivate();
+    dialogs.pasted =
+        "{\"format\":\"voiced-dialogue-npc-voices\",\"version\":1,"
+            + "\"overrides\":{\"3105\":{\"style\":\"Lost\"}}}";
+    dialogs.mode = NpcVoiceImportPlan.Mode.MERGE;
+
+    ((JMenuItem) panel.transferBar().importMenu().getComponent(0)).doClick();
+
+    assertEquals(Collections.singletonList("Hans"), rowNames());
+    assertEquals(NpcVoicePanel.LIST_CARD, panel.shownCard());
   }
 }
