@@ -549,7 +549,8 @@ configured limit; a read never rescues an old entry, and the just-written clip s
 alone exceeds the cap, in which case the pass clears the directory and that line is billed again
 next time. Setting the limit to `0` opts out of eviction entirely, so the cache keeps every clip
 for users who would rather spend disk than ever re-bill a line. The limit is read at eviction time
-rather than held from start-up, so changing it applies from the next cached line with no restart.
+rather than held from start-up, so changing it applies from the next cached line with no restart. The
+on-disk file layout and how to convert a clip to WAV are in [cache-files.md](cache-files.md).
 
 ## Cave echo
 
