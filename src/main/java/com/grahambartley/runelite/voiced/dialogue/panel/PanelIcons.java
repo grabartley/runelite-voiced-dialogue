@@ -16,8 +16,7 @@ final class PanelIcons {
   private PanelIcons() {}
 
   static BufferedImage navigation() {
-    BufferedImage icon = ImageUtil.loadImageResource(PanelIcons.class, NAVIGATION_RESOURCE);
-    return ChatheadImages.fit(icon, NAVIGATION_SIZE);
+    return ImageUtil.loadImageResource(PanelIcons.class, NAVIGATION_RESOURCE);
   }
 
   static BufferedImage chatheadPlaceholder(int size) {
