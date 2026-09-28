@@ -18,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -40,6 +41,10 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
   public static final String ID = "cloud-google-ai-studio";
 
   static final String MODEL = GeminiTtsModel.GEMINI_MODEL_ID;
+
+  private static final String ERROR_INFO_TYPE = "type.googleapis.com/google.rpc.ErrorInfo";
+
+  private static final String API_KEY_INVALID = "API_KEY_INVALID";
 
   static final String PRODUCTION_ENDPOINT =
       "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
@@ -173,9 +178,25 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     if (httpCode == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
       return AiStudioQuotaFailure.noticeFor(gson, body);
     }
-    return "Google AI Studio TTS request failed (HTTP "
+    if (isKeyProblem(gson, httpCode, body)) {
+      return "Google AI Studio TTS request failed (HTTP "
+          + httpCode
+          + "); check your API key. This line was not voiced.";
+    }
+    return "Google AI Studio rejected the TTS request (HTTP "
         + httpCode
-        + "); check your API key. This line was not voiced.";
+        + "). This line was not voiced.";
+  }
+
+  private static boolean isKeyProblem(Gson gson, int httpCode, byte[] body) {
+    if (httpCode == HttpURLConnection.HTTP_UNAUTHORIZED
+        || httpCode == HttpURLConnection.HTTP_FORBIDDEN) {
+      return true;
+    }
+    return httpCode == HttpURLConnection.HTTP_BAD_REQUEST
+        && AiStudioErrorDetails.ofType(gson, body, ERROR_INFO_TYPE).stream()
+            .anyMatch(
+                detail -> API_KEY_INVALID.equals(AiStudioErrorDetails.text(detail, "reason")));
   }
 
   private final class Ops implements CloudSpeechExecutor.Ops {

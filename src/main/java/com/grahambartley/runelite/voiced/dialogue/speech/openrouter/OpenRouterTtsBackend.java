@@ -221,9 +221,13 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
     if (httpCode == HttpURLConnection.HTTP_PAYMENT_REQUIRED) {
       return OUT_OF_CREDITS_NOTICE;
     }
-    return "OpenRouter TTS request failed (HTTP "
-        + httpCode
-        + "); check your API key. This line was not voiced.";
+    if (httpCode == HttpURLConnection.HTTP_UNAUTHORIZED
+        || httpCode == HttpURLConnection.HTTP_FORBIDDEN) {
+      return "OpenRouter TTS request failed (HTTP "
+          + httpCode
+          + "); check your API key. This line was not voiced.";
+    }
+    return "OpenRouter rejected the TTS request (HTTP " + httpCode + "). This line was not voiced.";
   }
 
   private final class Ops implements CloudSpeechExecutor.Ops {
