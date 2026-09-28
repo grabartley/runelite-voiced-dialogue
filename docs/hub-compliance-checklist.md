@@ -136,7 +136,7 @@ resources, all loaded via `getResourceAsStream`:
 
 | Resource | Size | What it is |
 |----------|------|------------|
-| `npc-voices.json` | ~2.0 MiB uncompressed | Precomputed NPC race/gender/ethnicity + voice profile table |
+| `npc-voices.json` | ~2.4 MiB uncompressed | Precomputed NPC race/gender/ethnicity + voice profile table + cache symbols for shared names |
 | `expression-emotions.json` | ~1.5 KiB | Chat-head animation → emotion map |
 | `profanity.txt` | ~1.0 KiB | Offline profanity blocklist |
 

@@ -44,6 +44,13 @@ none of those, so their race comes from the page's categories. The generator:
 4. Corrects each id's gender from its cache symbol in the RuneLite api jar the
    Gradle build resolves (`./gradlew -q printRuneliteApiJar`, read with
    `javap -constants`), see [Mapping rules](#mapping-rules).
+5. Writes a top-level `symbols` map of id to cache symbol for every id whose
+   `profiles.byId` name another id shares exactly ("Guard" covers 73 ids across
+   Varrock, Falador, Ardougne and more). The symbol tells one character's ids apart
+   from other characters with the same display name (`FAI_VARROCK_GUARD02` and
+   `FAI_VARROCK_GUARD02_F` against `FAI_FALADOR_GUARD1`). Ids with a unique name, and
+   ids RuneLite has no symbol for, carry none. `NpcProfileParser` loads the map
+   beside the profile layers; nothing resolves a voice from it.
 
 A field value is read to the end of its line and cut at the first `|`, or at a
 link or template close that has nothing open, that sits outside a link or a
@@ -155,10 +162,10 @@ python3 tools/generate_npc_voices.py --limit 500
 
 For an **overrides- or profiles-only** change (no new wiki coverage needed), use
 the offline `--base` mode instead. It re-applies `overrides.json` and re-embeds
-`profiles.json` onto the existing table, and applies the cache symbol genders,
-without the live wiki scrape, so the diff
-is minimal and deterministic (only the changed ids, the embedded profiles, and
-the `_meta` counts) with no wiki drift:
+`profiles.json` onto the existing table, and applies the cache symbol genders and
+rewrites `symbols`, without the live wiki scrape, so the diff
+is minimal and deterministic (only the changed ids, the embedded profiles, the
+`symbols` map, and the `_meta` counts) with no wiki drift:
 
 ```bash
 python3 tools/generate_npc_voices.py --base src/main/resources/npc-voices.json

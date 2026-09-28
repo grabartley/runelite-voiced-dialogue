@@ -7,12 +7,21 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.CategoryRule;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.Layer;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Test;
 
 public class NpcProfileParserTest {
 
   private static NpcProfileLayers parse(String json) {
     return NpcProfileParser.parse(new JsonParser().parse(json).getAsJsonObject());
+  }
+
+  private static NpcProfileLayers parseWithSymbols(String symbolsJson) {
+    return NpcProfileParser.parse(
+        new JsonParser().parse("{}").getAsJsonObject(),
+        new JsonParser().parse(symbolsJson).getAsJsonObject());
   }
 
   private static final String COMPLETE_DEFAULT =
@@ -125,5 +134,67 @@ public class NpcProfileParserTest {
     assertTrue(layers.byCategory().isEmpty());
     assertTrue(layers.byId().isEmpty());
     assertNull(layers.playerLayer());
+  }
+
+  @Test
+  public void symbolsAreKeyedByNumericId() {
+    NpcProfileLayers layers =
+        parseWithSymbols("{\"11911\":\"FAI_VARROCK_GUARD02\",\"11914\":\"FAI_VARROCK_GUARD02_F\"}");
+
+    assertEquals(2, layers.symbols().size());
+    assertEquals("FAI_VARROCK_GUARD02", layers.symbols().get(11911));
+    assertEquals("FAI_VARROCK_GUARD02_F", layers.symbols().get(11914));
+  }
+
+  @Test
+  public void symbolsSkipCommentsNonNumericKeysAndNonStringValues() {
+    NpcProfileLayers layers =
+        parseWithSymbols(
+            "{\"_comment\":\"x\",\"nope\":\"GUARD\",\"1\":{\"a\":\"b\"},\"2\":[\"GUARD\"],"
+                + "\"3\":null,\"4\":\"\",\"5\":\"HANS\"}");
+
+    assertEquals(1, layers.symbols().size());
+    assertEquals("HANS", layers.symbols().get(5));
+  }
+
+  @Test
+  public void aMissingSymbolsSectionParsesToNoSymbols() {
+    assertTrue(parse("{}").symbols().isEmpty());
+  }
+
+  @Test
+  public void theBundledResourceCarriesSymbolsForIdsSharingAName() {
+    NpcProfileLayers layers = NpcProfileParser.loadResource("/npc-voices.json");
+
+    assertEquals("FAI_VARROCK_GUARD02", layers.symbols().get(11911));
+    assertEquals("FAI_VARROCK_GUARD02_F", layers.symbols().get(11914));
+    assertEquals("FAI_FALADOR_GUARD1", layers.symbols().get(3269));
+    assertEquals("FAI_FALADOR_GUARD1_F", layers.symbols().get(11943));
+  }
+
+  @Test
+  public void theBundledResourceCarriesNoSymbolForAUniqueName() {
+    NpcProfileLayers layers = NpcProfileParser.loadResource("/npc-voices.json");
+
+    assertEquals("Hans", layers.byId().get(3105).name());
+    assertNull(layers.symbols().get(3105));
+  }
+
+  @Test
+  public void everyBundledSymbolBelongsToAnIdWhoseNameAnotherIdShares() {
+    NpcProfileLayers layers = NpcProfileParser.loadResource("/npc-voices.json");
+    Map<String, Integer> idsPerName = new HashMap<>();
+    for (Layer layer : layers.byId().values()) {
+      idsPerName.merge(layer.name(), 1, Integer::sum);
+    }
+
+    assertTrue(layers.symbols().size() > 4000);
+    for (Integer npcId : layers.symbols().keySet()) {
+      Layer layer = layers.byId().get(npcId);
+      assertNotNull("symbol id " + npcId + " has a byId profile", layer);
+      assertTrue(
+          "symbol id " + npcId + " shares its name " + layer.name(),
+          idsPerName.get(layer.name()) > 1);
+    }
   }
 }

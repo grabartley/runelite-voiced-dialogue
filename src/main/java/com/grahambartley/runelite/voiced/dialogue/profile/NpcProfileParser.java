@@ -41,7 +41,7 @@ final class NpcProfileParser {
             resource);
         return null;
       }
-      return parse(root.getAsJsonObject("profiles"));
+      return parse(root.getAsJsonObject("profiles"), optObject(root, "symbols"));
     } catch (Exception e) {
       log.error("Failed to load NPC profile table {}: {}", resource, e.getMessage());
       return null;
@@ -49,6 +49,10 @@ final class NpcProfileParser {
   }
 
   static NpcProfileLayers parse(JsonObject profiles) {
+    return parse(profiles, null);
+  }
+
+  static NpcProfileLayers parse(JsonObject profiles, JsonObject symbols) {
     CharacterProfile parsedDefault = parseComplete(optObject(profiles, "default"));
     if (parsedDefault == null) {
       log.warn("profiles.default is missing or incomplete - using the built-in British default");
@@ -61,7 +65,30 @@ final class NpcProfileParser {
         parseLayerMap(optObject(profiles, "byRace")),
         parseLayerMap(optObject(profiles, "byEthnicity")),
         parseCategories(profiles),
-        parseByIdLayers(profiles));
+        parseByIdLayers(profiles),
+        parseSymbols(symbols));
+  }
+
+  private static Map<Integer, String> parseSymbols(JsonObject symbols) {
+    if (symbols == null) {
+      return Collections.emptyMap();
+    }
+    Map<Integer, String> parsed = new HashMap<>();
+    for (String key : symbols.keySet()) {
+      if (isComment(key) || !symbols.get(key).isJsonPrimitive()) {
+        continue;
+      }
+      String symbol = optString(symbols, key);
+      if (symbol == null) {
+        continue;
+      }
+      try {
+        parsed.put(Integer.parseInt(key), symbol);
+      } catch (NumberFormatException e) {
+        log.warn("Skipping non-numeric symbols key '{}'", key);
+      }
+    }
+    return Collections.unmodifiableMap(parsed);
   }
 
   private static List<CategoryRule> parseCategories(JsonObject profiles) {
