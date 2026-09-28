@@ -42,6 +42,10 @@ public class VoiceManagerTest {
 
   private static final int DWARF_ID = 290;
 
+  private static final int HANS_ID = 3105;
+
+  private static final int ABYSSAL_DEMON_ID = 415;
+
   private final NpcVoiceOverrideStore overrideStore =
       new NpcVoiceOverrideStore(mock(ConfigManager.class));
 
@@ -259,7 +263,7 @@ public class VoiceManagerTest {
   public void aVoicedNpcIsEditedUnderItsBundledId() {
     VoiceManager manager = newManager(VoiceType.TYPE_A);
 
-    assertEquals(Integer.valueOf(DWARF_ID), manager.profileIdOf(worldNpc(DWARF_ID, "Dwarf")));
+    assertEquals(DWARF_ID, manager.profileIdOf(worldNpc(DWARF_ID, "Dwarf")));
   }
 
   @Test
@@ -267,7 +271,7 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(VoiceType.TYPE_A);
     NPC dwarf = transformedNpc(999_000_001, DWARF_ID, "Dwarf");
 
-    assertEquals(Integer.valueOf(DWARF_ID), manager.profileIdOf(dwarf));
+    assertEquals(DWARF_ID, manager.profileIdOf(dwarf));
     overrideStore.set(
         DWARF_ID, new NpcVoiceOverride(null, "Cockney", null, null, VoiceType.TYPE_B));
     assertEquals("Cockney", manager.resolveNpc(dwarf).profile().accent());
@@ -277,12 +281,8 @@ public class VoiceManagerTest {
   public void anUnvoicedNpcIsEditedUnderItsOwnId() {
     VoiceManager manager = newManager(VoiceType.TYPE_A);
 
-    assertEquals(
-        Integer.valueOf(999_000_002), manager.profileIdOf(worldNpc(999_000_002, "Nobody")));
+    assertEquals(999_000_002, manager.profileIdOf(worldNpc(999_000_002, "Nobody")));
   }
-
-  private static final int HANS_ID = 3105;
-  private static final int ABYSSAL_DEMON_ID = 415;
 
   @Test
   public void anNpcWithABespokeProfileSpeaks() {
@@ -302,6 +302,18 @@ public class VoiceManagerTest {
     VoiceManager manager = newManager(VoiceType.TYPE_A);
 
     manager.resolveNpc(worldNpc(999_000_003, "Cave goblin miner"));
+
+    assertTrue(manager.speaks(999_000_003));
+  }
+
+  @Test
+  public void anNpcHeardEarlierStillSpeaksAfterManyOthersHaveSpoken() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    manager.resolveNpc(worldNpc(999_000_003, "Cave goblin miner"));
+
+    for (int i = 1; i <= 40; i++) {
+      manager.resolveNpc(worldNpc(999_100_000 + i, "Chatterer " + i));
+    }
 
     assertTrue(manager.speaks(999_000_003));
   }

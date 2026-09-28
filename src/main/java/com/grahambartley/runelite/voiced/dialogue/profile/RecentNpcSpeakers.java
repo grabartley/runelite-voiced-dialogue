@@ -34,10 +34,6 @@ public final class RecentNpcSpeakers {
     return new ArrayList<>(ring);
   }
 
-  public synchronized boolean heard(int npcId) {
-    return ring.stream().anyMatch(npc -> npc.id() == npcId);
-  }
-
   public void setListener(Runnable listener) {
     this.listener = listener == null ? () -> {} : listener;
   }

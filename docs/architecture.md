@@ -224,14 +224,18 @@ creates a `MenuAction.RUNELITE` entry beside it. The **Set Voice Menu Option** s
 every menu build, so toggling it needs no restart.
 
 The entry only appears on NPCs that speak, judged by `VoiceManager.speaks` against the NPC's
-`profileId()`, the same id its dialogue reads overrides under. The bundled voice table can't answer
+profile id, the same id its dialogue reads overrides under. `NpcDemographicAnalyzer.profileIdOf`
+picks that id without building the full identity, since menus rebuild every frame while the cursor
+rests on an NPC. The bundled voice table can't answer
 this, since it gives slayer monsters and silent bosses a race and gender too, and neither can a
 **Talk-to** option, which is missing on many speakers: bosses, the Dorgesh-Kaan cave goblins, and
 lots of quest characters. An NPC speaks when any of these hold:
 
 - It has a bespoke `byId` profile. Those were filled from the wiki's `Transcript:` pages, the
   authoritative record of who has dialogue.
-- It was heard this session, in `RecentNpcSpeakers`.
+- It was heard this session. `VoiceManager` keeps every heard profile id for the session, apart
+  from the panel's 30-slot `RecentNpcSpeakers` ring, so busy ambient chatter can't push a speaker
+  out.
 - The player has an override saved for it.
 - **Auto-learn New NPCs** has learned it, which only happens from a conversation option.
 

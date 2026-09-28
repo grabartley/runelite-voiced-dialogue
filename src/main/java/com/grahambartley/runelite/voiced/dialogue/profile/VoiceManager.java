@@ -7,6 +7,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -23,6 +25,7 @@ public class VoiceManager {
   private final NpcVoiceOverrideStore overrideStore;
   private final NpcVoiceCatalog catalog;
   private final RecentNpcSpeakers recentSpeakers = new RecentNpcSpeakers();
+  private final Set<Integer> heardIds = ConcurrentHashMap.newKeySet();
 
   private NpcLearningService learningService;
   private LearnedNpcStore learnedStore;
@@ -64,14 +67,14 @@ public class VoiceManager {
     return demographicAnalyzer.isVoiced(npcId);
   }
 
-  public Integer profileIdOf(NPC npc) {
-    return identityResolver.resolve(npc).profileId();
+  public int profileIdOf(NPC npc) {
+    return demographicAnalyzer.profileIdOf(npc);
   }
 
   public boolean speaks(int npcId) {
     return profileTable.hasBespokeProfile(npcId)
         || overrideStore.get(npcId) != null
-        || recentSpeakers.heard(npcId)
+        || heardIds.contains(npcId)
         || (learnedStore != null && learnedStore.contains(npcId));
   }
 
@@ -122,6 +125,7 @@ public class VoiceManager {
     String name = Text.removeTags(npcName).trim();
     catalog.remember(npcId, name);
     recentSpeakers.record(npcId, name);
+    heardIds.add(npcId);
   }
 
   public ResolvedSpeaker resolveNarrator() {

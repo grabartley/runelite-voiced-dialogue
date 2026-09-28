@@ -455,17 +455,49 @@ public class NpcDemographicAnalyzerTest {
     assertEquals("gender for id " + npcId, expectedGender, attributes.getGender());
   }
 
+  @Test
+  public void theProfileIdMatchesTheIdTheAttributesCarry() {
+    int[][] cases = {{3105, 3105}, {999_000_001, 3105}, {999_000_001, 999_000_002}};
+    for (int[] ids : cases) {
+      NPC npc = npc(ids[0], ids[1], "Hans");
+      assertEquals(analyzer.analyzeNPC(npc).getNpcId(), analyzer.profileIdOf(npc));
+    }
+  }
+
+  @Test
+  public void aTransformedNpcKnownOnlyByItsBaseIdUsesTheBaseId() {
+    assertEquals(3105, analyzer.profileIdOf(npc(999_000_001, 3105, "Hans")));
+  }
+
+  @Test
+  public void anUnknownNpcUsesItsActiveId() {
+    assertEquals(999_000_001, analyzer.profileIdOf(npc(999_000_001, 999_000_002, "Nobody")));
+  }
+
+  @Test
+  public void anNpcWithoutACompositionUsesItsActiveId() {
+    NPC npc = mock(NPC.class);
+    when(npc.getId()).thenReturn(3105);
+    when(npc.getComposition()).thenReturn(null);
+
+    assertEquals(3105, analyzer.profileIdOf(npc));
+  }
+
   private NpcAttributes analyze(int npcId, String npcName) {
     return analyze(npcId, npcId, npcName);
   }
 
   private NpcAttributes analyze(int activeId, int baseId, String npcName) {
+    return analyzer.analyzeNPC(npc(activeId, baseId, npcName));
+  }
+
+  private static NPC npc(int activeId, int baseId, String npcName) {
     NPCComposition composition = mock(NPCComposition.class);
     when(composition.getId()).thenReturn(baseId);
     when(composition.getName()).thenReturn(npcName);
     NPC npc = mock(NPC.class);
     when(npc.getId()).thenReturn(activeId);
     when(npc.getComposition()).thenReturn(composition);
-    return analyzer.analyzeNPC(npc);
+    return npc;
   }
 }

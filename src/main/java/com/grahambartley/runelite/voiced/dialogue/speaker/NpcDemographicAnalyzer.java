@@ -45,13 +45,23 @@ public class NpcDemographicAnalyzer {
     if (composition == null) {
       return null;
     }
-    int activeId = npc.getId();
-    int baseId = composition.getId();
+    NpcAttributes known = lookupKnown(npc.getId(), composition.getId());
+    return known != null ? known : defaultAttributes(npc.getId(), composition.getName());
+  }
+
+  public int profileIdOf(NPC npc) {
+    NPCComposition composition = npc.getComposition();
+    NpcAttributes known =
+        composition == null ? null : lookupKnown(npc.getId(), composition.getId());
+    return known != null ? known.getNpcId() : npc.getId();
+  }
+
+  private NpcAttributes lookupKnown(int activeId, int baseId) {
     NpcAttributes known = lookupKnown(activeId);
     if (known == null && baseId != activeId) {
       known = lookupKnown(baseId);
     }
-    return known != null ? known : defaultAttributes(activeId, composition.getName());
+    return known;
   }
 
   private NpcAttributes lookupKnown(int npcId) {
