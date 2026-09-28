@@ -1,7 +1,8 @@
 # Cache files
 
-Every line the plugin voices is saved to disk, so it is never billed twice. Each saved line is a
-plain audio file behind a short header, and any tool that reads raw PCM can turn it into a WAV.
+Every line the plugin voices is saved to disk, so a repeated line is played from disk instead of
+billed again. Each saved line is a plain audio file behind a short header, and any tool that reads
+raw PCM can turn it into a WAV.
 
 ## Where they live
 
@@ -15,8 +16,9 @@ There is one file per voiced line, with a `.tdc` extension.
 ## File names
 
 A file's name is the lowercase hex SHA-256 of four fields: the backend id, the voice key, the
-emotion, and the line's text. Each field is fed to the hash as its UTF-8 byte length (4-byte
-little-endian int) followed by its UTF-8 bytes; a missing emotion is the text `null`.
+emotion's upper-case name (such as `HAPPY`), and the line's text. Each field is fed to the hash as
+its UTF-8 byte length (4-byte little-endian int) followed by its UTF-8 bytes; when there is no
+emotion, that field is the text `null`.
 
 The name therefore says nothing a person can read. Finding one particular line means listening,
 though sorting by modified time helps: the newest file is the most recent line that had to be
@@ -46,12 +48,11 @@ ffmpeg -f f32le -ar 24000 -ac 1 -skip_initial_bytes 16 -i <file>.tdc clip.wav
 ```
 
 `-ar` must match the sample rate in the file's header (offset 4). Both providers use Gemini speech,
-which returns 24000 Hz, so `24000` is the value every current clip carries. A wrong value plays the
-line too fast or too slow, at the wrong pitch.
+which returns 24000 Hz, so `24000` is the value every clip carries. A wrong value plays the line
+too fast or too slow, at the wrong pitch.
 
 Changing the output name to `clip.aiff` or `clip.au` produces those formats instead. WAV, AIFF and
-AU are the formats Java sound plays, which is what other RuneLite plugins that accept custom
-sounds expect.
+AU are the formats Java sound plays.
 
 ## Things to know
 
