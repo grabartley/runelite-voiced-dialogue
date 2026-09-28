@@ -228,4 +228,35 @@ public class ChatheadImagesTest {
     assertEquals(3, shown.size());
     assertNotSame(images.placeholder(32), shown.get(2));
   }
+
+  @Test
+  public void aNameWantedAgainBeforeItsSkipLandsIsStillFetched() throws Exception {
+    server.enqueue(pngResponse(png(40, 40)));
+    List<ImageIcon> shown = new ArrayList<>();
+
+    images.load("Hans", 32, icon -> {});
+    images.newBatch();
+    executor.submit(() -> {}).get(5, TimeUnit.SECONDS);
+    images.load("Hans", 32, shown::add);
+    drain();
+    drain();
+
+    assertEquals(1, server.getRequestCount());
+    assertNotSame(images.placeholder(32), shown.get(shown.size() - 1));
+  }
+
+  @Test
+  public void aWikiErrorIsRetriedRatherThanTreatedAsMissing() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(503));
+    server.enqueue(pngResponse(png(40, 40)));
+    List<ImageIcon> shown = new ArrayList<>();
+
+    images.load("Hans", 32, shown::add);
+    drain();
+    images.load("Hans", 32, shown::add);
+    drain();
+
+    assertEquals(2, server.getRequestCount());
+    assertNotSame(images.placeholder(32), shown.get(shown.size() - 1));
+  }
 }

@@ -299,4 +299,29 @@ public class NpcDetailViewTest {
 
     assertEquals(new HashSet<>(Arrays.asList(GUARD, 424242)), store.overriddenIds());
   }
+
+  @Test
+  public void saveMessageSaysWhatHappened() {
+    assertEquals("Saved for 2 NPCs.", NpcDetailView.saveMessage(2, 0));
+    assertEquals("Cleared 1 NPC.", NpcDetailView.saveMessage(0, 1));
+    assertEquals("Nothing to save.", NpcDetailView.saveMessage(0, 0));
+  }
+
+  @Test
+  public void reloadPicksUpAChangeMadeOutsideTheForm() {
+    view.open(PanelFixtures.single("Hans", HANS));
+    store.set(HANS, new NpcVoiceOverride(null, null, null, "Brisk", null));
+
+    view.reload();
+
+    assertEquals("Brisk", view.paceField().getText());
+    assertTrue(view.clearButton().isEnabled());
+  }
+
+  @Test
+  public void reloadBeforeOpeningAnythingIsSafe() {
+    view.reload();
+
+    assertEquals("", view.paceField().getText());
+  }
 }

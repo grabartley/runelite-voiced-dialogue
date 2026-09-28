@@ -164,4 +164,30 @@ public class NpcVoicePanelTest {
     panel.onActivate();
     assertEquals(Collections.singletonList("Hans"), rowNames());
   }
+
+  @Test
+  public void anOverrideChangingUnderAnOpenFormReloadsIt() {
+    speakers.record(HANS, "Hans");
+    panel.onActivate();
+    click(panel.listView().rows().get(0));
+
+    store.set(HANS, new NpcVoiceOverride(null, null, "Synced from another device", null, null));
+    panel.refreshLater();
+    drainUi();
+
+    assertEquals("Synced from another device", panel.detailView().styleField().getText());
+  }
+
+  @Test
+  public void anNpcSpeakingNeverDisturbsAFormBeingEdited() {
+    speakers.record(HANS, "Hans");
+    panel.onActivate();
+    click(panel.listView().rows().get(0));
+    panel.detailView().styleField().setText("Half typed");
+
+    speakers.record(PanelFixtures.BOB, "Bob");
+    drainUi();
+
+    assertEquals("Half typed", panel.detailView().styleField().getText());
+  }
 }

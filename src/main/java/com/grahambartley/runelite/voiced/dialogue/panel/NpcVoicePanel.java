@@ -91,7 +91,7 @@ public final class NpcVoicePanel extends PluginPanel {
     content.add(listView, LIST_CARD);
     content.add(detailView, DETAIL_CARD);
     add(content, BorderLayout.CENTER);
-    recentSpeakers.setListener(this::refreshLater);
+    recentSpeakers.setListener(this::refreshListLater);
   }
 
   public static BufferedImage navigationIcon() {
@@ -107,10 +107,25 @@ public final class NpcVoicePanel extends PluginPanel {
   }
 
   public void refreshLater() {
+    whenShowing(
+        () -> {
+          if (LIST_CARD.equals(shownCard)) {
+            listView.refresh();
+          } else {
+            detailView.reload();
+          }
+        });
+  }
+
+  private void refreshListLater() {
+    whenShowing(this::refresh);
+  }
+
+  private void whenShowing(Runnable redraw) {
     uiThread.accept(
         () -> {
           if (showing.getAsBoolean()) {
-            refresh();
+            redraw.run();
           }
         });
   }

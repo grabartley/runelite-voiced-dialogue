@@ -199,9 +199,21 @@ final class NpcDetailView extends JPanel {
         cleared++;
       }
     }
-    finish(
-        saved > 0 ? "Saved for " + npcCount(saved) + "." : "Cleared " + npcCount(cleared) + ".",
-        ColorScheme.PROGRESS_COMPLETE_COLOR);
+    finish(saveMessage(saved, cleared), ColorScheme.PROGRESS_COMPLETE_COLOR);
+  }
+
+  static String saveMessage(int saved, int cleared) {
+    if (saved > 0) {
+      return "Saved for " + npcCount(saved) + ".";
+    }
+    return cleared > 0 ? "Cleared " + npcCount(cleared) + "." : "Nothing to save.";
+  }
+
+  void reload() {
+    if (entry != null) {
+      Integer selected = (Integer) npcPicker.getSelectedItem();
+      loadNpc(selected == null ? entry.preferredId() : selected);
+    }
   }
 
   private void clear() {
@@ -218,8 +230,7 @@ final class NpcDetailView extends JPanel {
   }
 
   private void finish(String message, Color color) {
-    Integer selected = (Integer) npcPicker.getSelectedItem();
-    loadNpc(selected == null ? entry.preferredId() : selected);
+    reload();
     status.setForeground(color);
     status.setText(message);
     onChanged.run();

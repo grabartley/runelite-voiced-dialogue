@@ -26,6 +26,8 @@ import okhttp3.ResponseBody;
 @Slf4j
 final class ChatheadImages {
 
+  private static final int NOT_FOUND = 404;
+
   static final String WIKI_FILE_PATH = "https://oldschool.runescape.wiki/w/Special:FilePath";
 
   private final OkHttpClient httpClient;
@@ -91,6 +93,10 @@ final class ChatheadImages {
     waiting = new ArrayList<>();
     waiting.add(whenLoaded);
     pending.put(file, waiting);
+    submit(file);
+  }
+
+  private void submit(String file) {
     try {
       executor.execute(() -> fetchIfWanted(file));
     } catch (RejectedExecutionException e) {
@@ -100,7 +106,7 @@ final class ChatheadImages {
 
   private void fetchIfWanted(String file) {
     if (!wanted.contains(file)) {
-      uiThread.accept(() -> pending.remove(file));
+      uiThread.accept(() -> skipped(file));
       return;
     }
     try {
@@ -109,6 +115,14 @@ final class ChatheadImages {
     } catch (IOException | RuntimeException e) {
       log.debug("Chathead {} could not be reached: {}", file, e.getMessage());
       uiThread.accept(() -> pending.remove(file));
+    }
+  }
+
+  private void skipped(String file) {
+    if (wanted.contains(file)) {
+      submit(file);
+    } else {
+      pending.remove(file);
     }
   }
 
@@ -125,9 +139,12 @@ final class ChatheadImages {
     Request request =
         new Request.Builder().url(url).addHeader("User-Agent", CloudHttp.USER_AGENT).get().build();
     try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() == NOT_FOUND) {
+        return null;
+      }
       ResponseBody body = response.body();
       if (!response.isSuccessful() || body == null) {
-        return null;
+        throw new IOException("wiki answered " + response.code());
       }
       try (InputStream stream = body.byteStream()) {
         return ImageIO.read(stream);
