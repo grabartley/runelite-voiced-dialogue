@@ -50,7 +50,8 @@ final class NpcListView extends JPanel {
       Supplier<Set<Integer>> edited,
       ChatheadImages chatheads,
       Consumer<NpcListEntry> onOpen,
-      Consumer<Set<Integer>> onUnnamedEdits) {
+      Consumer<Set<Integer>> onUnnamedEdits,
+      JComponent actions) {
     super(new BorderLayout(0, 8));
     this.entries = entries;
     this.heard = heard;
@@ -73,7 +74,11 @@ final class NpcListView extends JPanel {
           }
         });
     search.addClearListener(this::refresh);
-    add(search, BorderLayout.NORTH);
+    JPanel top = new JPanel(new BorderLayout(0, 6));
+    top.setOpaque(false);
+    top.add(search, BorderLayout.NORTH);
+    top.add(actions, BorderLayout.SOUTH);
+    add(top, BorderLayout.NORTH);
 
     results.setBackground(ColorScheme.DARK_GRAY_COLOR);
     JPanel pinnedTop = new ViewportWidthPanel(new BorderLayout());

@@ -61,6 +61,14 @@ thread. User-facing notices are hopped back to the client thread via
 `clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread never makes a network
 call, reads the disk cache, or blocks on synthesis.
 
+### Local files and the clipboard only on a player's click
+
+**Verified.** The **NPC Voices** panel's **Export** and **Import** read and write only a file the
+player picks in a `JFileChooser`, or the system clipboard, and only from the click that asked for
+it. Nothing is uploaded: the JSON holds the player's own voice edits and stays local. An import is
+parsed, validated, and sanitized with `DirectionSanitizer` before anything is written, and a file
+over 1 MB is refused unread (`panel/NpcVoiceTransfer.java`).
+
 ### No subprocess, no `Thread.sleep`, no thread interrupt
 
 **Verified.** `src/main` spawns no external process (`grep -rn "ProcessBuilder\|Runtime.*exec"

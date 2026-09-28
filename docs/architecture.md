@@ -240,6 +240,37 @@ Writing ids, not a rule, means a regenerated table never widens an edit the play
 Save is enabled only when saving would change a stored override in the scope, and **Clear
 override** only when one exists.
 
+### Importing and exporting edits
+
+**Export** and **Import** sit under the list's search bar, so they stay put while a search is
+active. `NpcVoiceTransferCodec` writes every stored override as one JSON document:
+
+```json
+{
+  "format": "voiced-dialogue-npc-voices",
+  "version": 1,
+  "overrides": {
+    "11911": { "accent": "Strong Scottish accent", "voiceType": "TYPE_B" }
+  }
+}
+```
+
+Each entry is written and read by `NpcVoiceOverrideJson`, the same class the store uses for its
+config values, so the file and the stored keys cannot drift apart. Only the player's stored
+overrides go in the file, never bundled or learned profile values.
+
+Import parses and validates the whole document before writing anything. A malformed document, a
+different `format`, or a `version` other than 1 is rejected outright. An entry whose id is not a plain
+NPC number written the way an export writes it, an unknown `voiceType`, or no fields left after `DirectionSanitizer` is skipped and counted.
+`NpcVoiceImportPlan` then counts how many NPCs the import sets, how many of those already have an
+edit it replaces, and how many other edits **Replace all** would clear, for the confirm step.
+**Merge** writes only the ids in the file; **Replace all** first clears every edit whose id is not in
+the file. Every write goes through `NpcVoiceOverrideStore.set`, so sanitizing and the
+`ConfigManager` write stay in one place, and `VoiceManager` reads the store per line, so an import is
+heard on the next line. `NpcVoiceTransfer` runs the flow against a small dialogs interface, which
+`SwingTransferDialogs` implements with `JOptionPane`, `JFileChooser`, and the system clipboard. A
+file over 1 MB is refused unread.
+
 Chat-heads come from the OSRS Wiki file `<Name> chathead.png`, fetched by `ChatheadImages` on its own
 `tts-chathead` daemon thread and cached for the session. A name the wiki has no chat-head for keeps a
 drawn silhouette and is not asked for again. Redraws triggered by a line being heard, a profile

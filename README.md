@@ -73,6 +73,8 @@ Open an NPC to set its **Voice type** (Type A or Type B, the same choice as **Pl
 
 Edits take effect on the next line, with no restart. An edited NPC is re-voiced, and billed again, the next time you hear each of its lines. Edits are stored in your RuneLite profile.
 
+To share a set of voices with a friend or copy them to another RuneLite profile, use **Export** under the search bar to copy your edits to the clipboard or save them as a `.json` file. **Import** takes pasted text or a file and shows what it will change first: choose **Merge** to add the imported NPCs to your own edits, or **Replace all** to keep only the imported ones. Only your own edits are exported.
+
 ## Track your spend
 
 Type `::voicedspend` in chat for this session's lines voiced, lines prefetched, and cost, one line per provider. Cached replays are free and counted nowhere. Totals reset when the plugin restarts.

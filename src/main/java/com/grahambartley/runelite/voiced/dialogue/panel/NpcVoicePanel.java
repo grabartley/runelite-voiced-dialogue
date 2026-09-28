@@ -1,7 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.panel;
 
+import com.google.gson.Gson;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceCatalog;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceTransferCodec;
 import com.grahambartley.runelite.voiced.dialogue.profile.RecentNpcSpeakers;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -11,6 +13,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import javax.swing.JLabel;
@@ -33,9 +36,11 @@ public final class NpcVoicePanel extends PluginPanel {
   private final BooleanSupplier showing;
   private final CardLayout cards = new CardLayout();
   private final JPanel content = new JPanel(cards);
+  private final NpcVoiceTransferBar transferBar;
   private final NpcListView listView;
   private final NpcDetailView detailView;
   private final Set<Integer> requestedNames = new HashSet<>();
+  private final AtomicBoolean refreshQueued = new AtomicBoolean();
   private String shownCard = LIST_CARD;
   private boolean formStale;
 
@@ -45,11 +50,13 @@ public final class NpcVoicePanel extends PluginPanel {
       NpcVoiceOverrideStore store,
       NpcNameResolver nameResolver,
       OkHttpClient httpClient,
-      ExecutorService chatheadExecutor) {
+      ExecutorService chatheadExecutor,
+      Gson gson) {
     this(
         catalog,
         recentSpeakers,
         store,
+        new NpcVoiceTransferCodec(store::sanitize, gson),
         nameResolver,
         new ChatheadImages(
             httpClient,
@@ -57,6 +64,7 @@ public final class NpcVoicePanel extends PluginPanel {
             chatheadExecutor,
             SwingUtilities::invokeLater),
         SwingUtilities::invokeLater,
+        null,
         null);
   }
 
@@ -64,10 +72,12 @@ public final class NpcVoicePanel extends PluginPanel {
       NpcVoiceCatalog catalog,
       RecentNpcSpeakers recentSpeakers,
       NpcVoiceOverrideStore store,
+      NpcVoiceTransferCodec transferCodec,
       NpcNameResolver nameResolver,
       ChatheadImages chatheads,
       Consumer<Runnable> uiThread,
-      BooleanSupplier showing) {
+      BooleanSupplier showing,
+      NpcVoiceTransfer.Dialogs dialogs) {
     super(false);
     this.catalog = catalog;
     this.nameResolver = nameResolver;
@@ -77,6 +87,13 @@ public final class NpcVoicePanel extends PluginPanel {
     setBorder(new EmptyBorder(10, 10, 10, 10));
     setBackground(ColorScheme.DARK_GRAY_COLOR);
 
+    transferBar =
+        new NpcVoiceTransferBar(
+            new NpcVoiceTransfer(
+                store,
+                transferCodec,
+                dialogs == null ? new SwingTransferDialogs(this) : dialogs,
+                this::refresh));
     listView =
         new NpcListView(
             new NpcListEntries(catalog),
@@ -84,7 +101,8 @@ public final class NpcVoicePanel extends PluginPanel {
             store::overriddenIds,
             chatheads,
             this::openDetail,
-            this::resolveNames);
+            this::resolveNames,
+            transferBar);
     detailView = new NpcDetailView(catalog, store, chatheads, this::showList, this::refresh);
 
     add(title(), BorderLayout.NORTH);
@@ -112,8 +130,12 @@ public final class NpcVoicePanel extends PluginPanel {
   }
 
   public void refreshLater() {
+    if (!refreshQueued.compareAndSet(false, true)) {
+      return;
+    }
     uiThread.accept(
         () -> {
+          refreshQueued.set(false);
           if (!showing.getAsBoolean()) {
             formStale = true;
           } else if (LIST_CARD.equals(shownCard)) {
@@ -189,6 +211,10 @@ public final class NpcVoicePanel extends PluginPanel {
 
   NpcListView listView() {
     return listView;
+  }
+
+  NpcVoiceTransferBar transferBar() {
+    return transferBar;
   }
 
   NpcDetailView detailView() {

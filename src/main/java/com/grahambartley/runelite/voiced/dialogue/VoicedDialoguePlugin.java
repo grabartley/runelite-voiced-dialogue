@@ -258,7 +258,8 @@ public class VoicedDialoguePlugin extends Plugin {
             voiceOverrideStore,
             this::resolveNpcNames,
             okHttpClient,
-            chatheadExecutor);
+            chatheadExecutor,
+            gson);
     navigationButton =
         NavigationButton.builder()
             .tooltip("Voiced Dialogue: NPC voices")
