@@ -231,8 +231,13 @@ public final class CloudSpeechExecutor {
     String voice = model.voiceFor(request.voice(), profile);
 
     if (config.debugMode()) {
+      String region = model.voiceRegionFor(request.voice(), profile);
       log.info(
-          "[TTS voice] cloud voice {} emotion {} -> style '{}'", voice, request.emotion(), style);
+          "[TTS voice] cloud voice {} region {} emotion {} -> style '{}'",
+          voice,
+          region == null ? "-" : region,
+          request.emotion(),
+          style);
       log.info(
           "[TTS cloud] character profile '{}' accent='{}' (cacheKey={})",
           profile.name(),

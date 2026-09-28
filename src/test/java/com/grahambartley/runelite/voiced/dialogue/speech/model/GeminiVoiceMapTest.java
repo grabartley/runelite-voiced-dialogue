@@ -426,6 +426,94 @@ public class GeminiVoiceMapTest {
         REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), welsh));
   }
 
+  private static CharacterProfile overridden(String accent, String bundledRegion) {
+    return new CharacterProfile(
+        "Npc", accent, null, "Plain.", "Steady.", null, bundledRegion, true);
+  }
+
+  private static final GeminiVoiceMap TWO_REGIONS =
+      new GeminiVoiceMap(
+          new GeminiVoiceRegions(
+              new JsonParser()
+                  .parse(
+                      "{\"IRISH\":{\"playerKeywords\":[\"irish\"],\"MALE\":[\"ie-m-1\",\"ie-m-2\"],"
+                          + "\"FEMALE\":[\"ie-f-1\"],\"CHILD_MALE\":[\"ie-young\"]},"
+                          + "\"SOUTHERN_ENGLISH\":{\"MALE\":[\"se-m-1\",\"se-m-2\"],"
+                          + "\"FEMALE\":[\"se-f-1\"]}}")
+                  .getAsJsonObject()));
+
+  @Test
+  public void anNpcAccentOverrideNamingARegionIsVoicedFromThatRegion() {
+    VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 42);
+    CharacterProfile irish =
+        overridden("Strong Irish accent, Irish English pronunciation", "SOUTHERN_ENGLISH");
+    String voice = TWO_REGIONS.voiceFor(spec, irish);
+    assertTrue(voice, voice.startsWith("ie-m-"));
+    assertEquals("IRISH", TWO_REGIONS.regionFor(spec, irish));
+  }
+
+  @Test
+  public void anOverrideRegionIsSeededLikeABundledNpcInThatRegion() {
+    VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 1234);
+    assertEquals(
+        TWO_REGIONS.voiceFor(spec, inRegion("IRISH")),
+        TWO_REGIONS.voiceFor(spec, overridden("Irish", "SOUTHERN_ENGLISH")));
+  }
+
+  @Test
+  public void anOverrideRegionKeepsTheGender() {
+    assertEquals(
+        "ie-f-1",
+        TWO_REGIONS.voiceFor(
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE, 7),
+            overridden("Irish", "SOUTHERN_ENGLISH")));
+  }
+
+  @Test
+  public void anOverrideRegionAppliesToTheChildPool() {
+    assertEquals(
+        "ie-young",
+        TWO_REGIONS.voiceFor(
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 7, true),
+            overridden("Irish", "SOUTHERN_ENGLISH")));
+  }
+
+  @Test
+  public void anOverrideAccentNamingNoRegionKeepsTheBundledRegion() {
+    VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 42);
+    CharacterProfile welsh = overridden("Strong Welsh accent", "SOUTHERN_ENGLISH");
+    assertEquals(
+        TWO_REGIONS.voiceFor(spec, inRegion("SOUTHERN_ENGLISH")),
+        TWO_REGIONS.voiceFor(spec, welsh));
+    assertEquals("SOUTHERN_ENGLISH", TWO_REGIONS.regionFor(spec, welsh));
+  }
+
+  @Test
+  public void aBundledAccentNamingARegionDoesNotMoveTheVoice() {
+    VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 42);
+    CharacterProfile bundled =
+        new CharacterProfile(
+            "Npc", "Irish accent", null, "Plain.", "Steady.", null, "SOUTHERN_ENGLISH");
+    assertTrue(TWO_REGIONS.voiceFor(spec, bundled).startsWith("se-m-"));
+    assertEquals("SOUTHERN_ENGLISH", TWO_REGIONS.regionFor(spec, bundled));
+  }
+
+  @Test
+  public void anUnseededNpcIgnoresTheOverrideRegion() {
+    VoiceSpec unseeded = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
+    CharacterProfile irish = overridden("Irish", "SOUTHERN_ENGLISH");
+    assertEquals(map.voiceFor(unseeded, null), TWO_REGIONS.voiceFor(unseeded, irish));
+    assertEquals(null, TWO_REGIONS.regionFor(unseeded, irish));
+  }
+
+  @Test
+  public void regionForMatchesThePlayersTypedAccentAndSkipsTheNarrator() {
+    CharacterProfile irish = new CharacterProfile("Adventurer", "Irish", "Plain.", "Steady.");
+    assertEquals("IRISH", TWO_REGIONS.regionFor(VoiceSpec.player(NpcGender.MALE), irish));
+    assertEquals(null, TWO_REGIONS.regionFor(VoiceSpec.NARRATOR, irish));
+    assertEquals(null, TWO_REGIONS.regionFor(null, irish));
+  }
+
   private static Set<String> pool(String... voices) {
     return new HashSet<>(Arrays.asList(voices));
   }

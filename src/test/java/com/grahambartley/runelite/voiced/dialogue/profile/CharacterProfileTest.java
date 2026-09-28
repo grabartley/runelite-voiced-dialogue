@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 
 import junitparams.JUnitParamsRunner;
@@ -64,6 +65,25 @@ public class CharacterProfileTest {
             "Very deep voice",
             null);
     assertNotEquals(WIZARD.cacheKey(), pitched.cacheKey());
+  }
+
+  @Test
+  public void anOverriddenAccentChangesTheCacheKeySinceItCanMoveTheVoice() {
+    CharacterProfile bundled =
+        new CharacterProfile("Wizard", "Irish accent", null, "Warm", "Measured", null, "SCOTTISH");
+    CharacterProfile overridden =
+        new CharacterProfile(
+            "Wizard", "Irish accent", null, "Warm", "Measured", null, "SCOTTISH", true);
+    assertNotEquals(bundled.cacheKey(), overridden.cacheKey());
+    assertNotEquals(bundled, overridden);
+  }
+
+  @Test
+  public void aProfileIsNotAccentOverriddenByDefault() {
+    assertFalse(WIZARD.accentOverridden());
+    assertFalse(
+        new CharacterProfile("Wizard", "Irish accent", null, "Warm", "Measured", null, "IRISH")
+            .accentOverridden());
   }
 
   @Test

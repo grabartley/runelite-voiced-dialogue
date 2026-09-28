@@ -195,7 +195,9 @@ and a bundled `byId` entry for the same NPC line up. `VoiceManager` looks the ov
 line and hands it to both halves. Profile fields patch over every bundled layer field by field (the
 resolution order is in [npc-voice-tooling](npc-voice-tooling.md)). The voice type is a separate
 merge point: it replaces the detected gender in `VoiceSpec` rather than living in the profile.
-Race, the child flag and the voice pool are not overridable. Every free-text field passes through
+Race and the child flag are not overridable, and neither is the voice pool directly: an
+overridden accent that names a region's `playerKeywords` moves the NPC to that region's native
+voices (see [voice-casting](voice-casting.md), "NPC accent overrides"). Every free-text field passes through
 `DirectionSanitizer` on write and on load, since the profile reaches the Gemini style prompt
 unchanged. An edit changes `CharacterProfile.cacheKey()` or `VoiceSpec.key()`, so only that NPC's
 clips are re-voiced.
