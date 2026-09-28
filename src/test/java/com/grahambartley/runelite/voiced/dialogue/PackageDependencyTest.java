@@ -31,6 +31,7 @@ public class PackageDependencyTest {
   static {
     TIER.put("", 8);
     TIER.put("capture", 7);
+    TIER.put("panel", 7);
     TIER.put("speech.openrouter", 7);
     TIER.put("speech.aistudio", 7);
     TIER.put("speech", 6);

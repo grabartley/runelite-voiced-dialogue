@@ -1,16 +1,20 @@
 package com.grahambartley.runelite.voiced.dialogue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.audio.AudioOutput;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.audio.StreamingAudioPlayer;
+import com.grahambartley.runelite.voiced.dialogue.panel.NpcVoicePanel;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
@@ -23,14 +27,23 @@ import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.runelite.api.Client;
+import net.runelite.api.NPCComposition;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.ProfileChanged;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import org.junit.Test;
 
 public class VoicedDialoguePluginTest {
@@ -292,6 +305,74 @@ public class VoicedDialoguePluginTest {
   @Test
   public void aProfileSwitchBeforeStartUpIsIgnored() {
     new VoicedDialoguePlugin().onProfileChanged(new ProfileChanged());
+  }
+
+  @Test
+  public void anOverrideKeyChangeRedrawsTheNpcVoicePanel() throws Exception {
+    NpcVoicePanel panel = mock(NpcVoicePanel.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "npcVoicePanel", panel);
+
+    plugin.onConfigChanged(configChanged("voicedDialogue", "npcVoice_11911"));
+    plugin.onConfigChanged(configChanged("voicedDialogue", "volume"));
+
+    verify(panel, times(1)).refreshLater();
+  }
+
+  @Test
+  public void aProfileSwitchRedrawsTheNpcVoicePanel() throws Exception {
+    NpcVoicePanel panel = mock(NpcVoicePanel.class);
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "npcVoicePanel", panel);
+
+    plugin.onProfileChanged(new ProfileChanged());
+
+    verify(panel).refreshLater();
+  }
+
+  @Test
+  public void shutDownRemovesTheSidePanelButton() throws Exception {
+    ClientToolbar toolbar = mock(ClientToolbar.class);
+    NavigationButton button = NavigationButton.builder().tooltip("t").build();
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "clientToolbar", toolbar);
+    setField(plugin, "navigationButton", button);
+
+    plugin.shutDown();
+
+    verify(toolbar).removeNavigation(button);
+  }
+
+  @Test
+  public void npcNamesAreReadOnTheClientThreadAndBlankOnesSkipped() throws Exception {
+    Client client = mock(Client.class);
+    NPCComposition named = mock(NPCComposition.class);
+    when(named.getName()).thenReturn("Mystery trader");
+    NPCComposition unnamed = mock(NPCComposition.class);
+    when(unnamed.getName()).thenReturn("null");
+    when(client.getNpcDefinition(1)).thenReturn(named);
+    when(client.getNpcDefinition(2)).thenReturn(unnamed);
+    when(client.getNpcDefinition(3)).thenReturn(null);
+    ClientThread clientThread = mock(ClientThread.class);
+    List<Runnable> clientTasks = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              clientTasks.add(invocation.getArgument(0));
+              return null;
+            })
+        .when(clientThread)
+        .invoke(any(Runnable.class));
+    VoicedDialoguePlugin plugin = new VoicedDialoguePlugin();
+    setField(plugin, "client", client);
+    setField(plugin, "clientThread", clientThread);
+    List<Map<Integer, String>> resolved = new ArrayList<>();
+
+    plugin.resolveNpcNames(new HashSet<>(Arrays.asList(1, 2, 3)), resolved::add);
+    assertTrue(resolved.isEmpty());
+    clientTasks.forEach(Runnable::run);
+
+    assertEquals(
+        Collections.singletonList(Collections.singletonMap(1, "Mystery trader")), resolved);
   }
 
   private static VoicedDialoguePlugin pluginWith(ConfigManager configManager, String openRouterKey)

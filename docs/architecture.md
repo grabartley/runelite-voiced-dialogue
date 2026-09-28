@@ -200,6 +200,44 @@ Race, the child flag and the voice pool are not overridable. Every free-text fie
 unchanged. An edit changes `CharacterProfile.cacheKey()` or `VoiceSpec.key()`, so only that NPC's
 clips are re-voiced.
 
+### NPC Voices side panel
+
+`NpcVoicePanel` is the plugin's one `PluginPanel`, added to the sidebar through `ClientToolbar` on
+start-up and removed on shut-down. It is a single panel holding two views in a `CardLayout`: the list
+(`NpcListView`) and the edit form (`NpcDetailView`). Switching views never rebuilds the list, so it
+keeps its scroll position.
+
+The list reads three sources. `RecentNpcSpeakers` is a ring of the last 30 NPCs resolved for a line,
+dialogue or ambient chatter, recorded by `VoiceManager` under the same `profileId()` the override
+store is keyed by. `NpcVoiceOverrideStore.overriddenIds()` lists edited NPCs. `NpcVoiceCatalog` holds
+the name of every bundled `byId` entry, plus names learned this session. An edited id with no known
+name is named from its `NPCComposition` on the client thread. With no search, the list shows
+**Heard this session** then **Edited**. A search matches every known name, ranking heard, then
+edited, then prefix matches, and caps at 50 rows. `NpcListEntries` builds each listing as a pure
+function, one row per display name, carrying every id with that name.
+
+The form never reads the bundled profile. It shows only what the player has saved for the selected
+id, with each blank field meaning the plugin's value. That keeps the bundled prompt text out of the
+panel. Only NPC names from the bundled table appear.
+
+`NpcScopePicker` resolves each scope to an explicit id list before saving, and Save writes that list
+one key per id:
+
+- **Only this NPC**: the id alone.
+- **This character and its variants**: every id whose cache symbol matches after stripping
+  `_VARIANT<n>`, a `_F` or `_M` segment, and digit runs, so `FAI_VARROCK_GUARD02_F_VARIANT01` joins
+  `FAI_VARROCK_GUARD`. The captain, `FAI_VARROCK_GUARD_CAPTAIN02`, stays apart.
+- **Everyone called "X"**: every id with that display name.
+
+Writing ids, not a rule, means a regenerated table never widens an edit the player already saved.
+Save is enabled only when saving would change a stored override in the scope, and **Clear
+override** only when one exists.
+
+Chat-heads come from the OSRS Wiki file `<Name> chathead.png`, fetched by `ChatheadImages` on its own
+`tts-chathead` daemon thread and cached for the session. A name the wiki has no chat-head for keeps a
+drawn silhouette and is not asked for again. Redraws triggered by a line being heard, a profile
+switch, or an override key changing are posted to the Swing thread with `SwingUtilities.invokeLater`.
+
 ## Auto-learn
 
 **Auto-learn New NPCs** covers whoever the bundled table misses: it reads the NPC's wiki page and
