@@ -14,52 +14,34 @@ import net.runelite.api.NPC;
 @Slf4j
 public class VoiceManager {
 
-  public enum PlayerVoice {
-    TYPE_A(NpcGender.MALE, "Type A"),
-    TYPE_B(NpcGender.FEMALE, "Type B");
-
-    private final NpcGender gender;
-    private final String label;
-
-    PlayerVoice(NpcGender gender, String label) {
-      this.gender = gender;
-      this.label = label;
-    }
-
-    public NpcGender getGender() {
-      return gender;
-    }
-
-    @Override
-    public String toString() {
-      return label;
-    }
-  }
-
   private final VoicedDialogueConfig config;
   private final NpcDemographicAnalyzer demographicAnalyzer;
   private final NpcProfileTable profileTable;
   private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
+  private final NpcVoiceOverrideStore overrideStore;
 
   private NpcLearningService learningService;
 
-  public static VoiceManager create(VoicedDialogueConfig config, Client client) {
+  public static VoiceManager create(
+      VoicedDialogueConfig config, Client client, NpcVoiceOverrideStore overrideStore) {
     NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
     demographicAnalyzer.initialize();
     NpcProfileTable profileTable = new NpcProfileTable();
     profileTable.initialize();
-    return new VoiceManager(config, client, demographicAnalyzer, profileTable);
+    return new VoiceManager(config, client, demographicAnalyzer, profileTable, overrideStore);
   }
 
   public VoiceManager(
       VoicedDialogueConfig config,
       Client client,
       NpcDemographicAnalyzer demographicAnalyzer,
-      NpcProfileTable profileTable) {
+      NpcProfileTable profileTable,
+      NpcVoiceOverrideStore overrideStore) {
     this.config = config;
     this.demographicAnalyzer = demographicAnalyzer;
     this.profileTable = profileTable;
+    this.overrideStore = overrideStore;
     this.identityResolver =
         new NpcIdentityResolver(new NpcFinder(client), demographicAnalyzer, profileTable);
     this.npcVoiceResolver = new NpcVoiceResolver(config);
@@ -101,8 +83,10 @@ public class VoiceManager {
   }
 
   private ResolvedSpeaker npcSpeaker(String npcName, NpcIdentity identity) {
-    VoiceSpec voice = npcVoiceResolver.resolve(npcName, identity);
-    return new ResolvedSpeaker(voice, npcProfile(npcName, identity));
+    NpcVoiceOverride override = overrideStore.get(identity.profileId());
+    VoiceSpec voice =
+        npcVoiceResolver.resolve(npcName, identity, override == null ? null : override.voiceType());
+    return new ResolvedSpeaker(voice, npcProfile(npcName, identity, override));
   }
 
   public ResolvedSpeaker resolveNarrator() {
@@ -127,19 +111,20 @@ public class VoiceManager {
     return profile;
   }
 
-  private CharacterProfile npcProfile(String npcName, NpcIdentity identity) {
-    Integer npcId = identity.worldId();
+  private CharacterProfile npcProfile(
+      String npcName, NpcIdentity identity, NpcVoiceOverride override) {
+    Integer npcId = identity.profileId();
     String race = null;
     String ethnicity = null;
     NpcAttributes attributes = identity.attributes();
     if (attributes != null) {
       race = attributes.getRace();
       ethnicity = attributes.getEthnicity();
-      npcId = attributes.getNpcId();
     }
 
     NpcProfileTable.Resolution resolution =
-        profileTable.resolveNpc(npcId, identity.nameMatch(), race, ethnicity, identity.child());
+        profileTable.resolveNpc(
+            npcId, identity.nameMatch(), race, ethnicity, identity.child(), override);
     if (config.debugMode()) {
       log.info(
           "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}',"

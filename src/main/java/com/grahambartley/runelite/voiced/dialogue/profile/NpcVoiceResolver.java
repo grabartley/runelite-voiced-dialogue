@@ -25,16 +25,16 @@ final class NpcVoiceResolver {
     this.learningService = learningService;
   }
 
-  VoiceSpec resolve(String npcName, NpcIdentity identity) {
+  VoiceSpec resolve(String npcName, NpcIdentity identity, VoiceType voiceType) {
     if (npcName == null || npcName.isEmpty()) {
-      return defaultVoice(npcName, null, identity, "blank-name");
+      return defaultVoice(npcName, null, identity, voiceType, "blank-name");
     }
     if (identity.worldId() == null) {
-      return defaultVoice(npcName, null, identity, "not-in-world");
+      return defaultVoice(npcName, null, identity, voiceType, "not-in-world");
     }
     NpcAttributes attributes = identity.attributes();
     if (attributes == null) {
-      return defaultVoice(npcName, identity.baseId(), identity, "analysis-failed");
+      return defaultVoice(npcName, identity.baseId(), identity, voiceType, "analysis-failed");
     }
 
     NpcRace race = NpcDemographicParser.toRace(attributes.getRace());
@@ -48,6 +48,11 @@ final class NpcVoiceResolver {
 
     NpcRace voiceRace = race == NpcRace.UNKNOWN ? NpcRace.HUMAN : race;
     NpcGender voiceGender = NpcDemographicParser.toVoiceGender(gender);
+    if (voiceType != null) {
+      voiceGender = voiceType.getGender();
+      gender = voiceGender;
+      source += "+voice-type-override";
+    }
     boolean child = identity.child();
     int seed = voiceSeed(identity.baseId(), npcName);
     if (config.debugMode()) {
@@ -59,15 +64,26 @@ final class NpcVoiceResolver {
   }
 
   private VoiceSpec defaultVoice(
-      String npcName, Integer npcId, NpcIdentity identity, String source) {
+      String npcName, Integer npcId, NpcIdentity identity, VoiceType voiceType, String source) {
     boolean child = identity.child();
     int seed = voiceSeed(npcId, npcName);
+    NpcGender voiceTypeGender = voiceType == null ? null : voiceType.getGender();
+    if (voiceTypeGender != null) {
+      source += "+voice-type-override";
+    }
     if (config.debugMode()) {
       log.info(
           VoiceTraceFormatter.buildNpcTrace(
-              npcName, npcId, NpcRace.UNKNOWN, NpcGender.UNKNOWN, child, source, seed));
+              npcName,
+              npcId,
+              NpcRace.UNKNOWN,
+              voiceTypeGender == null ? NpcGender.UNKNOWN : voiceTypeGender,
+              child,
+              source,
+              seed));
     }
-    return VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, seed, child);
+    return VoiceSpec.npc(
+        NpcRace.HUMAN, voiceTypeGender == null ? NpcGender.MALE : voiceTypeGender, seed, child);
   }
 
   private static int voiceSeed(Integer npcId, String npcName) {

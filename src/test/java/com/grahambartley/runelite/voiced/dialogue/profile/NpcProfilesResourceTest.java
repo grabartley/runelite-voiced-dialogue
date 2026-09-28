@@ -18,7 +18,7 @@ public class NpcProfilesResourceTest {
 
   private NpcProfileTable.Resolution resolve(
       Integer npcId, String npcName, String race, String ethnicity) {
-    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false);
+    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false, null);
   }
 
   private boolean isChild(String npcName) {
@@ -306,7 +306,7 @@ public class NpcProfilesResourceTest {
   public void eoinKeepsABoyishPitchOverTheChildDefault() {
     for (int id : new int[] {5302, 8930, 8931}) {
       NpcProfileTable.Resolution eoin =
-          table.resolveNpc(id, table.matchName("Eoin"), "Elf", "tirannwn", true);
+          table.resolveNpc(id, table.matchName("Eoin"), "Elf", "tirannwn", true, null);
       assertEquals(
           "Bright boyish voice, clearly a young lad, never squeaky", eoin.profile().pitch());
     }
