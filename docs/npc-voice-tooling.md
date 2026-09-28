@@ -41,6 +41,9 @@ none of those, so their race comes from the page's categories. The generator:
 3. Maps each cache id to `{race, gender, ethnicity}` (plus a curated `lifeStage` child
    marker from the overrides), deriving race from the
    page categories when the infobox does not carry it.
+4. Corrects each id's gender from its cache symbol in the RuneLite api jar the
+   Gradle build resolves (`./gradlew -q printRuneliteApiJar`, read with
+   `javap -constants`), see [Mapping rules](#mapping-rules).
 
 A field value is read to the end of its line and cut at the first `|`, or at a
 link or template close that has nothing open, that sits outside a link or a
@@ -115,7 +118,18 @@ reason written up below. Re-sorting the list would change what thousands of NPCs
   Cold War penguins keep their own voice wherever they turn up. The penguins in
   costume are pinned to `Penguin` rather than to whatever they are dressed as.
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
-  wiki has none.
+  wiki has none. A switch infobox pairs its i-th id group with its i-th gender, but
+  a page that lists more id groups than genders gives every id the page's first
+  gender. The cache symbol then decides: RuneLite's `net.runelite.api.gameval.NpcID`
+  names each id after Jagex's own symbol, and a whole `F`, `FEMALE`, `M` or `MALE`
+  token in it (`FAI_VARROCK_GUARD02_F`, `VARLAMORE_FISHER_M_1`) sets that id's
+  gender over whatever the wiki gave it. A symbol naming both, or neither, leaves
+  the wiki gender alone. An override that names a gender still wins over the
+  symbol, and `NpcDemographicAnalyzerTest` fails the build if any id resolves
+  against its symbol, so a gender pin must agree with the symbol. That test applies the same token rule
+  as the generator, so it guards the table against the rule rather than proving the
+  rule; the rule itself was checked against the wiki's own per-version genders. A
+  symbol Jagex ever mislabels would need an exception in both.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
   proxy for ethnicity (where they are from) and maps to an ethnicity accent key.
   `Desert` splits into `kharidian` (Middle Eastern) and `menaphite` (Egyptian, for
@@ -129,7 +143,9 @@ reason written up below. Re-sorting the list would change what thousands of NPCs
 
 ## Regenerate the table
 
-From the repo root (needs network access to the wiki):
+From the repo root (needs network access to the wiki, and a JDK for `javap`; pass
+`--runelite-api <jar>` to read the symbols from a specific api jar instead of the
+one the build resolves):
 
 ```bash
 python3 tools/generate_npc_voices.py
@@ -139,7 +155,8 @@ python3 tools/generate_npc_voices.py --limit 500
 
 For an **overrides- or profiles-only** change (no new wiki coverage needed), use
 the offline `--base` mode instead. It re-applies `overrides.json` and re-embeds
-`profiles.json` onto the existing table without the live wiki scrape, so the diff
+`profiles.json` onto the existing table, and applies the cache symbol genders,
+without the live wiki scrape, so the diff
 is minimal and deterministic (only the changed ids, the embedded profiles, and
 the `_meta` counts) with no wiki drift:
 
