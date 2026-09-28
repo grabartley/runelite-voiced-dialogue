@@ -345,13 +345,13 @@ public class NpcDetailViewTest {
   }
 
   @Test
-  public void aStoredNameAloneStillCountsAsAnEdit() {
+  public void aStoredNameAloneOpensBlankAndCanBeCleared() {
     store.set(HANS, new NpcVoiceOverride("Hans the Elder", null, null, null, null));
 
     view.open(PanelFixtures.single("Hans", HANS));
 
     assertBlank();
-    assertFalse(view.saveButton().isEnabled());
+    assertTrue(view.saveButton().isEnabled());
     assertTrue(view.clearButton().isEnabled());
   }
 
