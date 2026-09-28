@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonParser;
@@ -18,6 +19,17 @@ import org.junit.Test;
 public class GeminiVoiceMapTest {
 
   private final GeminiVoiceMap map = new GeminiVoiceMap();
+
+  private static final GeminiVoiceMap TWO_REGIONS =
+      new GeminiVoiceMap(
+          new GeminiVoiceRegions(
+              new JsonParser()
+                  .parse(
+                      "{\"IRISH\":{\"playerKeywords\":[\"irish\"],\"MALE\":[\"ie-m-1\",\"ie-m-2\"],"
+                          + "\"FEMALE\":[\"ie-f-1\"],\"CHILD_MALE\":[\"ie-young\"]},"
+                          + "\"SOUTHERN_ENGLISH\":{\"MALE\":[\"se-m-1\",\"se-m-2\"],"
+                          + "\"FEMALE\":[\"se-f-1\"]}}")
+                  .getAsJsonObject()));
 
   private static final String[] REGION_KEYS = {
     "SOUTHERN_ENGLISH",
@@ -356,6 +368,11 @@ public class GeminiVoiceMapTest {
     return new CharacterProfile("Npc", "Strong accent", null, "Plain.", "Steady.", null, region);
   }
 
+  private static CharacterProfile overridden(String accent, String bundledRegion) {
+    return new CharacterProfile(
+        "Npc", accent, null, "Plain.", "Steady.", null, bundledRegion, true);
+  }
+
   @Test
   public void anNpcWithARegionIsVoicedFromThatRegionsPool() {
     String voice =
@@ -426,22 +443,6 @@ public class GeminiVoiceMapTest {
         REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), welsh));
   }
 
-  private static CharacterProfile overridden(String accent, String bundledRegion) {
-    return new CharacterProfile(
-        "Npc", accent, null, "Plain.", "Steady.", null, bundledRegion, true);
-  }
-
-  private static final GeminiVoiceMap TWO_REGIONS =
-      new GeminiVoiceMap(
-          new GeminiVoiceRegions(
-              new JsonParser()
-                  .parse(
-                      "{\"IRISH\":{\"playerKeywords\":[\"irish\"],\"MALE\":[\"ie-m-1\",\"ie-m-2\"],"
-                          + "\"FEMALE\":[\"ie-f-1\"],\"CHILD_MALE\":[\"ie-young\"]},"
-                          + "\"SOUTHERN_ENGLISH\":{\"MALE\":[\"se-m-1\",\"se-m-2\"],"
-                          + "\"FEMALE\":[\"se-f-1\"]}}")
-                  .getAsJsonObject()));
-
   @Test
   public void anNpcAccentOverrideNamingARegionIsVoicedFromThatRegion() {
     VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 42);
@@ -503,15 +504,15 @@ public class GeminiVoiceMapTest {
     VoiceSpec unseeded = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE);
     CharacterProfile irish = overridden("Irish", "SOUTHERN_ENGLISH");
     assertEquals(map.voiceFor(unseeded, null), TWO_REGIONS.voiceFor(unseeded, irish));
-    assertEquals(null, TWO_REGIONS.regionFor(unseeded, irish));
+    assertNull(TWO_REGIONS.regionFor(unseeded, irish));
   }
 
   @Test
   public void regionForMatchesThePlayersTypedAccentAndSkipsTheNarrator() {
     CharacterProfile irish = new CharacterProfile("Adventurer", "Irish", "Plain.", "Steady.");
     assertEquals("IRISH", TWO_REGIONS.regionFor(VoiceSpec.player(NpcGender.MALE), irish));
-    assertEquals(null, TWO_REGIONS.regionFor(VoiceSpec.NARRATOR, irish));
-    assertEquals(null, TWO_REGIONS.regionFor(null, irish));
+    assertNull(TWO_REGIONS.regionFor(VoiceSpec.NARRATOR, irish));
+    assertNull(TWO_REGIONS.regionFor(null, irish));
   }
 
   private static Set<String> pool(String... voices) {

@@ -82,12 +82,11 @@ public final class GeminiVoiceMap {
       return narrator != null ? narrator : FALLBACK_NARRATOR_VOICE;
     }
     NpcGender gender = normalizeGender(spec.gender());
+    String region = regionFor(spec, profile);
     if (spec.player()) {
-      String accent = profile == null ? null : profile.accent();
-      String regional = regions.voiceFor(regions.regionForAccent(accent), gender, PLAYER_SEED);
+      String regional = regions.voiceFor(region, gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
     }
-    String region = npcRegion(spec, profile);
     if (spec.child()) {
       String regional = regions.childVoiceFor(region, gender, spec.voiceSeed());
       if (regional != null) {

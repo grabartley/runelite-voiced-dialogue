@@ -260,7 +260,8 @@ different people, where a short style string flattens them together.
 - `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
   (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
   comes from the same layer as the winning accent, so an accent with no region (Welsh, Nigerian)
-  clears any region a less specific layer set. See [voice-casting.md](voice-casting.md).
+  clears any region a less specific layer set. A player's accent override is the one exception:
+  its region comes from the typed accent instead. See [voice-casting.md](voice-casting.md).
 - No meta-instructions ("word for word", "do not change voice") and no square- or angle-bracket
   tags.
 
@@ -334,8 +335,10 @@ keyword takes the `child` category layer after the keyword categories and before
 6. Player overrides - the player's own edits for one NPC id, held by `NpcVoiceOverrideStore`
    outside the bundled table (see [architecture](architecture.md#player-voice-overrides)).
    Each field it sets beats every layer above: `name` and `pace` replace, `style` replaces the
-   whole blended style, and `accent` replaces the accent and drops the bundled `accentDetail`
-   while `voiceRegion` stays where the bundled layers put it. Fields it leaves unset inherit.
+   whole blended style, and `accent` replaces the accent and drops the bundled `accentDetail`.
+   `voiceRegion` stays where the bundled layers put it unless the override accent names a
+   region's `playerKeywords`, in which case `GeminiVoiceMap` voices the NPC from that region (see
+   [voice-casting](voice-casting.md#npc-accent-overrides)). Fields it leaves unset inherit.
 
 Player lines use the `player` layer over the default; the three player fields in
 the plugin config (accent/style/pace) override it at runtime when non-blank.
