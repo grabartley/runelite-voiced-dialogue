@@ -67,7 +67,7 @@ Switch any time with **Voice Provider**. Cached lines are instant and free on bo
 
 ## Change how an NPC sounds
 
-Click the speech-bubble icon in RuneLite's sidebar to open **NPC Voices**. NPCs you hear this session and NPCs you have edited are listed with their chat-heads; search to find anyone else by name.
+Click the Voiced Dialogue icon in RuneLite's sidebar to open **NPC Voices**. NPCs you hear this session and NPCs you have edited are listed with their chat-heads; search to find anyone else by name.
 
 Open an NPC to set its **Voice type** (Type A or Type B, the same choice as **Player Voice**), **Character name**, **Accent**, **Style**, and **Pace**. Leave a field blank to keep the plugin's voice for it. Under **Apply to**, choose **Only this NPC**, **This character and its variants** (such as every Varrock guard variant), or **Everyone called** that name; each option shows how many NPCs it covers. **Clear override** puts the plugin's voice back.
 

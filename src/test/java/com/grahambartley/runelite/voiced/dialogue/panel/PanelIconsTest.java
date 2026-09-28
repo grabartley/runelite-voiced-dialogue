@@ -29,6 +29,20 @@ public class PanelIconsTest {
   }
 
   @Test
+  public void theNavigationIconIsThePluginIconScaledToFit() {
+    BufferedImage icon = PanelIcons.navigation();
+
+    assertEquals(0, icon.getRGB(0, 0) >>> 24);
+    assertTrue(
+        (icon.getRGB(PanelIcons.NAVIGATION_SIZE / 2, PanelIcons.NAVIGATION_SIZE / 2) >>> 24) > 0);
+  }
+
+  @Test
+  public void theNavigationIconResourceShipsWithThePlugin() {
+    assertTrue(PanelIcons.class.getResource(PanelIcons.NAVIGATION_RESOURCE) != null);
+  }
+
+  @Test
   public void thePlaceholderIsTheRequestedSizeAndDrawn() {
     BufferedImage placeholder = PanelIcons.chatheadPlaceholder(48);
 
