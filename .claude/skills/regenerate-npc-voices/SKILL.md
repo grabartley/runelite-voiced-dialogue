@@ -6,7 +6,8 @@ description: Regenerate the bundled NPC voice + profile table (src/main/resource
 # Regenerate the NPC voice table
 
 `src/main/resources/npc-voices.json` is **generated**, never hand-edited. It holds
-`_meta`, the `profiles` section (embedded from `tools/profiles.json`), and the
+`_meta`, the `profiles` section (embedded from `tools/profiles.json`), the
+`symbols` map (`id -> cache symbol`, only for ids whose `byId` name another id shares), and the
 `npcs` table (`id -> {race, gender, ethnicity?}`).
 
 ## Command
