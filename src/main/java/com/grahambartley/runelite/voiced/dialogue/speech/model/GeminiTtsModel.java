@@ -40,6 +40,10 @@ public final class GeminiTtsModel {
     return voiceMap.voiceFor(voice, profile);
   }
 
+  public String voiceRegionFor(VoiceSpec voice, CharacterProfile profile) {
+    return voiceMap.regionFor(voice, profile);
+  }
+
   public String speechStyle(
       CharacterProfile profile, VoiceSpec voice, Emotion emotion, String language) {
     return GeminiSpeechStyle.compose(profile, voice, emotion, language, null);
