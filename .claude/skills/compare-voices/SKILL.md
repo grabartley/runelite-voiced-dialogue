@@ -22,8 +22,9 @@ that version.
 when the run fails. It never lands in the build or CI.
 
 The result is `voice-qa-sheet.html` in the output directory. Each card has the real line, the
-Before and After clips, and the voice id, region and accent each side used, plus Go / No go
-buttons. **Copy results** puts the verdicts on the clipboard to paste back into the session.
+Before and After clips, and the race and gender, profile, voice id, region and accent each side
+used, with the fields that differ in bold, plus Go / No go buttons. A case's `why` is shown above
+its line. **Copy results** puts the verdicts on the clipboard to paste back into the session.
 
 ## Run it
 
@@ -42,6 +43,24 @@ buttons. **Copy results** puts the verdicts on the clipboard to paste back into 
 - Use a Java 17 shell, the same one used for `./gradlew build`. The sheet builder compresses clips
   with macOS `afconvert`.
 - Put `<out-dir>` in a scratch location, never inside the repo.
+
+## Focused runs for specific NPCs
+
+When a change targets particular NPCs (an override, a `byId` profile, a race or gender fix), render
+those NPCs rather than the broad set. Write a cases file in scratch, never in the repo, with one
+case per NPC that sounds different, and point `VOICE_QA_CASES` at it:
+
+```bash
+VOICE_QA_CASES=<scratch>/cases.json .claude/skills/compare-voices/run.sh origin/main <out-dir>
+```
+
+Every case in a focused run carries a `why`: one or two plain sentences on who the NPC is, what
+changes for them (race, gender, accent, profile, before and after) and why, naming the source that
+proves it (cache symbol, wiki infobox, transcript). The developer judges each card on its own, so
+the card must explain itself, for example: "Gary, a frog from The Ribbiting Tale of a Lily Pad
+Labour Dispute. Accent goes from Welsh to Varlamore: the wiki's stale Pet Snakeling page claimed
+his id and gave him Zulrah's region, and his infobox and fellow frogs are Varlamore." Speakers who
+never talk (no Talk-to, no transcript) get no case; list them in the reply instead.
 
 A full run is about 80 short lines, so it costs a few cents and takes a few minutes.
 
