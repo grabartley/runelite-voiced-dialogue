@@ -175,6 +175,25 @@ so with **Auto-learn New NPCs** on, ambient chatter offers unknown speakers to t
 dialogue does. Only an NPC the bundled table and the learned store both miss is looked up, once per
 id and off the game thread, so the cost stays bounded.
 
+### Player voice overrides
+
+A player can override any NPC's `name`, `accent`, `style`, `pace` and gender. `NpcVoiceOverrideStore`
+keeps them in `ConfigManager`, one key per NPC id in the plugin's config group (`npcVoice_<id>`), each
+value a small JSON object holding only the fields the player set, such as `{"gender":"Female"}`.
+Keeping them in config means they follow the player's RuneLite profile and profile sync; the store
+loads every key once on startup and again when the RuneLite profile changes, into an in-memory map
+the resolvers read, and a write updates the map and `ConfigManager` together. A malformed value is
+logged and skipped without failing the rest of the load.
+
+The id is the one the bundled profile resolves under (`NpcIdentity.profileId()`), so an override
+and a bundled `byId` entry for the same NPC line up. Profile fields patch over every bundled layer
+field by field (the resolution order is in [npc-voice-tooling](npc-voice-tooling.md)). Gender is a
+separate merge point: it replaces the detected gender in `VoiceSpec` rather than living in the
+profile. Race, the child flag and the voice pool are not overridable. Every free-text field passes
+through `DirectionSanitizer` on write and on load, since the profile reaches the Gemini style
+prompt unchanged. An edit changes `CharacterProfile.cacheKey()` or `VoiceSpec.key()`, so only that
+NPC's clips are re-voiced.
+
 ## Auto-learn
 
 **Auto-learn New NPCs** covers whoever the bundled table misses: it reads the NPC's wiki page and

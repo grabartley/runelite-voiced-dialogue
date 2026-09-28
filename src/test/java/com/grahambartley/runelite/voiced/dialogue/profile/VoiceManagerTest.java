@@ -23,6 +23,7 @@ import java.util.Collections;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
+import net.runelite.client.config.ConfigManager;
 import org.junit.Test;
 
 public class VoiceManagerTest {
@@ -42,6 +43,9 @@ public class VoiceManagerTest {
 
   private static final int DWARF_ID = 290;
 
+  private final NpcVoiceOverrideStore overrideStore =
+      new NpcVoiceOverrideStore(mock(ConfigManager.class));
+
   private VoiceManager newManager(PlayerVoice playerVoice) {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
@@ -53,7 +57,8 @@ public class VoiceManagerTest {
     demographicAnalyzer.initialize();
     NpcProfileTable profileTable = new NpcProfileTable();
     profileTable.initialize();
-    return new VoiceManager(new TestConfig(playerVoice), client, demographicAnalyzer, profileTable);
+    return new VoiceManager(
+        new TestConfig(playerVoice), client, demographicAnalyzer, profileTable, overrideStore);
   }
 
   @Test
@@ -175,6 +180,36 @@ public class VoiceManagerTest {
     manager.offerToLearning("Attack", worldNpc(DWARF_ID, "Dwarf"));
 
     verify(learning, never()).considerLearning(anyInt(), any());
+  }
+
+  @Test
+  public void anOverrideReachesBothTheProfileAndTheVoiceOfThatNpc() {
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
+    ResolvedSpeaker before = manager.resolveNpc(dwarf);
+
+    overrideStore.set(
+        DWARF_ID, new NpcVoiceOverride(null, "Cockney", null, "Slow", NpcGender.FEMALE));
+    ResolvedSpeaker after = manager.resolveNpc(dwarf);
+
+    assertEquals("Cockney", after.profile().accent());
+    assertEquals("Slow", after.profile().pace());
+    assertEquals(before.profile().style(), after.profile().style());
+    assertEquals(NpcGender.FEMALE, after.voice().gender());
+    assertEquals(NpcRace.DWARF, after.voice().race());
+    assertFalse(before.profile().cacheKey().equals(after.profile().cacheKey()));
+  }
+
+  @Test
+  public void withNoOverridesResolutionIsUnchanged() {
+    NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
+    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    ResolvedSpeaker before = manager.resolveNpc(dwarf);
+
+    overrideStore.set(DWARF_ID, new NpcVoiceOverride(null, null, null, "Slow", null));
+    overrideStore.clear(DWARF_ID);
+
+    assertEquals(before, manager.resolveNpc(dwarf));
   }
 
   private static NPC transformedNpc(int activeId, int baseId, String name) {

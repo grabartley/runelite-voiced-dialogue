@@ -329,8 +329,13 @@ keyword takes the `child` category layer after the keyword categories and before
 5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id. Sparse:
    carry only what is unique to the character (usually `name` + `style`); its
    style is added on top of the blend, and accent and pace inherit unless it sets
-   them. This is the highest-precedence layer, so it can pin any character's
+   them. This is the highest-precedence bundled layer, so it can pin any character's
    delivery regardless of ethnicity.
+6. Player overrides - the player's own edits for one NPC id, held by `NpcVoiceOverrideStore`
+   outside the bundled table (see [architecture](architecture.md#player-voice-overrides)).
+   Each field it sets beats every layer above: `name` and `pace` replace, `style` replaces the
+   whole blended style, and `accent` replaces the accent and drops the bundled `accentDetail`
+   while `voiceRegion` stays where the bundled layers put it. Fields it leaves unset inherit.
 
 Player lines use the `player` layer over the default; the three player fields in
 the plugin config (accent/style/pace) override it at runtime when non-blank.

@@ -14,11 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 final class NpcVoiceResolver {
 
   private final VoicedDialogueConfig config;
+  private final NpcVoiceOverrideStore overrideStore;
 
   private NpcLearningService learningService;
 
-  NpcVoiceResolver(VoicedDialogueConfig config) {
+  NpcVoiceResolver(VoicedDialogueConfig config, NpcVoiceOverrideStore overrideStore) {
     this.config = config;
+    this.overrideStore = overrideStore;
   }
 
   void setLearningService(NpcLearningService learningService) {
@@ -48,6 +50,12 @@ final class NpcVoiceResolver {
 
     NpcRace voiceRace = race == NpcRace.UNKNOWN ? NpcRace.HUMAN : race;
     NpcGender voiceGender = NpcDemographicParser.toVoiceGender(gender);
+    NpcGender overriddenGender = overriddenGender(identity);
+    if (overriddenGender != null) {
+      voiceGender = overriddenGender;
+      gender = overriddenGender;
+      source += "+gender-override";
+    }
     boolean child = identity.child();
     int seed = voiceSeed(identity.baseId(), npcName);
     if (config.debugMode()) {
@@ -62,12 +70,28 @@ final class NpcVoiceResolver {
       String npcName, Integer npcId, NpcIdentity identity, String source) {
     boolean child = identity.child();
     int seed = voiceSeed(npcId, npcName);
+    NpcGender overriddenGender = overriddenGender(identity);
+    if (overriddenGender != null) {
+      source += "+gender-override";
+    }
     if (config.debugMode()) {
       log.info(
           VoiceTraceFormatter.buildNpcTrace(
-              npcName, npcId, NpcRace.UNKNOWN, NpcGender.UNKNOWN, child, source, seed));
+              npcName,
+              npcId,
+              NpcRace.UNKNOWN,
+              overriddenGender == null ? NpcGender.UNKNOWN : overriddenGender,
+              child,
+              source,
+              seed));
     }
-    return VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, seed, child);
+    return VoiceSpec.npc(
+        NpcRace.HUMAN, overriddenGender == null ? NpcGender.MALE : overriddenGender, seed, child);
+  }
+
+  private NpcGender overriddenGender(NpcIdentity identity) {
+    NpcVoiceOverride override = overrideStore.get(identity.profileId());
+    return override == null ? null : override.gender();
   }
 
   private static int voiceSeed(Integer npcId, String npcName) {

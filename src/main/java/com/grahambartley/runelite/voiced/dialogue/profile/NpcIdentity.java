@@ -16,6 +16,10 @@ class NpcIdentity {
 
   NpcProfileTable.NameMatch nameMatch;
 
+  Integer profileId() {
+    return attributes != null ? Integer.valueOf(attributes.getNpcId()) : worldId;
+  }
+
   boolean child() {
     return (attributes != null && attributes.isChild()) || nameMatch.child();
   }

@@ -14,12 +14,15 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
+import net.runelite.client.config.ConfigManager;
 import org.junit.Test;
 
 public class NpcVoiceResolverTest {
 
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
-  private final NpcVoiceResolver resolver = new NpcVoiceResolver(config);
+  private final NpcVoiceOverrideStore overrideStore =
+      new NpcVoiceOverrideStore(mock(ConfigManager.class));
+  private final NpcVoiceResolver resolver = new NpcVoiceResolver(config, overrideStore);
 
   @Test
   public void blankNameResolvesToDefaultHumanMale() {
@@ -139,6 +142,59 @@ public class NpcVoiceResolverTest {
             identity(3105, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false));
 
     assertFalse(spec.child());
+  }
+
+  @Test
+  public void aGenderOverrideReplacesTheDetectedGenderAndTheVoiceKey() {
+    NpcIdentity guard =
+        identity(11914, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false);
+    VoiceSpec before = resolver.resolve("Guard", guard);
+
+    overrideStore.set(11914, new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE));
+    VoiceSpec after = resolver.resolve("Guard", guard);
+
+    assertEquals(NpcGender.MALE, before.gender());
+    assertEquals(NpcGender.FEMALE, after.gender());
+    assertEquals("npc:HUMAN:FEMALE", after.key());
+    assertFalse(before.key().equals(after.key()));
+    assertEquals("the override keeps the per-NPC seed", before.voiceSeed(), after.voiceSeed());
+  }
+
+  @Test
+  public void aGenderOverrideCanTurnAFemaleNpcMale() {
+    overrideStore.set(12, new NpcVoiceOverride(null, null, null, null, NpcGender.MALE));
+    VoiceSpec spec =
+        resolver.resolve(
+            "Hag",
+            identity(12, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false));
+    assertEquals(NpcGender.MALE, spec.gender());
+  }
+
+  @Test
+  public void anOverrideWithoutAGenderKeepsTheDetectedGender() {
+    overrideStore.set(13, new NpcVoiceOverride(null, null, "Warm", null, null));
+    VoiceSpec spec =
+        resolver.resolve(
+            "Aggie",
+            identity(13, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false));
+    assertEquals(NpcGender.FEMALE, spec.gender());
+  }
+
+  @Test
+  public void anOverrideForAnotherIdLeavesThisNpcAlone() {
+    overrideStore.set(99, new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE));
+    VoiceSpec spec =
+        resolver.resolve(
+            "Hans", identity(14, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false));
+    assertEquals(NpcGender.MALE, spec.gender());
+  }
+
+  @Test
+  public void aGenderOverrideAppliesWhenDetectionFailedForAnNpcInTheWorld() {
+    overrideStore.set(5, new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE));
+    VoiceSpec spec = resolver.resolve("Hans", identity(5, null, false));
+    assertEquals(NpcRace.HUMAN, spec.race());
+    assertEquals(NpcGender.FEMALE, spec.gender());
   }
 
   private void assertDefaultHumanMale(VoiceSpec spec) {

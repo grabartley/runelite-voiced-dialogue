@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import org.junit.Test;
 
 public class NpcProfileTableTest {
@@ -30,7 +31,7 @@ public class NpcProfileTableTest {
 
   private static NpcProfileTable.Resolution resolve(
       NpcProfileTable table, Integer npcId, String npcName, String race, String ethnicity) {
-    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false);
+    return table.resolveNpc(npcId, table.matchName(npcName), race, ethnicity, false, null);
   }
 
   private static boolean isChild(NpcProfileTable table, String npcName) {
@@ -136,7 +137,7 @@ public class NpcProfileTableTest {
   public void aChildMarkedByTheTableTakesTheChildLayerWithoutAChildName() {
     NpcProfileTable table = table();
     NpcProfileTable.Resolution named =
-        table.resolveNpc(null, table.matchName("Shilop"), "Human", null, true);
+        table.resolveNpc(null, table.matchName("Shilop"), "Human", null, true, null);
     assertTrue(named.source().contains("lifeStage:child"));
     assertTrue(named.profile().style().contains("Bright and young."));
   }
@@ -145,7 +146,7 @@ public class NpcProfileTableTest {
   public void aChildNamedAsOneTakesTheChildLayerOnce() {
     NpcProfileTable table = table();
     NpcProfileTable.Resolution keyword =
-        table.resolveNpc(null, table.matchName("Street urchin"), "Human", null, true);
+        table.resolveNpc(null, table.matchName("Street urchin"), "Human", null, true, null);
     assertTrue(keyword.source().contains("keyword:child"));
     assertFalse(keyword.source().contains("lifeStage:child"));
   }
@@ -324,5 +325,87 @@ public class NpcProfileTableTest {
     assertEquals("Big and dim. Bright and young.", r.profile().style());
     assertEquals(
         "the child category leaves the accent to the race", "Brixton.", r.profile().accent());
+  }
+
+  private static NpcProfileTable.Resolution resolveWith(
+      NpcProfileTable table, Integer npcId, String race, NpcVoiceOverride override) {
+    return table.resolveNpc(npcId, table.matchName("Npc"), race, null, false, override);
+  }
+
+  @Test
+  public void aNullOverrideResolvesExactlyAsTheBundledTable() {
+    NpcProfileTable table = regionTable();
+    assertEquals(resolve(table, 9, "Dwarf", "Dwarf", null), resolveWith(table, 9, "Dwarf", null));
+  }
+
+  @Test
+  public void anOverrideFieldBeatsTheBundledByIdLayer() {
+    NpcProfileTable.Resolution r =
+        resolveWith(
+            table(),
+            100,
+            "Human",
+            new NpcVoiceOverride("Mine", null, "A cheerful baker", null, null));
+    assertEquals("Mine", r.profile().name());
+    assertEquals(
+        "the override style replaces every bundled style",
+        "A cheerful baker.",
+        r.profile().style());
+    assertEquals("race:Human+id:100+override", r.source());
+  }
+
+  @Test
+  public void aPartialOverridePatchesOnlyTheFieldsItSets() {
+    CharacterProfile bundled = resolve(table(), 100, "Npc", "Human", null).profile();
+    CharacterProfile patched =
+        resolveWith(table(), 100, "Human", new NpcVoiceOverride(null, null, null, "Brisk.", null))
+            .profile();
+    assertEquals("Brisk.", patched.pace());
+    assertEquals(bundled.name(), patched.name());
+    assertEquals(bundled.accent(), patched.accent());
+    assertEquals(bundled.style(), patched.style());
+  }
+
+  @Test
+  public void anAccentOverrideDropsTheBundledAccentDetailButKeepsTheVoicePool() {
+    CharacterProfile p =
+        resolveWith(
+                regionTable(), 9, "Dwarf", new NpcVoiceOverride(null, "Cockney", null, null, null))
+            .profile();
+    assertEquals("Cockney", p.accent());
+    assertEquals(null, p.accentDetail());
+    assertEquals("SCOTTISH", p.voiceRegion());
+  }
+
+  @Test
+  public void aGenderOnlyOverrideLeavesTheProfileAndItsSourceUntouched() {
+    NpcProfileTable table = regionTable();
+    assertEquals(
+        resolve(table, 9, "Dwarf", "Dwarf", null),
+        resolveWith(
+            table, 9, "Dwarf", new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE)));
+  }
+
+  @Test
+  public void anOverrideAppliesToAnNpcWithNoBundledByIdEntry() {
+    NpcProfileTable.Resolution r =
+        resolveWith(table(), 555, "Troll", new NpcVoiceOverride(null, "Geordie", null, null, null));
+    assertEquals("Geordie", r.profile().accent());
+    assertEquals("Troll", r.profile().name());
+    assertEquals("race:Troll+override", r.source());
+  }
+
+  @Test
+  public void anOverrideChangesTheProfileCacheKey() {
+    NpcProfileTable table = table();
+    assertFalse(
+        resolve(table, 100, "Npc", "Human", null)
+            .profile()
+            .cacheKey()
+            .equals(
+                resolveWith(
+                        table, 100, "Human", new NpcVoiceOverride(null, null, null, "Slow.", null))
+                    .profile()
+                    .cacheKey()));
   }
 }

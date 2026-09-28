@@ -16,6 +16,7 @@ import com.grahambartley.runelite.voiced.dialogue.capture.ExamineSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.capture.NarrationWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.PublicChatSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.EmotionResolver;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
@@ -53,6 +54,7 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import okhttp3.OkHttpClient;
@@ -89,6 +91,8 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private VoiceManager voiceManager;
 
+  private NpcVoiceOverrideStore voiceOverrideStore;
+
   private ChatNoticeManager noticeManager;
 
   private DialogueWatcher dialogueWatcher;
@@ -113,7 +117,9 @@ public class VoicedDialoguePlugin extends Plugin {
   @Override
   protected void startUp() {
     pinProviderWhenOnlyOpenRouterKeyed();
-    voiceManager = VoiceManager.create(config, client);
+    voiceOverrideStore = new NpcVoiceOverrideStore(configManager);
+    voiceOverrideStore.load();
+    voiceManager = VoiceManager.create(config, client, voiceOverrideStore);
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
     try {
@@ -246,6 +252,7 @@ public class VoicedDialoguePlugin extends Plugin {
       backendProvider = null;
     }
     voiceManager = null;
+    voiceOverrideStore = null;
     if (wikiExecutor != null) {
       wikiExecutor.shutdown();
       wikiExecutor = null;
@@ -364,6 +371,13 @@ public class VoicedDialoguePlugin extends Plugin {
         VoicedDialogueConfig.PROVIDER_KEY,
         VoicedDialogueConfig.TtsProvider.OPENROUTER);
     log.info("Pinned this profile to OpenRouter, the provider it holds a key for");
+  }
+
+  @Subscribe
+  public void onProfileChanged(ProfileChanged event) {
+    if (voiceOverrideStore != null) {
+      voiceOverrideStore.load();
+    }
   }
 
   @Subscribe

@@ -41,28 +41,32 @@ public class VoiceManager {
   private final NpcProfileTable profileTable;
   private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
+  private final NpcVoiceOverrideStore overrideStore;
 
   private NpcLearningService learningService;
 
-  public static VoiceManager create(VoicedDialogueConfig config, Client client) {
+  public static VoiceManager create(
+      VoicedDialogueConfig config, Client client, NpcVoiceOverrideStore overrideStore) {
     NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
     demographicAnalyzer.initialize();
     NpcProfileTable profileTable = new NpcProfileTable();
     profileTable.initialize();
-    return new VoiceManager(config, client, demographicAnalyzer, profileTable);
+    return new VoiceManager(config, client, demographicAnalyzer, profileTable, overrideStore);
   }
 
   public VoiceManager(
       VoicedDialogueConfig config,
       Client client,
       NpcDemographicAnalyzer demographicAnalyzer,
-      NpcProfileTable profileTable) {
+      NpcProfileTable profileTable,
+      NpcVoiceOverrideStore overrideStore) {
     this.config = config;
     this.demographicAnalyzer = demographicAnalyzer;
     this.profileTable = profileTable;
+    this.overrideStore = overrideStore;
     this.identityResolver =
         new NpcIdentityResolver(new NpcFinder(client), demographicAnalyzer, profileTable);
-    this.npcVoiceResolver = new NpcVoiceResolver(config);
+    this.npcVoiceResolver = new NpcVoiceResolver(config, overrideStore);
   }
 
   public boolean isVoiced(int npcId) {
@@ -128,18 +132,23 @@ public class VoiceManager {
   }
 
   private CharacterProfile npcProfile(String npcName, NpcIdentity identity) {
-    Integer npcId = identity.worldId();
+    Integer npcId = identity.profileId();
     String race = null;
     String ethnicity = null;
     NpcAttributes attributes = identity.attributes();
     if (attributes != null) {
       race = attributes.getRace();
       ethnicity = attributes.getEthnicity();
-      npcId = attributes.getNpcId();
     }
 
     NpcProfileTable.Resolution resolution =
-        profileTable.resolveNpc(npcId, identity.nameMatch(), race, ethnicity, identity.child());
+        profileTable.resolveNpc(
+            npcId,
+            identity.nameMatch(),
+            race,
+            ethnicity,
+            identity.child(),
+            overrideStore.get(npcId));
     if (config.debugMode()) {
       log.info(
           "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}',"
