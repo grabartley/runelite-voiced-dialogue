@@ -467,24 +467,29 @@ public class OpenRouterTtsBackendTest {
 
   @Test
   public void unauthorizedAndForbiddenBlameTheKey() {
-    String unauthorized = OpenRouterTtsBackend.failureNotice(HTTP_UNAUTHORIZED);
-    String forbidden = OpenRouterTtsBackend.failureNotice(HTTP_FORBIDDEN);
-
-    assertTrue(unauthorized.contains("check your API key"));
-    assertTrue(unauthorized.contains("HTTP 401"));
-    assertTrue(forbidden.contains("check your API key"));
-    assertTrue(forbidden.contains("HTTP 403"));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 401); check your API key. This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_UNAUTHORIZED));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 403); check your API key. This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_FORBIDDEN));
   }
 
   @Test
-  public void otherStatusesAreARejectedRequestThatDoesNotBlameTheKey() {
+  public void otherClientErrorsAreARejectedRequest() {
     assertEquals(
         "OpenRouter rejected the TTS request (HTTP 400). This line was not voiced.",
         OpenRouterTtsBackend.failureNotice(HTTP_BAD_REQUEST));
-    assertFalse(
-        OpenRouterTtsBackend.failureNotice(HTTP_INTERNAL_ERROR).contains("check your API key"));
-    assertFalse(
-        OpenRouterTtsBackend.failureNotice(HTTP_TOO_MANY_REQUESTS).contains("check your API key"));
+  }
+
+  @Test
+  public void rateLimitsAndServerErrorsAreAFailureThatBlamesNeitherKeyNorRequest() {
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 429). This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_TOO_MANY_REQUESTS));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 500). This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_INTERNAL_ERROR));
   }
 
   @Test

@@ -7,6 +7,7 @@ import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -32,7 +33,6 @@ import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.speech.TestFixtures;
 import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiVoiceMap;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,6 +74,10 @@ public class AiStudioTtsBackendTest {
         server.url("/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent").toString(),
         new RetryTuning(
             Duration.ofMillis(500), Duration.ofMillis(500), Duration.ofSeconds(1), 10, 0));
+  }
+
+  private String notice(int httpCode, String body) {
+    return AiStudioTtsBackend.failureNotice(gson, httpCode, body.getBytes(UTF_8));
   }
 
   private AiStudioTtsBackend noticedBackend() {
@@ -242,89 +246,80 @@ public class AiStudioTtsBackendTest {
     assertTrue(notices.get(0).contains("HTTP 500"));
   }
 
-  private static final String INVALID_KEY_BODY =
-      "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\","
-          + "\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"@type\":"
-          + "\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\","
-          + "\"domain\":\"googleapis.com\"}]}}";
-
-  private static final String NO_MATCHING_VOICE_BODY =
-      "{\"error\":{\"code\":400,\"message\":\"No matching speaker voice found for name:"
-          + " en-gb-advisor-8 and language: ga-IE\",\"status\":\"INVALID_ARGUMENT\"}}";
-
-  private static final String OTHER_REASON_BODY =
-      "{\"error\":{\"code\":400,\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"@type\":"
-          + "\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"SOMETHING_ELSE\"}]}}";
-
-  private static String notice(int httpCode, String body) {
-    return AiStudioTtsBackend.failureNotice(
-        new Gson(), httpCode, body.getBytes(StandardCharsets.UTF_8));
-  }
-
-  private static boolean blamesTheKey(String notice) {
-    return notice.contains("check your API key");
-  }
-
   @Test
   public void anInvalidKeyBadRequestBlamesTheKey() {
-    String notice = notice(HTTP_BAD_REQUEST, INVALID_KEY_BODY);
-
-    assertTrue(blamesTheKey(notice));
-    assertTrue(notice.contains("HTTP 400"));
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 400); check your API key. This line was not"
+            + " voiced.",
+        notice(HTTP_BAD_REQUEST, AiStudioResponses.invalidApiKey()));
   }
 
   @Test
   public void aBadRequestWithoutTheKeyReasonIsARejectedRequest() {
     assertEquals(
         "Google AI Studio rejected the TTS request (HTTP 400). This line was not voiced.",
-        notice(HTTP_BAD_REQUEST, NO_MATCHING_VOICE_BODY));
-  }
-
-  @Test
-  public void aBadRequestWithAnotherErrorInfoReasonDoesNotBlameTheKey() {
-    assertFalse(blamesTheKey(notice(HTTP_BAD_REQUEST, OTHER_REASON_BODY)));
+        notice(HTTP_BAD_REQUEST, AiStudioResponses.noMatchingVoice()));
   }
 
   @Test
   public void anUnreadableOrEmptyBadRequestBodyFallsBackToTheRejectedNotice() {
-    assertFalse(blamesTheKey(notice(HTTP_BAD_REQUEST, "not json")));
-    assertFalse(blamesTheKey(notice(HTTP_BAD_REQUEST, "")));
-    assertFalse(blamesTheKey(AiStudioTtsBackend.failureNotice(new Gson(), HTTP_BAD_REQUEST, null)));
+    String rejected =
+        "Google AI Studio rejected the TTS request (HTTP 400). This line was not voiced.";
+
+    assertEquals(rejected, notice(HTTP_BAD_REQUEST, "not json"));
+    assertEquals(rejected, notice(HTTP_BAD_REQUEST, ""));
+    assertEquals(rejected, AiStudioTtsBackend.failureNotice(gson, HTTP_BAD_REQUEST, null));
   }
 
   @Test
   public void unauthorizedAndForbiddenBlameTheKeyWhateverTheBody() {
-    assertTrue(blamesTheKey(notice(HTTP_UNAUTHORIZED, "")));
-    assertTrue(blamesTheKey(notice(HTTP_FORBIDDEN, "")));
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 401); check your API key. This line was not"
+            + " voiced.",
+        notice(HTTP_UNAUTHORIZED, ""));
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 403); check your API key. This line was not"
+            + " voiced.",
+        notice(HTTP_FORBIDDEN, ""));
   }
 
   @Test
   public void theKeyReasonOnlyCountsOnABadRequest() {
-    String notice = notice(HTTP_NOT_FOUND, INVALID_KEY_BODY);
+    assertEquals(
+        "Google AI Studio rejected the TTS request (HTTP 404). This line was not voiced.",
+        notice(HTTP_NOT_FOUND, AiStudioResponses.invalidApiKey()));
+  }
 
-    assertFalse(blamesTheKey(notice));
-    assertTrue(notice.contains("HTTP 404"));
+  @Test
+  public void aServerErrorIsAFailureThatNeitherBlamesTheKeyNorTheRequest() {
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 500). This line was not voiced.",
+        notice(HTTP_INTERNAL_ERROR, ""));
   }
 
   @Test
   public void aRejectedRequestReachesThePlayerWithoutBlamingTheKey() {
     AiStudioTtsBackend backend = noticedBackend();
-    server.enqueue(
-        new MockResponse().setResponseCode(HTTP_BAD_REQUEST).setBody(NO_MATCHING_VOICE_BODY));
+    server.enqueue(AiStudioResponses.badRequest(AiStudioResponses.noMatchingVoice()));
 
     assertNull(backend.synthesize(req()));
-    assertEquals(1, notices.size());
-    assertFalse(blamesTheKey(notices.get(0)));
+    assertEquals(
+        Arrays.asList(
+            "Google AI Studio rejected the TTS request (HTTP 400). This line was not voiced."),
+        notices);
   }
 
   @Test
   public void anInvalidKeyReachesThePlayerAsTheKeyNotice() {
     AiStudioTtsBackend backend = noticedBackend();
-    server.enqueue(new MockResponse().setResponseCode(HTTP_BAD_REQUEST).setBody(INVALID_KEY_BODY));
+    server.enqueue(AiStudioResponses.badRequest(AiStudioResponses.invalidApiKey()));
 
     assertNull(backend.synthesize(req()));
-    assertEquals(1, notices.size());
-    assertTrue(blamesTheKey(notices.get(0)));
+    assertEquals(
+        Arrays.asList(
+            "Google AI Studio TTS request failed (HTTP 400); check your API key. This line was not"
+                + " voiced."),
+        notices);
   }
 
   @Test

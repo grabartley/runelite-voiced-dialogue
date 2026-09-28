@@ -81,6 +81,10 @@ public final class CloudHttp {
     }
   }
 
+  public static boolean isRejectedRequest(int httpCode) {
+    return httpCode >= 400 && httpCode < 500 && httpCode != HTTP_TOO_MANY_REQUESTS;
+  }
+
   public static boolean isNonBlank(String value) {
     return value != null && !value.trim().isEmpty();
   }

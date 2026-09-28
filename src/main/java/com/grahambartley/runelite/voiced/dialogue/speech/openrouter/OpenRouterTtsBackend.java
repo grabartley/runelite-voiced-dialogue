@@ -227,7 +227,12 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
           + httpCode
           + "); check your API key. This line was not voiced.";
     }
-    return "OpenRouter rejected the TTS request (HTTP " + httpCode + "). This line was not voiced.";
+    if (CloudHttp.isRejectedRequest(httpCode)) {
+      return "OpenRouter rejected the TTS request (HTTP "
+          + httpCode
+          + "). This line was not voiced.";
+    }
+    return "OpenRouter TTS request failed (HTTP " + httpCode + "). This line was not voiced.";
   }
 
   private final class Ops implements CloudSpeechExecutor.Ops {

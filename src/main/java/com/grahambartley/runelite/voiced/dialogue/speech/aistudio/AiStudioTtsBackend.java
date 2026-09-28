@@ -42,10 +42,6 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
 
   static final String MODEL = GeminiTtsModel.GEMINI_MODEL_ID;
 
-  private static final String ERROR_INFO_TYPE = "type.googleapis.com/google.rpc.ErrorInfo";
-
-  private static final String API_KEY_INVALID = "API_KEY_INVALID";
-
   static final String PRODUCTION_ENDPOINT =
       "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
 
@@ -183,9 +179,12 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
           + httpCode
           + "); check your API key. This line was not voiced.";
     }
-    return "Google AI Studio rejected the TTS request (HTTP "
-        + httpCode
-        + "). This line was not voiced.";
+    if (CloudHttp.isRejectedRequest(httpCode)) {
+      return "Google AI Studio rejected the TTS request (HTTP "
+          + httpCode
+          + "). This line was not voiced.";
+    }
+    return "Google AI Studio TTS request failed (HTTP " + httpCode + "). This line was not voiced.";
   }
 
   private static boolean isKeyProblem(Gson gson, int httpCode, byte[] body) {
@@ -194,9 +193,7 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       return true;
     }
     return httpCode == HttpURLConnection.HTTP_BAD_REQUEST
-        && AiStudioErrorDetails.ofType(gson, body, ERROR_INFO_TYPE).stream()
-            .anyMatch(
-                detail -> API_KEY_INVALID.equals(AiStudioErrorDetails.text(detail, "reason")));
+        && AiStudioErrorInfo.isApiKeyInvalid(gson, body);
   }
 
   private final class Ops implements CloudSpeechExecutor.Ops {

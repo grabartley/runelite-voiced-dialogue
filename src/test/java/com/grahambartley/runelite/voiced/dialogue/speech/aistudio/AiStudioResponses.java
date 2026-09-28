@@ -111,6 +111,38 @@ final class AiStudioResponses {
     return rejection(details);
   }
 
+  static MockResponse badRequest(String body) {
+    return new MockResponse().setResponseCode(HttpURLConnection.HTTP_BAD_REQUEST).setBody(body);
+  }
+
+  static String invalidApiKey() {
+    return invalidArgument("API key not valid. Please pass a valid API key.", "API_KEY_INVALID");
+  }
+
+  static String noMatchingVoice() {
+    return invalidArgument(
+        "No matching speaker voice found for name: en-gb-advisor-8 and language: ga-IE", null);
+  }
+
+  static String invalidArgument(String message, String errorInfoReason) {
+    JsonObject error = new JsonObject();
+    error.addProperty("code", HttpURLConnection.HTTP_BAD_REQUEST);
+    error.addProperty("message", message);
+    error.addProperty("status", "INVALID_ARGUMENT");
+    if (errorInfoReason != null) {
+      JsonObject errorInfo = new JsonObject();
+      errorInfo.addProperty("@type", "type.googleapis.com/google.rpc.ErrorInfo");
+      errorInfo.addProperty("reason", errorInfoReason);
+      errorInfo.addProperty("domain", "googleapis.com");
+      JsonArray details = new JsonArray();
+      details.add(errorInfo);
+      error.add("details", details);
+    }
+    JsonObject body = new JsonObject();
+    body.add("error", error);
+    return body.toString();
+  }
+
   static String quotaExhausted() {
     return rejection(null);
   }
