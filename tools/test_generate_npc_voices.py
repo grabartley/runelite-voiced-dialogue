@@ -174,6 +174,25 @@ class SymbolGenderTest(unittest.TestCase):
         self.assertEqual(table[11914]["gender"], "Male")
 
 
+    def test_conflicting_pins_are_reported(self):
+        overrides = wrap({"11914": {"gender": "Male"}, "11943": {"gender": "Female"},
+                          "11911": {"gender": "Female"}, "5": {"race": "Human"}})
+        symbols = {11914: "FAI_VARROCK_GUARD02_F", 11943: "FAI_FALADOR_GUARD1_F",
+                   11911: "FAI_VARROCK_GUARD02"}
+        self.assertEqual(gen.symbol_conflicting_pins(overrides, symbols),
+                         ["11914 FAI_VARROCK_GUARD02_F pinned Male"])
+
+    def test_committed_overrides_agree_with_a_sample_of_symbols(self):
+        overrides = gen.load_json(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                               "overrides.json"))
+        symbols = {11914: "FAI_VARROCK_GUARD02_F", 11943: "FAI_FALADOR_GUARD1_F",
+                   2268: "DORGESH_MALE_1", 8324: "TOB_FEMALE_ORATOR"}
+        self.assertEqual(gen.symbol_conflicting_pins(overrides, symbols), [])
+
+    def test_parse_npc_symbols_of_empty_output_is_empty(self):
+        self.assertEqual(gen.parse_npc_symbols(""), {})
+
+
 class RaceBucketTest(unittest.TestCase):
     def test_citizen_of_arceuus_buckets_to_its_own_race(self):
         self.assertEqual(gen.bucket_for_race("Citizen of Arceuus"), "Arceuus")

@@ -126,7 +126,10 @@ reason written up below. Re-sorting the list would change what thousands of NPCs
   gender over whatever the wiki gave it. A symbol naming both, or neither, leaves
   the wiki gender alone. An override that names a gender still wins over the
   symbol, and `NpcDemographicAnalyzerTest` fails the build if any id resolves
-  against its symbol, so a gender pin must agree with the symbol.
+  against its symbol, so a gender pin must agree with the symbol. That test applies the same token rule
+  as the generator, so it guards the table against the rule rather than proving the
+  rule; the rule itself was checked against the wiki's own per-version genders. A
+  symbol Jagex ever mislabels would need an exception in both.
 - **Ethnicity.** The wiki `leagueRegion` (where the NPC is found) is the default
   proxy for ethnicity (where they are from) and maps to an ethnicity accent key.
   `Desert` splits into `kharidian` (Middle Eastern) and `menaphite` (Egyptian, for

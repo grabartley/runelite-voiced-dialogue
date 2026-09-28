@@ -415,14 +415,20 @@ def build_table_from_wiki(limit=None):
 
 def resolve_runelite_api_jar():
     out = subprocess.run(["./gradlew", "-q", "printRuneliteApiJar"], cwd=REPO_ROOT, check=True,
-                         capture_output=True, text=True).stdout
-    return out.strip().splitlines()[-1]
+                         capture_output=True, text=True).stdout.strip()
+    jar = out.splitlines()[-1] if out else ""
+    if not jar.endswith(".jar"):
+        raise RuntimeError(f"Gradle resolved no RuneLite api jar (got {out!r}); pass --runelite-api")
+    return jar
 
 
 def load_npc_symbols(api_jar):
     out = subprocess.run(["javap", "-constants", "-cp", api_jar, NPC_ID_CLASS], check=True,
                          capture_output=True, text=True).stdout
-    return parse_npc_symbols(out)
+    symbols = parse_npc_symbols(out)
+    if not symbols:
+        raise RuntimeError(f"{NPC_ID_CLASS} in {api_jar} has no int constants")
+    return symbols
 
 
 def parse_npc_symbols(javap_output):
@@ -443,6 +449,16 @@ def apply_symbol_genders(table, symbols):
             table[npc_id] = dict(entry, gender=gender)
             corrected += 1
     return corrected
+
+
+def symbol_conflicting_pins(overrides, symbols):
+    conflicts = []
+    for key, entry in overrides.get("npcs", {}).items():
+        symbol = symbols.get(int(key), "")
+        wanted = symbol_gender(symbol)
+        if wanted and entry.get("gender") and entry["gender"] != wanted:
+            conflicts.append(f"{key} {symbol} pinned {entry['gender']}")
+    return conflicts
 
 
 def fill_from_summary(table, name_map, summary):
@@ -690,7 +706,10 @@ def main():
             except Exception as exc:  # noqa: BLE001 - tooling, surface and continue
                 print(f"  (skipping name cross-ref: {exc})", file=sys.stderr)
     api_jar = args.runelite_api or resolve_runelite_api_jar()
-    symbol_gendered = apply_symbol_genders(table, load_npc_symbols(api_jar))
+    symbols = load_npc_symbols(api_jar)
+    symbol_gendered = apply_symbol_genders(table, symbols)
+    for conflict in symbol_conflicting_pins(overrides, symbols):
+        print(f"  WARNING: override gender contradicts its cache symbol: {conflict}", file=sys.stderr)
     print(f"  cache symbols corrected {symbol_gendered} genders from {api_jar}", file=sys.stderr)
     override_count = apply_overrides(table, overrides)
 

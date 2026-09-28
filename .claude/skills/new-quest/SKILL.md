@@ -17,7 +17,8 @@ Stop at the filed issue. Implementation belongs to [[add-npc-profile]], [[add-ra
 Quest support is four things, and only the first arrives for free:
 
 1. **Race and gender**, for any NPC whose wiki page carries an Infobox `id`. The generator's
-   wiki sweep picks these up with no help.
+   wiki sweep picks these up with no help, and an id whose `NpcID` cache symbol names a gender
+   takes that gender.
 2. **A race the generator can bucket.** `bucket_for_race` in `tools/generate_npc_voices.py` ends
    in `return "Human"`, so a wiki race no rule matches voices as a British commoner and nothing
    reports it. This is the highest-value thing this skill finds.

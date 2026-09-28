@@ -63,8 +63,9 @@ you; do not rubber-stamp the diff.
 1. Enumerates every main-namespace page transcluding `Template:Infobox NPC` **or** `Template:Infobox Monster`.
 2. Per page: race from the infobox `race` field, or, for Monster pages that lack it, from the page **categories** (e.g. `Category:Trolls` -> Troll); gender paired **per version** (switch infoboxes list a gender per id group); ethnicity from `leagueRegion` (Desert splits into `kharidian`/`menaphite` via location or `Category:Menaphites`/`Sophanem`).
 3. Cross-references a full `id -> name` dump (`--summary`) by name to cover variant ids the wiki pages don't list.
-4. Applies `tools/overrides.json` last (authoritative: race/gender/ethnicity).
-5. Embeds `tools/profiles.json` under `profiles`.
+4. Corrects gender from each id's `NpcID` cache symbol (a whole `F`/`FEMALE`/`M`/`MALE` token, e.g. `FAI_VARROCK_GUARD02_F`), read with `javap` from the RuneLite api jar the Gradle build resolves, or from `--runelite-api <jar>`. This runs in `--base` mode too, so a regen needs a JDK and a working `./gradlew`.
+5. Applies `tools/overrides.json` last (authoritative: race/gender/ethnicity). A gender pin must agree with a gendered symbol: the generator warns when one does not, and `NpcDemographicAnalyzerTest` fails the build.
+6. Embeds `tools/profiles.json` under `profiles`.
 
 ## Profile architecture (for reference)
 
@@ -74,7 +75,7 @@ you; do not rubber-stamp the diff.
 
 ## Notes / known limits
 
-- The full run scrapes a few thousand pages (minutes). Race/gender/ethnicity come from the wiki, so accuracy tracks the wiki.
+- The full run scrapes a few thousand pages (minutes). Race and ethnicity come from the wiki, so their accuracy tracks the wiki. Gender comes from the wiki too, except where the id's cache symbol names one.
 - Coverage gaps that fall to overrides or the runtime wiki fallback: variant ids in neither the wiki id-lists nor the id dump; talkable monsters whose category gives no race; disambiguation-named NPCs ("Citizen", "Priest") with no page data.
 - To find which NPCs still **need** a bespoke profile, the authoritative talkable signal is the existence of a `Transcript:<name>` page (wiki namespace 120), not the infobox `Talk-to` options line, which is blank on many genuine talkers (monster-infobox bosses, the Dorgesh-Kaan cave goblins). See `fill-npc-profiles-batch` section 1 for the batch query.
 - See `add-npc-profile` to make a change and `diagnose-npc-voice` to investigate one.
