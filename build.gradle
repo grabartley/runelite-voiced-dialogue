@@ -53,6 +53,13 @@ tasks.register('printVersion') {
 	}
 }
 
+tasks.register('printRuneliteApiJar') {
+	def compileClasspath = configurations.compileClasspath
+	doLast {
+		println compileClasspath.find { it.name.startsWith('runelite-api-') }
+	}
+}
+
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
 	options.release.set(17)

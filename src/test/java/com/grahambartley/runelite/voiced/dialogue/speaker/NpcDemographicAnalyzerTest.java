@@ -9,10 +9,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
+import net.runelite.api.gameval.NpcID;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -397,6 +405,47 @@ public class NpcDemographicAnalyzerTest {
   @Test
   public void unmarkedNpcsAreAdults() {
     assertFalse("Hans is an adult", analyze(3105, null).isChild());
+  }
+
+  @Test
+  public void guardVariantsResolveToTheGenderTheirCacheSymbolNames() {
+    assertEquals("Female", analyze(11914, null).getGender());
+    assertEquals("Female", analyze(11943, null).getGender());
+    assertEquals("Male", analyze(11911, null).getGender());
+    assertEquals("Male", analyze(3269, null).getGender());
+  }
+
+  @Test
+  public void everyIdWhoseCacheSymbolNamesAGenderResolvesToIt() throws IllegalAccessException {
+    List<String> mismatches = new ArrayList<>();
+    int checked = 0;
+    for (Field field : NpcID.class.getFields()) {
+      if (field.getType() != int.class || !Modifier.isStatic(field.getModifiers())) {
+        continue;
+      }
+      String symbolGender = symbolGender(field.getName());
+      int npcId = field.getInt(null);
+      if (symbolGender == null || !analyzer.isVoiced(npcId)) {
+        continue;
+      }
+      checked++;
+      String resolved = analyze(npcId, null).getGender();
+      if (!symbolGender.equals(resolved)) {
+        mismatches.add(npcId + " " + field.getName() + " resolves " + resolved);
+      }
+    }
+    assertTrue("expected many gendered symbols in the table, checked " + checked, checked > 500);
+    assertTrue("ids resolving against their symbol: " + mismatches, mismatches.isEmpty());
+  }
+
+  private static String symbolGender(String symbol) {
+    Set<String> tokens = new HashSet<>(Arrays.asList(symbol.split("_")));
+    boolean female = tokens.contains("F") || tokens.contains("FEMALE");
+    boolean male = tokens.contains("M") || tokens.contains("MALE");
+    if (female == male) {
+      return null;
+    }
+    return female ? "Female" : "Male";
   }
 
   private void assertAttributes(int npcId, String expectedRace, String expectedGender) {
