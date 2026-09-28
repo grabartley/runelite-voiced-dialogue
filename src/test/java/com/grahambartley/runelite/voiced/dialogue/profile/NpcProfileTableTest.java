@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
@@ -522,5 +523,15 @@ public class NpcProfileTableTest {
                         table, 100, "Human", new NpcVoiceOverride(null, null, null, "Slow.", null))
                     .profile()
                     .cacheKey()));
+  }
+
+  @Test
+  public void theBundledCatalogNamesByIdNpcsAndNothingElse() {
+    NpcProfileTable table = new NpcProfileTable();
+    table.initialize();
+    NpcVoiceCatalog catalog = table.buildCatalog();
+
+    assertEquals("Hans", catalog.nameOf(3105));
+    assertNull(catalog.nameOf(-1));
   }
 }

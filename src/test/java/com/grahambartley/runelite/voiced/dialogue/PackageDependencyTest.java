@@ -33,6 +33,7 @@ public class PackageDependencyTest {
     TIER.put("integration", 8);
     TIER.put("integration.followerbuddy", 8);
     TIER.put("capture", 7);
+    TIER.put("panel", 7);
     TIER.put("speech.openrouter", 7);
     TIER.put("speech.aistudio", 7);
     TIER.put("speech", 6);

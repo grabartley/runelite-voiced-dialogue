@@ -32,6 +32,8 @@ pool, derives from it via `newBuilder()` (allowed):
   as-is.
 - `speaker/wiki/WikiNpcClient.java`: optional NPC auto-learn lookups, also through the injected
   client.
+- `panel/ChatheadImages.java`: chat-head pictures for the **NPC Voices** side panel, read from the
+  OSRS Wiki by NPC name through the injected client.
 
 ### All network and synthesis stays off the game thread
 
@@ -53,8 +55,9 @@ Ambient chatter also reads NPC positions on the game thread, once per tick per s
 is a coordinate subtraction and no more. Nothing else about the feature touches the game thread. Disk cache
 I/O also stays on those pool threads: the prefetch fast-path checks only the in-memory tier,
 so the game thread never reads the on-disk cache. NPC auto-learn lookups run on their own
-`tts-wiki-learn` daemon thread, and the `::voicedspend` balance read runs on a dedicated
-spend executor thread. User-facing notices are hopped back to the client thread via
+`tts-wiki-learn` daemon thread, the `::voicedspend` balance read runs on a dedicated
+spend executor thread, and the side panel's wiki chat-heads load on a `tts-chathead` daemon
+thread. User-facing notices are hopped back to the client thread via
 `clientThread.invokeLater(...)` in `ChatNoticeManager`. The game thread never makes a network
 call, reads the disk cache, or blocks on synthesis.
 

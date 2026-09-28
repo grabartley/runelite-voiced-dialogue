@@ -16,6 +16,7 @@ import com.grahambartley.runelite.voiced.dialogue.capture.ExamineSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.capture.NarrationWatcher;
 import com.grahambartley.runelite.voiced.dialogue.capture.PublicChatSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.integration.followerbuddy.FollowerBuddyIntegration;
+import com.grahambartley.runelite.voiced.dialogue.panel.NpcVoicePanel;
 import com.grahambartley.runelite.voiced.dialogue.profile.EmotionResolver;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
 import com.grahambartley.runelite.voiced.dialogue.profile.ProfanityFilter;
@@ -36,14 +37,19 @@ import com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterUs
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendReport;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameTick;
@@ -58,6 +64,8 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 import okhttp3.OkHttpClient;
 
@@ -70,6 +78,8 @@ public class VoicedDialoguePlugin extends Plugin {
   private static final int QUEUE_CAPACITY = 4;
 
   private static final long WIKI_CALL_INTERVAL_MILLIS = 500;
+
+  private static final int NAVIGATION_PRIORITY = 8;
 
   @Inject private Client client;
 
@@ -86,6 +96,7 @@ public class VoicedDialoguePlugin extends Plugin {
   @Inject private ChatMessageManager chatMessageManager;
 
   @Inject private OverlayManager overlayManager;
+  @Inject private ClientToolbar clientToolbar;
 
   private BackendProvider backendProvider;
 
@@ -118,6 +129,12 @@ public class VoicedDialoguePlugin extends Plugin {
 
   private NpcLearningService learningService;
 
+  private ExecutorService chatheadExecutor;
+
+  private NpcVoicePanel npcVoicePanel;
+
+  private NavigationButton navigationButton;
+
   private final AtomicLong spendEpoch = new AtomicLong();
 
   @Override
@@ -126,6 +143,7 @@ public class VoicedDialoguePlugin extends Plugin {
     voiceOverrideStore = new NpcVoiceOverrideStore(configManager);
     voiceOverrideStore.load();
     voiceManager = VoiceManager.create(config, client, voiceOverrideStore);
+    addNpcVoicePanel();
 
     Path ttsDir = RuneLite.RUNELITE_DIR.toPath().resolve("voiced-dialogue");
     try {
@@ -240,8 +258,58 @@ public class VoicedDialoguePlugin extends Plugin {
     log.info("VoicedDialogue started");
   }
 
+  private void addNpcVoicePanel() {
+    chatheadExecutor =
+        Executors.newSingleThreadExecutor(
+            r -> {
+              Thread t = new Thread(r, "tts-chathead");
+              t.setDaemon(true);
+              return t;
+            });
+    npcVoicePanel =
+        new NpcVoicePanel(
+            voiceManager.catalog(),
+            voiceManager.recentSpeakers(),
+            voiceOverrideStore,
+            this::resolveNpcNames,
+            okHttpClient,
+            chatheadExecutor);
+    navigationButton =
+        NavigationButton.builder()
+            .tooltip("Voiced Dialogue: NPC voices")
+            .icon(NpcVoicePanel.navigationIcon())
+            .priority(NAVIGATION_PRIORITY)
+            .panel(npcVoicePanel)
+            .build();
+    clientToolbar.addNavigation(navigationButton);
+  }
+
+  void resolveNpcNames(Set<Integer> npcIds, Consumer<Map<Integer, String>> onResolved) {
+    clientThread.invoke(
+        () -> {
+          Map<Integer, String> names = new HashMap<>();
+          for (int npcId : npcIds) {
+            NPCComposition composition = client.getNpcDefinition(npcId);
+            String name = composition == null ? null : composition.getName();
+            if (name != null && !name.isEmpty() && !"null".equals(name)) {
+              names.put(npcId, name);
+            }
+          }
+          onResolved.accept(names);
+        });
+  }
+
   @Override
   protected void shutDown() {
+    if (navigationButton != null) {
+      clientToolbar.removeNavigation(navigationButton);
+      navigationButton = null;
+    }
+    npcVoicePanel = null;
+    if (chatheadExecutor != null) {
+      chatheadExecutor.shutdown();
+      chatheadExecutor = null;
+    }
     if (learningService != null) {
       learningService.close();
       learningService = null;
@@ -401,6 +469,9 @@ public class VoicedDialoguePlugin extends Plugin {
     if (voiceOverrideStore != null) {
       voiceOverrideStore.load();
     }
+    if (npcVoicePanel != null) {
+      npcVoicePanel.refreshLater();
+    }
   }
 
   @Subscribe
@@ -408,8 +479,14 @@ public class VoicedDialoguePlugin extends Plugin {
     if (followerBuddy != null) {
       followerBuddy.onConfigChanged(event);
     }
-    if (VoicedDialogueConfig.GROUP.equals(event.getGroup()) && voiceOverrideStore != null) {
-      voiceOverrideStore.refresh(event.getKey());
+    if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
+        && NpcVoiceOverrideStore.isOverrideKey(event.getKey())) {
+      if (voiceOverrideStore != null) {
+        voiceOverrideStore.refresh(event.getKey());
+      }
+      if (npcVoicePanel != null) {
+        npcVoicePanel.refreshLater();
+      }
     }
     if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
         && VoicedDialogueConfig.OPENROUTER_API_KEY.equals(event.getKey())

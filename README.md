@@ -17,6 +17,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.001 
 - **Accents with lore behind them, voiced by native speakers where they exist.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
 - **6,451 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
+- **Recast anyone.** Open the **NPC Voices** side panel, find any NPC by name, and give them your own accent, style, pace, or voice type, for one NPC, one character, or everyone sharing a name.
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
 - **A narrator for the quest beats.** Turn on **Voice Narration** for the message and item boxes quests lean on, and **Voice Examine Text** to hear anything you examine.
 - **The world talking around you.** Turn on **Voice Ambient Chatter** and the lines NPCs say over their heads, market criers, farm animals, cutscene asides, come through in their own voices, overlapping the way a crowd actually does and fading away as you walk off.
@@ -25,7 +26,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.001 
 - **Cave echo underground**, so dungeons and sewers sound enclosed.
 - **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
 
-Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere. **Auto-learn New NPCs**, off unless you turn it on, also looks up an unrecognised NPC's name on the OSRS Wiki.
+Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere. **Auto-learn New NPCs**, off unless you turn it on, also looks up an unrecognised NPC's name on the OSRS Wiki. The **NPC Voices** panel loads each listed NPC's chat-head picture from the OSRS Wiki by name.
 
 ## Install
 
@@ -64,6 +65,14 @@ Switch any time with **Voice Provider**. Cached lines are instant and free on bo
 3. Create a key on the [API Keys page](https://openrouter.ai/settings/keys) and copy it.
 4. In RuneLite, set **Voice Provider** to **OpenRouter** and paste the key into **OpenRouter API Key**.
 5. Talk to any NPC.
+
+## Change how an NPC sounds
+
+Click the Voiced Dialogue icon in RuneLite's sidebar to open **NPC Voices**. NPCs you hear this session and NPCs you have edited are listed with their chat-heads; search to find anyone else by name.
+
+Open an NPC to set its **Voice type** (Type A or Type B, the same choice as **Player Voice**), **Accent**, **Style**, and **Pace**. Leave a field blank to keep the plugin's voice for it. Under **Apply to**, choose **Only this NPC**, **This character and its variants** (such as every Varrock guard variant), or **Everyone called** that name; each option shows how many NPCs it covers. **Clear override** puts the plugin's voice back.
+
+Edits take effect on the next line, with no restart. An edited NPC is re-voiced, and billed again, the next time you hear each of its lines. Edits are stored in your RuneLite profile.
 
 ## Track your spend
 

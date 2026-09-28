@@ -242,6 +242,45 @@ public class VoiceManagerTest {
     assertEquals(before, manager.resolveNpc(dwarf));
   }
 
+  @Test
+  public void anNpcHeardSpeakingIsRecordedUnderItsVoicedIdAndName() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    manager.resolveNpc(worldNpc(DWARF_ID, "<col=ffff00>Dwarf</col>"));
+
+    assertEquals(
+        Collections.singletonList(new HeardNpc(DWARF_ID, "Dwarf")),
+        manager.recentSpeakers().newestFirst());
+  }
+
+  @Test
+  public void aHeardNpcTheBundleCannotNameIsNamedInTheCatalog() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    int unbundledId = 999_999;
+
+    manager.resolveNpc(worldNpc(unbundledId, "Stranger"));
+
+    assertEquals("Stranger", manager.catalog().nameOf(unbundledId));
+  }
+
+  @Test
+  public void anNpcNotFoundInTheWorldIsNotRecorded() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    manager.resolve(Speaker.NPC, "Hans");
+
+    assertTrue(manager.recentSpeakers().newestFirst().isEmpty());
+  }
+
+  @Test
+  public void thePlayerIsNeverRecordedAsAHeardNpc() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    manager.resolve(Speaker.PLAYER, null);
+
+    assertTrue(manager.recentSpeakers().newestFirst().isEmpty());
+  }
+
   private static NPC transformedNpc(int activeId, int baseId, String name) {
     NPCComposition composition = mock(NPCComposition.class);
     when(composition.getId()).thenReturn(baseId);

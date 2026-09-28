@@ -1,7 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -13,6 +15,7 @@ import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import net.runelite.client.config.ConfigManager;
 import org.junit.Test;
 
@@ -202,5 +205,30 @@ public class NpcVoiceOverrideStoreTest {
     store.refresh("playerAccent");
     store.refresh(null);
     verify(configManager, never()).getConfiguration(eq(GROUP), anyString());
+  }
+
+  @Test
+  public void overriddenIdsListsEveryIdWithAnOverride() {
+    store.set(1, new NpcVoiceOverride(null, null, "Warm", null, null));
+    store.set(2, new NpcVoiceOverride(null, null, null, null, VoiceType.TYPE_A));
+    store.clear(1);
+
+    assertEquals(Collections.singleton(2), store.overriddenIds());
+  }
+
+  @Test
+  public void overriddenIdsIsASnapshot() {
+    store.set(1, new NpcVoiceOverride(null, null, "Warm", null, null));
+    Set<Integer> snapshot = store.overriddenIds();
+    store.set(2, new NpcVoiceOverride(null, null, "Warm", null, null));
+
+    assertEquals(Collections.singleton(1), snapshot);
+  }
+
+  @Test
+  public void isOverrideKeyMatchesOnlyNpcVoiceKeys() {
+    assertTrue(NpcVoiceOverrideStore.isOverrideKey("npcVoice_11911"));
+    assertFalse(NpcVoiceOverrideStore.isOverrideKey("volume"));
+    assertFalse(NpcVoiceOverrideStore.isOverrideKey(null));
   }
 }

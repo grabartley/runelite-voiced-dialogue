@@ -140,6 +140,7 @@ never a peer.
 | 9 | (root) | `VoicedDialoguePlugin` and `VoicedDialogueConfig`, pinned here by `runelite-plugin.properties`, and the wiring that constructs both provider backends |
 | 8 | `integration`, `integration.followerbuddy` | Voicing the [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin's companion: its chat mirror, its config group, its outfit string. Everything that knows Follower Buddy exists |
 | 7 | `capture` | Reading a line off the game widgets: watching, widget reads, text cleaning, narration, public chat, examine, prefetch |
+| 7 | `panel` | The **NPC Voices** side panel: list, search, edit form, scope picker, and wiki chat-head images |
 | 7 | `speech.openrouter` | The OpenRouter transport: payload shape, credit metering, usage reads |
 | 7 | `speech.aistudio` | The Google AI Studio transport: `generateContent`, SSE streaming, token usage |
 | 6 | `speech` | The provider-neutral call flow: retry and back-off, HTTP helpers, the backend contract, the off-thread pipeline |
