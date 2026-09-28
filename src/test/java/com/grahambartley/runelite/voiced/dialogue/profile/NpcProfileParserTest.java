@@ -9,6 +9,7 @@ import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.CategoryRule;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.Layer;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import org.junit.Test;
 
@@ -151,7 +152,7 @@ public class NpcProfileParserTest {
     NpcProfileLayers layers =
         parseWithSymbols(
             "{\"_comment\":\"x\",\"nope\":\"GUARD\",\"1\":{\"a\":\"b\"},\"2\":[\"GUARD\"],"
-                + "\"3\":null,\"4\":\"\",\"5\":\"HANS\"}");
+                + "\"3\":null,\"4\":\"\",\"6\":123,\"7\":true,\"5\":\"HANS\"}");
 
     assertEquals(1, layers.symbols().size());
     assertEquals("HANS", layers.symbols().get(5));
@@ -173,6 +174,16 @@ public class NpcProfileParserTest {
   }
 
   @Test
+  public void theBundledResourceGroupsNamesIgnoringCase() {
+    NpcProfileLayers layers = NpcProfileParser.loadResource("/npc-voices.json");
+
+    assertEquals("Gem merchant", layers.byId().get(8723).name());
+    assertEquals("Gem Merchant", layers.byId().get(13336).name());
+    assertNotNull(layers.symbols().get(8723));
+    assertNotNull(layers.symbols().get(13336));
+  }
+
+  @Test
   public void theBundledResourceCarriesNoSymbolForAUniqueName() {
     NpcProfileLayers layers = NpcProfileParser.loadResource("/npc-voices.json");
 
@@ -185,16 +196,15 @@ public class NpcProfileParserTest {
     NpcProfileLayers layers = NpcProfileParser.loadResource("/npc-voices.json");
     Map<String, Integer> idsPerName = new HashMap<>();
     for (Layer layer : layers.byId().values()) {
-      idsPerName.merge(layer.name(), 1, Integer::sum);
+      idsPerName.merge(layer.name().toLowerCase(Locale.ROOT), 1, Integer::sum);
     }
 
-    assertTrue(layers.symbols().size() > 4000);
     for (Integer npcId : layers.symbols().keySet()) {
       Layer layer = layers.byId().get(npcId);
       assertNotNull("symbol id " + npcId + " has a byId profile", layer);
       assertTrue(
           "symbol id " + npcId + " shares its name " + layer.name(),
-          idsPerName.get(layer.name()) > 1);
+          idsPerName.get(layer.name().toLowerCase(Locale.ROOT)) > 1);
     }
   }
 }

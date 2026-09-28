@@ -30,7 +30,8 @@ Pipeline
      symbol names one (FAI_VARROCK_GUARD02_F), since a page whose genders do not pair with
      its id groups gives every id the page's first gender.
   7. Merge the hand-curated overrides on top (authoritative, always win).
-  8. Emit the cache symbol of every id whose byId name another id shares under ``symbols``,
+  8. Emit the cache symbol of every id whose byId name another id shares, ignoring case,
+     under ``symbols``,
      so one character's ids can be told apart from others with the same display name.
   9. Embed tools/profiles.json under the ``profiles`` key and emit
      src/main/resources/npc-voices.json.
@@ -467,7 +468,7 @@ def ambiguous_name_symbols(profiles, symbols):
     ids_by_name = {}
     for key, layer in (profiles.get("byId") or {}).items():
         if not key.startswith("_") and isinstance(layer, dict) and layer.get("name"):
-            ids_by_name.setdefault(layer["name"], []).append(int(key))
+            ids_by_name.setdefault(layer["name"].lower(), []).append(int(key))
     shared = {npc_id for ids in ids_by_name.values() if len(ids) > 1 for npc_id in ids}
     return {str(npc_id): symbols[npc_id] for npc_id in sorted(shared) if npc_id in symbols}
 

@@ -78,11 +78,12 @@ public final class NpcProfileTable {
     this.loaded = true;
     log.info(
         "NPC profiles loaded: {} race, {} ethnicity, {} keyword categories, {} bespoke NPC"
-            + " overrides",
+            + " overrides, {} cache symbols",
         layers.byRace().size(),
         layers.byEthnicity().size(),
         layers.byCategory().size(),
-        layers.byId().size());
+        layers.byId().size(),
+        layers.symbols().size());
   }
 
   static NpcProfileTable fromProfilesJson(JsonObject profiles) {

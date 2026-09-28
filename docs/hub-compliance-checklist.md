@@ -130,7 +130,7 @@ line stays silent with a one-time "add your API key" notice naming the selected 
 
 ### No secrets or large binaries in the built jar
 
-**Verified by inspecting `build/libs` after `./gradlew jar`.** The jar is ~362 KiB
+**Verified by inspecting `build/libs` after `./gradlew jar`.** The jar is ~547 KiB
 (well under the Hub's 10 MiB limit) and contains only compiled classes plus three data
 resources, all loaded via `getResourceAsStream`:
 

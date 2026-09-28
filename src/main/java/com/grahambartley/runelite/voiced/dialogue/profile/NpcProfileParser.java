@@ -75,15 +75,15 @@ final class NpcProfileParser {
     }
     Map<Integer, String> parsed = new HashMap<>();
     for (String key : symbols.keySet()) {
-      if (isComment(key) || !symbols.get(key).isJsonPrimitive()) {
-        continue;
-      }
-      String symbol = optString(symbols, key);
-      if (symbol == null) {
+      JsonElement value = symbols.get(key);
+      if (isComment(key)
+          || !value.isJsonPrimitive()
+          || !value.getAsJsonPrimitive().isString()
+          || value.getAsString().isEmpty()) {
         continue;
       }
       try {
-        parsed.put(Integer.parseInt(key), symbol);
+        parsed.put(Integer.parseInt(key), value.getAsString());
       } catch (NumberFormatException e) {
         log.warn("Skipping non-numeric symbols key '{}'", key);
       }

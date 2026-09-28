@@ -214,9 +214,11 @@ class AmbiguousNameSymbolsTest(unittest.TestCase):
         self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS),
                          {"11911": "FAI_VARROCK_GUARD02"})
 
-    def test_names_group_exactly(self):
-        profiles = {"byId": {"11911": {"name": "Guard"}, "11914": {"name": "guard"}}}
-        self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS), {})
+    def test_names_group_ignoring_case(self):
+        profiles = {"byId": {"11911": {"name": "Guard"}, "11914": {"name": "guard"},
+                             "3105": {"name": "Hans"}}}
+        self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS),
+                         {"11911": "FAI_VARROCK_GUARD02", "11914": "FAI_VARROCK_GUARD02_F"})
 
     def test_comments_and_nameless_layers_are_ignored(self):
         profiles = {"byId": {"_comment": "x", "2108": {"style": "Wise."},

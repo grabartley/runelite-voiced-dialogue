@@ -45,7 +45,7 @@ none of those, so their race comes from the page's categories. The generator:
    Gradle build resolves (`./gradlew -q printRuneliteApiJar`, read with
    `javap -constants`), see [Mapping rules](#mapping-rules).
 5. Writes a top-level `symbols` map of id to cache symbol for every id whose
-   `profiles.byId` name another id shares exactly ("Guard" covers 73 ids across
+   `profiles.byId` name another id shares, ignoring case ("Guard" covers 73 ids across
    Varrock, Falador, Ardougne and more). The symbol tells one character's ids apart
    from other characters with the same display name (`FAI_VARROCK_GUARD02` and
    `FAI_VARROCK_GUARD02_F` against `FAI_FALADOR_GUARD1`). Ids with a unique name, and
