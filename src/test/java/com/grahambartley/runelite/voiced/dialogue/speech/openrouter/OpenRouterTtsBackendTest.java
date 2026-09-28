@@ -437,6 +437,20 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void anUnauthorizedResponseReachesThePlayerAsTheKeyNotice() {
+    server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("Unauthorized"));
+
+    String[] noticeText = {null};
+    OpenRouterTtsBackend backend = backend(keyedConfig());
+    backend.setNotice(msg -> noticeText[0] = msg);
+
+    assertNull(backend.synthesize(req()));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 401); check your API key. This line was not voiced.",
+        noticeText[0]);
+  }
+
+  @Test
   public void outOfCreditsResponseSurfacesTopUpNotice() {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_PAYMENT_REQUIRED).setBody("Insufficient credits"));

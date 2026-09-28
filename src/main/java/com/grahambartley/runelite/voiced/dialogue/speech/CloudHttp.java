@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
@@ -82,7 +83,9 @@ public final class CloudHttp {
   }
 
   public static boolean isRejectedRequest(int httpCode) {
-    return httpCode >= 400 && httpCode < 500 && httpCode != HTTP_TOO_MANY_REQUESTS;
+    return httpCode >= HttpURLConnection.HTTP_BAD_REQUEST
+        && httpCode < HttpURLConnection.HTTP_INTERNAL_ERROR
+        && httpCode != HTTP_TOO_MANY_REQUESTS;
   }
 
   public static boolean isNonBlank(String value) {
