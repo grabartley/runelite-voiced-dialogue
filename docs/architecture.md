@@ -260,8 +260,8 @@ config values, so the file and the stored keys cannot drift apart. Only the play
 overrides go in the file, never bundled or learned profile values.
 
 Import parses and validates the whole document before writing anything. A malformed document, a
-different `format`, or a `version` other than 1 is rejected outright. An entry with a non-numeric
-id, an unknown `voiceType`, or no fields left after `DirectionSanitizer` is skipped and counted.
+different `format`, or a `version` other than 1 is rejected outright. An entry whose id is not a plain
+NPC number written the way an export writes it, an unknown `voiceType`, or no fields left after `DirectionSanitizer` is skipped and counted.
 `NpcVoiceImportPlan` then counts how many NPCs the import sets, how many of those already have an
 edit it replaces, and how many other edits **Replace all** would clear, for the confirm step.
 **Merge** writes only the ids in the file; **Replace all** first clears every edit whose id is not in
