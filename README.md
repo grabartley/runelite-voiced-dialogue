@@ -133,7 +133,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Cache Size Limit (MiB)** | `1024` | Maximum on-disk cache size; oldest clips are deleted first. `0` for no limit. |
+| **Cache Size Limit (MiB)** | `1024` | Maximum on-disk cache size; oldest clips are deleted first. `0` for no limit. Clips can be [converted to WAV](docs/cache-files.md). |
 | **Debug Logging** | `Off` | Writes per-line voice decisions and timing logs for troubleshooting. |
 
 </details>
