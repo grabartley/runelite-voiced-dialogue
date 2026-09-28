@@ -161,7 +161,7 @@ public class VoiceManager {
     if (config.debugMode()) {
       log.info(
           "[TTS profile] npc='{}' id={} race={} ethnicity={} -> '{}' (source={}, accent='{}',"
-              + " voiceRegion={})",
+              + " voiceRegion={}, accentOverride={})",
           npcName,
           npcId == null ? "MISS" : npcId,
           race == null ? "UNKNOWN" : race,
@@ -169,7 +169,8 @@ public class VoiceManager {
           resolution.profile().name(),
           resolution.source(),
           resolution.profile().accent(),
-          resolution.profile().voiceRegion() == null ? "-" : resolution.profile().voiceRegion());
+          resolution.profile().voiceRegion() == null ? "-" : resolution.profile().voiceRegion(),
+          resolution.profile().accentOverridden());
     }
     return resolution.profile();
   }

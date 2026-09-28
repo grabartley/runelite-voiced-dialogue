@@ -494,6 +494,25 @@ public class NpcProfileTableTest {
   }
 
   @Test
+  public void anAccentOverrideMarksTheProfileAsAccentOverridden() {
+    CharacterProfile p =
+        resolveWith(
+                regionTable(), 9, "Dwarf", new NpcVoiceOverride(null, "Cockney", null, null, null))
+            .profile();
+    assertTrue(p.accentOverridden());
+  }
+
+  @Test
+  public void anOverrideWithoutAnAccentLeavesTheAccentBundled() {
+    CharacterProfile p =
+        resolveWith(
+                regionTable(), 9, "Dwarf", new NpcVoiceOverride(null, null, "Gruff.", null, null))
+            .profile();
+    assertFalse(p.accentOverridden());
+    assertFalse(resolveWith(regionTable(), 9, "Dwarf", null).profile().accentOverridden());
+  }
+
+  @Test
   public void aVoiceTypeOnlyOverrideLeavesTheProfileAndItsSourceUntouched() {
     NpcProfileTable table = regionTable();
     assertEquals(

@@ -18,8 +18,9 @@ so the Fremennik take them.
 So an NPC whose accent has native speakers is voiced from them. Each profile layer that sets an
 `accent` can name a `voiceRegion` next to it (see
 [npc-voice-tooling.md](npc-voice-tooling.md)), and the region always comes from the same layer as
-the winning accent, so the two can never disagree. `GeminiVoiceMap` then resolves a speaker in
-this order:
+the winning accent, so the two can never disagree. An accent the player typed into an NPC's
+override is the one exception: its region comes from the typed accent instead (see "NPC accent
+overrides" below). `GeminiVoiceMap` then resolves a speaker in this order:
 
 1. The narrator takes its fixed voice.
 2. The player takes a native voice from the first region whose keyword their typed accent names,
@@ -227,6 +228,22 @@ seed. The two options are
 labelled Type A and Type B rather than by gender: the voices are
 recognisably male and female, and the labelling follows the modern convention so the setting does
 not ask a player to pick a gender.
+
+## NPC accent overrides
+
+When the player sets an NPC's accent in the **NPC Voices** panel, the profile is marked as carrying
+an overridden accent (`CharacterProfile.accentOverridden()`). `GeminiVoiceMap` matches that accent
+against each region's `playerKeywords` exactly as it does for **Your Accent**, in file order with
+broad southern English last. A match replaces the bundled region, so "Strong Irish accent" on a
+Varrock NPC is voiced by a native Irish speaker rather than a southern English one asked to put on
+the accent. The voice is seeded exactly as a bundled NPC in that region would be, so the NPC keeps
+one stable voice, and gender, the voice type override and the child pools still apply. An override
+accent that names no region keeps the bundled region, and clearing the override restores the
+bundled voice.
+
+The mark is part of `CharacterProfile.cacheKey()`, so an overridden NPC never replays a clip cached
+under its bundled voice. With debug logging on, the `[TTS profile]` line shows `accentOverride` and
+the `[TTS voice] cloud voice` line shows the region actually used.
 
 ## The narrator
 

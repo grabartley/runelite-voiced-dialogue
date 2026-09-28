@@ -89,17 +89,16 @@ public final class GeminiVoiceMap {
       return narrator != null ? narrator : FALLBACK_NARRATOR_VOICE;
     }
     NpcGender gender = NpcGender.orDefault(spec.gender());
+    String region = regionFor(spec, profile);
     if (spec.player()) {
-      String regional = regions.voiceFor(accentRegion(profile), gender, PLAYER_SEED);
+      String regional = regions.voiceFor(region, gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
     }
     if (spec.follower()) {
-      String region = accentRegion(profile);
       String ownersVoice = regions.voiceFor(region, gender, PLAYER_SEED);
       String regional = regions.voiceExcluding(region, gender, FOLLOWER_SEED, ownersVoice);
       return regional != null ? regional : anchor(followerVoices.get(gender));
     }
-    String region = profile != null && spec.hasVoiceSeed() ? profile.voiceRegion() : null;
     if (spec.child()) {
       String regional = regions.childVoiceFor(region, gender, spec.voiceSeed());
       if (regional != null) {
@@ -119,8 +118,27 @@ public final class GeminiVoiceMap {
     return pick(byGender.get(gender), spec);
   }
 
-  private String accentRegion(CharacterProfile profile) {
-    return regions.regionForAccent(profile == null ? null : profile.accent());
+  public String regionFor(VoiceSpec spec, CharacterProfile profile) {
+    if (spec == null || spec.narrator()) {
+      return null;
+    }
+    if (spec.player() || spec.follower()) {
+      return regions.regionForAccent(profile == null ? null : profile.accent());
+    }
+    return npcRegion(spec, profile);
+  }
+
+  private String npcRegion(VoiceSpec spec, CharacterProfile profile) {
+    if (profile == null || !spec.hasVoiceSeed()) {
+      return null;
+    }
+    if (profile.accentOverridden()) {
+      String matched = regions.regionForAccent(profile.accent());
+      if (matched != null) {
+        return matched;
+      }
+    }
+    return profile.voiceRegion();
   }
 
   private static String anchor(String[] pool) {

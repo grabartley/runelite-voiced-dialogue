@@ -168,6 +168,7 @@ public final class NpcProfileTable {
     String pace = defaultProfile.pace();
     String pitch = defaultProfile.pitch();
     List<String> styleParts = new ArrayList<>();
+    boolean accentOverridden = false;
     List<String> sources = new ArrayList<>();
     for (MatchedLayer entry : matched) {
       Layer layer = entry.layer;
@@ -200,6 +201,7 @@ public final class NpcProfileTable {
       if (override.accent() != null) {
         accent = override.accent();
         accentDetail = null;
+        accentOverridden = true;
       }
       if (override.style() != null) {
         styleParts.clear();
@@ -214,7 +216,9 @@ public final class NpcProfileTable {
     String source = sources.isEmpty() ? "default" : String.join("+", sources);
 
     return new Resolution(
-        new CharacterProfile(name, accent, accentDetail, style, pace, pitch, voiceRegion), source);
+        new CharacterProfile(
+            name, accent, accentDetail, style, pace, pitch, voiceRegion, accentOverridden),
+        source);
   }
 
   private static String asSentence(String style) {
