@@ -10,6 +10,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningServic
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
+import net.runelite.client.util.Text;
 
 @Slf4j
 public class VoiceManager {
@@ -20,6 +21,8 @@ public class VoiceManager {
   private final NpcIdentityResolver identityResolver;
   private final NpcVoiceResolver npcVoiceResolver;
   private final NpcVoiceOverrideStore overrideStore;
+  private final NpcVoiceCatalog catalog;
+  private final RecentNpcSpeakers recentSpeakers = new RecentNpcSpeakers();
 
   private NpcLearningService learningService;
 
@@ -45,6 +48,15 @@ public class VoiceManager {
     this.identityResolver =
         new NpcIdentityResolver(new NpcFinder(client), demographicAnalyzer, profileTable);
     this.npcVoiceResolver = new NpcVoiceResolver(config);
+    this.catalog = profileTable.buildCatalog();
+  }
+
+  public NpcVoiceCatalog catalog() {
+    return catalog;
+  }
+
+  public RecentNpcSpeakers recentSpeakers() {
+    return recentSpeakers;
   }
 
   public boolean isVoiced(int npcId) {
@@ -83,10 +95,20 @@ public class VoiceManager {
   }
 
   private ResolvedSpeaker npcSpeaker(String npcName, NpcIdentity identity) {
+    rememberHeard(identity.profileId(), npcName);
     NpcVoiceOverride override = overrideStore.get(identity.profileId());
     VoiceSpec voice =
         npcVoiceResolver.resolve(npcName, identity, override == null ? null : override.voiceType());
     return new ResolvedSpeaker(voice, npcProfile(npcName, identity, override));
+  }
+
+  private void rememberHeard(Integer npcId, String npcName) {
+    if (npcId == null || npcName == null) {
+      return;
+    }
+    String name = Text.removeTags(npcName).trim();
+    catalog.remember(npcId, name);
+    recentSpeakers.record(npcId, name);
   }
 
   public ResolvedSpeaker resolveNarrator() {

@@ -238,6 +238,10 @@ public final class NpcProfileTable {
     return isBlank(sanitized) ? fallback : sanitized;
   }
 
+  public NpcVoiceCatalog buildCatalog() {
+    return NpcVoiceCatalog.from(layers);
+  }
+
   public boolean isLoaded() {
     return loaded;
   }

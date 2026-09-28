@@ -4,7 +4,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
@@ -39,8 +41,12 @@ public final class NpcVoiceOverrideStore {
     log.info("Loaded {} NPC voice overrides", loaded.size());
   }
 
+  public static boolean isOverrideKey(String key) {
+    return key != null && key.startsWith(KEY_PREFIX);
+  }
+
   public synchronized void refresh(String key) {
-    if (key != null && key.startsWith(KEY_PREFIX)) {
+    if (isOverrideKey(key)) {
       readInto(overrides, key);
     }
   }
@@ -76,6 +82,10 @@ public final class NpcVoiceOverrideStore {
 
   public NpcVoiceOverride get(Integer npcId) {
     return npcId == null ? null : overrides.get(npcId);
+  }
+
+  public Set<Integer> overriddenIds() {
+    return new HashSet<>(overrides.keySet());
   }
 
   public synchronized void set(int npcId, NpcVoiceOverride override) {
