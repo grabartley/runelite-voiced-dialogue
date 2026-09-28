@@ -382,7 +382,8 @@ public class VoicedDialoguePluginTest {
     setField(
         plugin,
         "setVoiceMenu",
-        new SetVoiceMenu(client, () -> true, npc -> 1, Runnable::run, (id, name) -> {}));
+        new SetVoiceMenu(
+            client, () -> true, npc -> 1, id -> true, Runnable::run, (id, name) -> {}));
 
     plugin.shutDown();
     MenuEntry examine = mock(MenuEntry.class);

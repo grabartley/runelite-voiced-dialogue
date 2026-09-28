@@ -25,6 +25,7 @@ public class VoiceManager {
   private final RecentNpcSpeakers recentSpeakers = new RecentNpcSpeakers();
 
   private NpcLearningService learningService;
+  private LearnedNpcStore learnedStore;
 
   public static VoiceManager create(
       VoicedDialogueConfig config, Client client, NpcVoiceOverrideStore overrideStore) {
@@ -67,6 +68,13 @@ public class VoiceManager {
     return identityResolver.resolve(npc).profileId();
   }
 
+  public boolean speaks(int npcId) {
+    return profileTable.hasBespokeProfile(npcId)
+        || overrideStore.get(npcId) != null
+        || recentSpeakers.heard(npcId)
+        || (learnedStore != null && learnedStore.contains(npcId));
+  }
+
   public void offerToLearning(String menuOption, NPC npc) {
     if (learningService == null
         || npc == null
@@ -82,6 +90,7 @@ public class VoiceManager {
 
   public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
     this.learningService = service;
+    this.learnedStore = store;
     this.demographicAnalyzer.setLearnedStore(store);
     this.npcVoiceResolver.setLearningService(service);
   }

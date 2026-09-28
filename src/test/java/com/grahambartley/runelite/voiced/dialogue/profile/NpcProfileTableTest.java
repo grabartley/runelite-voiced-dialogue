@@ -437,4 +437,17 @@ public class NpcProfileTableTest {
     assertEquals("Hans", catalog.nameOf(3105));
     assertNull(catalog.nameOf(-1));
   }
+
+  @Test
+  public void onlyAnNpcWithItsOwnByIdEntryHasABespokeProfile() {
+    NpcProfileTable table = table();
+
+    assertTrue(table.hasBespokeProfile(100));
+    assertFalse(table.hasBespokeProfile(101));
+  }
+
+  @Test
+  public void anUnloadedTableHasNoBespokeProfiles() {
+    assertFalse(new NpcProfileTable().hasBespokeProfile(100));
+  }
 }

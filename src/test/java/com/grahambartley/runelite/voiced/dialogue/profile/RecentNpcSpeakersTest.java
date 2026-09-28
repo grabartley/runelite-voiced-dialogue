@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
@@ -80,5 +81,19 @@ public class RecentNpcSpeakersTest {
     speakers.record(1, "Hans");
 
     assertEquals(1, speakers.newestFirst().size());
+  }
+
+  @Test
+  public void anNpcIsHeardOnlyOnceItHasSpokenAndWhileItIsInTheRing() {
+    assertFalse(speakers.heard(1));
+
+    speakers.record(1, "Hans");
+    assertTrue(speakers.heard(1));
+    assertFalse(speakers.heard(2));
+
+    for (int id = 2; id <= RecentNpcSpeakers.CAPACITY + 1; id++) {
+      speakers.record(id, "Npc " + id);
+    }
+    assertFalse("pushed out of the ring", speakers.heard(1));
   }
 }

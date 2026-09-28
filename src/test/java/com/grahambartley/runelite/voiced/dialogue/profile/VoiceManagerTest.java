@@ -281,6 +281,50 @@ public class VoiceManagerTest {
         Integer.valueOf(999_000_002), manager.profileIdOf(worldNpc(999_000_002, "Nobody")));
   }
 
+  private static final int HANS_ID = 3105;
+  private static final int ABYSSAL_DEMON_ID = 415;
+
+  @Test
+  public void anNpcWithABespokeProfileSpeaks() {
+    assertTrue(newManager(VoiceType.TYPE_A).speaks(HANS_ID));
+  }
+
+  @Test
+  public void aSilentMonsterInTheVoiceTableDoesNotSpeak() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    assertTrue("the voice table covers monsters too", manager.isVoiced(ABYSSAL_DEMON_ID));
+    assertFalse(manager.speaks(ABYSSAL_DEMON_ID));
+  }
+
+  @Test
+  public void anNpcHeardThisSessionSpeaks() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    manager.resolveNpc(worldNpc(999_000_003, "Cave goblin miner"));
+
+    assertTrue(manager.speaks(999_000_003));
+  }
+
+  @Test
+  public void anNpcThePlayerHasEditedSpeaks() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    overrideStore.set(ABYSSAL_DEMON_ID, new NpcVoiceOverride(null, "Welsh", null, null, null));
+
+    assertTrue(manager.speaks(ABYSSAL_DEMON_ID));
+  }
+
+  @Test
+  public void anNpcAutoLearnHasLearnedSpeaks() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    LearnedNpcStore learned = new LearnedNpcStore(null, new Gson());
+    learned.learn(999_000_004, "Human", "Male", null);
+    manager.enableLearning(learned, mock(NpcLearningService.class));
+
+    assertTrue(manager.speaks(999_000_004));
+    assertFalse(manager.speaks(999_000_005));
+  }
+
   private static NPC transformedNpc(int activeId, int baseId, String name) {
     NPCComposition composition = mock(NPCComposition.class);
     when(composition.getId()).thenReturn(baseId);

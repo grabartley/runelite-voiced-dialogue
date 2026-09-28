@@ -67,7 +67,7 @@ Switch any time with **Voice Provider**. Cached lines are instant and free on bo
 
 ## Change how an NPC sounds
 
-Click the Voiced Dialogue icon in RuneLite's sidebar to open **NPC Voices**. NPCs you hear this session and NPCs you have edited are listed with their chat-heads; search to find anyone else by name. You can also right-click an NPC in game and choose **Set voice** to open the panel straight to them.
+Click the Voiced Dialogue icon in RuneLite's sidebar to open **NPC Voices**. NPCs you hear this session and NPCs you have edited are listed with their chat-heads; search to find anyone else by name. You can also right-click an NPC that speaks and choose **Set voice** to open the panel straight to them.
 
 Open an NPC to set its **Voice type** (Type A or Type B, the same choice as **Player Voice**), **Accent**, **Style**, and **Pace**. Leave a field blank to keep the plugin's voice for it. Under **Apply to**, choose **Only this NPC**, **This character and its variants** (such as every Varrock guard variant), or **Everyone called** that name; each option shows how many NPCs it covers. **Clear override** puts the plugin's voice back.
 
@@ -110,7 +110,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
 | **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, each in their own voice. Everyone within earshot is voiced, and they overlap, so a market square sounds like a market square. Chatter fades with distance and cuts out once the speaker walks out of range. One NPC's lines queue behind each other rather than overlapping themselves, and animal noises are left unvoiced. These play without you clicking a dialogue, so a busy area costs real calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. Silent while you are in a conversation. |
 | **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Clicking **Talk-to** starts the lookup, usually before the dialogue opens, so their first line lands in the right voice. |
-| **Set Voice Menu Option** | `On` | Adds **Set voice** to every NPC's right-click menu, opening that NPC in the **NPC Voices** panel. Turn it off to keep NPC menus unchanged. |
+| **Set Voice Menu Option** | `On` | Adds **Set voice** to the right-click menu of NPCs that speak, opening that NPC in the **NPC Voices** panel. Monsters and bosses with nothing to say don't get it. Turn it off to keep NPC menus unchanged. |
 
 </details>
 

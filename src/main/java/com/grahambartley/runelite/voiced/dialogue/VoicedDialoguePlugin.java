@@ -148,6 +148,7 @@ public class VoicedDialoguePlugin extends Plugin {
             client,
             config::setVoiceMenuOption,
             voiceManager::profileIdOf,
+            voiceManager::speaks,
             SwingUtilities::invokeLater,
             this::openNpcVoice);
 

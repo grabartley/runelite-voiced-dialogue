@@ -11,8 +11,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import net.runelite.api.Client;
 import net.runelite.api.Menu;
@@ -33,6 +35,7 @@ public class SetVoiceMenuTest {
   private final Menu menu = mock(Menu.class);
   private final MenuEntry created = mock(MenuEntry.class, RETURNS_SELF);
   private final Map<NPC, Integer> profileIds = new HashMap<>();
+  private final Set<Integer> speakers = new HashSet<>();
   private final List<Runnable> uiQueue = new ArrayList<>();
   private final List<String> opened = new ArrayList<>();
   private boolean enabled = true;
@@ -42,6 +45,7 @@ public class SetVoiceMenuTest {
           client,
           () -> enabled,
           profileIds::get,
+          speakers::contains,
           uiQueue::add,
           (npcId, name) -> opened.add(npcId + ":" + name));
 
@@ -54,6 +58,13 @@ public class SetVoiceMenuTest {
     NPC npc = mock(NPC.class);
     when(npc.getId()).thenReturn(id);
     when(npc.getName()).thenReturn(name);
+    return npc;
+  }
+
+  private NPC speaker(String name) {
+    NPC npc = npc(HANS, name);
+    profileIds.put(npc, PROFILE_ID);
+    speakers.add(PROFILE_ID);
     return npc;
   }
 
@@ -81,7 +92,7 @@ public class SetVoiceMenuTest {
 
   @Test
   public void examiningAnNpcAddsSetVoiceBesideIt() {
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, npc(HANS, "Hans")));
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, speaker("Hans")));
 
     verify(menu).createMenuEntry(-1);
     verify(created).setOption("Set voice");
@@ -92,8 +103,9 @@ public class SetVoiceMenuTest {
 
   @Test
   public void otherNpcOptionsAddNothingSoEachNpcGetsOneEntry() {
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.NPC_FIRST_OPTION, npc(HANS, "Hans")));
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.NPC_SECOND_OPTION, npc(HANS, "Hans")));
+    NPC hans = speaker("Hans");
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.NPC_FIRST_OPTION, hans));
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.NPC_SECOND_OPTION, hans));
 
     verify(menu, never()).createMenuEntry(anyInt());
   }
@@ -115,20 +127,19 @@ public class SetVoiceMenuTest {
 
   @Test
   public void turningTheSettingOffHidesTheEntryOnTheNextMenu() {
+    NPC hans = speaker("Hans");
     enabled = false;
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, npc(HANS, "Hans")));
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, hans));
     verify(menu, never()).createMenuEntry(anyInt());
 
     enabled = true;
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, npc(HANS, "Hans")));
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, hans));
     verify(menu).createMenuEntry(-1);
   }
 
   @Test
   public void choosingSetVoiceOpensThatNpcOnTheUiThreadUnderItsProfileId() {
-    NPC hans = npc(HANS, "Hans");
-    profileIds.put(hans, PROFILE_ID);
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, hans));
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, speaker("Hans")));
 
     clickCreatedEntry();
     assertTrue("the panel is only touched on the UI thread", opened.isEmpty());
@@ -139,22 +150,37 @@ public class SetVoiceMenuTest {
   }
 
   @Test
-  public void anNpcWithNoResolvableIdOpensNothing() {
-    NPC hans = npc(HANS, "Hans");
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, hans));
+  public void anNpcWithNoResolvableIdAddsNothing() {
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, npc(HANS, "Hans")));
 
-    clickCreatedEntry();
-    drainUi();
+    verify(menu, never()).createMenuEntry(anyInt());
+  }
 
-    assertTrue(opened.isEmpty());
-    assertTrue(uiQueue.isEmpty());
+  @Test
+  public void anNpcThatNeverSpeaksAddsNothing() {
+    NPC demon = npc(415, "Abyssal demon");
+    profileIds.put(demon, 415);
+
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, demon));
+
+    verify(menu, never()).createMenuEntry(anyInt());
+  }
+
+  @Test
+  public void anNpcIsJudgedByItsProfileIdNotItsWorldId() {
+    NPC shifted = npc(999, "Hans");
+    profileIds.put(shifted, PROFILE_ID);
+    speakers.add(PROFILE_ID);
+
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, shifted));
+
+    verify(menu).createMenuEntry(-1);
   }
 
   @Test
   public void aTaggedNameOpensUnderItsPlainName() {
-    NPC hans = npc(HANS, "<col=ffff00>Hans</col> ");
-    profileIds.put(hans, PROFILE_ID);
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, hans));
+    setVoiceMenu.onMenuEntryAdded(
+        added(MenuAction.EXAMINE_NPC, speaker("<col=ffff00>Hans</col> ")));
 
     clickCreatedEntry();
     drainUi();
@@ -164,9 +190,7 @@ public class SetVoiceMenuTest {
 
   @Test
   public void anNpcWithNoNameOpensNothing() {
-    NPC nameless = npc(HANS, null);
-    profileIds.put(nameless, PROFILE_ID);
-    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, nameless));
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, speaker(null)));
 
     clickCreatedEntry();
     drainUi();

@@ -3,6 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntPredicate;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
@@ -21,6 +22,7 @@ final class SetVoiceMenu {
   private final Client client;
   private final BooleanSupplier enabled;
   private final Function<NPC, Integer> profileId;
+  private final IntPredicate speaks;
   private final Consumer<Runnable> uiThread;
   private final NpcOpener opener;
 
@@ -28,11 +30,13 @@ final class SetVoiceMenu {
       Client client,
       BooleanSupplier enabled,
       Function<NPC, Integer> profileId,
+      IntPredicate speaks,
       Consumer<Runnable> uiThread,
       NpcOpener opener) {
     this.client = client;
     this.enabled = enabled;
     this.profileId = profileId;
+    this.speaks = speaks;
     this.uiThread = uiThread;
     this.opener = opener;
   }
@@ -46,6 +50,10 @@ final class SetVoiceMenu {
     if (npc == null) {
       return;
     }
+    Integer npcId = profileId.apply(npc);
+    if (npcId == null || !speaks.test(npcId)) {
+      return;
+    }
     client
         .getMenu()
         .createMenuEntry(-1)
@@ -53,13 +61,12 @@ final class SetVoiceMenu {
         .setTarget(event.getTarget())
         .setIdentifier(event.getIdentifier())
         .setType(MenuAction.RUNELITE)
-        .onClick(clicked -> open(npc));
+        .onClick(clicked -> open(npcId, npc));
   }
 
-  private void open(NPC npc) {
-    Integer npcId = profileId.apply(npc);
+  private void open(int npcId, NPC npc) {
     String name = npc.getName() == null ? "" : Text.removeTags(npc.getName()).trim();
-    if (npcId == null || name.isEmpty()) {
+    if (name.isEmpty()) {
       return;
     }
     uiThread.accept(() -> opener.open(npcId, name));
