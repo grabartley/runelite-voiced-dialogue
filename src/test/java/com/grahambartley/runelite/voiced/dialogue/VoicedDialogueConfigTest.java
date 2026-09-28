@@ -155,4 +155,9 @@ public class VoicedDialogueConfigTest {
     assertEquals("Your Delivery Pace", direction.name());
     assertEquals("Speaking Pace", speed.name());
   }
+
+  @Test
+  public void theSetVoiceMenuOptionIsOnByDefault() {
+    assertTrue(new VoicedDialogueConfig() {}.setVoiceMenuOption());
+  }
 }

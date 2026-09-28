@@ -7,6 +7,8 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -23,8 +25,10 @@ public class VoiceManager {
   private final NpcVoiceOverrideStore overrideStore;
   private final NpcVoiceCatalog catalog;
   private final RecentNpcSpeakers recentSpeakers = new RecentNpcSpeakers();
+  private final Set<Integer> heardIds = ConcurrentHashMap.newKeySet();
 
   private NpcLearningService learningService;
+  private LearnedNpcStore learnedStore;
 
   public static VoiceManager create(
       VoicedDialogueConfig config, Client client, NpcVoiceOverrideStore overrideStore) {
@@ -63,6 +67,17 @@ public class VoiceManager {
     return demographicAnalyzer.isVoiced(npcId);
   }
 
+  public int profileIdOf(NPC npc) {
+    return demographicAnalyzer.profileIdOf(npc);
+  }
+
+  public boolean speaks(int npcId) {
+    return profileTable.hasBespokeProfile(npcId)
+        || overrideStore.get(npcId) != null
+        || heardIds.contains(npcId)
+        || (learnedStore != null && learnedStore.contains(npcId));
+  }
+
   public void offerToLearning(String menuOption, NPC npc) {
     if (learningService == null
         || npc == null
@@ -78,6 +93,7 @@ public class VoiceManager {
 
   public void enableLearning(LearnedNpcStore store, NpcLearningService service) {
     this.learningService = service;
+    this.learnedStore = store;
     this.demographicAnalyzer.setLearnedStore(store);
     this.npcVoiceResolver.setLearningService(service);
   }
@@ -109,6 +125,7 @@ public class VoiceManager {
     String name = Text.removeTags(npcName).trim();
     catalog.remember(npcId, name);
     recentSpeakers.record(npcId, name);
+    heardIds.add(npcId);
   }
 
   public ResolvedSpeaker resolveNarrator() {

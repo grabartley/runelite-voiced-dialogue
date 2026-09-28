@@ -218,6 +218,31 @@ name is named from its `NPCComposition` on the client thread. With no search, th
 edited, then prefix matches, and caps at 50 rows. `NpcListEntries` builds each listing as a pure
 function, one row per display name, carrying every id with that name.
 
+`SetVoiceMenu` adds a **Set-voice** entry to an NPC's right-click menu, following the core Hiscore
+plugin's **Lookup**: on each `MenuEntryAdded` for that NPC's `EXAMINE_NPC` entry, one per NPC, it
+creates a `MenuAction.RUNELITE` entry beside it. The **Set Voice Menu Option** setting is read on
+every menu build, so toggling it needs no restart.
+
+The entry only appears on NPCs that speak, judged by `VoiceManager.speaks` against the NPC's
+profile id, the same id its dialogue reads overrides under. `NpcDemographicAnalyzer.profileIdOf`
+picks that id without building the full identity, since menus rebuild every frame while the cursor
+rests on an NPC. The bundled voice table can't answer
+this, since it gives slayer monsters and silent bosses a race and gender too, and neither can a
+**Talk-to** option, which is missing on many speakers: bosses, the Dorgesh-Kaan cave goblins, and
+lots of quest characters. An NPC speaks when any of these hold:
+
+- It has a bespoke `byId` profile. Those were filled from the wiki's `Transcript:` pages, the
+  authoritative record of who has dialogue.
+- It was heard this session. `VoiceManager` keeps every heard profile id for the session, apart
+  from the panel's 30-slot `RecentNpcSpeakers` ring, so busy ambient chatter can't push a speaker
+  out.
+- The player has an override saved for it.
+- **Auto-learn New NPCs** has learned it, which only happens from a conversation option.
+
+Choosing the entry calls, on the EDT, `NpcVoicePanel.showNpc`, which opens the form with the
+clicked id preferred among its namesakes, and only then `ClientToolbar.openPanel`, so the panel
+activates on the new form.
+
 The form never reads the bundled profile. It edits voice type, accent, style and pace, and shows
 only what the player has saved for the selected id, with each blank field meaning the plugin's
 value. That keeps the bundled prompt text out of the panel. Only NPC names from the bundled table

@@ -42,6 +42,10 @@ public class VoiceManagerTest {
 
   private static final int DWARF_ID = 290;
 
+  private static final int HANS_ID = 3105;
+
+  private static final int ABYSSAL_DEMON_ID = 415;
+
   private final NpcVoiceOverrideStore overrideStore =
       new NpcVoiceOverrideStore(mock(ConfigManager.class));
 
@@ -253,6 +257,84 @@ public class VoiceManagerTest {
     manager.resolve(Speaker.PLAYER, null);
 
     assertTrue(manager.recentSpeakers().newestFirst().isEmpty());
+  }
+
+  @Test
+  public void aVoicedNpcIsEditedUnderItsBundledId() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    assertEquals(DWARF_ID, manager.profileIdOf(worldNpc(DWARF_ID, "Dwarf")));
+  }
+
+  @Test
+  public void aTransformedNpcIsEditedUnderTheIdItsDialogueResolvesTo() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    NPC dwarf = transformedNpc(999_000_001, DWARF_ID, "Dwarf");
+
+    assertEquals(DWARF_ID, manager.profileIdOf(dwarf));
+    overrideStore.set(
+        DWARF_ID, new NpcVoiceOverride(null, "Cockney", null, null, VoiceType.TYPE_B));
+    assertEquals("Cockney", manager.resolveNpc(dwarf).profile().accent());
+  }
+
+  @Test
+  public void anUnvoicedNpcIsEditedUnderItsOwnId() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    assertEquals(999_000_002, manager.profileIdOf(worldNpc(999_000_002, "Nobody")));
+  }
+
+  @Test
+  public void anNpcWithABespokeProfileSpeaks() {
+    assertTrue(newManager(VoiceType.TYPE_A).speaks(HANS_ID));
+  }
+
+  @Test
+  public void aSilentMonsterInTheVoiceTableDoesNotSpeak() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    assertTrue("the voice table covers monsters too", manager.isVoiced(ABYSSAL_DEMON_ID));
+    assertFalse(manager.speaks(ABYSSAL_DEMON_ID));
+  }
+
+  @Test
+  public void anNpcHeardThisSessionSpeaks() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    manager.resolveNpc(worldNpc(999_000_003, "Cave goblin miner"));
+
+    assertTrue(manager.speaks(999_000_003));
+  }
+
+  @Test
+  public void anNpcHeardEarlierStillSpeaksAfterManyOthersHaveSpoken() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    manager.resolveNpc(worldNpc(999_000_003, "Cave goblin miner"));
+
+    for (int i = 1; i <= 40; i++) {
+      manager.resolveNpc(worldNpc(999_100_000 + i, "Chatterer " + i));
+    }
+
+    assertTrue(manager.speaks(999_000_003));
+  }
+
+  @Test
+  public void anNpcThePlayerHasEditedSpeaks() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    overrideStore.set(ABYSSAL_DEMON_ID, new NpcVoiceOverride(null, "Welsh", null, null, null));
+
+    assertTrue(manager.speaks(ABYSSAL_DEMON_ID));
+  }
+
+  @Test
+  public void anNpcAutoLearnHasLearnedSpeaks() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    LearnedNpcStore learned = new LearnedNpcStore(null, new Gson());
+    learned.learn(999_000_004, "Human", "Male", null);
+    manager.enableLearning(learned, mock(NpcLearningService.class));
+
+    assertTrue(manager.speaks(999_000_004));
+    assertFalse(manager.speaks(999_000_005));
   }
 
   private static NPC transformedNpc(int activeId, int baseId, String name) {

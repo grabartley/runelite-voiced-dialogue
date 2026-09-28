@@ -337,6 +337,16 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   @ConfigItem(
+      keyName = "setVoiceMenuOption",
+      name = "Set Voice Menu Option",
+      description = "Add Set-voice to NPC right-click menus, opening that NPC in the voice panel.",
+      position = 8,
+      section = voicesSection)
+  default boolean setVoiceMenuOption() {
+    return true;
+  }
+
+  @ConfigItem(
       keyName = "cloudEmotion",
       name = "Emotional Delivery",
       description = "Deliver lines with the speaker's on-screen emotion.",
