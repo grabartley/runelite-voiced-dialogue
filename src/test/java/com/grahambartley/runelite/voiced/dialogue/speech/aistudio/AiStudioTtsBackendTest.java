@@ -2,8 +2,12 @@ package com.grahambartley.runelite.voiced.dialogue.speech.aistudio;
 
 import static com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioRequests.keyedConfig;
 import static com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioRequests.req;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -70,6 +74,10 @@ public class AiStudioTtsBackendTest {
         server.url("/v1beta/models/" + AiStudioTranslator.MODEL + ":generateContent").toString(),
         new RetryTuning(
             Duration.ofMillis(500), Duration.ofMillis(500), Duration.ofSeconds(1), 10, 0));
+  }
+
+  private String notice(int httpCode, String body) {
+    return AiStudioTtsBackend.failureNotice(gson, httpCode, body.getBytes(UTF_8));
   }
 
   private AiStudioTtsBackend noticedBackend() {
@@ -236,6 +244,82 @@ public class AiStudioTtsBackendTest {
     assertNull(backend.synthesize(req()));
     assertEquals("one notice for the failure", 1, notices.size());
     assertTrue(notices.get(0).contains("HTTP 500"));
+  }
+
+  @Test
+  public void anInvalidKeyBadRequestBlamesTheKey() {
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 400); check your API key. This line was not"
+            + " voiced.",
+        notice(HTTP_BAD_REQUEST, AiStudioResponses.invalidApiKey()));
+  }
+
+  @Test
+  public void aBadRequestWithoutTheKeyReasonIsARejectedRequest() {
+    assertEquals(
+        "Google AI Studio rejected the TTS request (HTTP 400). This line was not voiced.",
+        notice(HTTP_BAD_REQUEST, AiStudioResponses.noMatchingVoice()));
+  }
+
+  @Test
+  public void anUnreadableOrEmptyBadRequestBodyFallsBackToTheRejectedNotice() {
+    String rejected =
+        "Google AI Studio rejected the TTS request (HTTP 400). This line was not voiced.";
+
+    assertEquals(rejected, notice(HTTP_BAD_REQUEST, "not json"));
+    assertEquals(rejected, notice(HTTP_BAD_REQUEST, ""));
+    assertEquals(rejected, AiStudioTtsBackend.failureNotice(gson, HTTP_BAD_REQUEST, null));
+  }
+
+  @Test
+  public void unauthorizedAndForbiddenBlameTheKeyWhateverTheBody() {
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 401); check your API key. This line was not"
+            + " voiced.",
+        notice(HTTP_UNAUTHORIZED, ""));
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 403); check your API key. This line was not"
+            + " voiced.",
+        notice(HTTP_FORBIDDEN, ""));
+  }
+
+  @Test
+  public void theKeyReasonOnlyCountsOnABadRequest() {
+    assertEquals(
+        "Google AI Studio rejected the TTS request (HTTP 404). This line was not voiced.",
+        notice(HTTP_NOT_FOUND, AiStudioResponses.invalidApiKey()));
+  }
+
+  @Test
+  public void aServerErrorIsAFailureThatNeitherBlamesTheKeyNorTheRequest() {
+    assertEquals(
+        "Google AI Studio TTS request failed (HTTP 500). This line was not voiced.",
+        notice(HTTP_INTERNAL_ERROR, ""));
+  }
+
+  @Test
+  public void aRejectedRequestReachesThePlayerWithoutBlamingTheKey() {
+    AiStudioTtsBackend backend = noticedBackend();
+    server.enqueue(AiStudioResponses.badRequest(AiStudioResponses.noMatchingVoice()));
+
+    assertNull(backend.synthesize(req()));
+    assertEquals(
+        Arrays.asList(
+            "Google AI Studio rejected the TTS request (HTTP 400). This line was not voiced."),
+        notices);
+  }
+
+  @Test
+  public void anInvalidKeyReachesThePlayerAsTheKeyNotice() {
+    AiStudioTtsBackend backend = noticedBackend();
+    server.enqueue(AiStudioResponses.badRequest(AiStudioResponses.invalidApiKey()));
+
+    assertNull(backend.synthesize(req()));
+    assertEquals(
+        Arrays.asList(
+            "Google AI Studio TTS request failed (HTTP 400); check your API key. This line was not"
+                + " voiced."),
+        notices);
   }
 
   @Test

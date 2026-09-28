@@ -16,6 +16,16 @@ import org.junit.Test;
 public class CloudHttpTest {
 
   @Test
+  public void isRejectedRequestCoversClientErrorsExceptRateLimits() {
+    assertTrue(CloudHttp.isRejectedRequest(400));
+    assertTrue(CloudHttp.isRejectedRequest(404));
+    assertTrue(CloudHttp.isRejectedRequest(499));
+    assertFalse(CloudHttp.isRejectedRequest(CloudHttp.HTTP_TOO_MANY_REQUESTS));
+    assertFalse(CloudHttp.isRejectedRequest(399));
+    assertFalse(CloudHttp.isRejectedRequest(500));
+  }
+
+  @Test
   public void isNonBlankRequiresANonWhitespaceCharacter() {
     assertFalse(CloudHttp.isNonBlank(null));
     assertFalse(CloudHttp.isNonBlank(""));
