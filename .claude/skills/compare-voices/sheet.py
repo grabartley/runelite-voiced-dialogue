@@ -15,15 +15,25 @@ def audio(b, key):
     data = base64.b64encode(open(m4a, 'rb').read()).decode()
     return f'<audio controls preload="none" src="data:audio/mp4;base64,{data}"></audio>'
 
-def meta(b, key):
+def fields(b, key):
     r = res[b].get(key)
     if not r:
-        return ''
+        return None
     region = next((t.split('voiceRegion=')[1].rstrip(')') for t in r['trace'] if 'voiceRegion=' in t), None)
-    bits = [f'voice <code>{html.escape(r.get("voice", "?"))}</code>']
-    if region:
-        bits.append(f'region <code>{html.escape(region)}</code>')
-    bits.append(f'accent: {html.escape(r["accent"] or "")}')
+    return [('as', r.get('spec')), ('profile', r.get('profileName')), ('voice', r.get('voice')),
+            ('region', region), ('accent', r.get('accent'))]
+
+def meta(b, key):
+    mine, other = fields(b, key), fields('after' if b == 'before' else 'before', key)
+    if not mine:
+        return ''
+    theirs = dict(other or [])
+    bits = []
+    for label, value in mine:
+        if value is None and theirs.get(label) is None:
+            continue
+        cls = ' class="changed"' if other and theirs.get(label) != value else ''
+        bits.append(f'<span{cls}>{label} <code>{html.escape(str(value or "none"))}</code></span>')
     return '<div class="meta">' + '<br>'.join(bits) + '</div>'
 
 groups = list(dict.fromkeys(c['group'] for c in cases))
@@ -43,6 +53,7 @@ for title in groups:
         who = c.get('name') or c['kind'].title()
         rows.append(f'''<div class="card" data-key="{k}">
 <h3>{n}. {html.escape(who)} <small>{html.escape(k)}{" #" + str(c["id"]) if c.get("id") is not None else ""}</small></h3>
+{'<p class="why">' + html.escape(c["why"]) + '</p>' if c.get("why") else ""}
 <p class="line">"{html.escape(c["line"])}"</p>
 <div class="pair"><div><b>Before</b>{audio("before", k)}{meta("before", k)}</div>
 <div><b>After</b>{audio("after", k)}{meta("after", k)}</div></div>
@@ -60,12 +71,13 @@ body{{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;m
 h3{{margin:0 0 4px;font-size:16px}} small{{color:var(--mut);font-weight:normal}}
 .line{{font-style:italic;margin:4px 0 10px}} .pair{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
 @media (max-width:640px){{.pair{{grid-template-columns:1fr}}}}
-audio{{width:100%;margin:4px 0}} .meta{{font-size:12px;color:var(--mut)}} .miss{{color:var(--mut)}}
+audio{{width:100%;margin:4px 0}} .meta{{font-size:12px;color:var(--mut)}} .changed{{color:var(--fg);font-weight:600}}
+.why{{margin:6px 0;padding:6px 10px;border-left:3px solid var(--line)}} .miss{{color:var(--mut)}}
 .verdict{{margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}} .note{{flex:1;min-width:160px;padding:4px 6px}}
 #out{{width:100%;height:140px}} button{{padding:8px 14px;font-size:15px}}
 </style></head><body>
 <h1>Voice QA: before vs after</h1>
-<p>Each speaker says one real in-game line through the plugin's own code at both versions, on {html.escape(PROVIDER)} with default settings. Before: <code>{html.escape(BEFORE)}</code>. After: <code>{html.escape(AFTER)}</code>. Mark Go when After is as good as or better than Before.</p>
+<p>Each speaker says one real in-game line through the plugin's own code at both versions, on {html.escape(PROVIDER)} with default settings. Before: <code>{html.escape(BEFORE)}</code>. After: <code>{html.escape(AFTER)}</code>. Mark Go when After is as good as or better than Before. Fields in bold differ between the two sides.</p>
 {"".join(rows)}
 <h2>Results</h2><button onclick="collect()">Copy results</button><textarea id="out"></textarea>
 <script>
