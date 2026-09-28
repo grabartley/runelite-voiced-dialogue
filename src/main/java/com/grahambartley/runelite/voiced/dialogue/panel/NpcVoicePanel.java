@@ -37,6 +37,7 @@ public final class NpcVoicePanel extends PluginPanel {
   private final NpcDetailView detailView;
   private final Set<Integer> requestedNames = new HashSet<>();
   private String shownCard = LIST_CARD;
+  private boolean formStale;
 
   public NpcVoicePanel(
       NpcVoiceCatalog catalog,
@@ -100,6 +101,10 @@ public final class NpcVoicePanel extends PluginPanel {
 
   @Override
   public void onActivate() {
+    if (formStale && DETAIL_CARD.equals(shownCard)) {
+      detailView.reload();
+    }
+    formStale = false;
     refresh();
     if (LIST_CARD.equals(shownCard)) {
       listView.focusSearch();
@@ -107,9 +112,11 @@ public final class NpcVoicePanel extends PluginPanel {
   }
 
   public void refreshLater() {
-    whenShowing(
+    uiThread.accept(
         () -> {
-          if (LIST_CARD.equals(shownCard)) {
+          if (!showing.getAsBoolean()) {
+            formStale = true;
+          } else if (LIST_CARD.equals(shownCard)) {
             listView.refresh();
           } else {
             detailView.reload();
@@ -118,14 +125,10 @@ public final class NpcVoicePanel extends PluginPanel {
   }
 
   private void refreshListLater() {
-    whenShowing(this::refresh);
-  }
-
-  private void whenShowing(Runnable redraw) {
     uiThread.accept(
         () -> {
           if (showing.getAsBoolean()) {
-            redraw.run();
+            refresh();
           }
         });
   }

@@ -190,4 +190,34 @@ public class NpcVoicePanelTest {
 
     assertEquals("Half typed", panel.detailView().styleField().getText());
   }
+
+  @Test
+  public void anOverrideChangeWhileHiddenReloadsTheOpenFormOnReturn() {
+    speakers.record(HANS, "Hans");
+    panel.onActivate();
+    click(panel.listView().rows().get(0));
+    showing = false;
+
+    store.set(HANS, new NpcVoiceOverride(null, null, "From the other profile", null, null));
+    panel.refreshLater();
+    drainUi();
+    assertEquals("", panel.detailView().styleField().getText());
+
+    showing = true;
+    panel.onActivate();
+
+    assertEquals("From the other profile", panel.detailView().styleField().getText());
+  }
+
+  @Test
+  public void returningWithNothingChangedKeepsHalfTypedText() {
+    speakers.record(HANS, "Hans");
+    panel.onActivate();
+    click(panel.listView().rows().get(0));
+    panel.detailView().styleField().setText("Half typed");
+
+    panel.onActivate();
+
+    assertEquals("Half typed", panel.detailView().styleField().getText());
+  }
 }
