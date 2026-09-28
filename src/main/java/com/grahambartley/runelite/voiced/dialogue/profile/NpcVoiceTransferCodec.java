@@ -7,17 +7,18 @@ import com.google.gson.JsonParser;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.UnaryOperator;
 
 public final class NpcVoiceTransferCodec {
 
   public static final String FORMAT = "voiced-dialogue-npc-voices";
   public static final int VERSION = 1;
 
-  private final NpcVoiceOverrideStore store;
+  private final UnaryOperator<NpcVoiceOverride> sanitizer;
   private final Gson gson;
 
-  public NpcVoiceTransferCodec(NpcVoiceOverrideStore store, Gson gson) {
-    this.store = store;
+  public NpcVoiceTransferCodec(UnaryOperator<NpcVoiceOverride> sanitizer, Gson gson) {
+    this.sanitizer = sanitizer;
     this.gson = gson.newBuilder().setPrettyPrinting().create();
   }
 
@@ -86,7 +87,7 @@ public final class NpcVoiceTransferCodec {
   private static Integer npcId(String key) {
     try {
       int id = Integer.parseInt(key);
-      return id < 0 ? null : id;
+      return id < 0 || !String.valueOf(id).equals(key) ? null : id;
     } catch (NumberFormatException e) {
       return null;
     }
@@ -95,7 +96,7 @@ public final class NpcVoiceTransferCodec {
   private NpcVoiceOverride override(JsonElement value) {
     NpcVoiceOverride sanitized;
     try {
-      sanitized = store.sanitize(NpcVoiceOverrideJson.parse(value));
+      sanitized = sanitizer.apply(NpcVoiceOverrideJson.parse(value));
     } catch (RuntimeException e) {
       return null;
     }

@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.panel;
 
+import static com.grahambartley.runelite.voiced.dialogue.panel.NpcDetailView.npcCount;
+
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceImport;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceImportPlan;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverride;
@@ -159,9 +161,5 @@ final class NpcVoiceTransfer {
     return skipped == 1
         ? " 1 entry was skipped as invalid."
         : " " + skipped + " entries were skipped as invalid.";
-  }
-
-  private static String npcCount(int count) {
-    return NpcDetailView.npcCount(count);
   }
 }

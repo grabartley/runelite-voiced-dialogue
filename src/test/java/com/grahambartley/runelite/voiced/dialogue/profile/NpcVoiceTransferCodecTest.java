@@ -21,7 +21,8 @@ import org.junit.runner.RunWith;
 public class NpcVoiceTransferCodecTest {
 
   private final NpcVoiceTransferCodec codec =
-      new NpcVoiceTransferCodec(new NpcVoiceOverrideStore(mock(ConfigManager.class)), new Gson());
+      new NpcVoiceTransferCodec(
+          new NpcVoiceOverrideStore(mock(ConfigManager.class))::sanitize, new Gson());
 
   private static String document(String overrides) {
     return "{\"format\":\"voiced-dialogue-npc-voices\",\"version\":1,\"overrides\":"
@@ -185,5 +186,18 @@ public class NpcVoiceTransferCodecTest {
         decode("{\"format\":\"voiced-dialogue-npc-voices\",\"version\":1.0,\"overrides\":{}}")
             .overrides()
             .isEmpty());
+  }
+
+  @Test
+  public void idKeysMustBeWrittenTheWayAnExportWritesThem() {
+    NpcVoiceImport imported =
+        decode(
+            document(
+                "{\"+7\":{\"pace\":\"Fast\"},\"007\":{\"pace\":\"Slow\"},"
+                    + "\"7\":{\"pace\":\"Calm\"}}"));
+
+    assertEquals(1, imported.overrides().size());
+    assertEquals("Calm", imported.overrides().get(7).pace());
+    assertEquals(2, imported.skipped());
   }
 }

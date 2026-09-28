@@ -40,7 +40,7 @@ public class NpcVoicePanelTest {
           catalog,
           speakers,
           store,
-          new NpcVoiceTransferCodec(store, new Gson()),
+          new NpcVoiceTransferCodec(store::sanitize, new Gson()),
           (ids, done) -> {
             nameRequests.add(ids);
             nameCallbacks.add(done);
@@ -240,5 +240,19 @@ public class NpcVoicePanelTest {
 
     assertEquals(Collections.singletonList("Hans"), rowNames());
     assertEquals(NpcVoicePanel.LIST_CARD, panel.shownCard());
+  }
+
+  @Test
+  public void aBurstOfOverrideChangesQueuesOneRedraw() {
+    panel.onActivate();
+
+    panel.refreshLater();
+    panel.refreshLater();
+    panel.refreshLater();
+    assertEquals(1, uiQueue.size());
+
+    drainUi();
+    panel.refreshLater();
+    assertEquals(1, uiQueue.size());
   }
 }

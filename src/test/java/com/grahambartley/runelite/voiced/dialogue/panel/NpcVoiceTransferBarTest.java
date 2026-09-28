@@ -20,7 +20,7 @@ public class NpcVoiceTransferBarTest {
   private final NpcVoiceTransferBar bar =
       new NpcVoiceTransferBar(
           new NpcVoiceTransfer(
-              store, new NpcVoiceTransferCodec(store, new Gson()), dialogs, () -> {}));
+              store, new NpcVoiceTransferCodec(store::sanitize, new Gson()), dialogs, () -> {}));
 
   private static List<String> labels(JPopupMenu menu) {
     List<String> labels = new ArrayList<>();

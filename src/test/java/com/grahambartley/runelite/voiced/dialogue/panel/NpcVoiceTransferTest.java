@@ -34,7 +34,8 @@ public class NpcVoiceTransferTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
   private final NpcVoiceOverrideStore store = PanelFixtures.store();
-  private final NpcVoiceTransferCodec codec = new NpcVoiceTransferCodec(store, new Gson());
+  private final NpcVoiceTransferCodec codec =
+      new NpcVoiceTransferCodec(store::sanitize, new Gson());
   private final PanelFixtures.ScriptedDialogs dialogs = new PanelFixtures.ScriptedDialogs();
   private int refreshes;
   private final NpcVoiceTransfer transfer =

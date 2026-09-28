@@ -79,6 +79,10 @@ final class SwingTransferDialogs implements NpcVoiceTransfer.Dialogs {
             null,
             options,
             options[0]);
+    return importMode(choice);
+  }
+
+  static NpcVoiceImportPlan.Mode importMode(int choice) {
     if (choice == 0) {
       return NpcVoiceImportPlan.Mode.MERGE;
     }

@@ -109,7 +109,7 @@ public final class NpcVoiceOverrideStore {
     configManager.unsetConfiguration(VoicedDialogueConfig.GROUP, KEY_PREFIX + npcId);
   }
 
-  NpcVoiceOverride sanitize(NpcVoiceOverride override) {
+  public NpcVoiceOverride sanitize(NpcVoiceOverride override) {
     return new NpcVoiceOverride(
         sanitize(override.name()),
         sanitize(override.accent()),

@@ -84,4 +84,15 @@ public class NpcVoiceImportPlanTest {
     assertEquals(1, plan.replaces());
     assertEquals(0, plan.clearedByReplaceAll());
   }
+
+  @Test
+  public void replaceAllClearsOnlyTheEditsTheSummaryCounted() {
+    existing(1);
+    NpcVoiceImportPlan plan = plan(0, 2);
+
+    existing(9);
+    plan.apply(store, NpcVoiceImportPlan.Mode.REPLACE_ALL);
+
+    assertEquals(new HashSet<>(Arrays.asList(2, 9)), store.overriddenIds());
+  }
 }

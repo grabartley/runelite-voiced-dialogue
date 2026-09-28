@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import javax.swing.JLabel;
@@ -39,6 +40,7 @@ public final class NpcVoicePanel extends PluginPanel {
   private final NpcListView listView;
   private final NpcDetailView detailView;
   private final Set<Integer> requestedNames = new HashSet<>();
+  private final AtomicBoolean refreshQueued = new AtomicBoolean();
   private String shownCard = LIST_CARD;
   private boolean formStale;
 
@@ -54,7 +56,7 @@ public final class NpcVoicePanel extends PluginPanel {
         catalog,
         recentSpeakers,
         store,
-        new NpcVoiceTransferCodec(store, gson),
+        new NpcVoiceTransferCodec(store::sanitize, gson),
         nameResolver,
         new ChatheadImages(
             httpClient,
@@ -128,8 +130,12 @@ public final class NpcVoicePanel extends PluginPanel {
   }
 
   public void refreshLater() {
+    if (!refreshQueued.compareAndSet(false, true)) {
+      return;
+    }
     uiThread.accept(
         () -> {
+          refreshQueued.set(false);
           if (!showing.getAsBoolean()) {
             formStale = true;
           } else if (LIST_CARD.equals(shownCard)) {

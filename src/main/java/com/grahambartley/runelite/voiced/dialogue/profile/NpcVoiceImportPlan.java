@@ -42,7 +42,7 @@ public final class NpcVoiceImportPlan {
 
   public void apply(NpcVoiceOverrideStore store, Mode mode) {
     if (mode == Mode.REPLACE_ALL) {
-      for (Integer id : store.overriddenIds()) {
+      for (Integer id : current) {
         if (!imported.overrides().containsKey(id)) {
           store.clear(id);
         }
