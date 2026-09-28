@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +20,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okhttp3.mockwebserver.SocketPolicy;
 import okio.Buffer;
 import org.junit.After;
 import org.junit.Before;
@@ -182,5 +184,48 @@ public class ChatheadImagesTest {
 
     assertEquals(32, fitted.getWidth());
     assertEquals(32, fitted.getHeight());
+  }
+
+  @Test
+  public void aNameDroppedByANewBatchBeforeItsTurnIsNotFetched() throws Exception {
+    List<ImageIcon> shown = new ArrayList<>();
+    CountDownLatch release = new CountDownLatch(1);
+    executor.execute(
+        () -> {
+          try {
+            release.await(5, TimeUnit.SECONDS);
+          } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+          }
+        });
+
+    images.load("Hans", 32, shown::add);
+    images.newBatch();
+    release.countDown();
+    drain();
+
+    assertEquals(0, server.getRequestCount());
+    server.enqueue(pngResponse(png(40, 40)));
+    images.load("Hans", 32, shown::add);
+    drain();
+    assertEquals(1, server.getRequestCount());
+    assertNotSame(images.placeholder(32), shown.get(shown.size() - 1));
+  }
+
+  @Test
+  public void aNetworkFailureIsRetriedOnTheNextLoad() throws Exception {
+    server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START));
+    server.enqueue(pngResponse(png(40, 40)));
+    List<ImageIcon> shown = new ArrayList<>();
+
+    images.load("Hans", 32, shown::add);
+    drain();
+    assertEquals(1, shown.size());
+
+    images.load("Hans", 32, shown::add);
+    drain();
+
+    assertEquals(3, shown.size());
+    assertNotSame(images.placeholder(32), shown.get(2));
   }
 }

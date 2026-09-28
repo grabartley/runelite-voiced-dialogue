@@ -1,11 +1,15 @@
 package com.grahambartley.runelite.voiced.dialogue.panel;
 
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudHttp;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
@@ -24,8 +28,6 @@ final class ChatheadImages {
 
   static final String WIKI_FILE_PATH = "https://oldschool.runescape.wiki/w/Special:FilePath";
 
-  private static final String USER_AGENT = "runelite-voiced-dialogue";
-
   private final OkHttpClient httpClient;
   private final HttpUrl filePath;
   private final ExecutorService executor;
@@ -34,6 +36,7 @@ final class ChatheadImages {
   private final Map<String, BufferedImage> loaded = new HashMap<>();
   private final Map<String, List<Consumer<BufferedImage>>> pending = new HashMap<>();
   private final Map<String, ImageIcon> icons = new HashMap<>();
+  private final Set<String> wanted = ConcurrentHashMap.newKeySet();
 
   ChatheadImages(
       OkHttpClient httpClient,
@@ -51,8 +54,13 @@ final class ChatheadImages {
         "placeholder:" + size, k -> new ImageIcon(PanelIcons.chatheadPlaceholder(size)));
   }
 
+  void newBatch() {
+    wanted.clear();
+  }
+
   void load(String npcName, int size, Consumer<ImageIcon> onIcon) {
     String file = fileName(npcName);
+    wanted.add(file);
     String iconKey = file + ":" + size;
     ImageIcon cached = icons.get(iconKey);
     if (cached != null) {
@@ -84,27 +92,38 @@ final class ChatheadImages {
     waiting.add(whenLoaded);
     pending.put(file, waiting);
     try {
-      executor.execute(() -> deliver(file, fetch(file)));
+      executor.execute(() -> fetchIfWanted(file));
     } catch (RejectedExecutionException e) {
       pending.remove(file);
     }
   }
 
-  private void deliver(String file, BufferedImage image) {
-    uiThread.accept(
-        () -> {
-          loaded.put(file, image);
-          List<Consumer<BufferedImage>> waiting = pending.remove(file);
-          if (waiting != null) {
-            waiting.forEach(callback -> callback.accept(image));
-          }
-        });
+  private void fetchIfWanted(String file) {
+    if (!wanted.contains(file)) {
+      uiThread.accept(() -> pending.remove(file));
+      return;
+    }
+    try {
+      BufferedImage image = fetch(file);
+      uiThread.accept(() -> deliver(file, image));
+    } catch (IOException | RuntimeException e) {
+      log.debug("Chathead {} could not be reached: {}", file, e.getMessage());
+      uiThread.accept(() -> pending.remove(file));
+    }
   }
 
-  private BufferedImage fetch(String file) {
+  private void deliver(String file, BufferedImage image) {
+    loaded.put(file, image);
+    List<Consumer<BufferedImage>> waiting = pending.remove(file);
+    if (waiting != null) {
+      waiting.forEach(callback -> callback.accept(image));
+    }
+  }
+
+  private BufferedImage fetch(String file) throws IOException {
     HttpUrl url = filePath.newBuilder().addPathSegment(file).build();
     Request request =
-        new Request.Builder().url(url).addHeader("User-Agent", USER_AGENT).get().build();
+        new Request.Builder().url(url).addHeader("User-Agent", CloudHttp.USER_AGENT).get().build();
     try (Response response = httpClient.newCall(request).execute()) {
       ResponseBody body = response.body();
       if (!response.isSuccessful() || body == null) {
@@ -113,9 +132,6 @@ final class ChatheadImages {
       try (InputStream stream = body.byteStream()) {
         return ImageIO.read(stream);
       }
-    } catch (Exception e) {
-      log.debug("Chathead {} could not be loaded: {}", file, e.getMessage());
-      return null;
     }
   }
 

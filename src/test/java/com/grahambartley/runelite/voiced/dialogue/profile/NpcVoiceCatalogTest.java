@@ -46,7 +46,7 @@ public class NpcVoiceCatalogTest {
 
     assertEquals(
         Arrays.asList(11911, 11912, 11913, 11914, 11915, 11916),
-        table.catalog().scopeIds(11911, NpcVoiceScope.THIS_CHARACTER));
+        table.buildCatalog().scopeIds(11911, NpcVoiceScope.THIS_CHARACTER));
   }
 
   @Test

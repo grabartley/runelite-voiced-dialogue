@@ -9,10 +9,14 @@ import static org.junit.Assert.assertTrue;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceScope;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 public class NpcScopePickerTest {
+
+  private static final List<Integer> GUARD_IDS =
+      Arrays.asList(3094, 11911, 11912, 11913, 11914, 11915, 11916, 11917);
 
   private final AtomicInteger changes = new AtomicInteger();
   private final NpcScopePicker picker =
@@ -20,7 +24,7 @@ public class NpcScopePickerTest {
 
   @Test
   public void startsOnThisNpcAlone() {
-    picker.show(GUARD, "Guard");
+    picker.show(GUARD, "Guard", GUARD_IDS);
 
     assertEquals(NpcVoiceScope.THIS_NPC, picker.selected());
     assertEquals(Collections.singletonList(GUARD), picker.selectedIds());
@@ -28,7 +32,7 @@ public class NpcScopePickerTest {
 
   @Test
   public void eachOptionShowsItsNpcCountBeforeSaving() {
-    picker.show(GUARD, "Guard");
+    picker.show(GUARD, "Guard", GUARD_IDS);
 
     assertEquals("Only this NPC (1)", picker.button(NpcVoiceScope.THIS_NPC).getText());
     assertEquals(
@@ -39,7 +43,7 @@ public class NpcScopePickerTest {
 
   @Test
   public void thisCharacterOnAVarrockGuardIsTheSixVariants() {
-    picker.show(GUARD, "Guard");
+    picker.show(GUARD, "Guard", GUARD_IDS);
     picker.select(NpcVoiceScope.THIS_CHARACTER);
 
     assertEquals(Arrays.asList(11911, 11912, 11913, 11914, 11915, 11916), picker.selectedIds());
@@ -47,7 +51,7 @@ public class NpcScopePickerTest {
 
   @Test
   public void optionsThatWouldOnlyCoverThisNpcAreDisabled() {
-    picker.show(HANS, "Hans");
+    picker.show(HANS, "Hans", Collections.singletonList(HANS));
 
     assertTrue(picker.button(NpcVoiceScope.THIS_NPC).isEnabled());
     assertFalse(picker.button(NpcVoiceScope.THIS_CHARACTER).isEnabled());
@@ -56,10 +60,10 @@ public class NpcScopePickerTest {
 
   @Test
   public void aSelectionThatBecomesDisabledFallsBackToThisNpc() {
-    picker.show(GUARD, "Guard");
+    picker.show(GUARD, "Guard", GUARD_IDS);
     picker.select(NpcVoiceScope.SAME_NAME);
 
-    picker.show(HANS, "Hans");
+    picker.show(HANS, "Hans", Collections.singletonList(HANS));
 
     assertEquals(NpcVoiceScope.THIS_NPC, picker.selected());
     assertEquals(Collections.singletonList(HANS), picker.selectedIds());
@@ -67,7 +71,7 @@ public class NpcScopePickerTest {
 
   @Test
   public void pickingAnOptionNotifies() {
-    picker.show(GUARD, "Guard");
+    picker.show(GUARD, "Guard", GUARD_IDS);
 
     picker.button(NpcVoiceScope.SAME_NAME).doClick();
 
@@ -78,5 +82,14 @@ public class NpcScopePickerTest {
   @Test
   public void selectedIdsBeforeShowingAnythingIsEmpty() {
     assertTrue(picker.selectedIds().isEmpty());
+  }
+
+  @Test
+  public void everyoneCalledCoversExactlyTheIdsTheRowShows() {
+    picker.show(GUARD, "Guard", Arrays.asList(GUARD, 424242));
+    picker.select(NpcVoiceScope.SAME_NAME);
+
+    assertEquals(Arrays.asList(GUARD, 424242), picker.selectedIds());
+    assertEquals("Everyone called \"Guard\" (2)", picker.button(NpcVoiceScope.SAME_NAME).getText());
   }
 }

@@ -10,7 +10,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.util.List;
 import java.util.Objects;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
@@ -157,7 +156,7 @@ final class NpcDetailView extends JPanel {
     accentField.setText(saved == null ? "" : orEmpty(saved.accent()));
     styleField.setText(saved == null ? "" : orEmpty(saved.style()));
     paceField.setText(saved == null ? "" : orEmpty(saved.pace()));
-    scopePicker.show(npcId, entry.name());
+    scopePicker.show(npcId, entry.name(), entry.ids());
     loading = false;
     formChanged();
   }
@@ -189,16 +188,19 @@ final class NpcDetailView extends JPanel {
 
   private void save() {
     NpcVoiceOverride form = emptyToNull(formOverride());
-    List<Integer> ids = scopePicker.selectedIds();
-    for (int id : ids) {
-      if (form == null) {
-        store.clear(id);
-      } else {
-        store.set(id, form);
+    int saved = 0;
+    int cleared = 0;
+    for (int id : scopePicker.selectedIds()) {
+      boolean hadOverride = store.get(id) != null;
+      store.set(id, form);
+      if (store.get(id) != null) {
+        saved++;
+      } else if (hadOverride) {
+        cleared++;
       }
     }
     finish(
-        (form == null ? "Cleared " : "Saved for ") + npcCount(ids.size()) + ".",
+        saved > 0 ? "Saved for " + npcCount(saved) + "." : "Cleared " + npcCount(cleared) + ".",
         ColorScheme.PROGRESS_COMPLETE_COLOR);
   }
 

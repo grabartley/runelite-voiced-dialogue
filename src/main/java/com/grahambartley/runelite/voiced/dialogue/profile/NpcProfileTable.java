@@ -238,7 +238,7 @@ public final class NpcProfileTable {
     return isBlank(sanitized) ? fallback : sanitized;
   }
 
-  public NpcVoiceCatalog catalog() {
+  public NpcVoiceCatalog buildCatalog() {
     return NpcVoiceCatalog.from(layers);
   }
 

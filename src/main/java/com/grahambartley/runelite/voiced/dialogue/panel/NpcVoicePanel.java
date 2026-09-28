@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,6 +30,7 @@ public final class NpcVoicePanel extends PluginPanel {
   private final NpcVoiceCatalog catalog;
   private final NpcNameResolver nameResolver;
   private final Consumer<Runnable> uiThread;
+  private final BooleanSupplier showing;
   private final CardLayout cards = new CardLayout();
   private final JPanel content = new JPanel(cards);
   private final NpcListView listView;
@@ -53,7 +55,8 @@ public final class NpcVoicePanel extends PluginPanel {
             ChatheadImages.WIKI_FILE_PATH,
             chatheadExecutor,
             SwingUtilities::invokeLater),
-        SwingUtilities::invokeLater);
+        SwingUtilities::invokeLater,
+        null);
   }
 
   NpcVoicePanel(
@@ -62,11 +65,13 @@ public final class NpcVoicePanel extends PluginPanel {
       NpcVoiceOverrideStore store,
       NpcNameResolver nameResolver,
       ChatheadImages chatheads,
-      Consumer<Runnable> uiThread) {
+      Consumer<Runnable> uiThread,
+      BooleanSupplier showing) {
     super(false);
     this.catalog = catalog;
     this.nameResolver = nameResolver;
     this.uiThread = uiThread;
+    this.showing = showing == null ? this::isShowing : showing;
     setLayout(new BorderLayout(0, 10));
     setBorder(new EmptyBorder(10, 10, 10, 10));
     setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -102,7 +107,12 @@ public final class NpcVoicePanel extends PluginPanel {
   }
 
   public void refreshLater() {
-    uiThread.accept(this::refresh);
+    uiThread.accept(
+        () -> {
+          if (showing.getAsBoolean()) {
+            refresh();
+          }
+        });
   }
 
   void refresh() {

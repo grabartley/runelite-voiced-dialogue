@@ -413,7 +413,7 @@ public class NpcProfileTableTest {
   public void theBundledCatalogNamesByIdNpcsAndNothingElse() {
     NpcProfileTable table = new NpcProfileTable();
     table.initialize();
-    NpcVoiceCatalog catalog = table.catalog();
+    NpcVoiceCatalog catalog = table.buildCatalog();
 
     assertEquals("Hans", catalog.nameOf(3105));
     assertNull(catalog.nameOf(-1));

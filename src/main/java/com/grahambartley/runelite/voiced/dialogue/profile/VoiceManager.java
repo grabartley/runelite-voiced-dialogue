@@ -48,7 +48,7 @@ public class VoiceManager {
     this.identityResolver =
         new NpcIdentityResolver(new NpcFinder(client), demographicAnalyzer, profileTable);
     this.npcVoiceResolver = new NpcVoiceResolver(config);
-    this.catalog = profileTable.catalog();
+    this.catalog = profileTable.buildCatalog();
   }
 
   public NpcVoiceCatalog catalog() {

@@ -39,9 +39,10 @@ final class NpcScopePicker extends JPanel {
     buttons.get(NpcVoiceScope.THIS_NPC).setSelected(true);
   }
 
-  void show(int npcId, String npcName) {
+  void show(int npcId, String npcName, List<Integer> sameNameIds) {
     for (NpcVoiceScope scope : NpcVoiceScope.values()) {
-      List<Integer> scoped = catalog.scopeIds(npcId, scope);
+      List<Integer> scoped =
+          scope == NpcVoiceScope.SAME_NAME ? sameNameIds : catalog.scopeIds(npcId, scope);
       ids.put(scope, scoped);
       JRadioButton button = buttons.get(scope);
       button.setText(label(scope, npcName, scoped.size()));

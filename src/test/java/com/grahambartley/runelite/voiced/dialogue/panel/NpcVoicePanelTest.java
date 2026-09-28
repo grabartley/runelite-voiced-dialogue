@@ -28,6 +28,7 @@ public class NpcVoicePanelTest {
   private final List<Set<Integer>> nameRequests = new ArrayList<>();
   private final List<Consumer<Map<Integer, String>>> nameCallbacks = new ArrayList<>();
   private final List<Runnable> uiQueue = new ArrayList<>();
+  private boolean showing = true;
 
   private final NpcVoicePanel panel =
       new NpcVoicePanel(
@@ -39,7 +40,8 @@ public class NpcVoicePanelTest {
             nameCallbacks.add(done);
           },
           PanelFixtures.offlineChatheads(),
-          uiQueue::add);
+          uiQueue::add,
+          () -> showing);
 
   private void drainUi() {
     List<Runnable> queued = new ArrayList<>(uiQueue);
@@ -149,5 +151,17 @@ public class NpcVoicePanelTest {
   @Test
   public void theNavigationIconIsDrawn() {
     assertEquals(PanelIcons.NAVIGATION_SIZE, NpcVoicePanel.navigationIcon().getWidth());
+  }
+
+  @Test
+  public void aHiddenPanelSkipsRedrawsUntilItOpens() {
+    showing = false;
+
+    speakers.record(HANS, "Hans");
+    drainUi();
+    assertTrue(rowNames().isEmpty());
+
+    panel.onActivate();
+    assertEquals(Collections.singletonList("Hans"), rowNames());
   }
 }

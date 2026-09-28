@@ -77,7 +77,7 @@ public class NpcDetailViewTest {
   private static NpcVoiceCatalog bundledCatalog() {
     NpcProfileTable table = new NpcProfileTable();
     table.initialize();
-    return table.catalog();
+    return table.buildCatalog();
   }
 
   @Test
@@ -274,5 +274,29 @@ public class NpcDetailViewTest {
     assertEquals(
         new NpcVoiceOverride("Hans the Elder", null, null, null, VoiceType.TYPE_A),
         view.formOverride());
+  }
+
+  @Test
+  public void savingABlankFormOverABroadScopeCountsOnlyWhatItCleared() {
+    store.set(GUARD, new NpcVoiceOverride(null, "Scottish", null, null, null));
+    openGuard();
+    view.scopePicker().select(NpcVoiceScope.THIS_CHARACTER);
+    view.accentField().setText("");
+
+    view.saveButton().doClick();
+
+    assertTrue(store.overriddenIds().isEmpty());
+    assertEquals("Cleared 1 NPC.", view.statusText());
+  }
+
+  @Test
+  public void everyoneCalledUsesTheIdsOnTheRow() {
+    view.open(new NpcListEntry("Guard", Arrays.asList(GUARD, 424242), true, false, GUARD));
+    view.styleField().setText("Bored");
+    view.scopePicker().select(NpcVoiceScope.SAME_NAME);
+
+    view.saveButton().doClick();
+
+    assertEquals(new HashSet<>(Arrays.asList(GUARD, 424242)), store.overriddenIds());
   }
 }

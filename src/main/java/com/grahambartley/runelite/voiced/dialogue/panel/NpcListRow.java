@@ -69,8 +69,7 @@ final class NpcListRow extends JPanel {
   }
 
   static String detailText(NpcListEntry entry) {
-    int count = entry.ids().size();
-    String npcs = count == 1 ? "1 NPC" : count + " NPCs";
+    String npcs = NpcDetailView.npcCount(entry.ids().size());
     return entry.heard() ? npcs + " · heard" : npcs;
   }
 

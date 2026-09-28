@@ -89,6 +89,7 @@ final class NpcListView extends JPanel {
     int scrollValue = scroll.getVerticalScrollBar().getValue();
     NpcListing listing = entries.build(search.getText(), heard.get(), edited.get());
     results.removeAll();
+    chatheads.newBatch();
     rows.clear();
     notes.clear();
     row = 0;
