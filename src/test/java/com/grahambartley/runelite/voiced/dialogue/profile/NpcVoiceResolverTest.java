@@ -151,11 +151,11 @@ public class NpcVoiceResolverTest {
   }
 
   @Test
-  public void aGenderOverrideReplacesTheDetectedGenderAndTheVoiceKey() {
+  public void aVoiceTypeOverrideReplacesTheDetectedGenderAndTheVoiceKey() {
     NpcIdentity guard =
         identity(11914, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false);
     VoiceSpec before = resolver.resolve("Guard", guard, null);
-    VoiceSpec after = resolver.resolve("Guard", guard, NpcGender.FEMALE);
+    VoiceSpec after = resolver.resolve("Guard", guard, VoiceType.TYPE_B);
 
     assertEquals(NpcGender.MALE, before.gender());
     assertEquals(NpcGender.FEMALE, after.gender());
@@ -165,17 +165,17 @@ public class NpcVoiceResolverTest {
   }
 
   @Test
-  public void aGenderOverrideCanTurnAFemaleNpcMale() {
+  public void typeACanTurnAFemaleNpcMale() {
     VoiceSpec spec =
         resolver.resolve(
             "Hag",
             identity(12, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false),
-            NpcGender.MALE);
+            VoiceType.TYPE_A);
     assertEquals(NpcGender.MALE, spec.gender());
   }
 
   @Test
-  public void noGenderOverrideKeepsTheDetectedGender() {
+  public void noVoiceTypeOverrideKeepsTheDetectedGender() {
     VoiceSpec spec =
         resolver.resolve(
             "Aggie",
@@ -185,8 +185,8 @@ public class NpcVoiceResolverTest {
   }
 
   @Test
-  public void aGenderOverrideAppliesWhenDetectionFailedForAnNpcInTheWorld() {
-    VoiceSpec spec = resolver.resolve("Hans", identity(5, null, false), NpcGender.FEMALE);
+  public void aVoiceTypeOverrideAppliesWhenDetectionFailedForAnNpcInTheWorld() {
+    VoiceSpec spec = resolver.resolve("Hans", identity(5, null, false), VoiceType.TYPE_B);
     assertEquals(NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.FEMALE, spec.gender());
   }

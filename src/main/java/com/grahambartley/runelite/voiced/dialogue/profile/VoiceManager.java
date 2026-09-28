@@ -85,12 +85,7 @@ public class VoiceManager {
   private ResolvedSpeaker npcSpeaker(String npcName, NpcIdentity identity) {
     NpcVoiceOverride override = overrideStore.get(identity.profileId());
     VoiceSpec voice =
-        npcVoiceResolver.resolve(
-            npcName,
-            identity,
-            override == null || override.voiceType() == null
-                ? null
-                : override.voiceType().getGender());
+        npcVoiceResolver.resolve(npcName, identity, override == null ? null : override.voiceType());
     return new ResolvedSpeaker(voice, npcProfile(npcName, identity, override));
   }
 

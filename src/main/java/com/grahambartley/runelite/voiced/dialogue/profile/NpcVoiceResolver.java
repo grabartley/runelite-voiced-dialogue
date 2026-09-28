@@ -25,17 +25,16 @@ final class NpcVoiceResolver {
     this.learningService = learningService;
   }
 
-  VoiceSpec resolve(String npcName, NpcIdentity identity, NpcGender overriddenGender) {
+  VoiceSpec resolve(String npcName, NpcIdentity identity, VoiceType voiceType) {
     if (npcName == null || npcName.isEmpty()) {
-      return defaultVoice(npcName, null, identity, overriddenGender, "blank-name");
+      return defaultVoice(npcName, null, identity, voiceType, "blank-name");
     }
     if (identity.worldId() == null) {
-      return defaultVoice(npcName, null, identity, overriddenGender, "not-in-world");
+      return defaultVoice(npcName, null, identity, voiceType, "not-in-world");
     }
     NpcAttributes attributes = identity.attributes();
     if (attributes == null) {
-      return defaultVoice(
-          npcName, identity.baseId(), identity, overriddenGender, "analysis-failed");
+      return defaultVoice(npcName, identity.baseId(), identity, voiceType, "analysis-failed");
     }
 
     NpcRace race = NpcDemographicParser.toRace(attributes.getRace());
@@ -49,10 +48,10 @@ final class NpcVoiceResolver {
 
     NpcRace voiceRace = race == NpcRace.UNKNOWN ? NpcRace.HUMAN : race;
     NpcGender voiceGender = NpcDemographicParser.toVoiceGender(gender);
-    if (overriddenGender != null) {
-      voiceGender = overriddenGender;
-      gender = overriddenGender;
-      source += "+gender-override";
+    if (voiceType != null) {
+      voiceGender = voiceType.getGender();
+      gender = voiceGender;
+      source += "+voice-type-override";
     }
     boolean child = identity.child();
     int seed = voiceSeed(identity.baseId(), npcName);
@@ -65,15 +64,12 @@ final class NpcVoiceResolver {
   }
 
   private VoiceSpec defaultVoice(
-      String npcName,
-      Integer npcId,
-      NpcIdentity identity,
-      NpcGender overriddenGender,
-      String source) {
+      String npcName, Integer npcId, NpcIdentity identity, VoiceType voiceType, String source) {
     boolean child = identity.child();
     int seed = voiceSeed(npcId, npcName);
-    if (overriddenGender != null) {
-      source += "+gender-override";
+    NpcGender voiceTypeGender = voiceType == null ? null : voiceType.getGender();
+    if (voiceTypeGender != null) {
+      source += "+voice-type-override";
     }
     if (config.debugMode()) {
       log.info(
@@ -81,13 +77,13 @@ final class NpcVoiceResolver {
               npcName,
               npcId,
               NpcRace.UNKNOWN,
-              overriddenGender == null ? NpcGender.UNKNOWN : overriddenGender,
+              voiceTypeGender == null ? NpcGender.UNKNOWN : voiceTypeGender,
               child,
               source,
               seed));
     }
     return VoiceSpec.npc(
-        NpcRace.HUMAN, overriddenGender == null ? NpcGender.MALE : overriddenGender, seed, child);
+        NpcRace.HUMAN, voiceTypeGender == null ? NpcGender.MALE : voiceTypeGender, seed, child);
   }
 
   private static int voiceSeed(Integer npcId, String npcName) {
