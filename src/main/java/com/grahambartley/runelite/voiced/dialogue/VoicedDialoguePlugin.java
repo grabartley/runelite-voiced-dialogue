@@ -287,8 +287,8 @@ public class VoicedDialoguePlugin extends Plugin {
     if (button == null || panel == null) {
       return;
     }
-    clientToolbar.openPanel(button);
     panel.showNpc(npcId, name);
+    clientToolbar.openPanel(button);
   }
 
   void resolveNpcNames(Set<Integer> npcIds, Consumer<Map<Integer, String>> onResolved) {

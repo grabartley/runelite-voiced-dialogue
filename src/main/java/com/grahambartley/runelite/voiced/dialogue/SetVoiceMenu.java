@@ -8,6 +8,7 @@ import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.client.util.Text;
 
 final class SetVoiceMenu {
 
@@ -57,8 +58,8 @@ final class SetVoiceMenu {
 
   private void open(NPC npc) {
     Integer npcId = profileId.apply(npc);
-    String name = npc.getName();
-    if (npcId == null || name == null) {
+    String name = npc.getName() == null ? "" : Text.removeTags(npc.getName()).trim();
+    if (npcId == null || name.isEmpty()) {
       return;
     }
     uiThread.accept(() -> opener.open(npcId, name));

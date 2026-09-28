@@ -337,7 +337,7 @@ public class VoicedDialoguePluginTest {
   }
 
   @Test
-  public void setVoiceOpensTheSidePanelThenShowsTheNpc() throws Exception {
+  public void setVoiceShowsTheNpcThenOpensTheSidePanel() throws Exception {
     ClientToolbar toolbar = mock(ClientToolbar.class);
     NavigationButton button = NavigationButton.builder().tooltip("t").build();
     NpcVoicePanel panel = mock(NpcVoicePanel.class);
@@ -349,8 +349,8 @@ public class VoicedDialoguePluginTest {
     plugin.openNpcVoice(3105, "Hans");
 
     InOrder order = inOrder(toolbar, panel);
-    order.verify(toolbar).openPanel(button);
     order.verify(panel).showNpc(3105, "Hans");
+    order.verify(toolbar).openPanel(button);
   }
 
   @Test
@@ -366,7 +366,12 @@ public class VoicedDialoguePluginTest {
 
   @Test
   public void aMenuBuiltBeforeStartUpIsIgnored() {
-    new VoicedDialoguePlugin().onMenuEntryAdded(new MenuEntryAdded(mock(MenuEntry.class)));
+    MenuEntry examine = mock(MenuEntry.class);
+    when(examine.getType()).thenReturn(MenuAction.EXAMINE_NPC);
+
+    new VoicedDialoguePlugin().onMenuEntryAdded(new MenuEntryAdded(examine));
+
+    verify(examine, never()).getNpc();
   }
 
   @Test

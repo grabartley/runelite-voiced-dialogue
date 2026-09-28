@@ -75,31 +75,37 @@ final class NpcListEntries {
   NpcListEntry forNpc(int npcId, String name, List<HeardNpc> heard, Set<Integer> editedIds) {
     String display = catalog.displayName(name);
     String key = key(display);
-    TreeSet<Integer> ids = new TreeSet<>(catalog.idsNamed(display));
-    ids.add(npcId);
+    TreeSet<Integer> ids = idsFor(display, npcId);
     boolean wasHeard = heard.stream().anyMatch(npc -> key(npc.name()).equals(key));
-    boolean edited = ids.stream().anyMatch(editedIds::contains);
-    return new NpcListEntry(display, new ArrayList<>(ids), wasHeard, edited, npcId);
+    Integer firstEdited = firstEdited(ids, editedIds);
+    return new NpcListEntry(display, new ArrayList<>(ids), wasHeard, firstEdited != null, npcId);
   }
 
   private NpcListEntry entry(String name, Context context) {
     String display = catalog.displayName(name);
-    String key = key(display);
-    TreeSet<Integer> ids = new TreeSet<>(catalog.idsNamed(display));
-    Integer heardId = context.heardIdByKey.get(key);
-    if (heardId != null) {
-      ids.add(heardId);
-    }
-    Integer firstEdited = null;
-    for (int id : ids) {
-      if (context.editedIds.contains(id)) {
-        firstEdited = id;
-        break;
-      }
-    }
+    Integer heardId = context.heardIdByKey.get(key(display));
+    TreeSet<Integer> ids = idsFor(display, heardId);
+    Integer firstEdited = firstEdited(ids, context.editedIds);
     int preferred = heardId != null ? heardId : firstEdited != null ? firstEdited : ids.first();
     return new NpcListEntry(
         display, new ArrayList<>(ids), heardId != null, firstEdited != null, preferred);
+  }
+
+  private TreeSet<Integer> idsFor(String display, Integer extraId) {
+    TreeSet<Integer> ids = new TreeSet<>(catalog.idsNamed(display));
+    if (extraId != null) {
+      ids.add(extraId);
+    }
+    return ids;
+  }
+
+  private static Integer firstEdited(TreeSet<Integer> ids, Set<Integer> editedIds) {
+    for (int id : ids) {
+      if (editedIds.contains(id)) {
+        return id;
+      }
+    }
+    return null;
   }
 
   private static int rank(NpcListEntry entry) {

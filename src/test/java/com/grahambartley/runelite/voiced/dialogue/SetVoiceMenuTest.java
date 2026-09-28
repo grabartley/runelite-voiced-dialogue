@@ -84,15 +84,10 @@ public class SetVoiceMenuTest {
     setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, npc(HANS, "Hans")));
 
     verify(menu).createMenuEntry(-1);
-    verify(created).setOption(SetVoiceMenu.OPTION);
+    verify(created).setOption("Set voice");
     verify(created).setTarget(TARGET);
     verify(created).setIdentifier(7);
     verify(created).setType(MenuAction.RUNELITE);
-  }
-
-  @Test
-  public void theEntryIsLabelledSetVoice() {
-    assertEquals("Set voice", SetVoiceMenu.OPTION);
   }
 
   @Test
@@ -153,6 +148,18 @@ public class SetVoiceMenuTest {
 
     assertTrue(opened.isEmpty());
     assertTrue(uiQueue.isEmpty());
+  }
+
+  @Test
+  public void aTaggedNameOpensUnderItsPlainName() {
+    NPC hans = npc(HANS, "<col=ffff00>Hans</col> ");
+    profileIds.put(hans, PROFILE_ID);
+    setVoiceMenu.onMenuEntryAdded(added(MenuAction.EXAMINE_NPC, hans));
+
+    clickCreatedEntry();
+    drainUi();
+
+    assertEquals(PROFILE_ID + ":Hans", opened.get(0));
   }
 
   @Test
