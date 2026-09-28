@@ -67,7 +67,7 @@ These must stay true for the Hub build to keep working:
 - `runelite-plugin.properties` declares `build=standard` and carries real, non-placeholder
   metadata. Its `version` is written by the `Release` workflow onto the tagged commit.
 - The jar stays clean and small: no native libraries, no model, well under the Hub's 10 MiB
-  limit (the built jar is ~362 KiB, mostly the bundled `npc-voices.json` table).
+  limit (the built jar is ~547 KiB, mostly the bundled `npc-voices.json` table).
 - `src/main` compiles under **Java 11**. `build=standard` replaces this repo's
   `build.gradle` with the Hub's, which hard-sets `options.release=11`, so any Java 12+
   syntax or API in main sources fails the Hub build. Our own `compileJava` pins

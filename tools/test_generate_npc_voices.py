@@ -193,6 +193,47 @@ class SymbolGenderTest(unittest.TestCase):
         self.assertEqual(gen.parse_npc_symbols(""), {})
 
 
+class AmbiguousNameSymbolsTest(unittest.TestCase):
+    SYMBOLS = {11911: "FAI_VARROCK_GUARD02", 11914: "FAI_VARROCK_GUARD02_F",
+               3269: "FAI_FALADOR_GUARD1", 3105: "HANS", 2108: "WISE_OLD_MAN"}
+
+    def test_ids_sharing_a_name_carry_their_symbol(self):
+        profiles = {"byId": {"11911": {"name": "Guard"}, "11914": {"name": "Guard"},
+                             "3269": {"name": "Guard"}}}
+        self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS),
+                         {"3269": "FAI_FALADOR_GUARD1", "11911": "FAI_VARROCK_GUARD02",
+                          "11914": "FAI_VARROCK_GUARD02_F"})
+
+    def test_a_unique_name_carries_no_symbol(self):
+        profiles = {"byId": {"3105": {"name": "Hans"}, "11911": {"name": "Guard"},
+                             "11914": {"name": "Guard"}}}
+        self.assertNotIn("3105", gen.ambiguous_name_symbols(profiles, self.SYMBOLS))
+
+    def test_a_shared_name_id_without_a_symbol_is_left_out(self):
+        profiles = {"byId": {"11911": {"name": "Guard"}, "99999": {"name": "Guard"}}}
+        self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS),
+                         {"11911": "FAI_VARROCK_GUARD02"})
+
+    def test_names_group_ignoring_case(self):
+        profiles = {"byId": {"11911": {"name": "Guard"}, "11914": {"name": "guard"},
+                             "3105": {"name": "Hans"}}}
+        self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS),
+                         {"11911": "FAI_VARROCK_GUARD02", "11914": "FAI_VARROCK_GUARD02_F"})
+
+    def test_comments_and_nameless_layers_are_ignored(self):
+        profiles = {"byId": {"_comment": "x", "2108": {"style": "Wise."},
+                             "3105": {"style": "Kind."}, "11911": {"name": "Guard"}}}
+        self.assertEqual(gen.ambiguous_name_symbols(profiles, self.SYMBOLS), {})
+
+    def test_no_byid_section_carries_no_symbols(self):
+        self.assertEqual(gen.ambiguous_name_symbols({}, self.SYMBOLS), {})
+
+    def test_symbols_are_ordered_by_numeric_id(self):
+        profiles = {"byId": {"11911": {"name": "Guard"}, "3269": {"name": "Guard"}}}
+        self.assertEqual(list(gen.ambiguous_name_symbols(profiles, self.SYMBOLS)),
+                         ["3269", "11911"])
+
+
 class RaceBucketTest(unittest.TestCase):
     def test_citizen_of_arceuus_buckets_to_its_own_race(self):
         self.assertEqual(gen.bucket_for_race("Citizen of Arceuus"), "Arceuus")

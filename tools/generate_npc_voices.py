@@ -30,7 +30,9 @@ Pipeline
      symbol names one (FAI_VARROCK_GUARD02_F), since a page whose genders do not pair with
      its id groups gives every id the page's first gender.
   7. Merge the hand-curated overrides on top (authoritative, always win).
-  8. Embed tools/profiles.json under the ``profiles`` key and emit
+  8. Emit under ``symbols`` the cache symbol of every id whose byId name another id shares,
+     ignoring case, so one character's ids can be told apart from others with that name.
+  9. Embed tools/profiles.json under the ``profiles`` key and emit
      src/main/resources/npc-voices.json.
 
 Usage
@@ -461,6 +463,15 @@ def symbol_conflicting_pins(overrides, symbols):
     return conflicts
 
 
+def ambiguous_name_symbols(profiles, symbols):
+    ids_by_name = {}
+    for key, layer in (profiles.get("byId") or {}).items():
+        if not key.startswith("_") and isinstance(layer, dict) and layer.get("name"):
+            ids_by_name.setdefault(layer["name"].lower(), []).append(int(key))
+    shared = {npc_id for ids in ids_by_name.values() if len(ids) > 1 for npc_id in ids}
+    return {str(npc_id): symbols[npc_id] for npc_id in sorted(shared) if npc_id in symbols}
+
+
 def fill_from_summary(table, name_map, summary):
     """Cover ids the wiki pages don't list by matching a full id -> name dump to the wiki
     data by name. Catches variant ids whose name still resolves to a documented NPC."""
@@ -712,6 +723,7 @@ def main():
         print(f"  WARNING: override gender contradicts its cache symbol: {conflict}", file=sys.stderr)
     print(f"  cache symbols corrected {symbol_gendered} genders from {api_jar}", file=sys.stderr)
     override_count = apply_overrides(table, overrides)
+    npc_symbols = ambiguous_name_symbols(profiles, symbols)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
 
@@ -732,7 +744,8 @@ def main():
                            "(Infobox NPC and Infobox Monster pages; Monster races derive from "
                            "page categories). Do not hand-edit; edit tools/overrides.json or "
                            "tools/profiles.json and regenerate.",
-            "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }",
+            "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; "
+                      "symbols[id] = cache symbol, only for ids whose byId name another id shares",
             "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) "
                       "and Infobox Monster (race from page categories), "
                       "cross-referenced by name against a full id dump for variant ids, "
@@ -742,6 +755,7 @@ def main():
             "count": len(npcs),
             "name_matched_ids": name_matched,
             "overrides_applied": override_count,
+            "symbols": len(npc_symbols),
             "race_counts": dict(sorted(race_counts.items())),
             "gender_counts": dict(sorted(gender_counts.items())),
             "ethnicity_counts": dict(sorted(ethnicity_counts.items())),
@@ -750,6 +764,7 @@ def main():
                 [k for k in (profiles.get("byId") or {}) if not k.startswith("_")]),
         },
         "profiles": profiles,
+        "symbols": npc_symbols,
         "npcs": npcs,
     }
 
