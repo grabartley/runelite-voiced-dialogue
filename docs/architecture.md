@@ -177,24 +177,28 @@ id and off the game thread, so the cost stays bounded.
 
 ### Player voice overrides
 
-A player can override any NPC's `name`, `accent`, `style`, `pace` and gender. `NpcVoiceOverrideStore`
-keeps them in `ConfigManager`, one key per NPC id in the plugin's config group (`npcVoice_<id>`), each
-value a small JSON object holding only the fields the player set, such as `{"gender":"Female"}`.
-Keeping them in config means they follow the player's RuneLite profile and profile sync; the store
-loads every key once on startup and again when the RuneLite profile changes, into an in-memory map
-the resolvers read. A reload swaps in the complete new map, so a line resolving mid-reload never
-sees a half-filled one. A single key changed from outside the store, such as by a profile sync,
-is re-read on its `ConfigChanged` event, and a write updates the map and `ConfigManager` together. A malformed value is
-logged and skipped without failing the rest of the load.
+A player can override any NPC's `name`, `accent`, `style`, `pace` and voice type. The voice type is
+the same **Type A** / **Type B** choice as the player's own **Player Voice** setting (`VoiceType`),
+not a male or female label. `NpcVoiceOverrideStore` keeps overrides in `ConfigManager`, one key per
+NPC id in the plugin's config group (`npcVoice_<id>`), each value a small JSON object holding only
+the fields the player set, such as `{"voiceType":"TYPE_B"}`.
+
+Keeping them in config means they follow the player's RuneLite profile and profile sync. The store
+loads every key on startup and again when the RuneLite profile changes, building the full map
+before swapping it in so a reload never exposes a half-filled one. A single key changed from
+outside the store, such as by a profile sync, is re-read on its `ConfigChanged` event. A write
+updates the map and `ConfigManager` together. A malformed value is logged and skipped without
+failing the rest of the load.
 
 The id is the one the bundled profile resolves under (`NpcIdentity.profileId()`), so an override
-and a bundled `byId` entry for the same NPC line up. Profile fields patch over every bundled layer
-field by field (the resolution order is in [npc-voice-tooling](npc-voice-tooling.md)). Gender is a
-separate merge point: it replaces the detected gender in `VoiceSpec` rather than living in the
-profile. Race, the child flag and the voice pool are not overridable. Every free-text field passes
-through `DirectionSanitizer` on write and on load, since the profile reaches the Gemini style
-prompt unchanged. An edit changes `CharacterProfile.cacheKey()` or `VoiceSpec.key()`, so only that
-NPC's clips are re-voiced.
+and a bundled `byId` entry for the same NPC line up. `VoiceManager` looks the override up once per
+line and hands it to both halves. Profile fields patch over every bundled layer field by field (the
+resolution order is in [npc-voice-tooling](npc-voice-tooling.md)). The voice type is a separate
+merge point: it replaces the detected gender in `VoiceSpec` rather than living in the profile.
+Race, the child flag and the voice pool are not overridable. Every free-text field passes through
+`DirectionSanitizer` on write and on load, since the profile reaches the Gemini style prompt
+unchanged. An edit changes `CharacterProfile.cacheKey()` or `VoiceSpec.key()`, so only that NPC's
+clips are re-voiced.
 
 ## Auto-learn
 

@@ -3,7 +3,6 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import org.junit.Test;
 
 public class NpcVoiceOverrideTest {
@@ -24,8 +23,8 @@ public class NpcVoiceOverrideTest {
   }
 
   @Test
-  public void aGenderOnlyOverrideIsNotEmptyButHasNoProfileFields() {
-    NpcVoiceOverride override = new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE);
+  public void aVoiceTypeOnlyOverrideIsNotEmptyButHasNoProfileFields() {
+    NpcVoiceOverride override = new NpcVoiceOverride(null, null, null, null, VoiceType.TYPE_B);
     assertFalse(override.isEmpty());
     assertFalse(override.hasProfileFields());
   }

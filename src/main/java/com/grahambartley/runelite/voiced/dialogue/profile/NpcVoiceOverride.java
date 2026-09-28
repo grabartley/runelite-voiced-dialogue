@@ -1,6 +1,5 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
@@ -12,13 +11,13 @@ public class NpcVoiceOverride {
   String accent;
   String style;
   String pace;
-  NpcGender gender;
+  VoiceType voiceType;
 
   public boolean hasProfileFields() {
     return name != null || accent != null || style != null || pace != null;
   }
 
   public boolean isEmpty() {
-    return !hasProfileFields() && gender == null;
+    return !hasProfileFields() && voiceType == null;
   }
 }

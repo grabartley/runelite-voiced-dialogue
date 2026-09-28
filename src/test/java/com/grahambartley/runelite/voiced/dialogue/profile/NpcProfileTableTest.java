@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import org.junit.Test;
 
 public class NpcProfileTableTest {
@@ -378,12 +377,12 @@ public class NpcProfileTableTest {
   }
 
   @Test
-  public void aGenderOnlyOverrideLeavesTheProfileAndItsSourceUntouched() {
+  public void aVoiceTypeOnlyOverrideLeavesTheProfileAndItsSourceUntouched() {
     NpcProfileTable table = regionTable();
     assertEquals(
         resolve(table, 9, "Dwarf", "Dwarf", null),
         resolveWith(
-            table, 9, "Dwarf", new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE)));
+            table, 9, "Dwarf", new NpcVoiceOverride(null, null, null, null, VoiceType.TYPE_B)));
   }
 
   @Test

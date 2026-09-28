@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,18 +46,18 @@ public class NpcVoiceOverrideStoreTest {
     stored(
         "npcVoice_11911",
         "{\"name\":\"Guard\",\"accent\":\"Cockney\",\"style\":\"Bored\",\"pace\":\"Slow\","
-            + "\"gender\":\"Female\"}");
+            + "\"voiceType\":\"TYPE_B\"}");
     store.load();
     assertEquals(
-        new NpcVoiceOverride("Guard", "Cockney", "Bored", "Slow", NpcGender.FEMALE),
+        new NpcVoiceOverride("Guard", "Cockney", "Bored", "Slow", VoiceType.TYPE_B),
         store.get(11911));
   }
 
   @Test
   public void aPartialEntryLeavesTheOtherFieldsUnset() {
-    stored("npcVoice_11914", "{\"gender\":\"male\"}");
+    stored("npcVoice_11914", "{\"voiceType\":\"TYPE_A\"}");
     store.load();
-    assertEquals(new NpcVoiceOverride(null, null, null, null, NpcGender.MALE), store.get(11914));
+    assertEquals(new NpcVoiceOverride(null, null, null, null, VoiceType.TYPE_A), store.get(11914));
   }
 
   @Test
@@ -66,7 +65,7 @@ public class NpcVoiceOverrideStoreTest {
     stored(
         "npcVoice_1", "{not json",
         "npcVoice_2", "[\"an\",\"array\"]",
-        "npcVoice_3", "{\"gender\":\"Robot\"}",
+        "npcVoice_3", "{\"voiceType\":\"TYPE_C\"}",
         "npcVoice_abc", "{\"pace\":\"Fast\"}",
         "npcVoice_4", "{\"style\":\"Warm\"}");
     store.load();
@@ -106,14 +105,14 @@ public class NpcVoiceOverrideStoreTest {
 
   @Test
   public void setWritesTheEntryAsJsonAndServesItImmediately() {
-    NpcVoiceOverride override = new NpcVoiceOverride("Guard", null, null, "Slow", NpcGender.FEMALE);
+    NpcVoiceOverride override = new NpcVoiceOverride("Guard", null, null, "Slow", VoiceType.TYPE_B);
     store.set(11911, override);
     assertEquals(override, store.get(11911));
     verify(configManager)
         .setConfiguration(
             GROUP,
             "npcVoice_11911",
-            "{\"name\":\"Guard\",\"pace\":\"Slow\",\"gender\":\"Female\"}");
+            "{\"name\":\"Guard\",\"pace\":\"Slow\",\"voiceType\":\"TYPE_B\"}");
   }
 
   @Test
@@ -138,15 +137,9 @@ public class NpcVoiceOverrideStoreTest {
   }
 
   @Test
-  public void anUnknownGenderIsTreatedAsThePluginDefault() {
-    store.set(11, new NpcVoiceOverride(null, null, null, "Brisk", NpcGender.UNKNOWN));
-    assertNull(store.get(11).gender());
-  }
-
-  @Test
   public void settingAnEmptyOverrideClearsTheEntry() {
     store.set(12, new NpcVoiceOverride(null, null, null, "Brisk", null));
-    store.set(12, new NpcVoiceOverride(" ", null, null, null, NpcGender.UNKNOWN));
+    store.set(12, new NpcVoiceOverride(" ", "[]", null, null, null));
     assertNull(store.get(12));
     verify(configManager).unsetConfiguration(GROUP, "npcVoice_12");
   }

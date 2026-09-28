@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -54,18 +53,24 @@ public final class NpcVoiceOverrideStore {
       log.warn("Skipping NPC voice override with a non-numeric id: {}", key);
       return;
     }
-    target.remove(npcId);
+    NpcVoiceOverride override = read(key);
+    if (override == null || override.isEmpty()) {
+      target.remove(npcId);
+    } else {
+      target.put(npcId, override);
+    }
+  }
+
+  private NpcVoiceOverride read(String key) {
     String value = configManager.getConfiguration(VoicedDialogueConfig.GROUP, key);
     if (value == null) {
-      return;
+      return null;
     }
     try {
-      NpcVoiceOverride override = sanitize(parse(value));
-      if (!override.isEmpty()) {
-        target.put(npcId, override);
-      }
+      return sanitize(parse(value));
     } catch (RuntimeException e) {
       log.warn("Skipping malformed NPC voice override {}: {}", key, e.getMessage());
+      return null;
     }
   }
 
@@ -95,7 +100,7 @@ public final class NpcVoiceOverrideStore {
         sanitize(override.accent()),
         sanitize(override.style()),
         sanitize(override.pace()),
-        override.gender() == NpcGender.UNKNOWN ? null : override.gender());
+        override.voiceType());
   }
 
   private String sanitize(String field) {
@@ -110,20 +115,11 @@ public final class NpcVoiceOverrideStore {
         optString(json, "accent"),
         optString(json, "style"),
         optString(json, "pace"),
-        parseGender(optString(json, "gender")));
+        parseVoiceType(optString(json, "voiceType")));
   }
 
-  private static NpcGender parseGender(String gender) {
-    if (gender == null) {
-      return null;
-    }
-    if (gender.equalsIgnoreCase("Male")) {
-      return NpcGender.MALE;
-    }
-    if (gender.equalsIgnoreCase("Female")) {
-      return NpcGender.FEMALE;
-    }
-    throw new IllegalArgumentException("unknown gender '" + gender + "'");
+  private static VoiceType parseVoiceType(String voiceType) {
+    return voiceType == null ? null : VoiceType.valueOf(voiceType);
   }
 
   private static String optString(JsonObject json, String field) {
@@ -137,10 +133,8 @@ public final class NpcVoiceOverrideStore {
     addIfSet(json, "accent", override.accent());
     addIfSet(json, "style", override.style());
     addIfSet(json, "pace", override.pace());
-    if (override.gender() == NpcGender.MALE) {
-      json.addProperty("gender", "Male");
-    } else if (override.gender() == NpcGender.FEMALE) {
-      json.addProperty("gender", "Female");
+    if (override.voiceType() != null) {
+      json.addProperty("voiceType", override.voiceType().name());
     }
     return json;
   }

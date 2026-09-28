@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
-import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager.PlayerVoice;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LearnedNpcStore;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
@@ -29,14 +28,14 @@ import org.junit.Test;
 public class VoiceManagerTest {
 
   private static final class TestConfig implements VoicedDialogueConfig {
-    private final PlayerVoice playerVoice;
+    private final VoiceType playerVoice;
 
-    TestConfig(PlayerVoice playerVoice) {
+    TestConfig(VoiceType playerVoice) {
       this.playerVoice = playerVoice;
     }
 
     @Override
-    public PlayerVoice playerVoice() {
+    public VoiceType playerVoice() {
       return playerVoice;
     }
   }
@@ -46,13 +45,13 @@ public class VoiceManagerTest {
   private final NpcVoiceOverrideStore overrideStore =
       new NpcVoiceOverrideStore(mock(ConfigManager.class));
 
-  private VoiceManager newManager(PlayerVoice playerVoice) {
+  private VoiceManager newManager(VoiceType playerVoice) {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
     return newManager(client, playerVoice);
   }
 
-  private VoiceManager newManager(Client client, PlayerVoice playerVoice) {
+  private VoiceManager newManager(Client client, VoiceType playerVoice) {
     NpcDemographicAnalyzer demographicAnalyzer = new NpcDemographicAnalyzer();
     demographicAnalyzer.initialize();
     NpcProfileTable profileTable = new NpcProfileTable();
@@ -62,14 +61,8 @@ public class VoiceManagerTest {
   }
 
   @Test
-  public void playerVoiceTypesFixGender() {
-    assertEquals(NpcGender.MALE, PlayerVoice.TYPE_A.getGender());
-    assertEquals(NpcGender.FEMALE, PlayerVoice.TYPE_B.getGender());
-  }
-
-  @Test
   public void playerResolvesToPlayerSpecWithConfiguredGender() {
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_B).resolve(Speaker.PLAYER, null).voice();
+    VoiceSpec spec = newManager(VoiceType.TYPE_B).resolve(Speaker.PLAYER, null).voice();
     assertTrue("player voice should be a player spec", spec.player());
     assertEquals(NpcGender.FEMALE, spec.gender());
     assertEquals("player:FEMALE", spec.key());
@@ -78,7 +71,7 @@ public class VoiceManagerTest {
 
   @Test
   public void undetectedNpcResolvesToTheDefaultHumanMaleVoice() {
-    VoiceSpec spec = newManager(PlayerVoice.TYPE_A).resolve(Speaker.NPC, "Hans").voice();
+    VoiceSpec spec = newManager(VoiceType.TYPE_A).resolve(Speaker.NPC, "Hans").voice();
     assertFalse(spec.player());
     assertEquals(NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.MALE, spec.gender());
@@ -88,7 +81,7 @@ public class VoiceManagerTest {
 
   @Test
   public void narratorResolvesToTheFixedNarratorSpec() {
-    VoiceManager manager = newManager(PlayerVoice.TYPE_B);
+    VoiceManager manager = newManager(VoiceType.TYPE_B);
 
     VoiceSpec spec = manager.resolveNarrator().voice();
     assertTrue("the narrator is its own speaker class", spec.narrator());
@@ -96,12 +89,12 @@ public class VoiceManagerTest {
     assertEquals(
         "the player voice setting must not move the narrator",
         spec,
-        newManager(PlayerVoice.TYPE_A).resolveNarrator().voice());
+        newManager(VoiceType.TYPE_A).resolveNarrator().voice());
   }
 
   @Test
   public void everySpeakerAlwaysResolvesToACharacterProfile() {
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
     assertNotNull(
         "the player always carries a profile", manager.resolve(Speaker.PLAYER, null).profile());
     assertNotNull(
@@ -111,8 +104,7 @@ public class VoiceManagerTest {
 
   @Test
   public void anUndetectedNpcStillResolvesToTheDefaultProfileRatherThanNone() {
-    CharacterProfile profile =
-        newManager(PlayerVoice.TYPE_A).resolve(Speaker.NPC, "Hans").profile();
+    CharacterProfile profile = newManager(VoiceType.TYPE_A).resolve(Speaker.NPC, "Hans").profile();
     assertNotNull(profile);
     assertFalse("the default profile still names a voice", profile.name().trim().isEmpty());
     assertFalse("the default profile still carries an accent", profile.accent().trim().isEmpty());
@@ -122,7 +114,7 @@ public class VoiceManagerTest {
   public void anNpcHandedInDirectlyResolvesFromItsOwnIdWithoutAWorldScan() {
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.emptyList());
-    VoiceManager manager = newManager(client, PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(client, VoiceType.TYPE_A);
 
     VoiceSpec spec = manager.resolveNpc(worldNpc(DWARF_ID, "Dwarf")).voice();
 
@@ -136,7 +128,7 @@ public class VoiceManagerTest {
     NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
     Client client = mock(Client.class);
     when(client.getNpcs()).thenReturn(Collections.singletonList(dwarf));
-    VoiceManager manager = newManager(client, PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(client, VoiceType.TYPE_A);
 
     assertEquals(manager.resolve(Speaker.NPC, "Dwarf"), manager.resolveNpc(dwarf));
   }
@@ -144,7 +136,7 @@ public class VoiceManagerTest {
   @Test
   public void aTransformedNpcIsOfferedUnderTheIdItIsVoicedUnder() {
     NpcLearningService learning = mock(NpcLearningService.class);
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
     when(learning.isEnabled()).thenReturn(true);
@@ -158,7 +150,7 @@ public class VoiceManagerTest {
   @Test
   public void anUnvoicedNpcIsOfferedUnderItsOwnId() {
     NpcLearningService learning = mock(NpcLearningService.class);
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
     when(learning.isEnabled()).thenReturn(true);
@@ -174,7 +166,7 @@ public class VoiceManagerTest {
     NpcLearningService learning = mock(NpcLearningService.class);
     when(learning.isEnabled()).thenReturn(true);
     when(learning.startsConversation("Attack")).thenReturn(false);
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
     manager.enableLearning(new LearnedNpcStore(null, new Gson()), learning);
 
     manager.offerToLearning("Attack", worldNpc(DWARF_ID, "Dwarf"));
@@ -184,12 +176,12 @@ public class VoiceManagerTest {
 
   @Test
   public void anOverrideReachesBothTheProfileAndTheVoiceOfThatNpc() {
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
     NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
     ResolvedSpeaker before = manager.resolveNpc(dwarf);
 
     overrideStore.set(
-        DWARF_ID, new NpcVoiceOverride(null, "Cockney", null, "Slow", NpcGender.FEMALE));
+        DWARF_ID, new NpcVoiceOverride(null, "Cockney", null, "Slow", VoiceType.TYPE_B));
     ResolvedSpeaker after = manager.resolveNpc(dwarf);
 
     assertEquals("Cockney", after.profile().accent());
@@ -203,11 +195,23 @@ public class VoiceManagerTest {
   @Test
   public void clearingAnOverrideRestoresTheBundledResolution() {
     NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
-    VoiceManager manager = newManager(PlayerVoice.TYPE_A);
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
     ResolvedSpeaker before = manager.resolveNpc(dwarf);
 
     overrideStore.set(DWARF_ID, new NpcVoiceOverride(null, null, null, "Slow", null));
     overrideStore.clear(DWARF_ID);
+
+    assertEquals(before, manager.resolveNpc(dwarf));
+  }
+
+  @Test
+  public void anOverrideForAnotherIdLeavesThisNpcAlone() {
+    NPC dwarf = worldNpc(DWARF_ID, "Dwarf");
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    ResolvedSpeaker before = manager.resolveNpc(dwarf);
+
+    overrideStore.set(
+        DWARF_ID + 1, new NpcVoiceOverride(null, "Cockney", null, null, VoiceType.TYPE_B));
 
     assertEquals(before, manager.resolveNpc(dwarf));
   }

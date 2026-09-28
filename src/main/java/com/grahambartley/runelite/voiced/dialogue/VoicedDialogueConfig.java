@@ -1,6 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue;
 
-import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.profile.VoiceType;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -258,8 +258,8 @@ public interface VoicedDialogueConfig extends Config {
       description = "Voice for your character's dialogue and public chat.",
       position = 0,
       section = voicesSection)
-  default VoiceManager.PlayerVoice playerVoice() {
-    return VoiceManager.PlayerVoice.TYPE_A;
+  default VoiceType playerVoice() {
+    return VoiceType.TYPE_A;
   }
 
   @ConfigItem(

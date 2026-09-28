@@ -14,29 +14,26 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcAttributes;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
-import net.runelite.client.config.ConfigManager;
 import org.junit.Test;
 
 public class NpcVoiceResolverTest {
 
   private final VoicedDialogueConfig config = mock(VoicedDialogueConfig.class);
-  private final NpcVoiceOverrideStore overrideStore =
-      new NpcVoiceOverrideStore(mock(ConfigManager.class));
-  private final NpcVoiceResolver resolver = new NpcVoiceResolver(config, overrideStore);
+  private final NpcVoiceResolver resolver = new NpcVoiceResolver(config);
 
   @Test
   public void blankNameResolvesToDefaultHumanMale() {
-    assertDefaultHumanMale(resolver.resolve("", identity(null, null, false)));
+    assertDefaultHumanMale(resolver.resolve("", identity(null, null, false), null));
   }
 
   @Test
   public void npcNotInWorldResolvesToDefaultHumanMale() {
-    assertDefaultHumanMale(resolver.resolve("Hans", identity(null, null, false)));
+    assertDefaultHumanMale(resolver.resolve("Hans", identity(null, null, false), null));
   }
 
   @Test
   public void analysisFailureResolvesToDefaultHumanMale() {
-    assertDefaultHumanMale(resolver.resolve("Hans", identity(5, null, false)));
+    assertDefaultHumanMale(resolver.resolve("Hans", identity(5, null, false), null));
   }
 
   @Test
@@ -45,9 +42,10 @@ public class NpcVoiceResolverTest {
     NpcAttributes before = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
     NpcAttributes after = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
 
-    VoiceSpec original = resolver.resolve("Juliet", new NpcIdentity(8000, 8000, before, nameMatch));
+    VoiceSpec original =
+        resolver.resolve("Juliet", new NpcIdentity(8000, 8000, before, nameMatch), null);
     VoiceSpec transformed =
-        resolver.resolve("Juliet", new NpcIdentity(8001, 8000, after, nameMatch));
+        resolver.resolve("Juliet", new NpcIdentity(8001, 8000, after, nameMatch), null);
 
     assertEquals(original.voiceSeed(), transformed.voiceSeed());
   }
@@ -60,7 +58,8 @@ public class NpcVoiceResolverTest {
     VoiceSpec spec =
         resolver.resolve(
             "Goblin",
-            identity(101, attributes("Goblin", "Male", AttributeSource.STATIC_TABLE), false));
+            identity(101, attributes("Goblin", "Male", AttributeSource.STATIC_TABLE), false),
+            null);
 
     assertEquals(NpcRace.GOBLIN, spec.race());
     assertEquals(NpcGender.MALE, spec.gender());
@@ -74,7 +73,9 @@ public class NpcVoiceResolverTest {
     resolver.setLearningService(learning);
 
     resolver.resolve(
-        "Goblin", identity(303, attributes("Goblin", "Male", AttributeSource.STATIC_TABLE), false));
+        "Goblin",
+        identity(303, attributes("Goblin", "Male", AttributeSource.STATIC_TABLE), false),
+        null);
 
     verify(learning).considerLearning(303, "Goblin");
   }
@@ -87,7 +88,8 @@ public class NpcVoiceResolverTest {
     VoiceSpec spec =
         resolver.resolve(
             "Merfolk",
-            identity(202, attributes("Merfolk", "Female", AttributeSource.LEARNED), false));
+            identity(202, attributes("Merfolk", "Female", AttributeSource.LEARNED), false),
+            null);
 
     assertEquals("an unrecognised race voices as human", NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.FEMALE, spec.gender());
@@ -98,7 +100,9 @@ public class NpcVoiceResolverTest {
   public void anUndetectedGenderVoicesAsTheDefaultMale() {
     VoiceSpec spec =
         resolver.resolve(
-            "Nulgar", identity(303, attributes("Human", null, AttributeSource.LEARNED), false));
+            "Nulgar",
+            identity(303, attributes("Human", null, AttributeSource.LEARNED), false),
+            null);
 
     assertEquals(NpcGender.MALE, spec.gender());
   }
@@ -108,7 +112,7 @@ public class NpcVoiceResolverTest {
     NpcAttributes attrs = attributes("Human", "Male", AttributeSource.STATIC_TABLE);
     attrs.setLifeStage(LifeStage.CHILD);
 
-    VoiceSpec spec = resolver.resolve("Shilop", identity(3501, attrs, false));
+    VoiceSpec spec = resolver.resolve("Shilop", identity(3501, attrs, false), null);
 
     assertTrue("the table life-stage marker makes a child spec", spec.child());
     assertEquals(NpcRace.HUMAN, spec.race());
@@ -120,14 +124,15 @@ public class NpcVoiceResolverTest {
     VoiceSpec spec =
         resolver.resolve(
             "Schoolboy",
-            identity(1919, attributes("Human", "Male", AttributeSource.STATIC_TABLE), true));
+            identity(1919, attributes("Human", "Male", AttributeSource.STATIC_TABLE), true),
+            null);
 
     assertTrue("a child-name keyword match makes a child spec", spec.child());
   }
 
   @Test
   public void childNamedNpcStaysAChildEvenWhenDetectionFails() {
-    VoiceSpec spec = resolver.resolve("Child", identity(null, null, true));
+    VoiceSpec spec = resolver.resolve("Child", identity(null, null, true), null);
 
     assertTrue("the default fallback keeps the child flag from the name", spec.child());
     assertEquals(NpcRace.HUMAN, spec.race());
@@ -139,7 +144,8 @@ public class NpcVoiceResolverTest {
     VoiceSpec spec =
         resolver.resolve(
             "Hans",
-            identity(3105, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false));
+            identity(3105, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false),
+            null);
 
     assertFalse(spec.child());
   }
@@ -148,10 +154,8 @@ public class NpcVoiceResolverTest {
   public void aGenderOverrideReplacesTheDetectedGenderAndTheVoiceKey() {
     NpcIdentity guard =
         identity(11914, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false);
-    VoiceSpec before = resolver.resolve("Guard", guard);
-
-    overrideStore.set(11914, new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE));
-    VoiceSpec after = resolver.resolve("Guard", guard);
+    VoiceSpec before = resolver.resolve("Guard", guard, null);
+    VoiceSpec after = resolver.resolve("Guard", guard, NpcGender.FEMALE);
 
     assertEquals(NpcGender.MALE, before.gender());
     assertEquals(NpcGender.FEMALE, after.gender());
@@ -162,37 +166,27 @@ public class NpcVoiceResolverTest {
 
   @Test
   public void aGenderOverrideCanTurnAFemaleNpcMale() {
-    overrideStore.set(12, new NpcVoiceOverride(null, null, null, null, NpcGender.MALE));
     VoiceSpec spec =
         resolver.resolve(
             "Hag",
-            identity(12, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false));
+            identity(12, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false),
+            NpcGender.MALE);
     assertEquals(NpcGender.MALE, spec.gender());
   }
 
   @Test
-  public void anOverrideWithoutAGenderKeepsTheDetectedGender() {
-    overrideStore.set(13, new NpcVoiceOverride(null, null, "Warm", null, null));
+  public void noGenderOverrideKeepsTheDetectedGender() {
     VoiceSpec spec =
         resolver.resolve(
             "Aggie",
-            identity(13, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false));
+            identity(13, attributes("Human", "Female", AttributeSource.STATIC_TABLE), false),
+            null);
     assertEquals(NpcGender.FEMALE, spec.gender());
   }
 
   @Test
-  public void anOverrideForAnotherIdLeavesThisNpcAlone() {
-    overrideStore.set(99, new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE));
-    VoiceSpec spec =
-        resolver.resolve(
-            "Hans", identity(14, attributes("Human", "Male", AttributeSource.STATIC_TABLE), false));
-    assertEquals(NpcGender.MALE, spec.gender());
-  }
-
-  @Test
   public void aGenderOverrideAppliesWhenDetectionFailedForAnNpcInTheWorld() {
-    overrideStore.set(5, new NpcVoiceOverride(null, null, null, null, NpcGender.FEMALE));
-    VoiceSpec spec = resolver.resolve("Hans", identity(5, null, false));
+    VoiceSpec spec = resolver.resolve("Hans", identity(5, null, false), NpcGender.FEMALE);
     assertEquals(NpcRace.HUMAN, spec.race());
     assertEquals(NpcGender.FEMALE, spec.gender());
   }
