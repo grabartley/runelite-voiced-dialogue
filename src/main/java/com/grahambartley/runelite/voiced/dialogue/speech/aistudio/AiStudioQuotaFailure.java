@@ -129,8 +129,8 @@ final class AiStudioQuotaFailure {
     }
     if (period == Period.DAILY) {
       return cap(period)
-          .append(". Enabling billing does not lift this cap, so wait for it to reset, or switch")
-          .append(" Voice Provider to OpenRouter.")
+          .append(". Wait for it to reset, or switch Voice Provider to OpenRouter. Google raises")
+          .append(" this cap as your AI Studio usage tier rises with spend.")
           .toString();
     }
     return cap(period)

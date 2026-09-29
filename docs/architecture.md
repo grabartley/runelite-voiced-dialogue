@@ -394,10 +394,12 @@ at the lowest allowance. The current figure for a key is on its AI Studio rate-l
 Those requests are not lines the player hears. **Prefetch Dialogue** defaults on, and
 `DialoguePrefetcher` speculatively synthesizes every visible dialogue option, so options that are
 never picked draw on the same allowance. Player-facing copy therefore names prefetch as a claim on
-the daily allowance, rather than equating requests with heard lines, and describes the lift only
-as one Google grants for heavy long-term use. The spend threshold is deliberately kept out of the
-README and the in-game notices: it reads as a paywall on a plugin that costs fractions of a cent
-per line.
+the daily allowance, rather than equating requests with heard lines. The billed daily-cap notice,
+the onboarding message and the README all name a higher usage tier as a way the cap rises, alongside
+waiting for the reset and switching to OpenRouter. Tier moves are automatic on spend, so the copy
+describes them as something Google grants over time rather than a button to press. The spend
+thresholds and cap values are deliberately kept out of the README and the in-game notices: they
+read as a paywall on a plugin that costs fractions of a cent per line.
 
 OpenRouter carries no equivalent ceiling. It serves the same model as a paid model, and paid models
 have no platform-level request cap: `GET /api/v1/key` on a credited key reports `is_free_tier:
