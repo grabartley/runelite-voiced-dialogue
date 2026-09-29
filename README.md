@@ -44,7 +44,7 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 | Long (400 chars) | **1.3s** | 10.1s |
 | Very long (500+ chars) | **1.2s** | 12.6s |
 
-**Google AI Studio** streams audio as it is generated, so a line starts in just over a second no matter how long it is. Google caps how many fresh lines a key can voice each day, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, but Google raises it on higher usage tiers, which you can upgrade to from AI Studio; your key's current limit is on its AI Studio rate-limit page.
+**Google AI Studio** streams audio as it is generated, so a line starts in just over a second no matter how long it is. Google caps how many fresh lines a key can voice each day, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, but Google raises it as your project moves up AI Studio usage tiers with spend over time; your key's current limit is on its AI Studio rate-limit page.
 
 **OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A long quest speech can leave you waiting over ten seconds.
 

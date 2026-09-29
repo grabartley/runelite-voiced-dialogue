@@ -129,8 +129,8 @@ final class AiStudioQuotaFailure {
     }
     if (period == Period.DAILY) {
       return cap(period)
-          .append(". Wait for it to reset, upgrade your project's usage tier at")
-          .append(" aistudio.google.com for a higher cap, or switch Voice Provider to OpenRouter.")
+          .append(". Wait for it to reset, or switch Voice Provider to OpenRouter. Google raises")
+          .append(" this cap as your project moves up AI Studio usage tiers with spend over time.")
           .toString();
     }
     return cap(period)

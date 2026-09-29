@@ -97,7 +97,6 @@ public class AiStudioQuotaFailureTest {
     assertTrue("as is the cap it hit: " + notice, notice.contains("daily request cap of 100"));
     assertFalse("billing is already on, so it is never asked for", notice.contains("billing"));
     assertFalse("the free tier is not the cause here", notice.contains("free tier"));
-    assertTrue("the working alternative is still offered", notice.contains("OpenRouter"));
   }
 
   @Test
@@ -107,7 +106,7 @@ public class AiStudioQuotaFailureTest {
     assertTrue("waiting is an option: " + notice, notice.contains("Wait for it to reset"));
     assertTrue(
         "a higher usage tier raises the cap: " + notice,
-        notice.contains("upgrade your project's usage tier at aistudio.google.com"));
+        notice.contains("raises this cap as your project moves up AI Studio usage tiers"));
     assertTrue(
         "switching provider is an option: " + notice,
         notice.contains("switch Voice Provider to OpenRouter"));
