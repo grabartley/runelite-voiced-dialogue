@@ -17,6 +17,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -968,6 +969,27 @@ public class DialogueAudioServiceTest {
 
     assertEquals(1, first.requests.size());
     assertEquals("the switched-to provider replays the cached clip", 0, second.requests.size());
+  }
+
+  @Test
+  public void aCloudLineLandsOnDiskUnderTheDocumentedFileName() {
+    Path cacheDir = tmp.getRoot().toPath().resolve("cache");
+    NamespacedBackend cloud =
+        new NamespacedBackend("cloud-openrouter", CloudSpeechExecutor.CACHE_NAMESPACE) {
+          @Override
+          public String cacheVariant(SynthesisRequest request) {
+            return "en-gb-tutor-9";
+          }
+        };
+    DeferredExecutor exec = new DeferredExecutor();
+    diskService(provider(cloud), new FakeOutput(), new DiskAudioCache(cacheDir), exec)
+        .speak(req("What can I do yer for?", NpcRace.HUMAN, NpcGender.MALE));
+    exec.runAll();
+
+    assertTrue(
+        Files.exists(
+            cacheDir.resolve(
+                "f0135745b1888237ffd10143f3c367b164a3bc62a4216486b639cd10af97c85e.tdc")));
   }
 
   @Test

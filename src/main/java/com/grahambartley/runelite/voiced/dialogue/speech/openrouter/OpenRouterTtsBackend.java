@@ -269,12 +269,6 @@ public final class OpenRouterTtsBackend implements SynthesisBackend {
       payload.addProperty("input", line.input);
       payload.addProperty("voice", line.voice);
       payload.addProperty("response_format", model.responseFormat());
-      if (line.speedPercent != CloudBackendSupport.DEFAULT_SPEED_PERCENT) {
-        payload.addProperty("speed", line.speedRatio);
-      }
-      if (line.translating) {
-        payload.addProperty("language_code", config.cloudLanguage().code());
-      }
       OpenRouterProvider.apply(payload, model.speechMetadata(line.style));
 
       Request httpRequest =

@@ -225,11 +225,6 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     }
 
     @Override
-    public boolean speedInStyle() {
-      return true;
-    }
-
-    @Override
     public CloudSpeechExecutor.PreparedSpeech buildRequests(
         CloudSpeechExecutor.SpokenLine line, SynthesisRequest request) {
       JsonObject payload = buildPayload(line.input, model.speechMetadata(line.style), line.voice);

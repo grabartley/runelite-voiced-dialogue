@@ -39,8 +39,8 @@ takes sustained delivery from a structured `speech_metadata.style` field, so the
 spoken line alone and `GeminiSpeechStyle` renders the profile as one style string: the spoken
 language from the **Spoken Language** setting, then the speaker's gender (none for the narrator),
 then any `pitch` direction, then labelled fields ("Audio profile: <name>, a character in a medieval fantasy
-world. Accent: ... <accent detail> Style: ... Pace: ..."), then the emotion direction, and on Google
-AI Studio a speed direction when Speaking Pace is not 100. The language is the Spoken Language
+world. Accent: ... <accent detail> Style: ... Pace: ..."), then the emotion direction, and a speed
+direction when Speaking Pace is not 100. The language is the Spoken Language
 setting when the line is translated, and English when it is not. By ear, the full profile keeps NPCs that share a voice
 distinct, and a strong accent phrase naming its pronunciation keeps every accent from falling back
 to a generic default. `CloudSpeechExecutor` builds the string once per line for both providers;
@@ -345,8 +345,8 @@ routes it to Google AI Studio. The
 body requests `response_format: "pcm"`, a headerless 16-bit LE mono stream at 24 kHz decoded to the
 pipeline's native rate (OpenRouter offers only `mp3` and `pcm` for it). The style string rides in
 `provider.options["google-ai-studio"].speech_metadata.style`, merged into the same `provider`
-block that carries the throughput sort, and a non-default **Speaking Pace** is sent as the
-`speed` field.
+block that carries the throughput sort. The body carries no `speed` or `language_code` field, so the
+model receives exactly what Google AI Studio sends it directly.
 
 Dialogue text leaves your machine and is sent to OpenRouter. A missing key, an API error, or a network
 problem fails that line gracefully (it is left unvoiced) and surfaces a one-time notice.
@@ -364,14 +364,14 @@ Only the transport differs from OpenRouter: the style string rides as `speech_me
 text part, and audio comes back as base64 16-bit LE PCM inside JSON rather than a raw body. The
 unary call defaults to WAV, so the request sets `generationConfig.responseFormat.audio.mimeType`
 to `AUDIO_L16` and the reply stays headerless PCM for `RawPcmDecoder`; the streaming call is L16
-either way. The Gemini API has no `speed` parameter, so the backend declares `speedInStyle` and a
-non-default **Speaking Pace** joins the style string as a closing direction ("Speaking at 120% of
-normal speed"). The
+either way. The Gemini API has no `speed` parameter, so a non-default **Speaking Pace** joins the
+style string as a closing direction ("Speaking at 120% of normal speed") on both providers. The
 `streamGenerateContent` variant (`?alt=sse`) backs the streaming path below, delivering audio as
 server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
 mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
-network timeout, a rate-limit back-off on 429, and the same `cacheVariant`. Both providers run the same model with the same voice and style, so they
-share the `cloud-speech` cache namespace: a line voiced on one replays from the cache on the other.
+network timeout, a rate-limit back-off on 429, and the same `cacheVariant`. Both providers send the
+same model the same line, voice, and style, so they share the `cloud-speech` cache namespace: a line
+voiced on one replays from the cache on the other.
 
 On the Gemini API a 429 means quota, so the notice is worded from the `google.rpc.QuotaFailure`
 violation the rejection carries: a free-tier ceiling, a paid per-model cap, and a per-minute limit
@@ -411,15 +411,18 @@ Because synthesis is billed per character, several guards keep cost bounded and 
 - **Cache key.** A line is keyed by `(namespace, voiceKey, emotion, text)`, where the namespace is
   the backend's `cacheNamespace` (`cloud-speech` for both cloud providers) and the voice key is the
   backend's `cacheVariant`. The variant holds only what defines a character's audio: the resolved
-  voice id, a hash of the profile fields that are sent (name, accent, style, pace, and pitch and
-  accent detail when set), and, only when not at their defaults, the speaking pace and a language
-  token built from the `SpokenLanguage` and `SpeakingStyle` enum names. Every speaker resolves to a
+  voice id, a speaker token (the gender, marked for a child, or the narrator) that stands for the
+  voice line opening the style, a hash of the profile fields exactly as they are sent (name,
+  accent, style, pace, and pitch and accent detail when sent, after the same trimming the style
+  string applies), and, only when not at their defaults, the speaking pace and a language token
+  built from the `SpokenLanguage` and `SpeakingStyle` enum names. Every speaker resolves to a
   profile, so a voice, profile, pace, or language change never replays the wrong audio, and only
   the characters whose own voice or profile changed are re-voiced. Nothing that can change without
   changing the audio is in the key: not the provider, the model, the race or gender taxonomy, how an
   accent was chosen, the style prompt's template wording, or the settings' display labels. Line
   length is not part of the key either: every line is sent whole. Golden-value tests in
-  `CloudCacheKeyBuilderTest`, `CharacterProfileTest`, and `DiskAudioCacheTest` pin the key format,
+  `CloudCacheKeyBuilderTest`, `CharacterProfileTest`, `DiskAudioCacheTest`, and
+  `DialogueAudioServiceTest` pin the key format,
   so an accidental change that would re-bill every cached line fails the build.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
@@ -457,10 +460,9 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   the dialogue has advanced, so stale audio never plays late. The live synthesis pool runs two workers
   sharing one queue, so a line stuck on a slow call or a backed-off retry (left running so its
   result still caches) does not block the next line: the free worker picks it up.
-- **Speaking pace.** The **Speaking Pace** setting (Delivery section) is sent as the OpenRouter
-  `speed` parameter only when it is not 100%, so the default request body is unchanged. On Google
-  AI Studio a non-default pace joins the style string as a closing direction instead (see the
-  Google AI Studio section).
+- **Speaking pace.** The **Speaking Pace** setting (Delivery section) joins the style string as a
+  closing direction only when it is not 100%, so the default request is unchanged. Both providers
+  carry it the same way, since the Gemini API has no `speed` parameter.
 - **Keepalive connection.** The pipeline reuses one long-lived client derived from the injected one
   (an 8-connection 15-minute keepalive pool and a 2s connect budget), so back-to-back lines
   reuse a warm connection instead of re-handshaking. It is pinned to HTTP/1.1: the speech endpoint
@@ -507,10 +509,9 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   provider's translator (`OpenRouterTranslator` or `AiStudioTranslator`)
   translates each line through the Gemini flash-lite model (a fixed per-language system
   prompt for prompt-cache stability, preserving names and RuneScape terms) before the speech call,
-  which opens its style with "Speaking <language>". OpenRouter also sends a BCP-47 `language_code`
-  derived from the base language; Google AI Studio sends none, because it rejects a language code
-  outside a library voice's own locale, and the speech model speaks its input verbatim either way,
-  so the translation call does the translating. The language (with any
+  which opens its style with "Speaking <language>". Neither provider sends a language code: Google
+  AI Studio rejects one outside a library voice's own locale, and the speech model speaks its input
+  verbatim either way, so the translation call does the translating. The language (with any
   quirk) is folded into the cache key, so a line is translated and billed at most once per
   language/quirk; a failed translation fails the line gracefully rather than voicing the wrong
   language. **Spoken Language** is a fixed dropdown (the `SpokenLanguage` enum in `VoicedDialogueConfig`,

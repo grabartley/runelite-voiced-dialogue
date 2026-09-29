@@ -32,8 +32,6 @@ public class CloudSpeechExecutorTest {
 
   private long bodyStatedWaitMillis;
 
-  private boolean speedInStyle;
-
   private CloudSpeechExecutor.SpokenLine spoken;
 
   @Before
@@ -171,8 +169,7 @@ public class CloudSpeechExecutorTest {
   }
 
   @Test
-  public void aProviderWithoutASpeedFieldGetsTheSpeedInTheStyle() {
-    speedInStyle = true;
+  public void aNonDefaultSpeedIsADirectionInTheStyle() {
     MutableTestConfig config = new MutableTestConfig();
     config.speedPercent = 80;
     server.enqueue(rejection());
@@ -180,23 +177,10 @@ public class CloudSpeechExecutorTest {
     executor(config).synthesize(request());
 
     assertEquals(TestFixtures.TROLL_STYLE + " Speaking at 80% of normal speed.", spoken.style);
-    assertEquals(80, spoken.speedPercent);
-  }
-
-  @Test
-  public void aProviderWithASpeedFieldKeepsTheSpeedOutOfTheStyle() {
-    MutableTestConfig config = new MutableTestConfig();
-    config.speedPercent = 80;
-    server.enqueue(rejection());
-
-    executor(config).synthesize(request());
-
-    assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
   }
 
   @Test
   public void theDefaultSpeedNeverAddsASpeedDirection() {
-    speedInStyle = true;
     server.enqueue(rejection());
 
     executor().synthesize(request());
@@ -409,11 +393,6 @@ public class CloudSpeechExecutorTest {
     @Override
     public String translate(String text, String language, String apiKey) {
       return text;
-    }
-
-    @Override
-    public boolean speedInStyle() {
-      return speedInStyle;
     }
 
     @Override

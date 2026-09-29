@@ -32,10 +32,6 @@ public final class CloudSpeechExecutor {
 
     String translate(String text, String language, String apiKey);
 
-    default boolean speedInStyle() {
-      return false;
-    }
-
     PreparedSpeech buildRequests(SpokenLine line, SynthesisRequest request);
 
     Call newCall(Request httpRequest, int inputLen);
@@ -79,25 +75,14 @@ public final class CloudSpeechExecutor {
     public final String input;
     public final String style;
     public final String voice;
-    public final boolean translating;
     public final double speedRatio;
-    public final int speedPercent;
 
-    public SpokenLine(
-        String apiKey,
-        String input,
-        String style,
-        String voice,
-        boolean translating,
-        double speedRatio,
-        int speedPercent) {
+    public SpokenLine(String apiKey, String input, String style, String voice, double speedRatio) {
       this.apiKey = apiKey;
       this.input = input;
       this.style = style;
       this.voice = voice;
-      this.translating = translating;
       this.speedRatio = speedRatio;
-      this.speedPercent = speedPercent;
     }
   }
 
@@ -169,6 +154,7 @@ public final class CloudSpeechExecutor {
   public String cacheVariant(SynthesisRequest request) {
     return CloudCacheKeyBuilder.build(
         model.voiceFor(request.voice(), request.profile()),
+        request.voice(),
         support.speedPercent(),
         request.profile(),
         CloudTtsText.languageCacheToken(config, request));
@@ -221,11 +207,10 @@ public final class CloudSpeechExecutor {
     CharacterProfile profile = request.profile();
     int speed = support.speedPercent();
     double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
-    boolean speedInStyle = ops.speedInStyle() && speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT;
     String spokenLanguage =
         translating ? CloudTtsText.spokenLanguage(config) : CloudTtsText.DEFAULT_LANGUAGE;
     String style =
-        speedInStyle
+        speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT
             ? model.speechStyle(profile, request.voice(), request.emotion(), spokenLanguage, speed)
             : model.speechStyle(profile, request.voice(), request.emotion(), spokenLanguage);
 
@@ -249,8 +234,7 @@ public final class CloudSpeechExecutor {
       }
     }
 
-    return ops.buildRequests(
-        new SpokenLine(apiKey, spokenText, style, voice, translating, speedRatio, speed), request);
+    return ops.buildRequests(new SpokenLine(apiKey, spokenText, style, voice, speedRatio), request);
   }
 
   private Pcm runBuffered(PreparedSpeech prepared) {
