@@ -154,7 +154,7 @@
     "6774": {"name": "Doomsayer", "race": "Human", "gender": "Male", "ethnicity": "misthalin"},
     "9636": {"name": "Drezel", "race": "Human", "gender": "Male", "ethnicity": "misthalin"},
     "1305": {"name": "Hairdresser", "race": "Human", "gender": "Female", "ethnicity": "asgarnia"},
-    "14177": {"name": "Hairdresser", "race": "Human", "gender": "Female", "ethnicity": null},
+    "14177": {"name": "Zombie pirate (NPC)", "race": "Undead", "gender": "Male", "ethnicity": "wilderness"},
     "14189": {"name": "Hairdresser", "race": "Human", "gender": "Female", "ethnicity": null},
     "4619": {"name": "Hetty", "race": "Human", "gender": "Female", "ethnicity": "asgarnia"},
     "3214": {"name": "Cassie", "race": "Human", "gender": "Female", "ethnicity": "asgarnia"},
@@ -1821,6 +1821,13 @@
     "15361": {"name": "Shipyard Worker (Shipyard)", "ethnicity": "asgarnia"},
     "15362": {"name": "Shipyard Worker (Shipyard)", "ethnicity": "asgarnia"},
     "15364": {"name": "Shipwright Sally", "ethnicity": "asgarnia"},
-    "15366": {"name": "Shipwright Steve", "ethnicity": "asgarnia"}
+    "15366": {"name": "Shipwright Steve", "ethnicity": "asgarnia"},
+    "12703": {"name": "Elnes", "gender": "Female"},
+    "13097": {"name": "Cuica", "gender": "Female"},
+    "14195": {"name": "Lieutenant (Chasm of Fire)", "gender": "Female"},
+    "6908": {"name": "Soldier (tier 3)", "gender": "Female"},
+    "6909": {"name": "Soldier (tier 3)", "gender": "Female"},
+    "6912": {"name": "Soldier (tier 5)", "gender": "Female"},
+    "6913": {"name": "Soldier (tier 5)", "gender": "Female"}
   }
 }

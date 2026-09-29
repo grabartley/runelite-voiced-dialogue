@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1821,
+    "overrides_applied": 1828,
     "symbols": 4436,
     "race_counts": {
       "Aranei": 24,
@@ -19,18 +19,18 @@
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9811,
+      "Human": 9810,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
       "Tortugan": 65,
       "Troll": 473,
-      "Undead": 895,
+      "Undead": 896,
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2144,
-      "Male": 11959
+      "Female": 2150,
+      "Male": 11953
     },
     "ethnicity_counts": {
       "asgarnia": 716,
@@ -45,7 +45,7 @@
       "morytania": 1033,
       "tirannwn": 328,
       "varlamore": 1019,
-      "wilderness": 126,
+      "wilderness": 127,
       "wyrmscraig": 11
     },
     "life_stage_counts": {
@@ -65428,11 +65428,11 @@
     },
     "6908": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "6909": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "6910": {
       "race": "Human",
@@ -65444,11 +65444,11 @@
     },
     "6912": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "6913": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "6914": {
       "race": "Human",
@@ -88123,7 +88123,7 @@
     },
     "12703": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "kandarin"
     },
     "12704": {
@@ -89806,7 +89806,7 @@
     },
     "13097": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "13098": {
       "race": "Dwarf",
@@ -94029,8 +94029,9 @@
       "ethnicity": "kourend"
     },
     "14177": {
-      "race": "Human",
-      "gender": "Female"
+      "race": "Undead",
+      "gender": "Male",
+      "ethnicity": "wilderness"
     },
     "14178": {
       "race": "Undead",
@@ -94106,7 +94107,7 @@
     },
     "14195": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "kourend"
     },
     "14197": {

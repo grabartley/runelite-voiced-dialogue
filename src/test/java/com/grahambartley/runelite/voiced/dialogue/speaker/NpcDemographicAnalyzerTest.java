@@ -435,6 +435,28 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void kourendWomenTheWikiCallsSheResolveFemale() {
+    for (int npcId : new int[] {12703, 13097, 14195, 6908, 6909, 6912, 6913}) {
+      assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void shayzienTierFourSoldierStaysMale() {
+    for (int npcId : new int[] {6910, 6911}) {
+      assertEquals("gender for id " + npcId, "Male", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void pyreCoveZombiePirateIsAMaleWildernessUndeadInBothForms() {
+    for (int npcId : new int[] {14177, 14178}) {
+      assertAttributes(npcId, "Undead", "Male");
+      assertEquals("wilderness", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
   public void youngLookingPetsAndCreaturesStayAdults() {
     for (int npcId : new int[] {5381, 8485, 14519, 14033, 14487, 8183, 9398, 14034, 8025, 759}) {
       assertFalse("id " + npcId + " is not a child", analyze(npcId, null).isChild());
