@@ -618,7 +618,7 @@
       "2147": {
         "name": "Veos",
         "style": "An earnest, purposeful seafarer with a calm, faintly devout streak; steady and measured.",
-        "age": 44
+        "age": 52
       },
       "3308": {
         "name": "Gielinor Guide",
@@ -628,12 +628,12 @@
       "4243": {
         "name": "Reldo",
         "style": "A bookish, mild-mannered royal librarian; precise and slightly pedantic, quietly enthusiastic about history and lore.",
-        "age": 52
+        "age": 50
       },
       "2886": {
         "name": "Aubury",
         "style": "An eccentric, slightly distracted rune-shop wizard; affable but absent-minded, with an offhand scholarly oddness.",
-        "age": 50
+        "age": 58
       },
       "5005": {
         "name": "Wizard Mizgog",
@@ -668,22 +668,22 @@
       "4771": {
         "name": "Sir Amik Varze",
         "style": "The stately commander of the White Knights; authoritative, formal, and dignified, measured and noble in tone.",
-        "age": 58
+        "age": 60
       },
       "4687": {
         "name": "Sir Tiffy Cashien",
         "style": "A genteel, chipper old Temple Knight recruiter; warmly polite and grandfatherly, all mild upper-class charm and good humour.",
-        "age": 70
+        "age": 72
       },
       "2108": {
         "name": "Wise Old Man",
         "style": "A venerable, world-weary retired adventurer; calm, sage, and dryly self-assured, speaking with patient gravitas.",
-        "age": 80
+        "age": 85
       },
       "815": {
         "name": "Duke Horacio",
         "style": "A portly, genial nobleman of middling competence; pompous but kindly, and fond of his own title.",
-        "age": 52
+        "age": 55
       },
       "5215": {
         "name": "King Roald",
@@ -2566,12 +2566,12 @@
       "825": {
         "name": "Cabin Boy Jenkins",
         "style": "A young, eager deckhand; bright, quick and boyish in delivery.",
-        "age": 14
+        "age": 15
       },
       "826": {
         "name": "Cabin Boy Jenkins",
         "style": "A young, eager deckhand; bright, quick and boyish in delivery.",
-        "age": 14
+        "age": 15
       },
       "995": {
         "name": "Guard",
@@ -8719,37 +8719,37 @@
       "15341": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15342": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15344": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15345": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15346": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15347": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15348": {
         "name": "Cabin Boy Jenkins",
         "style": "Faintly eerie but still earnest, like a dutiful ship's boy carrying old habits past death.",
-        "age": 16
+        "age": 15
       },
       "15373": {
         "name": "Shipwright Soraya",
@@ -22039,7 +22039,7 @@
       "15637": {
         "name": "Demon butler",
         "style": "Impeccably polite servant with a deep, formal butler's diction. Crisp, deferential and a touch droll.",
-        "age": 55
+        "age": 65
       },
       "15646": {
         "name": "Imp",
@@ -28065,12 +28065,12 @@
       "1179": {
         "name": "Lumbridge Guide",
         "style": "A friendly, knowledgeable helper; patient, welcoming and reassuring to newcomers.",
-        "age": 50
+        "age": 58
       },
       "1181": {
         "name": "Lumbridge Guide",
         "style": "A friendly, knowledgeable helper; patient, welcoming and reassuring to newcomers.",
-        "age": 50
+        "age": 58
       },
       "1193": {
         "name": "General Bentnoze",
@@ -29005,7 +29005,7 @@
       "3393": {
         "name": "Lumbridge Guide",
         "style": "A friendly, knowledgeable helper; patient, welcoming and reassuring to newcomers.",
-        "age": 50
+        "age": 58
       },
       "3394": {
         "name": "Evil Dave",
@@ -29501,7 +29501,7 @@
       "4242": {
         "name": "Reldo",
         "style": "A mild, scholarly royal librarian; bookish, mild-mannered and helpful.",
-        "age": 48
+        "age": 50
       },
       "4246": {
         "name": "Monk",

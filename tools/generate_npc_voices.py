@@ -645,7 +645,9 @@ def validate_profiles(profiles):
             int(key)
         except (TypeError, ValueError):
             raise ValueError(f"byId key '{key}' is not a numeric NPC id")
-        if isinstance(profiles["byId"][key], dict) and "age" not in profiles["byId"][key]:
+        if not isinstance(profiles["byId"][key], dict):
+            raise ValueError(f"byId.{key} is not a profile object")
+        if "age" not in profiles["byId"][key]:
             raise ValueError(f"byId.{key} has no age: every bespoke profile sets the years its "
                              "voice should sound")
     for where, layer in profile_layers(profiles):

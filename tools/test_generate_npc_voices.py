@@ -505,6 +505,10 @@ class ValidateProfilesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "byId.7 has no age"):
             gen.validate_profiles(profiles_with(byId={"7": {"name": "Hans", "style": "Doddery"}}))
 
+    def test_a_bespoke_profile_that_is_not_an_object_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "byId.8 is not a profile object"):
+            gen.validate_profiles(profiles_with(byId={"8": "Hans"}))
+
     def test_a_whole_number_age_passes(self):
         gen.validate_profiles(profiles_with(byId={"3480": {"age": 65}}))
 
