@@ -91,11 +91,11 @@ public final class GeminiVoiceMap {
     NpcGender gender = NpcGender.orDefault(spec.gender());
     String region = regionFor(spec, profile);
     if (spec.player()) {
-      String regional = regions.voiceFor(region, gender, PLAYER_SEED);
+      String regional = regions.playerVoiceFor(region, gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
     }
     if (spec.follower()) {
-      String ownersVoice = regions.voiceFor(region, gender, PLAYER_SEED);
+      String ownersVoice = regions.playerVoiceFor(region, gender, PLAYER_SEED);
       String regional = regions.voiceExcluding(region, gender, FOLLOWER_SEED, ownersVoice);
       return regional != null ? regional : anchor(followerVoices.get(gender));
     }

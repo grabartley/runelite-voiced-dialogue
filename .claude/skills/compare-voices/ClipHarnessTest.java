@@ -14,9 +14,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.audio.Pcm;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
+import com.grahambartley.runelite.voiced.dialogue.profile.NpcVoiceOverrideStore;
 import com.grahambartley.runelite.voiced.dialogue.profile.ResolvedSpeaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.Speaker;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceManager;
+import com.grahambartley.runelite.voiced.dialogue.profile.VoiceType;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisBackend;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
 import com.grahambartley.runelite.voiced.dialogue.speech.aistudio.AiStudioTtsBackend;
@@ -74,7 +76,7 @@ public class ClipHarnessTest {
       when(config.playerAccent()).thenReturn(playerAccent);
     }
 
-    VoiceManager vm = VoiceManager.create(config, mock(Client.class));
+    VoiceManager vm = VoiceManager.create(config, mock(Client.class), mock(NpcVoiceOverrideStore.class));
     File out = new File(job.get("outDir").getAsString());
     out.mkdirs();
     boolean render = job.get("mode").getAsString().equals("render");
@@ -134,8 +136,8 @@ public class ClipHarnessTest {
       when(config.playerVoice())
           .thenReturn(
               c.get("gender").getAsString().equals("MALE")
-                  ? VoiceManager.PlayerVoice.TYPE_A
-                  : VoiceManager.PlayerVoice.TYPE_B);
+                  ? VoiceType.TYPE_A
+                  : VoiceType.TYPE_B);
       resolved = vm.resolve(Speaker.PLAYER, null);
       player = true;
     } else if (kind.equals("narrator")) {
