@@ -7,7 +7,7 @@ description: Add or correct an NPC's (or the player's) cloud TTS voice, accent, 
 
 The cloud (Gemini) backend voices each line from a bundled lookup,
 `src/main/resources/npc-voices.json`, which is **generated** by
-`tools/generate_npc_voices.py` from two hand-curated sources plus the OSRS Wiki.
+`tools/generate_npc_voices.py` from two curated sources plus the OSRS Wiki.
 **Never hand-edit `npc-voices.json`.** Edit a source, then regenerate.
 
 ## The two sources you edit

@@ -15,7 +15,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.001 
 
 - **14,103 NPCs already voiced by nearly 600 unique voices**, most of them native speakers from Google's library of over 2,000, matched by race, gender and accent, and each NPC keeps its voice for life. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
 - **Accents with lore behind them, voiced by native speakers where they exist.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
-- **6,451 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
+- **6,451 individual character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
 - **Recast anyone.** Open the **NPC Voices** side panel, find any NPC by name, and give them your own accent, style, pace, or voice type, for one NPC, one character, or everyone sharing a name.
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
