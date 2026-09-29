@@ -48,6 +48,7 @@ pool.
 | `POLISH` | Polish | 28 | 27 | Morytania, vampyres, Romani bespoke NPCs |
 | `NORSE` | Dutch | 13 | 13 | the Fremennik |
 | `JAPANESE` | Tokyo Japanese | 27 | 36 | the Eastern Lands |
+| `INDIAN_ENGLISH` | Indian English | 47 | 57 | only a typed **Your Accent** or NPC accent override naming India, since no bundled NPC is Indian |
 | `AUSTRALIAN`, `NEW_ZEALAND` | Sydney, Auckland | | | bespoke NPCs |
 
 Accents with no native speakers in the library (Welsh, Nigerian, Bajan and Caribbean, the Russian
@@ -66,7 +67,8 @@ Every line names the speaker's gender before anything else in the profile ("A ma
 woman's voice."), because a few library voices drift toward the other gender unless told. Measuring
 the pitch of every pooled voice, with and without that direction, found seven that still read as
 the wrong gender with it (a Varlamore queen came out as a man), and each region's `exclude` list
-drops them. Trolls take `DEEP_SOUTHERN_ENGLISH`, the two southern English men who measure and sound
+drops them. `INDIAN_ENGLISH` also excludes three men who read as British by ear, found by a blind
+accent check across the whole accent and confirmed by listening. Trolls take `DEEP_SOUTHERN_ENGLISH`, the two southern English men who measure and sound
 deepest, since the full southern English pool is mostly light voices and a pitch direction only
 pulls a light voice down so far. The region names them with `onlyVoices`. A voice named there was
 picked by ear as an adult, so it voices no child in any region, and a narrowed region's children
