@@ -22,15 +22,16 @@ that version.
 when the run fails. It never lands in the build or CI.
 
 The result is `voice-qa-sheet.html` in the output directory. Each card has the NPC's model
-picture, the real line, the Before and After clips, and the race and gender, profile, voice id, region and accent each side
-used, with the fields that differ in bold, plus Go / No go buttons. A case's `why` is shown above
-its line. **Copy results** puts the verdicts on the clipboard to paste back into the session.
+picture, the real line, the Before and After clips, and the race and gender, profile, voice id,
+region and accent each side used, with the fields that differ in bold, plus Go / No go buttons. A
+case's `why` is shown above its line. **Copy results** puts the verdicts on the clipboard to paste back into the session.
 
 The picture comes from the same wiki lookup the `review-area-origins` skill uses: `sheet.py` looks
 each case's `id` up with `Special:Lookup` and shows that version's infobox image, hotlinked from
 the wiki, so the viewing device needs internet access. Lookups are cached in `wiki.json` in the
 output directory. The player, the narrator, `missing` slots and ids the wiki cannot place show no
-picture, and a failed lookup never stops the sheet from building.
+picture. A failed lookup never stops the sheet from building: the first network error ends the
+lookups for that run, and the next run retries the ids that failed.
 
 ## Run it
 

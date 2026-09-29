@@ -1,6 +1,9 @@
 import json, base64, subprocess, os, html, sys, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'review-area-origins'))
-from area import wiki_entry
+try:
+    from area import wiki_entry
+except ImportError:
+    wiki_entry = None
 # Usage: sheet.py <cases.json> <out-dir> <before-label> <after-label> <provider>
 CASES, D, BEFORE, AFTER, PROVIDER = sys.argv[1:]
 cases = json.load(open(CASES))['cases']
@@ -10,13 +13,14 @@ res = {b: {r['key']: r for r in json.load(open(f'{D}/{b}/results.json'))} for b 
 
 wiki_path = f'{D}/wiki.json'
 wiki = json.load(open(wiki_path)) if os.path.exists(wiki_path) else {}
-for c in cases:
+for c in cases if wiki_entry else []:
     npc_id = str(c.get('id')) if c.get('id') is not None and not c.get('missing') else None
     if npc_id and (npc_id not in wiki or 'error' in wiki[npc_id]):
         try:
             wiki[npc_id] = wiki_entry(npc_id)
         except Exception as error:
             wiki[npc_id] = {'error': str(error)}
+            break
         time.sleep(0.2)
 json.dump(wiki, open(wiki_path, 'w'), indent=1)
 
