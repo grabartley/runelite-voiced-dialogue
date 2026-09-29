@@ -963,7 +963,9 @@
     "en-gb-commercial-1",
     "en-gb-csagent-6",
     "en-gb-csagent-8"
-   ]
+   ],
+   "PLAYER_MALE": "en-gb-podcaster-1",
+   "PLAYER_FEMALE": "en-gb-commercial-6"
   }
  }
 }

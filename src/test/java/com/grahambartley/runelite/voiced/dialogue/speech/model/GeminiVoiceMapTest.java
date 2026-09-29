@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -433,6 +434,24 @@ public class GeminiVoiceMapTest {
     String voice = REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), irish);
     assertTrue(voice, voice.startsWith("ie-m-"));
     assertEquals(voice, REGIONAL.voiceFor(VoiceSpec.player(NpcGender.MALE), irish));
+  }
+
+  @Test
+  public void theDefaultPlayerAccentTakesThePinnedSouthernEnglishVoices() {
+    CharacterProfile southern =
+        new CharacterProfile(
+            "Adventurer",
+            "Strong friendly, down-to-earth southern English accent, British English pronunciation",
+            "Plain.",
+            "Steady.");
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    int seed = GeminiVoiceMap.PLAYER_SEED;
+    assertNotEquals(
+        "en-gb-podcaster-1", bundled.voiceFor("SOUTHERN_ENGLISH", NpcGender.MALE, seed));
+    assertNotEquals(
+        "en-gb-commercial-6", bundled.voiceFor("SOUTHERN_ENGLISH", NpcGender.FEMALE, seed));
+    assertEquals("en-gb-podcaster-1", map.voiceFor(VoiceSpec.player(NpcGender.MALE), southern));
+    assertEquals("en-gb-commercial-6", map.voiceFor(VoiceSpec.player(NpcGender.FEMALE), southern));
   }
 
   @Test

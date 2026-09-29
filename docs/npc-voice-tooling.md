@@ -19,8 +19,10 @@ are no network calls or large downloads when choosing a voice.
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
 - `tools/voice-regions.json` - curated **voice regions**: each names one Gemini Extended
   Voice Library accent, the player-accent keywords that select it, any voices excluded because they
-  read as the wrong gender, and optionally `onlyVoices` to narrow a gender to named voices (the
-  trolls' deep southern English pool).
+  read as the wrong gender, optionally `onlyVoices` to narrow a gender to named voices (the
+  trolls' deep southern English pool), and optionally `playerVoices` to pin the player's voice per
+  gender. A pinned voice must be in that region's adult pool for the gender, or the generator
+  rejects it, and it is baked as `PLAYER_MALE` / `PLAYER_FEMALE`.
 - `tools/voice-library.json` - a committed snapshot of the Extended Voice Library, refreshed with
   `GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`. The generator builds each region's
   male and female pools from it into `src/main/resources/voice-regions.json`, so a voice only
