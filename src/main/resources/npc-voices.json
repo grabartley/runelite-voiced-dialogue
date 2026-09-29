@@ -14,12 +14,12 @@
       "Crab": 24,
       "Demon": 790,
       "Dog": 318,
-      "Dwarf": 517,
+      "Dwarf": 519,
       "Elf": 354,
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9810,
+      "Human": 9808,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
@@ -36,15 +36,15 @@
       "asgarnia": 716,
       "easternlands": 2,
       "fremennik": 663,
-      "kandarin": 1121,
+      "kandarin": 1120,
       "karamja": 160,
       "kharidian": 547,
-      "kourend": 788,
+      "kourend": 789,
       "menaphite": 132,
       "misthalin": 1058,
       "morytania": 1033,
       "tirannwn": 328,
-      "varlamore": 1019,
+      "varlamore": 1020,
       "wilderness": 127,
       "wyrmscraig": 11
     },
@@ -88122,9 +88122,9 @@
       "ethnicity": "kourend"
     },
     "12703": {
-      "race": "Human",
+      "race": "Dwarf",
       "gender": "Female",
-      "ethnicity": "kandarin"
+      "ethnicity": "kourend"
     },
     "12704": {
       "race": "Dwarf",
@@ -89805,8 +89805,9 @@
       "ethnicity": "varlamore"
     },
     "13097": {
-      "race": "Human",
-      "gender": "Female"
+      "race": "Dwarf",
+      "gender": "Female",
+      "ethnicity": "varlamore"
     },
     "13098": {
       "race": "Dwarf",

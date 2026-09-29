@@ -435,10 +435,22 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
-  public void kourendWomenTheWikiCallsSheResolveFemale() {
+  public void wikiConfirmedWomenResolveFemale() {
     for (int npcId : new int[] {12703, 13097, 14195, 6908, 6909, 6912, 6913}) {
       assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
     }
+  }
+
+  @Test
+  public void elnesIsAKourendDwarfLikeTheOtherMinecartConductors() {
+    assertAttributes(12703, "Dwarf", "Female");
+    assertEquals("kourend", analyze(12703, null).getEthnicity());
+  }
+
+  @Test
+  public void cuicaIsACamTorumDwarf() {
+    assertAttributes(13097, "Dwarf", "Female");
+    assertEquals("varlamore", analyze(13097, null).getEthnicity());
   }
 
   @Test
