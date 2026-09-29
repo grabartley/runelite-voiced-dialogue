@@ -110,6 +110,9 @@ public final class CharacterProfile {
     if (detail != null) {
       joined += '\u0002' + detail;
     }
+    if (age != null) {
+      joined += '\u0003' + age.toString();
+    }
     try {
       byte[] digest =
           MessageDigest.getInstance("SHA-256").digest(joined.getBytes(StandardCharsets.UTF_8));

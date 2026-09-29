@@ -64,8 +64,39 @@ never talk (no Talk-to, no transcript) get no case; list them in the reply inste
 
 A full run is about 80 short lines, so it costs a few cents and takes a few minutes.
 
-Send the developer the sheet with `SendUserFile` (display `render`) and wait for their verdicts. A
-No go blocks the change until it is fixed or the developer accepts it.
+Send the developer the sheet with `SendUserFile` (display `render`), host it on the home network
+(below), and wait for their verdicts. A No go blocks the change until it is fixed or the developer
+accepts it.
+
+## Host the sheet on the home network
+
+Always host the sheet so the developer can review it from a phone or any device on their network.
+
+1. Start a static server over the output directory as a background task (the Bash tool's
+   `run_in_background`), so it stays up while you wait:
+
+   ```bash
+   python3 -m http.server 8765 --bind 0.0.0.0 --directory <out-dir>
+   ```
+
+2. Find the machine's address with `ipconfig getifaddr en0` (or `en1`), check the page answers with
+   `curl -s -o /dev/null -w "%{http_code}" http://<ip>:8765/voice-qa-sheet.html`, and give the
+   developer `http://<ip>:8765/voice-qa-sheet.html`. If a phone cannot reach it, the developer
+   allows Python through the macOS firewall prompt.
+
+The output directory holds only the sheet, its clips and the harness results, never a key. Serve
+nothing else. To host a second sheet in the same review, serve their shared parent directory rather
+than starting another server.
+
+**Mandatory: take it down.** As soon as the developer is done (their verdicts arrive, or they say
+so), stop the server's background task, then prove nothing is left:
+
+```bash
+lsof -nP -iTCP:8765 -sTCP:LISTEN || echo "nothing listening on 8765"
+```
+
+No server or other process from this skill may be left running, including at the end of the
+session. `run.sh` already removes its baseline worktree and harness files on exit.
 
 ## Coverage
 

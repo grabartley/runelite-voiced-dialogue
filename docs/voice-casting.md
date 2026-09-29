@@ -90,7 +90,13 @@ states an age for every native voice, and the generator bundles those ages besid
 `src/main/resources/voice-regions.json` as `voiceAges`. An NPC with an age is voiced from the
 region voices within ten years of it, or from the three nearest when fewer than three are that
 close, and its seed picks among them, so it still keeps one voice for life. A character older than
-every voice in its region takes the region's oldest voices, and its `pitch` and style carry the rest.
+every voice in its region takes the region's oldest voices.
+
+The age is also spoken to the model as part of the gender that leads the profile: "A man's voice,
+about 45 years old", or from 60 up "An old man's voice, about 65 years old". The library's oldest
+voices are younger than many old characters (its oldest southern English man is 55), and by ear
+naming the age there makes the chosen voice sound older than the same voice told only "A man's
+voice". A child keeps "A young boy's voice" or "A young girl's voice" whatever its age.
 
 An NPC with no age keeps its seeded pick from the whole pool, so adding ages moves only the NPCs
 that get one. Children ignore their age and keep the child pool. The prebuilt voices carry no age,

@@ -190,4 +190,58 @@ public class GeminiSpeechStyleTest {
   public void neverCarriesBracketTags() {
     assertFalse(compose(DWARF, MAN, Emotion.HAPPY).contains("["));
   }
+
+  private static CharacterProfile aged(int age) {
+    return new CharacterProfile("Dr Harlow", null, null, null, null, null, null, false, age);
+  }
+
+  @Test
+  public void anOldManIsNamedOldWithHisAge() {
+    assertTrue(
+        compose(aged(65), MAN, Emotion.NEUTRAL)
+            .startsWith(
+                "Speaking English. An old man's voice, about 65 years old. Audio profile:"));
+  }
+
+  @Test
+  public void anOldWomanIsNamedOldWithHerAge() {
+    assertTrue(
+        compose(aged(GeminiSpeechStyle.OLD_AGE), WOMAN, Emotion.NEUTRAL)
+            .startsWith("Speaking English. An old woman's voice, about 60 years old."));
+  }
+
+  @Test
+  public void anAdultBelowOldAgeKeepsThePlainAnchorWithTheirAge() {
+    assertTrue(
+        compose(aged(GeminiSpeechStyle.OLD_AGE - 1), MAN, Emotion.NEUTRAL)
+            .startsWith("Speaking English. A man's voice, about 59 years old."));
+    assertTrue(
+        compose(aged(19), WOMAN, Emotion.NEUTRAL)
+            .startsWith("Speaking English. A woman's voice, about 19 years old."));
+  }
+
+  @Test
+  public void theAgeComesBeforeThePitch() {
+    CharacterProfile agedAndPitched =
+        new CharacterProfile("Dr Harlow", null, null, null, null, DEEP, null, false, 65);
+    assertTrue(
+        compose(agedAndPitched, MAN, Emotion.NEUTRAL)
+            .startsWith(
+                "Speaking English. An old man's voice, about 65 years old. Very deep, booming voice."));
+  }
+
+  @Test
+  public void aChildKeepsTheChildAnchorWhateverItsAge() {
+    VoiceSpec boy = VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 1, true);
+    assertTrue(
+        compose(aged(70), boy, Emotion.NEUTRAL)
+            .startsWith("Speaking English. A young boy's voice. Audio profile:"));
+  }
+
+  @Test
+  public void anUnknownGenderGetsNoAgePhrase() {
+    assertEquals(
+        "Speaking English. Audio profile: Dr Harlow, a character in a medieval fantasy world.",
+        compose(aged(65), UNKNOWN, Emotion.NEUTRAL));
+  }
 }
