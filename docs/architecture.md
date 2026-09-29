@@ -412,10 +412,11 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   the backend's `cacheNamespace` (`cloud-speech` for both cloud providers) and the voice key is the
   backend's `cacheVariant`. The variant holds only what defines a character's audio: the resolved
   voice id, a speaker token (the gender, marked for a child, or the narrator) that stands for the
-  voice line opening the style, a truncated SHA-256 of the profile fields exactly as they are sent (name,
-  accent, style, pace, and pitch and accent detail when sent, after the same trimming the style
-  string applies), and, only when not at their defaults, the speaking pace and a language token
-  built from the `SpokenLanguage` and `SpeakingStyle` enum names. Every speaker resolves to a
+  voice line opening the style, a truncated SHA-256 of the profile fields exactly as they are sent
+  (name, accent, style, pace, and pitch and accent detail when sent, after the same trimming the
+  style string applies), and, only when not at their defaults, the speaking pace and a language
+  token built from the `SpokenLanguage` and `SpeakingStyle` enum names. `docs/cache-files.md`
+  spells out the exact recipe. Every speaker resolves to a
   profile, so a voice, profile, pace, or language change never replays the wrong audio, and only
   the characters whose own voice or profile changed are re-voiced. Nothing that can change without
   changing the audio is in the key: not the provider, the model, the race taxonomy, how an accent
