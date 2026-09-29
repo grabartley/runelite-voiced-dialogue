@@ -1,5 +1,8 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.regex.Pattern;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -11,6 +14,8 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode
 @ToString
 public final class CharacterProfile {
+
+  private static final int CACHE_KEY_BYTES = 8;
 
   private static final Pattern TRAILING_SEPARATORS = Pattern.compile("[\\s.;,:]+$");
 
@@ -90,6 +95,17 @@ public final class CharacterProfile {
     if (detail != null) {
       joined += '\u0002' + detail;
     }
-    return Integer.toHexString(joined.hashCode());
+    try {
+      byte[] digest =
+          MessageDigest.getInstance("SHA-256").digest(joined.getBytes(StandardCharsets.UTF_8));
+      StringBuilder hex = new StringBuilder(CACHE_KEY_BYTES * 2);
+      for (int i = 0; i < CACHE_KEY_BYTES; i++) {
+        hex.append(Character.forDigit((digest[i] >> 4) & 0xF, 16));
+        hex.append(Character.forDigit(digest[i] & 0xF, 16));
+      }
+      return hex.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 unavailable", e);
+    }
   }
 }

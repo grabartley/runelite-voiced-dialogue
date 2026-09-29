@@ -100,7 +100,7 @@ public class CloudCacheKeyBuilderTest {
             "Steady and conversational.");
     assertEquals(
         "changing this key re-bills every cached line for every user",
-        "en-gb-tutor-9|aMALE|pa29bfdb1",
+        "en-gb-tutor-9|aMALE|p18cbc67f87f11541",
         build("en-gb-tutor-9", 100, bartender, null));
   }
 }

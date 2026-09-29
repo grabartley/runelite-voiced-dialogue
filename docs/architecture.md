@@ -412,14 +412,16 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   the backend's `cacheNamespace` (`cloud-speech` for both cloud providers) and the voice key is the
   backend's `cacheVariant`. The variant holds only what defines a character's audio: the resolved
   voice id, a speaker token (the gender, marked for a child, or the narrator) that stands for the
-  voice line opening the style, a hash of the profile fields exactly as they are sent (name,
+  voice line opening the style, a truncated SHA-256 of the profile fields exactly as they are sent (name,
   accent, style, pace, and pitch and accent detail when sent, after the same trimming the style
   string applies), and, only when not at their defaults, the speaking pace and a language token
   built from the `SpokenLanguage` and `SpeakingStyle` enum names. Every speaker resolves to a
   profile, so a voice, profile, pace, or language change never replays the wrong audio, and only
   the characters whose own voice or profile changed are re-voiced. Nothing that can change without
-  changing the audio is in the key: not the provider, the model, the race or gender taxonomy, how an
-  accent was chosen, the style prompt's template wording, or the settings' display labels. Line
+  changing the audio is in the key: not the provider, the model, the race taxonomy, how an accent
+  was chosen, or the settings' dropdown text. Wording that is the same for every line is left out
+  too: the style prompt's template and the language names it reads out. Editing either keeps
+  replaying existing clips rather than re-voicing every line. Line
   length is not part of the key either: every line is sent whole. Golden-value tests in
   `CloudCacheKeyBuilderTest`, `CharacterProfileTest`, `DiskAudioCacheTest`, and
   `DialogueAudioServiceTest` pin the key format,
@@ -515,8 +517,8 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   quirk) is folded into the cache key, so a line is translated and billed at most once per
   language/quirk; a failed translation fails the line gracefully rather than voicing the wrong
   language. **Spoken Language** is a fixed dropdown (the `SpokenLanguage` enum in `VoicedDialogueConfig`,
-  one entry per supported language), so every selection carries a known-good BCP-47 code;
-  the enum is the single source of truth for both the options and their codes.
+  one entry per supported language), the single source of truth for the options and the language
+  name the model reads.
 - **Player / NPC Speaking Style.** Two independent settings, one for your own lines (**Player
   Speaking Style**) and one for NPC lines (**NPC Speaking Style**), drawn from the same option set
   (Gen Z slang, pirate speak, formal, Shakespearean, cyberpunk, and so on). Each style

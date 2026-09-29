@@ -108,7 +108,9 @@ public class CharacterProfileTest {
   @Test
   public void theCacheKeyForAFixedProfileNeverChangesAcrossReleases() {
     assertEquals(
-        "changing this re-bills every cached line for every user", "1e3f531e", WIZARD.cacheKey());
+        "changing this re-bills every cached line for every user",
+        "0c2a6052ac587a6a",
+        WIZARD.cacheKey());
   }
 
   @Test
