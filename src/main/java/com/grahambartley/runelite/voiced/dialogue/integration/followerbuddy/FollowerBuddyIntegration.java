@@ -1,0 +1,101 @@
+package com.grahambartley.runelite.voiced.dialogue.integration.followerbuddy;
+
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import com.grahambartley.runelite.voiced.dialogue.capture.ChatNoticeManager;
+import com.grahambartley.runelite.voiced.dialogue.capture.DialogueTextCleaner;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
+import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisDispatcher;
+import java.util.function.BooleanSupplier;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.events.ChatMessage;
+import net.runelite.client.config.ConfigManager;
+import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.ui.overlay.OverlayManager;
+
+@Slf4j
+public final class FollowerBuddyIntegration {
+
+  static final String MIRROR_OFF_NOTICE =
+      "Voiced Dialogue voices the Follower Buddy plugin's companion, but Follower Buddy's"
+          + " \"Mirror to chat\" setting is off. Turn it on in Follower Buddy to hear the lines"
+          + " it says over its head; its Talk-to conversation is voiced either way.";
+
+  private final VoicedDialogueConfig config;
+  private final ChatNoticeManager notices;
+  private final FollowerBuddySettings settings;
+  private final FollowerSpeaker speaker;
+  private final FollowerDialogWatcher dialogWatcher;
+
+  private volatile boolean mirrorNoticeChecked;
+
+  public FollowerBuddyIntegration(
+      ConfigManager configManager,
+      ChatNoticeManager notices,
+      DialogueTextCleaner textCleaner,
+      SynthesisDispatcher dispatcher,
+      BooleanSupplier conversationOnScreen,
+      OverlayManager overlayManager,
+      VoicedDialogueConfig config) {
+    this.config = config;
+    this.notices = notices;
+    this.settings = new FollowerBuddySettings(configManager);
+    this.dialogWatcher =
+        new FollowerDialogWatcher(
+            new FollowerDialogReader(overlayManager),
+            textCleaner,
+            dispatcher,
+            config::voiceFollower,
+            this::gender);
+    this.speaker =
+        new FollowerSpeaker(
+            textCleaner,
+            dispatcher,
+            config::voiceFollower,
+            () -> conversationOnScreen.getAsBoolean() || dialogWatcher.isOnScreen(),
+            settings::followerName,
+            this::gender);
+  }
+
+  public void onChatMessage(ChatMessage event) {
+    speaker.onChatMessage(event);
+  }
+
+  public void onGameTick() {
+    dialogWatcher.tick();
+    if (mirrorNoticeChecked || !config.voiceFollower()) {
+      return;
+    }
+    mirrorNoticeChecked = true;
+    if (settings.installedFromHub() && !settings.mirrorToChat()) {
+      notices.postNotice(MIRROR_OFF_NOTICE);
+    }
+  }
+
+  public void onConfigChanged(ConfigChanged event) {
+    if (FollowerBuddySettings.owns(event.getGroup())) {
+      settings.invalidate();
+      if (FollowerBuddySettings.MIRROR_TO_CHAT_KEY.equals(event.getKey())) {
+        mirrorNoticeChecked = false;
+      }
+      return;
+    }
+    if (VoicedDialogueConfig.GROUP.equals(event.getGroup())
+        && VoicedDialogueConfig.VOICE_FOLLOWER_KEY.equals(event.getKey())) {
+      mirrorNoticeChecked = false;
+    }
+  }
+
+  private NpcGender gender() {
+    FollowerVoice configured = config.followerVoice();
+    NpcGender fromOutfit = settings.outfitGender();
+    NpcGender resolved = FollowerGenderPolicy.resolve(configured, fromOutfit);
+    if (config.debugMode()) {
+      log.info(
+          "[TTS follower] voice setting={} outfit={} -> gender={}",
+          configured,
+          fromOutfit,
+          resolved);
+    }
+    return resolved;
+  }
+}

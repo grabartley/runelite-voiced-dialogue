@@ -11,30 +11,52 @@ public class VoiceSpec {
 
   public static final int UNSPECIFIED_SEED = -1;
 
-  public static final VoiceSpec NARRATOR =
-      new VoiceSpec(false, NpcRace.HUMAN, NpcGender.MALE, UNSPECIFIED_SEED, false, true);
+  public enum Kind {
+    NPC,
+    PLAYER,
+    FOLLOWER,
+    NARRATOR
+  }
 
-  boolean player;
+  public static final VoiceSpec NARRATOR =
+      new VoiceSpec(Kind.NARRATOR, NpcRace.HUMAN, NpcGender.MALE, UNSPECIFIED_SEED, false);
+
+  Kind kind;
   NpcRace race;
   NpcGender gender;
   int voiceSeed;
   boolean child;
-  boolean narrator;
 
   public static VoiceSpec player(NpcGender gender) {
-    return new VoiceSpec(true, NpcRace.HUMAN, gender, UNSPECIFIED_SEED, false, false);
+    return new VoiceSpec(Kind.PLAYER, NpcRace.HUMAN, gender, UNSPECIFIED_SEED, false);
+  }
+
+  public static VoiceSpec follower(NpcGender gender) {
+    return new VoiceSpec(Kind.FOLLOWER, NpcRace.HUMAN, gender, UNSPECIFIED_SEED, false);
   }
 
   public static VoiceSpec npc(NpcRace race, NpcGender gender) {
-    return new VoiceSpec(false, race, gender, UNSPECIFIED_SEED, false, false);
+    return new VoiceSpec(Kind.NPC, race, gender, UNSPECIFIED_SEED, false);
   }
 
   public static VoiceSpec npc(NpcRace race, NpcGender gender, int seed) {
-    return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, false, false);
+    return new VoiceSpec(Kind.NPC, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, false);
   }
 
   public static VoiceSpec npc(NpcRace race, NpcGender gender, int seed, boolean child) {
-    return new VoiceSpec(false, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, child, false);
+    return new VoiceSpec(Kind.NPC, race, gender, seed < 0 ? UNSPECIFIED_SEED : seed, child);
+  }
+
+  public boolean player() {
+    return kind == Kind.PLAYER;
+  }
+
+  public boolean follower() {
+    return kind == Kind.FOLLOWER;
+  }
+
+  public boolean narrator() {
+    return kind == Kind.NARRATOR;
   }
 
   public boolean hasVoiceSeed() {
@@ -42,10 +64,16 @@ public class VoiceSpec {
   }
 
   public String key() {
-    if (narrator) {
-      return "narrator";
+    switch (kind) {
+      case NARRATOR:
+        return "narrator";
+      case PLAYER:
+        return "player:" + gender;
+      case FOLLOWER:
+        return "follower:" + gender;
+      default:
+        return "npc:" + race + ":" + gender;
     }
-    return player ? "player:" + gender : "npc:" + race + ":" + gender;
   }
 
   @Override

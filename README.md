@@ -21,6 +21,7 @@ You bring your own API key and pay only for the audio you generate, about **$0.0
 - **Your character speaks too.** Set your own accent, personality and pace. You can also have your public chat read out.
 - **A narrator.** Turn on **Voice Narration** to hear the message and item boxes that quests use, and **Voice Examine Text** to hear examine text.
 - **Background chatter.** Turn on **Voice Ambient Chatter** to hear the text NPCs say over their heads, like market sellers and cutscene lines. Several NPCs can talk at once, and they get quieter as you walk away.
+- **Your Follower Buddy companion speaks too.** If you use the separate [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin, turn on **Voice Follower Buddy** and your companion gets its own voice, accent, personality and pace, both over its head and when you Talk-to it. Without that plugin the setting does nothing.
 - **Other languages and styles.** Play in Spanish or another language, or have everyone talk like pirates, Gen Z, or Shakespeare.
 - **Cave echo** in dungeons, caves and sewers.
 - **Doesn't slow the game down.** Voices are made in the background, skipping a line stops it straight away, and every line is played at the same loudness.
@@ -111,6 +112,23 @@ On OpenRouter this is the real amount you were charged. On Google AI Studio it i
 | **Voice Ambient Chatter** | `Off` | Reads the text nearby NPCs say over their heads, each in their own voice. Several NPCs can talk at once. Voices get quieter with distance and stop when the NPC is out of range. Animal noises aren't voiced. These play without you clicking anything, so a busy area costs money the first time you visit it, but the lines repeat a lot, so most are free after that. Chatter stays quiet while you are in a conversation. |
 | **Auto-learn New NPCs** | `Off` | Looks up an unknown NPC's race, gender and origin on the OSRS Wiki once and remembers it. The lookup starts when you click **Talk-to**, so it is usually done before the NPC speaks. |
 | **Set Voice Menu Option** | `On` | Adds **Set-voice** to the right-click menu of NPCs that talk, which opens them in the **NPC Voices** panel. Monsters and bosses that don't talk don't get it. |
+
+</details>
+
+<details>
+<summary><b>Follower Buddy</b></summary>
+
+An integration with the separate [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin, which gives you a customisable companion that follows you and chats. These settings voice the lines that companion speaks. Install Follower Buddy from the Plugin Hub, or nothing here has anything to voice. Its **Mirror to chat** setting is what makes the companion's overhead chatter audible; the **Talk-to** conversation is voiced either way.
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| **Voice Follower Buddy** | `Off` | Speaks your Follower Buddy companion's lines in its own voice, both its overhead chatter and its right-click **Talk-to** conversation. The companion's lines queue behind each other rather than overlapping themselves, and they play alongside ambient chatter rather than cutting it. Silent while you are in a conversation. Its phrases are short and repeat heavily, so the first of each costs a real call and the rest replay free. On Google AI Studio these lines draw on the same daily allowance as your dialogue. Does nothing without Follower Buddy installed. |
+| **Companion Voice** | `Auto` | The voice for your companion. `Auto` follows the gender of the outfit you built in Follower Buddy; `Type A` and `Type B` pin it. |
+| **Companion Accent** | British (travelling companion) | Accent for your companion's voice. |
+| **Companion Persona** | eager and warm | Persona and delivery style for your companion. |
+| **Companion Delivery Pace** | Normal | How your companion paces their words. |
+
+Both of the companion's voices are covered: the lines it says over its head, which need Follower Buddy's **Mirror to chat** setting on, and the right-click **Talk-to** conversation, which does not. Your own replies in that conversation are read in your player voice, the way quest dialogue is.
 
 </details>
 

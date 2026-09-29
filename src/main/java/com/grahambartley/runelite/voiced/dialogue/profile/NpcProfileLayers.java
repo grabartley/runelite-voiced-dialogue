@@ -22,6 +22,7 @@ class NpcProfileLayers {
           BUILTIN_DEFAULT,
           null,
           null,
+          null,
           Collections.emptyMap(),
           Collections.emptyMap(),
           Collections.emptyList(),
@@ -53,6 +54,7 @@ class NpcProfileLayers {
 
   CharacterProfile defaultProfile;
   Layer playerLayer;
+  Layer followerLayer;
   Layer narratorLayer;
   Map<String, Layer> byRace;
   Map<String, Layer> byEthnicity;

@@ -25,8 +25,14 @@ public class PublicChatPolicyTest {
 
   @Test
   @Parameters(method = "selfPublicChatCases")
-  public void selfFilterKeepsOnlyTheLocalPlayerIgnoringRankIconsAndNbsp(
-      String eventName, String localName, boolean expected) {
-    assertEquals(expected, PublicChatPolicy.isSelfPublicChat(eventName, localName));
+  public void theFilterKeepsOnlyTheNamedSpeakerIgnoringRankIconsAndNbsp(
+      String eventName, String speakerName, boolean expected) {
+    assertEquals(expected, PublicChatPolicy.isFrom(eventName, speakerName));
+  }
+
+  @Test
+  public void aNamedSpeakerIsMatchedThroughItsRankIcon() {
+    assertEquals(true, PublicChatPolicy.isFrom("<img=2>Barkley", "Barkley"));
+    assertEquals(false, PublicChatPolicy.isFrom("Barkley", "Rufus"));
   }
 }

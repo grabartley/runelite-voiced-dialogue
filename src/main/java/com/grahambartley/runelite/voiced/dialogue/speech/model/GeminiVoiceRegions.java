@@ -145,6 +145,16 @@ final class GeminiVoiceRegions {
     return Math.abs(voiceAges.get(voice) - age);
   }
 
+  String voiceExcluding(String region, NpcGender gender, int seed, String excluded) {
+    List<String> pool = pool(pools, region, gender);
+    if (pool == null || !pool.contains(excluded)) {
+      return pick(pool, seed);
+    }
+    List<String> remaining = new ArrayList<>(pool);
+    remaining.remove(excluded);
+    return pick(remaining, seed);
+  }
+
   String playerVoiceFor(String region, NpcGender gender, int seed) {
     Map<NpcGender, String> pinned = region == null ? null : playerVoices.get(region);
     String voice = pinned == null ? null : pinned.get(gender);

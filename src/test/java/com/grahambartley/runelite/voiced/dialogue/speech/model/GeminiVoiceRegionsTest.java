@@ -6,14 +6,17 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
+import org.mockito.Answers;
 
 public class GeminiVoiceRegionsTest {
 
@@ -73,6 +76,26 @@ public class GeminiVoiceRegionsTest {
   public void theVoiceComesFromThePoolForTheGender() {
     assertTrue(REGIONS.voiceFor("IRISH", NpcGender.MALE, 7).startsWith("ie-m-"));
     assertEquals("ie-f-1", REGIONS.voiceFor("IRISH", NpcGender.FEMALE, 7));
+  }
+
+  @Test
+  public void anExcludedVoiceIsNeverPicked() {
+    for (int seed = 0; seed < 200; seed++) {
+      String owners = REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, seed);
+      assertFalse(owners.equals(REGIONS.voiceExcluding("SCOTTISH", NpcGender.MALE, seed, owners)));
+    }
+  }
+
+  @Test
+  public void excludingAVoiceOutsideThePoolPicksAsUsual() {
+    assertEquals(
+        REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, 9),
+        REGIONS.voiceExcluding("SCOTTISH", NpcGender.MALE, 9, "ie-m-1"));
+  }
+
+  @Test
+  public void excludingThePoolsOnlyVoiceLeavesNoVoice() {
+    assertNull(REGIONS.voiceExcluding("SOUTHERN_ENGLISH", NpcGender.MALE, 3, "en-m-1"));
   }
 
   @Test
@@ -146,6 +169,14 @@ public class GeminiVoiceRegionsTest {
     assertEquals("INDIAN_ENGLISH", bundled.regionForAccent("Strong accent from south India"));
     assertEquals("INDIAN_ENGLISH", bundled.regionForAccent("Strong West Indian accent"));
     assertNull(bundled.regionForAccent("Strong Southern American accent"));
+  }
+
+  @Test
+  public void theDefaultCompanionAccentNamesSouthernEnglish() {
+    VoicedDialogueConfig defaults = mock(VoicedDialogueConfig.class, Answers.CALLS_REAL_METHODS);
+    assertEquals(
+        "SOUTHERN_ENGLISH",
+        GeminiVoiceRegions.bundled().regionForAccent(defaults.followerAccent()));
   }
 
   @Test
