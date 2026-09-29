@@ -3,9 +3,7 @@ package com.grahambartley.runelite.voiced.dialogue.audio;
 import static com.grahambartley.runelite.voiced.dialogue.audio.TestPcm.peak;
 import static com.grahambartley.runelite.voiced.dialogue.audio.TestPcm.rms;
 import static com.grahambartley.runelite.voiced.dialogue.audio.TestPcm.sine;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -23,6 +21,15 @@ public class LoudnessLevellerTest {
     return (float) (20 * Math.log10(amplitude));
   }
 
+  private static float[] levelled(float[] samples) {
+    float gain = LoudnessLeveller.gainFor(samples, RATE);
+    float[] out = new float[samples.length];
+    for (int i = 0; i < samples.length; i++) {
+      out[i] = samples[i] * gain;
+    }
+    return out;
+  }
+
   private static float amplitudeForRms(float rms) {
     return rms * SINE_CREST;
   }
@@ -31,7 +38,7 @@ public class LoudnessLevellerTest {
   public void aQuietClipIsRaisedToTheTarget() {
     float[] quiet = sine(amplitudeForRms(TARGET_RMS / 3), ONE_SECOND);
 
-    float[] out = LoudnessLeveller.levelled(quiet, RATE);
+    float[] out = levelled(quiet);
 
     assertEquals(db(TARGET_RMS), db(rms(out)), DB_TOLERANCE);
   }
@@ -40,7 +47,7 @@ public class LoudnessLevellerTest {
   public void aLoudClipIsLoweredToTheTarget() {
     float[] loud = sine(amplitudeForRms(TARGET_RMS * 3), ONE_SECOND);
 
-    float[] out = LoudnessLeveller.levelled(loud, RATE);
+    float[] out = levelled(loud);
 
     assertEquals(db(TARGET_RMS), db(rms(out)), DB_TOLERANCE);
   }
@@ -57,7 +64,6 @@ public class LoudnessLevellerTest {
     float[] silence = new float[ONE_SECOND];
 
     assertEquals(1f, LoudnessLeveller.gainFor(silence, RATE), 0f);
-    assertSame(silence, LoudnessLeveller.levelled(silence, RATE));
   }
 
   @Test
@@ -90,33 +96,38 @@ public class LoudnessLevellerTest {
     float[] spiky = sine(amplitudeForRms(TARGET_RMS / 4), ONE_SECOND);
     spiky[100] = 0.5f;
 
-    float[] out = LoudnessLeveller.levelled(spiky, RATE);
+    float[] out = levelled(spiky);
 
     assertEquals(CEILING, peak(out), 1e-4f);
     assertTrue(rms(out) < TARGET_RMS);
   }
 
   @Test
-  public void noOutputSampleExceedsFullScale() {
+  public void noLevelledSampleExceedsTheCeiling() {
     float[] clipped = sine(1f, ONE_SECOND);
     clipped[7] = 1.5f;
     clipped[8] = -1.5f;
 
-    assertTrue(peak(LoudnessLeveller.levelled(clipped, RATE)) <= CEILING + 1e-6f);
-    assertTrue(peak(LoudnessLeveller.scaled(clipped, 4f)) <= 1f);
+    assertTrue(peak(levelled(clipped)) <= CEILING + 1e-6f);
   }
 
   @Test
-  public void aUnitGainReturnsTheSamplesUnchanged() {
-    float[] samples = {0.1f, -0.2f};
+  public void aGainThatWouldPassTheCeilingIsLowered() {
+    float[] loudChunk = {0.5f, -0.5f};
 
-    assertSame(samples, LoudnessLeveller.scaled(samples, 1f));
+    assertEquals(CEILING / 0.5f, LoudnessLeveller.withinCeiling(loudChunk, 4f), 1e-5f);
   }
 
   @Test
-  public void scalingMultipliesEverySample() {
-    assertArrayEquals(
-        new float[] {0.2f, -0.4f}, LoudnessLeveller.scaled(new float[] {0.1f, -0.2f}, 2f), 1e-6f);
+  public void aGainWithinTheCeilingIsKept() {
+    float[] softChunk = {0.1f, -0.1f};
+
+    assertEquals(2f, LoudnessLeveller.withinCeiling(softChunk, 2f), 0f);
+  }
+
+  @Test
+  public void aSilentChunkKeepsTheGain() {
+    assertEquals(3f, LoudnessLeveller.withinCeiling(new float[4], 3f), 0f);
   }
 
   @Test

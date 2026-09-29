@@ -233,22 +233,70 @@ public class StreamingAudioPlayerTest {
   public void aStreamedLineHoldsTheLeadInGainForLaterChunks() {
     SourceDataLine line = lineThatAcceptsEverything();
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
-    float[] leadIn = sine(QUIET, leadIn().length);
 
     AudioOutput.AudioStream stream = player.beginStream(100);
-    stream.write(leadIn, LOW_RATE);
-    stream.write(sine(QUIET * 20, 20), LOW_RATE);
+    stream.write(sine(QUIET, leadIn().length), LOW_RATE);
+    stream.write(sine(QUIET, 20), LOW_RATE);
     stream.end();
 
     ArgumentCaptor<byte[]> pcm = ArgumentCaptor.forClass(byte[].class);
     verify(line, timeout(2_000).times(2)).write(pcm.capture(), anyInt(), anyInt());
     int leadInPeak = TestPcm.peak16(pcm.getAllValues().get(0));
-    float gain = leadInPeak / (float) unlevelledPeak();
-    assertTrue(gain > 2f);
-    assertEquals(
-        Math.min(32767, Math.round(QUIET * 20 * gain * 32767f)),
-        TestPcm.peak16(pcm.getAllValues().get(1)),
-        32767 * 0.02);
+    assertTrue(leadInPeak > unlevelledPeak() * 2);
+    assertEquals(leadInPeak, TestPcm.peak16(pcm.getAllValues().get(1)), 1);
+  }
+
+  @Test
+  public void aStreamedLineThatSwellsIsLoweredRatherThanClipped() {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(sine(QUIET, leadIn().length), LOW_RATE);
+    stream.write(sine(QUIET * 20, 20), LOW_RATE);
+    stream.write(sine(QUIET, 20), LOW_RATE);
+    stream.end();
+
+    ArgumentCaptor<byte[]> pcm = ArgumentCaptor.forClass(byte[].class);
+    verify(line, timeout(2_000).times(3)).write(pcm.capture(), anyInt(), anyInt());
+    int ceiling = Math.round((float) Math.pow(10, -1.0 / 20) * 32767f);
+    int swellPeak = TestPcm.peak16(pcm.getAllValues().get(1));
+    assertTrue(swellPeak <= ceiling + 1);
+    assertTrue(swellPeak > ceiling - 50);
+    assertTrue(
+        TestPcm.peak16(pcm.getAllValues().get(2)) < TestPcm.peak16(pcm.getAllValues().get(0)));
+  }
+
+  @Test
+  public void stopDuringTheLeadInWritesNothingAndReleasesTheLine() throws Exception {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream stream = player.beginStream(100);
+    stream.write(new float[] {0f, 0f}, LOW_RATE);
+    verify(line, timeout(2_000)).start();
+    player.stop();
+    stream.end();
+
+    verify(line, timeout(2_000)).close();
+    verify(line, never()).write(any(byte[].class), anyInt(), anyInt());
+    verify(line, never()).drain();
+  }
+
+  @Test
+  public void aNewerLineDuringTheLeadInWritesNothingAndReleasesTheLine() throws Exception {
+    SourceDataLine line = lineThatAcceptsEverything();
+    StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
+
+    AudioOutput.AudioStream first = player.beginStream(100);
+    first.write(new float[] {0f, 0f}, LOW_RATE);
+    verify(line, timeout(2_000)).start();
+    player.beginStream(100);
+    first.end();
+
+    verify(line, timeout(2_000)).close();
+    verify(line, never()).write(any(byte[].class), anyInt(), anyInt());
+    verify(line, never()).drain();
   }
 
   @Test

@@ -606,9 +606,11 @@ passes through it on its way to the audio line.
   line. Cave echo is added first, so the level is measured on what the player hears.
 
 A streamed line is not complete when playback starts. The player waits for a 500 ms lead-in of
-audio, measures that, and holds the resulting gain for the rest of the line. Estimating from the
-first chunk alone was rejected because a chunk can be a few milliseconds of breath or silence,
-which would set the gain for the whole line from noise. The lead-in costs little: AI Studio, the
-provider that actually streams, generates audio faster than it plays, so half a second of audio
-arrives well before half a second has passed. A line shorter than the lead-in is levelled whole once
-it ends. Later chunks louder than the lead-in are held at full scale by the 16-bit conversion.
+audio, measures that, and plays the rest of the line at the same gain. Estimating from the first
+chunk alone was rejected because a chunk can be a few milliseconds of breath or silence, which would
+set the gain for the whole line from noise. The cost is the time the provider takes to deliver that
+half second of audio after its first chunk, and it applies only to AI Studio, the provider that
+actually streams. A line shorter than the lead-in is levelled whole once it ends. The streamed gain
+can only fall: when a later chunk would push past the -1 dBFS ceiling at the held gain, the gain
+drops to fit that chunk and stays there for the rest of the line, so a line that opens softly and
+then swells is turned down rather than clipped.

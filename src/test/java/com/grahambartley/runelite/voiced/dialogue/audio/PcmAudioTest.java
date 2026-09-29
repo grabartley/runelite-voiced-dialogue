@@ -50,4 +50,17 @@ public class PcmAudioTest {
     assertEquals(AudioFormat.Encoding.PCM_SIGNED, format.getEncoding());
     assertEquals(false, format.isBigEndian());
   }
+
+  @Test
+  public void appliesTheGainBeforeConverting() {
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0.25f}, 2f);
+    assertEquals(16384, (pcm[0] & 0xff) | (pcm[1] << 8));
+  }
+
+  @Test
+  public void clampsSamplesTheGainPushesPastFullScale() {
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0.75f}, 2f);
+    assertEquals((byte) 0xFF, pcm[0]);
+    assertEquals((byte) 0x7F, pcm[1]);
+  }
 }

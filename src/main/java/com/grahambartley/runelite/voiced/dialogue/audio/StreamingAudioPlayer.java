@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.audio;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +44,7 @@ public class StreamingAudioPlayer implements AudioOutput {
       return;
     }
     long gen = generation.incrementAndGet();
-    byte[] pcm = PcmAudio.toPcm16LE(LoudnessLeveller.levelled(samples, sampleRate));
+    byte[] pcm = PcmAudio.toPcm16LE(samples, LoudnessLeveller.gainFor(samples, sampleRate));
     SourceDataLine sdl = null;
     try {
       sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
@@ -143,13 +144,14 @@ public class StreamingAudioPlayer implements AudioOutput {
         sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
         float[] leadIn = awaitLeadIn();
         float gain = LoudnessLeveller.gainFor(leadIn, sampleRate);
-        writeChunked(sdl, PcmAudio.toPcm16LE(LoudnessLeveller.scaled(leadIn, gain)), gen);
+        writeChunked(sdl, PcmAudio.toPcm16LE(leadIn, gain), gen);
         while (generation.get() == gen) {
           float[] chunk = nextChunk();
           if (chunk == null) {
             break;
           }
-          writeChunked(sdl, PcmAudio.toPcm16LE(LoudnessLeveller.scaled(chunk, gain)), gen);
+          gain = LoudnessLeveller.withinCeiling(chunk, gain);
+          writeChunked(sdl, PcmAudio.toPcm16LE(chunk, gain), gen);
         }
         if (generation.get() == gen) {
           sdl.drain();
@@ -165,15 +167,21 @@ public class StreamingAudioPlayer implements AudioOutput {
 
     private float[] awaitLeadIn() throws InterruptedException {
       int wanted = sampleRate * LEVELLING_LEAD_IN_MS / 1000;
-      float[] leadIn = new float[0];
-      while (leadIn.length < wanted) {
+      List<float[]> chunks = new ArrayList<>();
+      int gathered = 0;
+      while (gathered < wanted) {
         float[] chunk = nextChunk();
         if (chunk == null) {
           break;
         }
-        float[] joined = Arrays.copyOf(leadIn, leadIn.length + chunk.length);
-        System.arraycopy(chunk, 0, joined, leadIn.length, chunk.length);
-        leadIn = joined;
+        chunks.add(chunk);
+        gathered += chunk.length;
+      }
+      float[] leadIn = new float[gathered];
+      int offset = 0;
+      for (float[] chunk : chunks) {
+        System.arraycopy(chunk, 0, leadIn, offset, chunk.length);
+        offset += chunk.length;
       }
       return leadIn;
     }

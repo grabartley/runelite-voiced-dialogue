@@ -20,14 +20,11 @@ public final class LoudnessLeveller {
     int window = Math.max(1, sampleRate * WINDOW_MS / 1000);
     double speechEnergy = 0;
     int speechWindows = 0;
-    float peak = 0f;
     for (int start = 0; start < samples.length; start += window) {
       int end = Math.min(samples.length, start + window);
       double energy = 0;
       for (int i = start; i < end; i++) {
-        float s = samples[i];
-        energy += (double) s * s;
-        peak = Math.max(peak, Math.abs(s));
+        energy += (double) samples[i] * samples[i];
       }
       double meanSquare = energy / (end - start);
       if (meanSquare > GATE_MEAN_SQUARE) {
@@ -39,23 +36,15 @@ public final class LoudnessLeveller {
       return 1f;
     }
     double speechRms = Math.sqrt(speechEnergy / speechWindows);
-    double gain = Math.min(TARGET_RMS / speechRms, MAX_GAIN);
-    return (float) Math.min(gain, PEAK_CEILING / peak);
+    return withinCeiling(samples, (float) Math.min(TARGET_RMS / speechRms, MAX_GAIN));
   }
 
-  public static float[] scaled(float[] samples, float gain) {
-    if (gain == 1f) {
-      return samples;
+  public static float withinCeiling(float[] samples, float gain) {
+    float peak = 0f;
+    for (float s : samples) {
+      peak = Math.max(peak, Math.abs(s));
     }
-    float[] out = new float[samples.length];
-    for (int i = 0; i < samples.length; i++) {
-      out[i] = Math.max(-1f, Math.min(1f, samples[i] * gain));
-    }
-    return out;
-  }
-
-  public static float[] levelled(float[] samples, int sampleRate) {
-    return scaled(samples, gainFor(samples, sampleRate));
+    return peak == 0f ? gain : (float) Math.min(gain, PEAK_CEILING / peak);
   }
 
   private static double dbToAmplitude(double db) {
