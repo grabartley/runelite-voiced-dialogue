@@ -291,7 +291,7 @@ public final class DialogueAudioService {
           }
           log.debug(
               "[TTS synth] prefetch ({}/{}) \"{}\"",
-              key.backendId(),
+              key.namespace(),
               key.voiceKey(),
               key.textPreview());
           synthesizeDeduped(backend, effective, key);
@@ -304,9 +304,8 @@ public final class DialogueAudioService {
 
   private CacheKey keyFor(SynthesisBackend backend, SynthesisRequest effective) {
     String variant = backend.cacheVariant(effective);
-    String voiceKey =
-        variant.isEmpty() ? effective.voice().key() : effective.voice().key() + "|" + variant;
-    return new CacheKey(backend.id(), voiceKey, effective.emotion(), effective.text());
+    String voiceKey = variant.isEmpty() ? effective.voice().key() : variant;
+    return new CacheKey(backend.cacheNamespace(), voiceKey, effective.emotion(), effective.text());
   }
 
   public void cutPlayback() {
@@ -423,7 +422,7 @@ public final class DialogueAudioService {
               backend.id(),
               pcm != null,
               elapsedMs(start),
-              key.backendId(),
+              key.namespace(),
               key.voiceKey(),
               key.textPreview());
           return pcm;
@@ -431,7 +430,7 @@ public final class DialogueAudioService {
         () ->
             log.debug(
                 "[TTS synth] dedup reuse ({}/{}) \"{}\"",
-                key.backendId(),
+                key.namespace(),
                 key.voiceKey(),
                 key.textPreview()));
   }

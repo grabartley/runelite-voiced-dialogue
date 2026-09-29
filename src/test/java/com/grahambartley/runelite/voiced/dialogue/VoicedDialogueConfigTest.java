@@ -42,7 +42,6 @@ public class VoicedDialogueConfigTest {
 
   @Test
   public void englishIsTheDefaultNoTranslationLanguage() {
-    assertEquals("en-GB", SpokenLanguage.ENGLISH.code());
     assertTrue("English is the no-translation default", SpokenLanguage.ENGLISH.isEnglish());
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertEquals(
@@ -53,35 +52,27 @@ public class VoicedDialogueConfigTest {
   }
 
   @Test
-  public void everyLanguageCarriesANameAndWellFormedBcp47Code() {
+  public void everyLanguageCarriesAName() {
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertFalse(
           "a language name is fed to the prompt, so it is never blank", language.label().isEmpty());
-      assertTrue(
-          "the code is a BCP-47 tag: " + language.code(),
-          language.code().matches("[a-z]{2,3}(-[A-Za-z0-9]{2,8})*"));
     }
   }
 
   @Test
-  public void theDropdownIsDeAliasedSoEachCodeAppearsOnce() {
-    Set<String> codes = new HashSet<>();
+  public void theDropdownIsDeAliasedSoEachLanguageAppearsOnce() {
+    Set<String> labels = new HashSet<>();
     for (SpokenLanguage language : SpokenLanguage.values()) {
       assertTrue(
-          "a duplicate code means an alias slipped in: " + language.code(),
-          codes.add(language.code()));
+          "a duplicate name means an alias slipped in: " + language.label(),
+          labels.add(language.label()));
     }
   }
 
   @Test
-  public void toStringShowsTheDisplayNameWithoutTheCode() {
+  public void toStringShowsTheDisplayName() {
     assertEquals("English", SpokenLanguage.ENGLISH.toString());
     assertEquals("Spanish", SpokenLanguage.SPANISH.toString());
-    for (SpokenLanguage language : SpokenLanguage.values()) {
-      assertFalse(
-          "the dropdown never exposes the BCP-47 code: " + language,
-          language.toString().contains(language.code()));
-    }
   }
 
   @Test

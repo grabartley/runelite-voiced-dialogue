@@ -68,14 +68,49 @@ public class CharacterProfileTest {
   }
 
   @Test
-  public void anOverriddenAccentChangesTheCacheKeySinceItCanMoveTheVoice() {
+  public void anOverriddenAccentLeavesTheCacheKeyToTheVoiceItResolvesTo() {
     CharacterProfile bundled =
         new CharacterProfile("Wizard", "Irish accent", null, "Warm", "Measured", null, "SCOTTISH");
     CharacterProfile overridden =
         new CharacterProfile(
             "Wizard", "Irish accent", null, "Warm", "Measured", null, "SCOTTISH", true);
-    assertNotEquals(bundled.cacheKey(), overridden.cacheKey());
+    assertEquals(bundled.cacheKey(), overridden.cacheKey());
     assertNotEquals(bundled, overridden);
+  }
+
+  @Test
+  public void punctuationTheStylePromptTrimsNeverChangesTheCacheKey() {
+    CharacterProfile tidied =
+        new CharacterProfile(
+            " Wizard",
+            "Distinguished elderly British accent.",
+            "Warm and knowing;",
+            "Measured pace:");
+    assertEquals(WIZARD.cacheKey(), tidied.cacheKey());
+  }
+
+  @Test
+  public void anAccentDetailThatIsNeverSentNeverChangesTheCacheKey() {
+    CharacterProfile accentless =
+        new CharacterProfile("Wizard", null, null, "Warm", "Slow", null, null);
+    CharacterProfile unsentDetail =
+        new CharacterProfile("Wizard", null, "Scholarly RP", "Warm", "Slow", null, null);
+    assertEquals(accentless.cacheKey(), unsentDetail.cacheKey());
+  }
+
+  @Test
+  public void spokenTrimsSurroundingWhitespaceAndTrailingSeparators() {
+    assertEquals("Gruff", CharacterProfile.spoken("  Gruff.;, "));
+    assertEquals(null, CharacterProfile.spoken(" ... "));
+    assertEquals(null, CharacterProfile.spoken(null));
+  }
+
+  @Test
+  public void theCacheKeyForAFixedProfileNeverChangesAcrossReleases() {
+    assertEquals(
+        "changing this re-bills every cached line for every user",
+        "0c2a6052ac587a6a",
+        WIZARD.cacheKey());
   }
 
   @Test

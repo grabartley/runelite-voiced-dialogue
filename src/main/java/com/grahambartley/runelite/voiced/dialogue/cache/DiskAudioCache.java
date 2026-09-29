@@ -48,13 +48,13 @@ public class DiskAudioCache {
     this.maxBytes = maxBytes;
   }
 
-  public Pcm get(String backendId, String voiceKey, Emotion emotion, String text) {
+  public Pcm get(String namespace, String voiceKey, Emotion emotion, String text) {
     if (disabled) {
       return null;
     }
     Path file;
     try {
-      file = fileFor(backendId, voiceKey, emotion, text);
+      file = fileFor(namespace, voiceKey, emotion, text);
     } catch (RuntimeException e) {
       return null;
     }
@@ -75,14 +75,14 @@ public class DiskAudioCache {
     }
   }
 
-  public void put(String backendId, String voiceKey, Emotion emotion, String text, Pcm pcm) {
+  public void put(String namespace, String voiceKey, Emotion emotion, String text, Pcm pcm) {
     if (disabled || pcm == null || pcm.getSamples() == null) {
       return;
     }
     Path file;
     try {
       ensureDir();
-      file = fileFor(backendId, voiceKey, emotion, text);
+      file = fileFor(namespace, voiceKey, emotion, text);
     } catch (IOException | RuntimeException e) {
       log.debug("Disk cache unavailable; disabling on-disk caching", e);
       disabled = true;
@@ -108,14 +108,14 @@ public class DiskAudioCache {
     }
   }
 
-  private Path fileFor(String backendId, String voiceKey, Emotion emotion, String text) {
-    return dir.resolve(hashKey(backendId, voiceKey, emotion, text) + ".tdc");
+  private Path fileFor(String namespace, String voiceKey, Emotion emotion, String text) {
+    return dir.resolve(hashKey(namespace, voiceKey, emotion, text) + ".tdc");
   }
 
-  private static String hashKey(String backendId, String voiceKey, Emotion emotion, String text) {
+  private static String hashKey(String namespace, String voiceKey, Emotion emotion, String text) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
-      feed(md, backendId);
+      feed(md, namespace);
       feed(md, voiceKey);
       feed(md, emotion == null ? "null" : emotion.name());
       feed(md, text);
