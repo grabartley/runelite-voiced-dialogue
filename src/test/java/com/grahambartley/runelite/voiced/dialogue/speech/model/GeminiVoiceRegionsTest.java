@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -30,14 +31,16 @@ public class GeminiVoiceRegionsTest {
 
   private static final GeminiVoiceRegions REGIONS = regions(JSON);
 
+  private static final GeminiVoiceRegions PINNED_IRISH =
+      regions(
+          JSON.replace(
+              "\"FEMALE\":[\"ie-f-1\"]", "\"FEMALE\":[\"ie-f-1\"],\"PLAYER_MALE\":\"ie-m-2\""));
+
   @Test
   public void aPinnedPlayerVoiceWinsOverTheSeededPick() {
-    GeminiVoiceRegions pinned =
-        regions(
-            JSON.replace(
-                "\"FEMALE\":[\"ie-f-1\"]", "\"FEMALE\":[\"ie-f-1\"],\"PLAYER_MALE\":\"ie-m-2\""));
-    assertEquals("ie-m-2", pinned.playerVoiceFor("IRISH", NpcGender.MALE, 0));
-    assertEquals("ie-f-1", pinned.playerVoiceFor("IRISH", NpcGender.FEMALE, 0));
+    assertNotEquals("ie-m-2", REGIONS.voiceFor("IRISH", NpcGender.MALE, 0));
+    assertEquals("ie-m-2", PINNED_IRISH.playerVoiceFor("IRISH", NpcGender.MALE, 0));
+    assertEquals("ie-f-1", PINNED_IRISH.playerVoiceFor("IRISH", NpcGender.FEMALE, 0));
   }
 
   @Test
@@ -50,14 +53,10 @@ public class GeminiVoiceRegionsTest {
 
   @Test
   public void aPinnedPlayerVoiceLeavesNpcPicksAlone() {
-    GeminiVoiceRegions pinned =
-        regions(
-            JSON.replace(
-                "\"FEMALE\":[\"ie-f-1\"]", "\"FEMALE\":[\"ie-f-1\"],\"PLAYER_MALE\":\"ie-m-2\""));
     for (int seed = 0; seed < 50; seed++) {
       assertEquals(
           REGIONS.voiceFor("IRISH", NpcGender.MALE, seed),
-          pinned.voiceFor("IRISH", NpcGender.MALE, seed));
+          PINNED_IRISH.voiceFor("IRISH", NpcGender.MALE, seed));
     }
   }
 

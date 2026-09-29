@@ -601,11 +601,11 @@ class VoiceRegionsTest(unittest.TestCase):
         self.assertNotIn("PLAYER_FEMALE", regions["IRISH"])
 
     def test_player_voices_reject_a_voice_outside_the_adult_pool(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, "not in its male adult pool"):
             gen.build_voice_regions(regions_source(playerVoices={"male": "ie-f"}), LIBRARY)
 
     def test_player_voices_reject_an_unknown_gender(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, "unknown gender 'boys'"):
             gen.build_voice_regions(regions_source(playerVoices={"boys": "ie-2"}), LIBRARY)
 
     def test_a_region_matching_no_voices_is_rejected(self):
