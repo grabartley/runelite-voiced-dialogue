@@ -15,7 +15,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.001 
 
 - **14,103 NPCs already voiced by nearly 600 unique voices**, most of them native speakers from Google's library of over 2,000, matched by race, gender and accent, and each NPC keeps its voice for life. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
 - **Accents with lore behind them, voiced by native speakers where they exist.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
-- **6,451 hand-written character profiles**, so the names you know sound like themselves rather than like their species.
+- **6,451 individual character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
 - **Recast anyone.** Open the **NPC Voices** side panel, find any NPC by name, and give them your own accent, style, pace, or voice type, for one NPC, one character, or everyone sharing a name.
 - **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
@@ -104,7 +104,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | Strong educated southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, and more) voices you with a native speaker from it. |
+| **Your Accent** | Strong educated southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, Indian, and more) voices you with a native speaker from it. |
 | **Your Persona** | Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm. | Persona and delivery style for your character. |
 | **Your Delivery Pace** | Lively and bouncy, with an upbeat, energetic rhythm. | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
@@ -151,7 +151,7 @@ Both of the companion's voices are covered: the lines it says over its head, whi
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Cache Size Limit (MiB)** | `1024` | Maximum on-disk cache size; oldest clips are deleted first. `0` for no limit. |
+| **Cache Size Limit (MiB)** | `1024` | Maximum on-disk cache size; oldest clips are deleted first. `0` for no limit. Clips can be [converted to WAV](docs/cache-files.md). |
 | **Debug Logging** | `Off` | Writes per-line voice decisions and timing logs for troubleshooting. |
 
 </details>

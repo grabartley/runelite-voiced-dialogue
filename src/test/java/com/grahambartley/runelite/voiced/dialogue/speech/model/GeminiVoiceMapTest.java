@@ -45,7 +45,8 @@ public class GeminiVoiceMapTest {
     "ITALIAN",
     "EGYPTIAN_ARABIC",
     "POLISH",
-    "JAPANESE"
+    "JAPANESE",
+    "INDIAN_ENGLISH"
   };
 
   private static final Set<String> CHILD_MALE_POOL = new HashSet<>(Arrays.asList("Puck"));
@@ -534,8 +535,21 @@ public class GeminiVoiceMapTest {
   }
 
   private static final String[] BUNDLED_REGION_ACCENTS = {
-    "West Country", "Scouse", "Mancunian", "Geordie", "Scottish", "Irish", "Australian",
-    "New Zealand", "Italian", "Egyptian", "Polish", "Japanese", "Norse", "Southern English"
+    "West Country",
+    "Scouse",
+    "Mancunian",
+    "Geordie",
+    "Scottish",
+    "Irish",
+    "Australian",
+    "New Zealand",
+    "Italian",
+    "Egyptian",
+    "Polish",
+    "Japanese",
+    "Norse",
+    "Southern English",
+    "Indian"
   };
 
   @Test
@@ -614,6 +628,35 @@ public class GeminiVoiceMapTest {
   public void regionForMatchesTheFollowersTypedAccent() {
     assertEquals(
         "IRISH", TWO_REGIONS.regionFor(VoiceSpec.follower(NpcGender.MALE), accented("Irish")));
+  }
+
+  @Test
+  public void aPlayerTypingAnIndianAccentIsVoicedByANativeIndianEnglishVoice() {
+    CharacterProfile indian =
+        new CharacterProfile(
+            "Adventurer",
+            "Strong Indian accent, Indian English pronunciation",
+            "Plain.",
+            "Steady.");
+    for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+      String voice = map.voiceFor(VoiceSpec.player(gender), indian);
+      assertTrue(voice, voice.startsWith("en-in-"));
+      assertEquals("INDIAN_ENGLISH", map.regionFor(VoiceSpec.player(gender), indian));
+    }
+  }
+
+  @Test
+  public void anNpcAccentOverrideNamingIndiaIsVoicedByANativeIndianEnglishVoice() {
+    CharacterProfile indian =
+        overridden("Strong Indian accent, Indian English pronunciation", "SOUTHERN_ENGLISH");
+    for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+      for (boolean child : new boolean[] {false, true}) {
+        VoiceSpec spec = VoiceSpec.npc(NpcRace.HUMAN, gender, 42, child);
+        String voice = map.voiceFor(spec, indian);
+        assertTrue(voice, voice.startsWith("en-in-"));
+        assertEquals("INDIAN_ENGLISH", map.regionFor(spec, indian));
+      }
+    }
   }
 
   private static Set<String> pool(String... voices) {

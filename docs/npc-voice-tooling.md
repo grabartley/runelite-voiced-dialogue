@@ -10,14 +10,14 @@ are no network calls or large downloads when choosing a voice.
 - `tools/generate_npc_voices.py` - the generator. Pulls every NPC's race, gender
   and ethnicity from the Old School RuneScape Wiki, merges the curated
   overrides, embeds the voice profiles, and writes the bundled resource.
-- `tools/overrides.json` - hand-curated, **authoritative** `npcId -> {race,
+- `tools/overrides.json` - curated, **authoritative** `npcId -> {race,
   gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
   rare NPC the wiki gets wrong or does not cover, and for marking named children.
-- `tools/profiles.json` - hand-curated **character voice profiles** for the cloud
+- `tools/profiles.json` - curated **character voice profiles** for the cloud
   (Gemini) backend (name, accent, accentDetail, style, replaceStyle, pace, pitch, voiceRegion).
   Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
-- `tools/voice-regions.json` - hand-curated **voice regions**: each names one Gemini Extended
+- `tools/voice-regions.json` - curated **voice regions**: each names one Gemini Extended
   Voice Library accent, the player-accent keywords that select it, any voices excluded because they
   read as the wrong gender, and optionally `onlyVoices` to narrow a gender to named voices (the
   trolls' deep southern English pool).

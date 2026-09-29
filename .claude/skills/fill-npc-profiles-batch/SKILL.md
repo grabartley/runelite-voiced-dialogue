@@ -202,7 +202,7 @@ differs; most locals need none.
   signature races before shipping. The Morytania/Fremennik run found the Fremennik
   Isles bridge trolls (1891/1892) and the Hazeel/Khazard ice-troll disguises
   (12053/12060) bundled under human pages.
-- **File formatting is hand-curated.** `profiles.json` `byId` and
+- **File formatting is deliberate.** `profiles.json` `byId` and
   `overrides.json` `npcs` use **one-line entry objects**; other layers are
   multi-line. A blind `json.dump(indent=2)` reformats every existing entry and
   produces a giant noisy diff. **Insert append-only** (text insertion before the

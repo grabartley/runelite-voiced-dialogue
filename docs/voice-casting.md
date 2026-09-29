@@ -51,6 +51,7 @@ pool.
 | `POLISH` | Polish | 28 | 27 | Morytania, vampyres, Romani bespoke NPCs |
 | `NORSE` | Dutch | 13 | 13 | the Fremennik |
 | `JAPANESE` | Tokyo Japanese | 27 | 36 | the Eastern Lands |
+| `INDIAN_ENGLISH` | Indian English | 47 | 57 | only a typed **Your Accent** or NPC accent override naming India, since no bundled NPC is Indian |
 | `AUSTRALIAN`, `NEW_ZEALAND` | Sydney, Auckland | | | bespoke NPCs |
 
 Accents with no native speakers in the library (Welsh, Nigerian, Bajan and Caribbean, the Russian
@@ -67,16 +68,18 @@ dragons, TzHaar, ogres and dwarves are low.
 
 Every line names the speaker's gender before anything else in the profile ("A man's voice.", "A
 woman's voice."), because a few library voices drift toward the other gender unless told. Measuring
-the pitch of every pooled voice, with and without that direction, found seven that still read as
-the wrong gender with it (a Varlamore queen came out as a man), and each region's `exclude` list
-drops them. Trolls take `DEEP_SOUTHERN_ENGLISH`, the two southern English men who measure and sound
-deepest, since the full southern English pool is mostly light voices and a pitch direction only
-pulls a light voice down so far. The region names them with `onlyVoices`. A voice named there was
-picked by ear as an adult, so it voices no child in any region, and a narrowed region's children
-take the youngest voices of the whole accent: a troll child sounds like a southern English boy,
-never like the trolls' deep men. The child pool drops such a voice without taking the next-youngest
-in its place, so no adult pool changes: `en-gb-assistant-2`, among the youngest southern English
-men, voices trolls only, and the southern English boys share the other two young voices.
+the pitch of every pooled voice, with and without that direction, found seven that still read as the
+wrong gender with it (a Varlamore queen came out as a man), and each region's `exclude` list drops
+them. `INDIAN_ENGLISH` also excludes three men who read as British by ear, found by a blind accent
+check across the whole accent and confirmed by listening. Trolls take `DEEP_SOUTHERN_ENGLISH`, the
+two southern English men who measure and sound deepest, since the full southern English pool is
+mostly light voices and a pitch direction only pulls a light voice down so far. The region names
+them with `onlyVoices`. A voice named there was picked by ear as an adult, so it voices no child in
+any region, and a narrowed region's children take the youngest voices of the whole accent: a troll
+child sounds like a southern English boy, never like the trolls' deep men. The child pool drops such
+a voice without taking the next-youngest in its place, so no adult pool changes:
+`en-gb-assistant-2`, among the youngest southern English men, voices trolls only, and the southern
+English boys share the other two young voices.
 
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the
@@ -240,6 +243,10 @@ the accent. The voice is seeded exactly as a bundled NPC in that region would be
 one stable voice, and gender, the voice type override and the child pools still apply. An override
 accent that names no region keeps the bundled region, and clearing the override restores the
 bundled voice.
+
+Keywords match whole words with no sense of the words around them, so "West Indian" or "American
+Indian" names `INDIAN_ENGLISH` and is voiced by a native Indian English speaker. The library has no
+Caribbean English voices to send a West Indian accent to instead.
 
 The mark is part of `CharacterProfile.cacheKey()`, so an overridden NPC never replays a clip cached
 under its bundled voice. With debug logging on, the `[TTS profile]` line shows `accentOverride` and

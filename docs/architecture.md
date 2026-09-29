@@ -424,6 +424,13 @@ On the Gemini API a 429 means quota, so the notice is worded from the `google.rp
 violation the rejection carries: a free-tier ceiling, a paid per-model cap, and a per-minute limit
 each read differently, and a body carrying no violation falls back to wording that names no cause.
 
+Only a key problem tells the player to check their API key. The Gemini API returns HTTP 400 both
+for an invalid key and for a request it refuses, such as a library voice asked for a language
+outside its locale, so a 400 counts as a key problem only when it carries a `google.rpc.ErrorInfo`
+with reason `API_KEY_INVALID`; 401 and 403 always do. OpenRouter goes by status alone: 401 and 403
+are the key, 402 is out of credits. On both providers any other 4xx except 429 reads as a rejected
+request, and a 429 or 5xx reads as a plain failure.
+
 The paid per-model daily cap is the one players meet. Google sets it per project and per model by
 usage tier and raises it on cumulative spend, not on enabling billing, so a new billed key starts
 at the lowest allowance. The current figure for a key is on its AI Studio rate-limit page.
@@ -589,7 +596,8 @@ configured limit; a read never rescues an old entry, and the just-written clip s
 alone exceeds the cap, in which case the pass clears the directory and that line is billed again
 next time. Setting the limit to `0` opts out of eviction entirely, so the cache keeps every clip
 for users who would rather spend disk than ever re-bill a line. The limit is read at eviction time
-rather than held from start-up, so changing it applies from the next cached line with no restart.
+rather than held from start-up, so changing it applies from the next cached line with no restart. The
+on-disk file layout and how to convert a clip to WAV are in [cache-files.md](cache-files.md).
 
 ## Cave echo
 

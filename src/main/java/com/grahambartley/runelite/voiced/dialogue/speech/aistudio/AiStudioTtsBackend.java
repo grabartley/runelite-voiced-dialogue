@@ -18,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -173,9 +174,26 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
     if (httpCode == CloudHttp.HTTP_TOO_MANY_REQUESTS) {
       return AiStudioQuotaFailure.noticeFor(gson, body);
     }
-    return "Google AI Studio TTS request failed (HTTP "
-        + httpCode
-        + "); check your API key. This line was not voiced.";
+    if (isKeyProblem(gson, httpCode, body)) {
+      return "Google AI Studio TTS request failed (HTTP "
+          + httpCode
+          + "); check your API key. This line was not voiced.";
+    }
+    if (CloudHttp.isRejectedRequest(httpCode)) {
+      return "Google AI Studio rejected the TTS request (HTTP "
+          + httpCode
+          + "). This line was not voiced.";
+    }
+    return "Google AI Studio TTS request failed (HTTP " + httpCode + "). This line was not voiced.";
+  }
+
+  private static boolean isKeyProblem(Gson gson, int httpCode, byte[] body) {
+    if (httpCode == HttpURLConnection.HTTP_UNAUTHORIZED
+        || httpCode == HttpURLConnection.HTTP_FORBIDDEN) {
+      return true;
+    }
+    return httpCode == HttpURLConnection.HTTP_BAD_REQUEST
+        && AiStudioErrorInfo.isApiKeyInvalid(gson, body);
   }
 
   private final class Ops implements CloudSpeechExecutor.Ops {

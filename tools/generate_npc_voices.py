@@ -29,7 +29,7 @@ Pipeline
   6. Correct gender from the cache symbol RuneLite's NpcID class gives each id, where the
      symbol names one (FAI_VARROCK_GUARD02_F), since a page whose genders do not pair with
      its id groups gives every id the page's first gender.
-  7. Merge the hand-curated overrides on top (authoritative, always win).
+  7. Merge the curated overrides on top (authoritative, always win).
   8. Emit under ``symbols`` the cache symbol of every id whose byId name another id shares,
      ignoring case, so one character's ids can be told apart from others with that name.
   9. Embed tools/profiles.json under the ``profiles`` key and emit

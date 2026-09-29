@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
@@ -79,6 +80,12 @@ public final class CloudHttp {
       log.debug("[TTS cloud] Retry-After '{}' is not a usable wait", value);
       return 0;
     }
+  }
+
+  public static boolean isRejectedRequest(int httpCode) {
+    return httpCode >= HttpURLConnection.HTTP_BAD_REQUEST
+        && httpCode < HttpURLConnection.HTTP_INTERNAL_ERROR
+        && httpCode != HTTP_TOO_MANY_REQUESTS;
   }
 
   public static boolean isNonBlank(String value) {

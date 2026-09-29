@@ -181,6 +181,7 @@ either from your IDE or wired into `build.gradle`.
 - [voice-casting.md](voice-casting.md): which Gemini voice each race, child, player, and the
   narrator gets, and why that one.
 - [emotion-detection.md](emotion-detection.md): how chat-head expressions map to emotions.
+- [cache-files.md](cache-files.md): the on-disk clip format and how to convert a clip to WAV.
 - [hub-submission.md](hub-submission.md) and
   [hub-compliance-checklist.md](hub-compliance-checklist.md): how the Plugin Hub listing works
   and what it requires.

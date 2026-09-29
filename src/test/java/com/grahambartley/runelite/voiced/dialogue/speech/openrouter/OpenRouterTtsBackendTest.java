@@ -17,6 +17,8 @@ import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenR
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.style;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterRequests.truncatedAudio;
 import static com.grahambartley.runelite.voiced.dialogue.speech.openrouter.OpenRouterTtsBackend.WARM_UP_CONNECTIONS;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PAYMENT_REQUIRED;
@@ -435,6 +437,20 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void anUnauthorizedResponseReachesThePlayerAsTheKeyNotice() {
+    server.enqueue(new MockResponse().setResponseCode(HTTP_UNAUTHORIZED).setBody("Unauthorized"));
+
+    String[] noticeText = {null};
+    OpenRouterTtsBackend backend = backend(keyedConfig());
+    backend.setNotice(msg -> noticeText[0] = msg);
+
+    assertNull(backend.synthesize(req()));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 401); check your API key. This line was not voiced.",
+        noticeText[0]);
+  }
+
+  @Test
   public void outOfCreditsResponseSurfacesTopUpNotice() {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_PAYMENT_REQUIRED).setBody("Insufficient credits"));
@@ -458,12 +474,36 @@ public class OpenRouterTtsBackendTest {
         "402 gets the dedicated top-up notice",
         OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE,
         OpenRouterTtsBackend.failureNotice(HTTP_PAYMENT_REQUIRED));
-    assertTrue(
-        "other codes keep the generic key-check notice with the code for context",
-        OpenRouterTtsBackend.failureNotice(HTTP_UNAUTHORIZED).contains("HTTP 401"));
     assertFalse(
         "the out-of-credits notice never blames the key",
         OpenRouterTtsBackend.OUT_OF_CREDITS_NOTICE.contains("key"));
+  }
+
+  @Test
+  public void unauthorizedAndForbiddenBlameTheKey() {
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 401); check your API key. This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_UNAUTHORIZED));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 403); check your API key. This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_FORBIDDEN));
+  }
+
+  @Test
+  public void otherClientErrorsAreARejectedRequest() {
+    assertEquals(
+        "OpenRouter rejected the TTS request (HTTP 400). This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  public void rateLimitsAndServerErrorsAreAFailureThatBlamesNeitherKeyNorRequest() {
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 429). This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_TOO_MANY_REQUESTS));
+    assertEquals(
+        "OpenRouter TTS request failed (HTTP 500). This line was not voiced.",
+        OpenRouterTtsBackend.failureNotice(HTTP_INTERNAL_ERROR));
   }
 
   @Test

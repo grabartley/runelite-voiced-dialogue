@@ -133,6 +133,11 @@ public class GeminiVoiceRegionsTest {
         "NORSE",
         bundled.regionForAccent(
             "Strong Norse Scandinavian accent, Scandinavian-accented English pronunciation"));
+    assertEquals(
+        "INDIAN_ENGLISH",
+        bundled.regionForAccent("Strong Indian accent, Indian English pronunciation"));
+    assertEquals("INDIAN_ENGLISH", bundled.regionForAccent("Strong accent from south India"));
+    assertEquals("INDIAN_ENGLISH", bundled.regionForAccent("Strong West Indian accent"));
     assertNull(bundled.regionForAccent("Strong Southern American accent"));
   }
 
@@ -171,6 +176,23 @@ public class GeminiVoiceRegionsTest {
   }
 
   @Test
+  public void theBundledIndianEnglishPoolsHoldOnlyIndianEnglishVoices() {
+    GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
+    Set<String> readAsBritish =
+        new HashSet<>(Arrays.asList("en-in-advisor-9", "en-in-assistant-10", "en-in-concierge-1"));
+    for (NpcGender gender : new NpcGender[] {NpcGender.MALE, NpcGender.FEMALE}) {
+      for (int seed = 0; seed < 200; seed++) {
+        String adult = bundled.voiceFor("INDIAN_ENGLISH", gender, seed);
+        String child = bundled.childVoiceFor("INDIAN_ENGLISH", gender, seed);
+        assertTrue(adult, adult.startsWith("en-in-"));
+        assertTrue(child, child.startsWith("en-in-"));
+        assertFalse(adult, readAsBritish.contains(adult));
+        assertFalse(child, readAsBritish.contains(child));
+      }
+    }
+  }
+
+  @Test
   public void anEmptyTableVoicesNothing() {
     GeminiVoiceRegions empty = new GeminiVoiceRegions(new JsonObject());
     assertNull(empty.voiceFor("IRISH", NpcGender.MALE, 1));
@@ -181,7 +203,9 @@ public class GeminiVoiceRegionsTest {
   public void theBundledTableCarriesNativeVoicesForEachGender() {
     GeminiVoiceRegions bundled = GeminiVoiceRegions.bundled();
     for (String region :
-        new String[] {"IRISH", "SCOTTISH", "SOUTHERN_ENGLISH", "ITALIAN", "NORSE"}) {
+        new String[] {
+          "IRISH", "SCOTTISH", "SOUTHERN_ENGLISH", "ITALIAN", "NORSE", "INDIAN_ENGLISH"
+        }) {
       assertNotNull(region, bundled.voiceFor(region, NpcGender.MALE, 1));
       assertNotNull(region, bundled.voiceFor(region, NpcGender.FEMALE, 1));
     }

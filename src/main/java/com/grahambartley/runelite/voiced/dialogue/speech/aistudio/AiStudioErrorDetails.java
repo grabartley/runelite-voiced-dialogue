@@ -39,7 +39,7 @@ final class AiStudioErrorDetails {
       }
       return matches;
     } catch (RuntimeException e) {
-      log.debug("[TTS cloud] AI Studio quota failure parse error: {}", e.getMessage());
+      log.debug("[TTS cloud] AI Studio error details parse error: {}", e.getMessage());
       return Collections.emptyList();
     }
   }
