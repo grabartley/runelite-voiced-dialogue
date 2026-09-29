@@ -62,7 +62,7 @@ public class NpcDemographicAnalyzerTest {
     assertAttributes(5035, "Human", "Female");
     assertAttributes(4284, "Human", "Female");
     assertAttributes(3561, "Human", "Female");
-    assertAttributes(1305, "Human", "Female");
+    assertAttributes(1305, "Human", "Male");
     assertAttributes(11868, "Human", "Female");
     assertAttributes(3481, "Undead", "Male");
     assertAttributes(3893, "Dwarf", "Male");
@@ -465,6 +465,14 @@ public class NpcDemographicAnalyzerTest {
     for (int npcId : new int[] {14177, 14178}) {
       assertAttributes(npcId, "Undead", "Male");
       assertEquals("wilderness", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void warhammerChasmSoldierIsAKourendManLikeItsSquad() {
+    for (int npcId : new int[] {14189, 14191, 14193}) {
+      assertAttributes(npcId, "Human", "Male");
+      assertEquals("kourend", analyze(npcId, null).getEthnicity());
     }
   }
 

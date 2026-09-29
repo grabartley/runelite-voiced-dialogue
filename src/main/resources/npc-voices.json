@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2150,
-      "Male": 11953
+      "Female": 2148,
+      "Male": 11955
     },
     "ethnicity_counts": {
       "asgarnia": 716,
@@ -39,7 +39,7 @@
       "kandarin": 1120,
       "karamja": 160,
       "kharidian": 547,
-      "kourend": 789,
+      "kourend": 790,
       "menaphite": 132,
       "misthalin": 1058,
       "morytania": 1033,
@@ -43014,7 +43014,7 @@
     },
     "1305": {
       "race": "Human",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "asgarnia"
     },
     "1306": {
@@ -94084,7 +94084,8 @@
     },
     "14189": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "14190": {
       "race": "Human",
