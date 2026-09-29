@@ -1,6 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.capture;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -92,7 +93,13 @@ public class ChatNoticeManagerTest {
         .addChatMessage(eq(ChatMessageType.GAMEMESSAGE), eq(""), posted.capture(), isNull());
     assertTrue(
         "a player picking a provider is told the ceiling on the fast one",
-        posted.getValue().contains("caps fresh lines a day by usage tier"));
+        posted.getValue().contains("caps fresh lines a day"));
+    assertTrue(
+        "and that a higher usage tier raises it",
+        posted.getValue().contains("raises that cap as your usage tier rises"));
+    assertFalse(
+        "rather than implying the cap can never be lifted",
+        posted.getValue().contains("does not lift"));
     assertTrue("and that the other one has none", posted.getValue().contains("no daily cap"));
   }
 

@@ -68,7 +68,8 @@ AU are the formats Java sound plays.
 
 ## Things to know
 
-- **Clips are dry.** Cave Echo is added at playback, so a clip never carries it.
+- **Clips are dry.** Cave Echo and loudness levelling are applied at playback, so a clip never
+  carries either.
 - **Clips are not permanent.** The cache is capped by **Cache Size Limit** and deletes the oldest
   written files first once it passes the cap. Copy a clip somewhere else to keep it.
 - **The format is stable.** Changing it would throw away every clip players already hold, so the

@@ -89,6 +89,9 @@ sound as `misthalin`.
    origin-audit PR.
 4. Present the change table (see `regenerate-npc-voices`).
 
+To audit a whole area with the developer choosing each origin from the in-game models, use
+`review-area-origins`, which builds a picture sheet with an origin selector per NPC.
+
 ## Sanity references
 
 - Karim (2877) / Ellis (3231): Al-Kharid natives, `kharidian`.

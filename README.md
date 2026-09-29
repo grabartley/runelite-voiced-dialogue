@@ -7,26 +7,26 @@
 <a href="https://ko-fi.com/grahambartley"><img src="https://img.shields.io/badge/Ko--fi-Support-009078?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
-**Gielinor talks back.** Voiced Dialogue speaks every dialogue box aloud with cloud AI voices, in real time, as you play.
+Voiced Dialogue reads dialogue boxes out loud as you play, using AI voices from Google's Gemini text-to-speech.
 
-Bring your own API key. You pay only for the audio you generate, about **$0.001 a line**, and every line you have already heard replays free from your cache.
+You bring your own API key and pay only for the audio you generate, about **$0.001 a line**. Lines you have already heard are saved on your computer and replay for free.
 
 ## What it does
 
-- **14,103 NPCs already voiced by nearly 600 unique voices**, most of them native speakers from Google's library of over 2,000, matched by race, gender and accent, and each NPC keeps its voice for life. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
-- **Accents with lore behind them, voiced by native speakers where they exist.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
-- **6,451 individual character profiles**, so the names you know sound like themselves rather than like their species.
-- **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
-- **Recast anyone.** Open the **NPC Voices** side panel, find any NPC by name, and give them your own accent, style, pace, or voice type, for one NPC, one character, or everyone sharing a name.
-- **You get a voice too.** Set your accent, persona, and pace, and optionally speak your public chat aloud.
-- **A narrator for the quest beats.** Turn on **Voice Narration** for the message and item boxes quests lean on, and **Voice Examine Text** to hear anything you examine.
-- **The world talking around you.** Turn on **Voice Ambient Chatter** and the lines NPCs say over their heads, market criers, farm animals, cutscene asides, come through in their own voices, overlapping the way a crowd actually does and fading away as you walk off.
-- **Your Follower Buddy companion, voiced.** If you run the separate [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin, turn on **Voice Follower Buddy** and your companion speaks in a voice of its own, with its own accent, persona, and pace, both overhead and in its right-click Talk-to conversation. Without that plugin installed the setting does nothing.
-- **Any language, any register.** Speak the whole game in Spanish, or run Gielinor as a pirate crew, Gen Z roadmen, or Shakespearean nobles.
-- **Cave echo underground**, so dungeons and sewers sound enclosed.
-- **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
+- **14,103 NPCs have voices already**, using about 700 different voices. Most are native speakers from Google's library of over 2,000. Each NPC's voice is picked to fit its race, gender, age and accent, children get child voices, and an NPC keeps the same voice every time you talk to it. For NPCs added in future game updates, turn on **Auto-learn New NPCs** and the plugin looks them up on the wiki.
+- **Accents that fit the lore**, using native speakers where Google has them. 18 races and 14 regions each have their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, and a gothic Morytania.
+- **6,451 named characters have their own voice profile**, so well-known characters sound like themselves and not just like the rest of their race.
+- **Emotion from the chat-head.** The line is spoken happy, sad, angry, scared or neutral, based on the speaker's face.
+- **Change anyone's voice.** In the **NPC Voices** side panel you can search for any NPC and set its accent, style, pace or voice type. The change can apply to one NPC, one character, or everyone with that name.
+- **Your character speaks too.** Set your own accent, personality and pace. You can also have your public chat read out.
+- **A narrator.** Turn on **Voice Narration** to hear the message and item boxes that quests use, and **Voice Examine Text** to hear examine text.
+- **Background chatter.** Turn on **Voice Ambient Chatter** to hear the text NPCs say over their heads, like market sellers and cutscene lines. Several NPCs can talk at once, and they get quieter as you walk away.
+- **Your Follower Buddy companion speaks too.** If you use the separate [Follower Buddy](https://github.com/MikeSpatol/follower-buddy) plugin, turn on **Voice Follower Buddy** and your companion gets its own voice, accent, personality and pace, both over its head and when you Talk-to it. Without that plugin the setting does nothing.
+- **Other languages and styles.** Play in Spanish or another language, or have everyone talk like pirates, Gen Z, or Shakespeare.
+- **Cave echo** in dungeons, caves and sewers.
+- **Doesn't slow the game down.** Voices are made in the background, skipping a line stops it straight away, and every line is played at the same loudness.
 
-Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere. **Auto-learn New NPCs**, off unless you turn it on, also looks up an unrecognised NPC's name on the OSRS Wiki. The **NPC Voices** panel loads each listed NPC's chat-head picture from the OSRS Wiki by name.
+A built-in offline filter blocks swear words. The only things sent from your computer are the line being spoken and a short description of how the character should sound. These go over HTTPS to the provider you pick. Lines you have heard before play from your computer and are not sent anywhere. If you turn on **Auto-learn New NPCs**, the plugin also searches the OSRS Wiki for NPCs it doesn't know. The **NPC Voices** panel loads NPC chat-head pictures from the OSRS Wiki.
 
 ## Install
 
@@ -36,7 +36,7 @@ Then pick a provider and paste in a key. Until you do, dialogue stays silent and
 
 ## Pick a provider
 
-Both providers run the same Gemini TTS model, so **the voices, accents, and emotion are identical**. The difference is speed and volume.
+Both providers use the same Gemini model, so **the voices, accents and emotion sound the same**. The difference is speed and how many lines you can make a day.
 
 | Line length | Google AI Studio | OpenRouter |
 |---|---|---|
@@ -45,11 +45,11 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 | Long (400 chars) | **1.3s** | 10.1s |
 | Very long (500+ chars) | **1.2s** | 12.6s |
 
-**Google AI Studio** streams audio as it is generated, so a line starts in just over a second no matter how long it is. Google caps how many fresh lines a key can voice each day, and **Prefetch Dialogue** draws on the same allowance by pre-voicing options you may never pick. Enabling billing does not lift that ceiling, though Google does raise it for accounts with heavy long-term use; your key's current limit is on its AI Studio rate-limit page.
+**Google AI Studio** starts playing while the audio is still being made, so a line starts in just over a second however long it is. Google limits how many new lines a key can make each day, and **Prefetch Dialogue** uses up that same limit by voicing options you might not pick. Turning on billing doesn't raise the limit, but Google raises it over time as you spend more and move up AI Studio's usage tiers. You can see your key's current limit on its AI Studio rate-limit page.
 
-**OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A long quest speech can leave you waiting over ten seconds.
+**OpenRouter** has no daily limit, so long quest sessions never go quiet. But it only plays a line once the whole clip is finished, so a long quest speech can take over ten seconds to start.
 
-Switch any time with **Voice Provider**. Cached lines are instant and free on both.
+You can switch at any time with **Voice Provider**. Both use the same saved lines, so anything you have heard on one plays instantly and for free on the other.
 
 ### Google AI Studio
 
@@ -68,19 +68,19 @@ Switch any time with **Voice Provider**. Cached lines are instant and free on bo
 
 ## Change how an NPC sounds
 
-Click the Voiced Dialogue icon in RuneLite's sidebar to open **NPC Voices**. NPCs you hear this session and NPCs you have edited are listed with their chat-heads; search to find anyone else by name. You can also right-click an NPC that speaks and choose **Set-voice** to open the panel straight to them.
+Click the Voiced Dialogue icon in RuneLite's sidebar to open **NPC Voices**. It lists the NPCs you have heard this session and any you have edited. Search by name to find anyone else. You can also right-click an NPC that talks and choose **Set-voice** to go straight to it.
 
-Open an NPC to set its **Voice type** (Type A or Type B, the same choice as **Player Voice**), **Accent**, **Style**, and **Pace**. Leave a field blank to keep the plugin's voice for it. Under **Apply to**, choose **Only this NPC**, **This character and its variants** (such as every Varrock guard variant), or **Everyone called** that name; each option shows how many NPCs it covers. **Clear override** puts the plugin's voice back.
+Open an NPC to set its **Voice type** (Type A or Type B, like **Player Voice**), **Accent**, **Style** and **Pace**. Leave a field blank to keep the plugin's choice. Under **Apply to**, pick **Only this NPC**, **This character and its variants** (for example every Varrock guard), or **Everyone called** that name. Each option shows how many NPCs it affects. **Clear override** puts the plugin's voice back.
 
-Edits take effect on the next line, with no restart. An edited NPC is re-voiced, and billed again, the next time you hear each of its lines. Edits are stored in your RuneLite profile.
+Changes work from the next line, with no restart. Lines from an edited NPC are made again, and paid for again, the first time you hear them after the change. Your edits are saved in your RuneLite profile.
 
-To share a set of voices with a friend or copy them to another RuneLite profile, use **Export** under the search bar to copy your edits to the clipboard or save them as a `.json` file. **Import** takes pasted text or a file and shows what it will change first: choose **Merge** to add the imported NPCs to your own edits, or **Replace all** to keep only the imported ones. Only your own edits are exported.
+To share your voices with a friend or move them to another RuneLite profile, use **Export** under the search bar. It copies your edits to the clipboard or saves them as a `.json` file. **Import** takes pasted text or a file and shows you what will change first. Pick **Merge** to add them to your own edits, or **Replace all** to keep only the imported ones. Only your own edits are exported.
 
 ## Track your spend
 
-Type `::voicedspend` in chat for this session's lines voiced, lines prefetched, and cost, one line per provider. Cached replays are free and counted nowhere. Totals reset when the plugin restarts.
+Type `::voicedspend` in chat to see how many lines you have voiced and prefetched this session, and what they cost, for each provider. Saved lines are free and aren't counted. The totals reset when the plugin restarts.
 
-On OpenRouter the figure is the real billed amount read from your key. On Google AI Studio it is an estimate: Google returns the tokens it metered but no cost, so the plugin prices those measured counts at Google's published rate. A non-English language or a speaking style adds a cheap translation call per line, accounted for separately.
+On OpenRouter this is the real amount you were charged. On Google AI Studio it is an estimate, because Google reports how much was used but not the price, so the plugin works it out from Google's published rates. Using another language or a speaking style adds a small extra charge per line to rewrite the text, and this is shown separately.
 
 ## Settings
 
@@ -89,12 +89,12 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Voice Provider** | `Google AI Studio` | Which cloud service voices dialogue and bills the calls. See [Pick a provider](#pick-a-provider). |
-| **OpenRouter API Key** | empty | Your OpenRouter key; stored locally, never bundled with the plugin. |
-| **Google AI Studio API Key** | empty | Your Gemini key; stored locally, never bundled with the plugin. |
-| **Dialogue Volume** | `20` | Loudness of spoken dialogue, `0` (muted) to `100`. |
-| **Voice My Public Chat** | `Off` | Speaks your public chat aloud in your player voice, exactly as typed. |
-| **Prefetch Dialogue** | `On` | Pre-voices the dialogue options on screen so your pick plays instantly; can spend credit on branches you never choose. |
+| **Voice Provider** | `Google AI Studio` | Which service makes the voices and charges you. See [Pick a provider](#pick-a-provider). |
+| **OpenRouter API Key** | empty | Your OpenRouter key. Saved only on your computer. |
+| **Google AI Studio API Key** | empty | Your Google AI Studio key. Saved only on your computer. |
+| **Dialogue Volume** | `20` | How loud voices are, from `0` (muted) to `100`. Every line plays at this loudness, whoever is speaking. |
+| **Voice My Public Chat** | `Off` | Reads your public chat out loud in your character's voice, exactly as you typed it. |
+| **Prefetch Dialogue** | `On` | Voices the dialogue options on screen ahead of time so your choice plays straight away. This can cost money for options you never pick. |
 
 </details>
 
@@ -104,14 +104,14 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | Strong friendly, down-to-earth southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, Indian, and more) voices you with a native speaker from it. |
-| **Your Persona** | Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm. | Persona and delivery style for your character. |
-| **Your Delivery Pace** | Lively and bouncy, with an upbeat, energetic rhythm. | How your character paces their words. |
-| **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
-| **Voice Examine Text** | `Off` | Narrates examine text for items, NPCs, and scenery. Short and heavily repeated, so mostly cached after the first hearing. |
-| **Voice Ambient Chatter** | `Off` | Speaks the overhead lines nearby NPCs say, each in their own voice. Everyone within earshot is voiced, and they overlap, so a market square sounds like a market square. Chatter fades with distance and cuts out once the speaker walks out of range. One NPC's lines queue behind each other rather than overlapping themselves, and animal noises are left unvoiced. These play without you clicking a dialogue, so a busy area costs real calls the first time you stand in it; the lines are short and repeat heavily, so most replay free afterwards. Silent while you are in a conversation. |
-| **Auto-learn New NPCs** | `Off` | Looks an unrecognised NPC's race, gender, and origin up on the OSRS Wiki once and remembers it. Clicking **Talk-to** starts the lookup, usually before the dialogue opens, so their first line lands in the right voice. |
-| **Set Voice Menu Option** | `On` | Adds **Set-voice** to the right-click menu of NPCs that speak, opening that NPC in the **NPC Voices** panel. Monsters and bosses with nothing to say don't get it. Turn it off to keep NPC menus unchanged. |
+| **Your Accent** | Strong friendly, down-to-earth southern English | Your character's accent. Write it strongly and name the pronunciation, for example "Strong Dublin Irish accent, Irish English pronunciation". If you name a place Google has native voices for (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, Indian and more), you get a native speaker from there. |
+| **Your Persona** | Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm. | Your character's personality and way of speaking. |
+| **Your Delivery Pace** | Lively and bouncy, with an upbeat, energetic rhythm. | How fast or slow your character talks. |
+| **Voice Narration** | `Off` | Reads message and item boxes in a narrator voice. The game also uses these boxes for things like the world switch warning, so those get read too. |
+| **Voice Examine Text** | `Off` | Reads examine text for items, NPCs and scenery. These lines are short and come up often, so most are free after the first time. |
+| **Voice Ambient Chatter** | `Off` | Reads the text nearby NPCs say over their heads, each in their own voice. Several NPCs can talk at once. Voices get quieter with distance and stop when the NPC is out of range. Animal noises aren't voiced. These play without you clicking anything, so a busy area costs money the first time you visit it, but the lines repeat a lot, so most are free after that. Chatter stays quiet while you are in a conversation. |
+| **Auto-learn New NPCs** | `Off` | Looks up an unknown NPC's race, gender and origin on the OSRS Wiki once and remembers it. The lookup starts when you click **Talk-to**, so it is usually done before the NPC speaks. |
+| **Set Voice Menu Option** | `On` | Adds **Set-voice** to the right-click menu of NPCs that talk, which opens them in the **NPC Voices** panel. Monsters and bosses that don't talk don't get it. |
 
 </details>
 
@@ -137,12 +137,12 @@ Both of the companion's voices are covered: the lines it says over its head, whi
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Emotional Delivery** | `On` | Matches the voice to the emotion on the speaker's chat-head. Off voices everything neutral. |
-| **Spoken Language** | `English` | Speaks dialogue in another language, keeping names, places, and item terms intact. Adds a little latency per line. |
-| **Player Speaking Style** | `None` | A register layered onto your own lines: Gen Z slang, pirate speak, formal, and more. |
-| **NPC Speaking Style** | `None` | The same styles applied to NPC lines. Composes with any Spoken Language. |
-| **Speaking Pace** | `100` | Speech speed as a percent of normal. |
-| **Cave Echo** | `Off` | Adds a decaying echo below the overworld (cave, dungeon, sewer, basement). Narration stays dry. |
+| **Emotional Delivery** | `On` | Matches the voice to the emotion on the speaker's chat-head. When off, every line is spoken neutrally. |
+| **Spoken Language** | `English` | Speaks dialogue in another language, keeping names, places and items as they are. Each line takes a little longer to start. |
+| **Player Speaking Style** | `None` | Rewrites your character's lines in a style, like Gen Z slang, pirate speak, posh and more. |
+| **NPC Speaking Style** | `None` | The same styles for NPC lines. Works with any Spoken Language. |
+| **Speaking Pace** | `100` | How fast voices talk, as a percent of normal speed. |
+| **Cave Echo** | `Off` | Adds an echo when you are underground, like in caves, dungeons, sewers and basements. The narrator has no echo. |
 
 </details>
 
@@ -151,8 +151,8 @@ Both of the companion's voices are covered: the lines it says over its head, whi
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| **Cache Size Limit (MiB)** | `1024` | Maximum on-disk cache size; oldest clips are deleted first. `0` for no limit. Clips can be [converted to WAV](docs/cache-files.md). |
-| **Debug Logging** | `Off` | Writes per-line voice decisions and timing logs for troubleshooting. |
+| **Cache Size Limit (MiB)** | `1024` | How much disk space saved lines can use. The oldest are deleted first. `0` means no limit. Saved lines can be [converted to WAV](docs/cache-files.md). |
+| **Debug Logging** | `Off` | Writes extra logs about each line's voice and timing, to help find problems. |
 
 </details>
 
@@ -164,9 +164,9 @@ cd runelite-voiced-dialogue
 ./gradlew clean build
 ```
 
-[docs/development.md](docs/development.md) covers setup, tests, and the dev client. [docs/architecture.md](docs/architecture.md) explains the synthesis pipeline end to end.
+[docs/development.md](docs/development.md) covers setup, tests and the dev client. [docs/architecture.md](docs/architecture.md) explains how the plugin works.
 
-Built on Java, the RuneLite plugin framework, and the Gemini and OpenRouter speech APIs. Thanks to the RuneLite devs for making plugin development genuinely fun.
+Built on Java, the RuneLite plugin framework, and the Gemini and OpenRouter speech APIs. Thanks to the RuneLite devs for making plugins fun to build.
 
 Got ideas or found a bug? [Open an issue](https://github.com/grabartley/runelite-voiced-dialogue/issues).
 

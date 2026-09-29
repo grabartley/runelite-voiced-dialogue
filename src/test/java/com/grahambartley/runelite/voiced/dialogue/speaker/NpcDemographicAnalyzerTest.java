@@ -62,7 +62,7 @@ public class NpcDemographicAnalyzerTest {
     assertAttributes(5035, "Human", "Female");
     assertAttributes(4284, "Human", "Female");
     assertAttributes(3561, "Human", "Female");
-    assertAttributes(1305, "Human", "Female");
+    assertAttributes(1305, "Human", "Male");
     assertAttributes(11868, "Human", "Female");
     assertAttributes(3481, "Undead", "Male");
     assertAttributes(3893, "Dwarf", "Male");
@@ -400,6 +400,87 @@ public class NpcDemographicAnalyzerTest {
   public void markedChildrenCarryTheChildLifeStageFromTheBundledTable() {
     assertTrue("Shilop is a child", analyze(3501, null).isChild());
     assertTrue("Rory is a child", analyze(2136, null).isChild());
+  }
+
+  @Test
+  public void wikiChildrenCarryTheChildLifeStage() {
+    for (int npcId :
+        new int[] {
+          8402, 8403, 8404, 8405, 1472, 7969, 4455, 4456, 4457, 4458, 2576, 4182, 2037, 1562, 13308
+        }) {
+      assertTrue("id " + npcId + " is a child", analyze(npcId, null).isChild());
+    }
+  }
+
+  @Test
+  public void wikiChildrenKeepTheirRaceAndGender() {
+    assertAttributes(1472, "Troll", "Male");
+    assertAttributes(2576, "Gnome", "Male");
+    assertAttributes(2037, "Gnome", "Male");
+    assertAttributes(4455, "Human", "Female");
+    assertAttributes(13308, "Human", "Female");
+  }
+
+  @Test
+  public void smiddiRyakIsAGirlFromBurghDeRott() {
+    assertAttributes(1562, "Human", "Female");
+    assertEquals("morytania", analyze(1562, null).getEthnicity());
+  }
+
+  @Test
+  public void moxiIsFemaleInEveryForm() {
+    for (int npcId : new int[] {14034, 14046, 30154}) {
+      assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void wikiConfirmedWomenResolveFemale() {
+    for (int npcId : new int[] {12703, 13097, 14195, 6908, 6909, 6912, 6913}) {
+      assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void elnesIsAKourendDwarfLikeTheOtherMinecartConductors() {
+    assertAttributes(12703, "Dwarf", "Female");
+    assertEquals("kourend", analyze(12703, null).getEthnicity());
+  }
+
+  @Test
+  public void cuicaIsACamTorumDwarf() {
+    assertAttributes(13097, "Dwarf", "Female");
+    assertEquals("varlamore", analyze(13097, null).getEthnicity());
+  }
+
+  @Test
+  public void shayzienTierFourSoldierStaysMale() {
+    for (int npcId : new int[] {6910, 6911}) {
+      assertEquals("gender for id " + npcId, "Male", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void pyreCoveZombiePirateIsAMaleWildernessUndeadInBothForms() {
+    for (int npcId : new int[] {14177, 14178}) {
+      assertAttributes(npcId, "Undead", "Male");
+      assertEquals("wilderness", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void warhammerChasmSoldierIsAKourendManLikeItsSquad() {
+    for (int npcId : new int[] {14189, 14191, 14193}) {
+      assertAttributes(npcId, "Human", "Male");
+      assertEquals("kourend", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void youngLookingPetsAndCreaturesStayAdults() {
+    for (int npcId : new int[] {5381, 8485, 14519, 14033, 14487, 8183, 9398, 14034, 8025, 759}) {
+      assertFalse("id " + npcId + " is not a child", analyze(npcId, null).isChild());
+    }
   }
 
   @Test

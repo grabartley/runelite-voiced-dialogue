@@ -176,9 +176,9 @@ for its speaker's current distance and pushes the new gain onto that bark's audi
 away from a crier fades them out mid-sentence and rounding a corner towards one brings them up. A
 speaker that has left earshot entirely, whether because you walked off or it did, is cut there and
 then rather than faded, since it has stopped being rendered and a voice from an empty tile is worse
-than silence. `SourceDataLine` exposes its master gain as a live control, which is what makes the
-fade possible; on a mixer that does not offer the control the line plays at the volume it opened
-with, and the cut still lands. The distance is read on the game thread, where NPC positions are safe
+than silence. The gain is applied to the samples as they are written, so the fade works on every
+mixer; a change reaches the speaker once the audio line's buffer has played through, within about
+one tick. The distance is read on the game thread, where NPC positions are safe
 to read, and the only work done there is one coordinate subtraction per bark still playing.
 
 One speaker is never voiced twice at once. A person cannot say two things at the same time, so a
@@ -441,10 +441,12 @@ at the lowest allowance. The current figure for a key is on its AI Studio rate-l
 Those requests are not lines the player hears. **Prefetch Dialogue** defaults on, and
 `DialoguePrefetcher` speculatively synthesizes every visible dialogue option, so options that are
 never picked draw on the same allowance. Player-facing copy therefore names prefetch as a claim on
-the daily allowance, rather than equating requests with heard lines, and describes the lift only
-as one Google grants for heavy long-term use. The spend threshold is deliberately kept out of the
-README and the in-game notices: it reads as a paywall on a plugin that costs fractions of a cent
-per line.
+the daily allowance, rather than equating requests with heard lines. The billed daily-cap notice,
+the onboarding message and the README all name a higher usage tier as a way the cap rises, alongside
+waiting for the reset and switching to OpenRouter. Tier moves are automatic on spend, so the copy
+describes them as something Google grants over time rather than a button to press. The spend
+thresholds and cap values are deliberately kept out of the README and the in-game notices: they
+read as a paywall on a plugin that costs fractions of a cent per line.
 
 OpenRouter carries no equivalent ceiling. It serves the same model as a paid model, and paid models
 have no platform-level request cap: `GET /api/v1/key` on a credited key reports `is_free_tier:
@@ -628,3 +630,46 @@ Synthesized audio (a `Pcm` of mono float samples) is played through `javax.sound
 by `StreamingAudioPlayer`, converting to signed 16-bit LE PCM via `PcmAudio`. Nothing is staged to a
 temp file, and a generation counter lets a new line interrupt the one currently playing. The Plugin Hub
 maintainers accept this `javax.sound` use for the plugin's streaming and interruption needs.
+
+### Loudness levelling
+
+Gemini does not return every line at the same level, and emotional deliveries swing the most, so
+consecutive lines from one NPC on one voice would otherwise jump in volume. `LoudnessLeveller` sets
+every line to one speech level, and **Dialogue Volume** chooses that level. `StreamingAudioPlayer` is
+the one owner: every line, dialogue and ambient alike, passes through it on its way to the audio
+line, and the gain is applied to the samples themselves rather than to the line's gain control.
+
+- **What is measured.** The line is cut into 20 ms windows, windows quieter than -50 dBFS are
+  treated as pauses and ignored, and the RMS of the rest is the line's speech level. Ignoring pauses
+  keeps a line with long gaps from being boosted as though it were a quiet one.
+- **The volume sets the level.** At 100 the speech level is -18 dBFS, the median across a real cache
+  of about 2,900 lines, and lower settings scale it in proportion, a gain of volume / 100: 50 is
+  -24 dBFS, the default 20 is -32 dBFS, and 0 is silent. A typical line plays as loud at each
+  setting as it would with no levelling at all.
+- **The limits.** The gain never pushes the loudest sample past -1 dBFS, so levelling cannot clip,
+  and never boosts by more than 12 dB, so a whispered line is brought up without amplifying its
+  noise floor. Gemini speech peaks 15 to 19 dB above its level, so the ceiling only holds a line
+  below its level near full volume; at everyday settings every line reaches it.
+- **Whole lines.** One gain covers a whole line. Nothing is compressed within a line, so a shout
+  keeps its shape and still reads as a shout next to the words around it.
+- **At playback.** The cache holds each clip as the model returned it, so every cached clip is
+  levelled the same way, the cache format carries no level, and changing the level never re-bills a
+  line. A line with cave echo is always played whole, and the echo is added before levelling, so the
+  level is measured on what the player hears.
+- **Live volume.** The gain is worked out for each 2048-sample block as it is written, so the
+  ambient distance fade reaches the rest of a bark as it plays. A dialogue line takes the volume it
+  starts with.
+
+A streamed line starts playing on its first chunk with no added wait, which means its level is not
+known yet. It starts at the level the model produced, and as chunks arrive the gain slides toward
+the level of everything heard so far, at no more than 3 dB per second, then locks once 3 seconds of
+speech have been heard. The slow slide keeps the correction from being heard as a jump, and locking
+keeps the rest of the line whole. The volume setting scales the sliding gain at every moment. The
+cost is accuracy: across eleven real AI Studio lines at the default volume, streamed lines spread
+over 2.3 dB, where the same lines levelled whole spread over 1.5 dB. A replay from the
+cache is levelled whole. Waiting for a lead-in before playing was measured and rejected: the first
+quarter second of a line is usually silence, so a lead-in short enough to go unnoticed holds too
+little speech to measure, and one long enough to measure adds half a second or more before the
+line speaks. The streamed gain also respects the ceiling: when a later chunk would push past -1
+dBFS, the gain drops to fit it for the rest of the line, so a line that swells is turned down rather
+than clipped.
