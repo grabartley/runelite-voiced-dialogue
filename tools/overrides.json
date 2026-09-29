@@ -1761,7 +1761,7 @@
     "16482": {"name": "Crab (ceremony audience)", "race": "Crab", "gender": "Male"},
     "16485": {"name": "'Crab'", "race": "Penguin", "gender": "Male"},
     "13247": {"name": "Squire", "race": "Human", "gender": "Female", "ethnicity": "varlamore"},
-    "1314": {"name": "Bartender", "ethnicity": "wilderness"},
+    "1314": {"name": "Bartender (Dead Man's Chest)", "ethnicity": "wilderness"},
     "1430": {"name": "Shipyard worker", "ethnicity": "asgarnia"},
     "2669": {"name": "Garth", "ethnicity": "kourend"},
     "3110": {"name": "Man", "ethnicity": "misthalin"},
