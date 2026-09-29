@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1824,
+    "overrides_applied": 1821,
     "symbols": 4436,
     "race_counts": {
       "Aranei": 24,
@@ -49,7 +49,7 @@
       "wyrmscraig": 11
     },
     "life_stage_counts": {
-      "child": 63
+      "child": 60
     },
     "profiles_bespoke": 6451
   },
@@ -2545,12 +2545,12 @@
       },
       "759": {
         "name": "Drunken Dwarf's Leg",
-        "style": "A little troll child. Slow, simple, blunt speech with little grasp of what's going on.",
+        "style": "Dim, lumbering mountain troll. Slow, simple, blunt speech with little grasp of what's going on.",
         "age": 8
       },
       "760": {
         "name": "Drunken Dwarf's Leg",
-        "style": "A little troll child. Slow, simple, blunt speech with little grasp of what's going on.",
+        "style": "Dim, lumbering mountain troll. Slow, simple, blunt speech with little grasp of what's going on.",
         "age": 8
       },
       "814": {
@@ -4462,7 +4462,7 @@
       },
       "8419": {
         "name": "Drunken Dwarf's Leg",
-        "style": "A little troll child. Slow, simple, blunt speech with little grasp of what's going on.",
+        "style": "Dim, lumbering mountain troll. Slow, simple, blunt speech with little grasp of what's going on.",
         "age": 8
       },
       "8424": {
@@ -40730,14 +40730,12 @@
     "759": {
       "race": "Troll",
       "gender": "Male",
-      "ethnicity": "asgarnia",
-      "lifeStage": "child"
+      "ethnicity": "asgarnia"
     },
     "760": {
       "race": "Troll",
       "gender": "Male",
-      "ethnicity": "asgarnia",
-      "lifeStage": "child"
+      "ethnicity": "asgarnia"
     },
     "762": {
       "race": "Human",
@@ -71304,8 +71302,7 @@
     "8419": {
       "race": "Troll",
       "gender": "Male",
-      "ethnicity": "asgarnia",
-      "lifeStage": "child"
+      "ethnicity": "asgarnia"
     },
     "8422": {
       "race": "Human",
