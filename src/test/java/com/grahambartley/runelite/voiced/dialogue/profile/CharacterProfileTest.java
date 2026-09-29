@@ -156,4 +156,34 @@ public class CharacterProfileTest {
             "Mage", "Distinguished elderly British accent", "Warm and knowing", "Measured pace");
     assertNotEquals(WIZARD.cacheKey(), renamed.cacheKey());
   }
+
+  private static CharacterProfile wizardAged(Integer age) {
+    return new CharacterProfile(
+        "Wizard",
+        "Distinguished elderly British accent",
+        null,
+        "Warm and knowing",
+        "Measured pace",
+        null,
+        null,
+        false,
+        age);
+  }
+
+  @Test
+  public void anAgeChangesTheCacheKey() {
+    assertNotEquals(WIZARD.cacheKey(), wizardAged(70).cacheKey());
+    assertNotEquals(wizardAged(70).cacheKey(), wizardAged(71).cacheKey());
+    assertEquals(Integer.valueOf(70), wizardAged(70).age());
+  }
+
+  @Test
+  public void noAgeKeepsTheCacheKeyOfAProfileWithoutOne() {
+    assertEquals(WIZARD.cacheKey(), wizardAged(null).cacheKey());
+  }
+
+  @Test
+  public void aProfileWithoutAnAgeHasNone() {
+    assertEquals(null, WIZARD.age());
+  }
 }

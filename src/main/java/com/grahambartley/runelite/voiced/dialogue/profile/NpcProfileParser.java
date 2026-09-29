@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.CategoryRule;
 import com.grahambartley.runelite.voiced.dialogue.profile.NpcProfileLayers.Layer;
 import com.grahambartley.runelite.voiced.dialogue.speaker.LifeStage;
@@ -20,6 +21,12 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 final class NpcProfileParser {
+
+  static final String AGE_KEY = "age";
+
+  static final int MIN_AGE = 1;
+
+  static final int MAX_AGE = 120;
 
   private NpcProfileParser() {}
 
@@ -160,7 +167,8 @@ final class NpcProfileParser {
         obj.has("replaceStyle") && obj.get("replaceStyle").getAsBoolean(),
         optString(obj, "pace"),
         optString(obj, "pitch"),
-        optString(obj, "voiceRegion"));
+        optString(obj, "voiceRegion"),
+        optAge(obj));
   }
 
   private static CharacterProfile parseComplete(JsonObject obj) {
@@ -192,6 +200,18 @@ final class NpcProfileParser {
     }
     String value = obj.get(key).getAsString();
     return value.isEmpty() ? null : value;
+  }
+
+  private static Integer optAge(JsonObject obj) {
+    if (!obj.has(AGE_KEY) || !obj.get(AGE_KEY).isJsonPrimitive()) {
+      return null;
+    }
+    JsonPrimitive value = obj.getAsJsonPrimitive(AGE_KEY);
+    if (!value.isNumber()) {
+      return null;
+    }
+    int age = value.getAsInt();
+    return age >= MIN_AGE && age <= MAX_AGE ? age : null;
   }
 
   private static boolean isComment(String key) {

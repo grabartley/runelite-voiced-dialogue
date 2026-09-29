@@ -24,6 +24,12 @@ final class GeminiSpeechStyle {
 
   private static final String GIRL = "A young girl's voice";
 
+  private static final String OLD_MAN = "An old man's voice";
+
+  private static final String OLD_WOMAN = "An old woman's voice";
+
+  static final int OLD_AGE = 60;
+
   private GeminiSpeechStyle() {}
 
   static String compose(
@@ -34,7 +40,7 @@ final class GeminiSpeechStyle {
       String paceDirection) {
     List<String> directions = new ArrayList<>();
     addDirection(directions, "Speaking " + language);
-    addDirection(directions, voiceAnchor(voice));
+    addDirection(directions, voiceAnchor(voice, profile.age()));
     addDirection(directions, profile.pitch());
     String name = CharacterProfile.spoken(profile.name());
     if (name != null) {
@@ -49,7 +55,7 @@ final class GeminiSpeechStyle {
     return String.join(" ", directions);
   }
 
-  private static String voiceAnchor(VoiceSpec voice) {
+  private static String voiceAnchor(VoiceSpec voice, Integer age) {
     if (voice.narrator() || voice.gender() == NpcGender.UNKNOWN) {
       return null;
     }
@@ -57,7 +63,12 @@ final class GeminiSpeechStyle {
     if (voice.child()) {
       return female ? GIRL : BOY;
     }
-    return female ? WOMAN : MAN;
+    if (age == null) {
+      return female ? WOMAN : MAN;
+    }
+    boolean old = age >= OLD_AGE;
+    String anchor = female ? (old ? OLD_WOMAN : WOMAN) : (old ? OLD_MAN : MAN);
+    return anchor + ", about " + age + " years old";
   }
 
   static String speedDirection(int speedPercent) {

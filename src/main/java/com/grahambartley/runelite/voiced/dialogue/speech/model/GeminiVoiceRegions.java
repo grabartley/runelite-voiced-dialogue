@@ -10,12 +10,15 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -28,6 +31,12 @@ final class GeminiVoiceRegions {
   static final String NARRATOR_KEY = "narratorVoice";
 
   static final String PLAYER_KEYWORDS_KEY = "playerKeywords";
+
+  static final String VOICE_AGES_KEY = "voiceAges";
+
+  static final int AGE_WINDOW = 10;
+
+  static final int MIN_AGE_MATCHES = 3;
 
   private static final long HASH_MULTIPLIER = 0x9E3779B97F4A7C15L;
 
@@ -49,6 +58,7 @@ final class GeminiVoiceRegions {
   private final Map<String, Map<NpcGender, List<String>>> childPools = new LinkedHashMap<>();
   private final Map<String, Map<NpcGender, String>> playerVoices = new LinkedHashMap<>();
   private final Map<String, List<Pattern>> playerKeywords = new LinkedHashMap<>();
+  private final Map<String, Integer> voiceAges;
   private final String narratorVoice;
 
   GeminiVoiceRegions(JsonObject regions) {
@@ -56,7 +66,12 @@ final class GeminiVoiceRegions {
   }
 
   GeminiVoiceRegions(JsonObject regions, String narratorVoice) {
+    this(regions, narratorVoice, Collections.emptyMap());
+  }
+
+  GeminiVoiceRegions(JsonObject regions, String narratorVoice, Map<String, Integer> voiceAges) {
     this.narratorVoice = narratorVoice;
+    this.voiceAges = voiceAges;
     for (Map.Entry<String, JsonElement> entry : regions.entrySet()) {
       if (!entry.getValue().isJsonObject()) {
         continue;
@@ -94,7 +109,40 @@ final class GeminiVoiceRegions {
   }
 
   String voiceFor(String region, NpcGender gender, int seed) {
-    return pick(pool(pools, region, gender), seed);
+    return voiceFor(region, gender, seed, null);
+  }
+
+  String voiceFor(String region, NpcGender gender, int seed, Integer age) {
+    List<String> pool = pool(pools, region, gender);
+    return pick(age == null ? pool : closestInAge(pool, age), seed);
+  }
+
+  private List<String> closestInAge(List<String> pool, int age) {
+    if (pool == null) {
+      return null;
+    }
+    List<String> aged =
+        pool.stream()
+            .filter(voiceAges::containsKey)
+            .sorted(
+                Comparator.<String>comparingInt(voice -> ageGap(voice, age))
+                    .thenComparing(Comparator.naturalOrder()))
+            .collect(Collectors.toList());
+    if (aged.isEmpty()) {
+      return pool;
+    }
+    List<String> matches = new ArrayList<>();
+    for (String voice : aged) {
+      if (matches.size() >= MIN_AGE_MATCHES && ageGap(voice, age) > AGE_WINDOW) {
+        break;
+      }
+      matches.add(voice);
+    }
+    return matches;
+  }
+
+  private int ageGap(String voice, int age) {
+    return Math.abs(voiceAges.get(voice) - age);
   }
 
   String voiceExcluding(String region, NpcGender gender, int seed, String excluded) {
@@ -174,6 +222,20 @@ final class GeminiVoiceRegions {
     return Collections.unmodifiableList(values);
   }
 
+  static Map<String, Integer> ages(JsonObject root) {
+    if (!root.has(VOICE_AGES_KEY) || !root.get(VOICE_AGES_KEY).isJsonObject()) {
+      return Collections.emptyMap();
+    }
+    Map<String, Integer> ages = new HashMap<>();
+    for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject(VOICE_AGES_KEY).entrySet()) {
+      JsonElement value = entry.getValue();
+      if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()) {
+        ages.put(entry.getKey(), value.getAsInt());
+      }
+    }
+    return Collections.unmodifiableMap(ages);
+  }
+
   private static final class Bundled {
     static final GeminiVoiceRegions INSTANCE = load();
 
@@ -192,7 +254,7 @@ final class GeminiVoiceRegions {
                 ? root.getAsJsonObject(REGIONS_KEY)
                 : new JsonObject();
         String narrator = root.has(NARRATOR_KEY) ? root.get(NARRATOR_KEY).getAsString() : null;
-        return new GeminiVoiceRegions(regions, narrator);
+        return new GeminiVoiceRegions(regions, narrator, ages(root));
       } catch (Exception e) {
         log.error("Failed to load voice region table {}: {}", RESOURCE, e.getMessage());
         return new GeminiVoiceRegions(new JsonObject());

@@ -30,7 +30,8 @@ overrides" below). `GeminiVoiceMap` then resolves a speaker in this order:
    it, it takes its own fixed voice.
 4. A child with a voice region takes that region's child pool: the three youngest native voices
    of its gender. A child with no region takes the prebuilt child pool.
-5. An NPC with a voice region takes a voice from that region's pool for its gender.
+5. An NPC with a voice region takes a voice from that region's pool for its gender, narrowed to
+   the voices closest to its profile `age` when it has one (see "Age" below).
 6. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
 
 The counts are the adult pools, after any child voices a region can spare have moved to its child
@@ -84,6 +85,29 @@ English boys share the other two young voices.
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the
 pools are regenerated and shipped.
+
+## Age
+
+A profile's `age` is the number of years the character's voice should sound, not the character's
+age in lore. A being thousands of years old, such as a Mahjarrat, gets the age its voice should
+sound (Azzanadra 70, Lucien 55), since the number is spoken to the model and picks among voices
+whose real ages run from their twenties to their seventies. The voice library
+states an age for every native voice, and the generator bundles those ages beside the pools in
+`src/main/resources/voice-regions.json` as `voiceAges`. An NPC with an age is voiced from the
+region voices within ten years of it, or from the three nearest when fewer than three are that
+close, and its seed picks among them, so it still keeps one voice for life. A character older than
+every voice in its region takes the region's oldest voices.
+
+The age is also spoken to the model as part of the gender that leads the profile: "A man's voice,
+about 45 years old", or from 60 up "An old man's voice, about 65 years old". The library's oldest
+voices are younger than many old characters (its oldest southern English man is 55), and by ear
+naming the age there makes the chosen voice sound older than the same voice told only "A man's
+voice". A child keeps "A young boy's voice" or "A young girl's voice" whatever its age.
+
+An NPC with no age keeps its seeded pick from the whole pool, so adding ages moves only the NPCs
+that get one. Children ignore their age and keep the child pool. The prebuilt voices carry no age,
+so an NPC voiced from a race pool (monkeys, gorillas, dogs, penguins, Tortugans, and accents with
+no native voices) keeps its seeded pick whatever its age.
 
 ## The catalog adjectives are not the casting
 

@@ -566,4 +566,34 @@ public class NpcProfileTableTest {
   public void anUnloadedTableHasNoBespokeProfiles() {
     assertFalse(new NpcProfileTable().hasBespokeProfile(100));
   }
+
+  @Test
+  public void theMostSpecificAgeWins() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"A\",\"style\":\"S\",\"pace\":\"P\"},"
+                    + "\"byRace\":{\"Wizard\":{\"age\":60}},"
+                    + "\"byId\":{\"3\":{\"age\":80}}}")
+            .getAsJsonObject();
+    NpcProfileTable table = NpcProfileTable.fromProfilesJson(profiles);
+    assertEquals(
+        Integer.valueOf(60), resolve(table, null, "Wizard", "Wizard", null).profile().age());
+    assertEquals(Integer.valueOf(80), resolve(table, 3, "Wizard", "Wizard", null).profile().age());
+    assertNull(resolve(table, null, "Man", "Human", null).profile().age());
+  }
+
+  @Test
+  public void anOverrideKeepsTheBundledAge() {
+    JsonObject profiles =
+        new JsonParser()
+            .parse(
+                "{\"default\":{\"name\":\"D\",\"accent\":\"A\",\"style\":\"S\",\"pace\":\"P\"},"
+                    + "\"byId\":{\"3\":{\"age\":65}}}")
+            .getAsJsonObject();
+    NpcProfileTable table = NpcProfileTable.fromProfilesJson(profiles);
+    NpcVoiceOverride override =
+        new NpcVoiceOverride(null, null, "A cheerful young lad", null, null);
+    assertEquals(Integer.valueOf(65), resolveWith(table, 3, "Human", override).profile().age());
+  }
 }

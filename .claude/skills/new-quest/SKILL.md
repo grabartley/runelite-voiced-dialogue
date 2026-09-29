@@ -24,7 +24,7 @@ Quest support is four things, and only the first arrives for free:
    reports it. This is the highest-value thing this skill finds.
 3. **An origin** for Human NPCs, which the generator derives from the page's `leagueRegion`.
    Recent quest pages routinely omit that field, so the origin needs pinning by hand.
-4. **A bespoke `byId` profile** for the characters who carry the quest.
+4. **A bespoke `byId` profile**, with its `age`, for the characters who carry the quest.
 
 A quest counts as supported only when all four hold for its **speaking** cast.
 

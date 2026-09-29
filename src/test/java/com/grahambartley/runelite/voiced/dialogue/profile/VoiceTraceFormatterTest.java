@@ -139,4 +139,31 @@ public class VoiceTraceFormatterTest {
     assertTrue(trace, trace.contains("player ->"));
     assertTrue(trace, trace.contains("gender=FEMALE"));
   }
+
+  @Test
+  public void buildResolvedLineShowsTheProfileAge() {
+    CharacterProfile aged =
+        new CharacterProfile(
+            "Dr Harlow", "British", null, "Gruff.", "Slow.", null, null, false, 65);
+    String line =
+        VoiceTraceFormatter.buildResolvedLine(
+            "cloud-openrouter",
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 3480),
+            "Dr Harlow",
+            "NEUTRAL",
+            aged);
+    assertTrue(line, line.contains("age=65"));
+  }
+
+  @Test
+  public void buildResolvedLineShowsADashWhenTheProfileHasNoAge() {
+    String line =
+        VoiceTraceFormatter.buildResolvedLine(
+            "cloud-openrouter",
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 26),
+            "Hans",
+            "NEUTRAL",
+            profile("Hans", "British"));
+    assertTrue(line, line.contains("age=-"));
+  }
 }
