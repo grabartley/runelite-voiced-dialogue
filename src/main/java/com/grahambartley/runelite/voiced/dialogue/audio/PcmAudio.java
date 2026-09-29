@@ -6,10 +6,6 @@ public final class PcmAudio {
 
   private PcmAudio() {}
 
-  public static byte[] toPcm16LE(float[] samples) {
-    return toPcm16LE(samples, 1f);
-  }
-
   public static byte[] toPcm16LE(float[] samples, float gain) {
     byte[] pcm = new byte[samples.length * 2];
     for (int i = 0; i < samples.length; i++) {

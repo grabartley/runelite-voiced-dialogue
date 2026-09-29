@@ -14,6 +14,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.AudioFormat;
@@ -25,9 +27,23 @@ import org.mockito.ArgumentCaptor;
 public class StreamingAudioPlayerTest {
 
   private static final int LOW_RATE = 1_000;
+  private static final int LEAD_IN_SAMPLES =
+      LOW_RATE * StreamingAudioPlayer.LEVELLING_LEAD_IN_MS / 1000;
+  private static final float QUIET = 0.02f;
+  private static final int UNLEVELLED_PEAK = Math.round(QUIET * 32767f);
 
   private static float[] leadIn() {
-    return new float[LOW_RATE * StreamingAudioPlayer.LEVELLING_LEAD_IN_MS / 1000];
+    return new float[LEAD_IN_SAMPLES];
+  }
+
+  private static List<Integer> writtenPeaks(SourceDataLine line, int writes) {
+    ArgumentCaptor<byte[]> pcm = ArgumentCaptor.forClass(byte[].class);
+    verify(line, timeout(2_000).times(writes)).write(pcm.capture(), anyInt(), anyInt());
+    List<Integer> peaks = new ArrayList<>();
+    for (byte[] written : pcm.getAllValues()) {
+      peaks.add(TestPcm.peak16(written));
+    }
+    return peaks;
   }
 
   private static SourceDataLine lineThatAcceptsEverything() {
@@ -203,22 +219,6 @@ public class StreamingAudioPlayerTest {
     verify(line).drain();
   }
 
-  private static final float QUIET = 0.02f;
-
-  private static int writtenPeak(SourceDataLine line, int writes) {
-    ArgumentCaptor<byte[]> pcm = ArgumentCaptor.forClass(byte[].class);
-    verify(line, timeout(2_000).times(writes)).write(pcm.capture(), anyInt(), anyInt());
-    int peak = 0;
-    for (byte[] written : pcm.getAllValues()) {
-      peak = Math.max(peak, TestPcm.peak16(written));
-    }
-    return peak;
-  }
-
-  private static int unlevelledPeak() {
-    return Math.round(QUIET * 32767f);
-  }
-
   @Test
   public void aWholeClipIsLevelledBeforeItPlays() {
     SourceDataLine line = lineThatAcceptsEverything();
@@ -226,7 +226,7 @@ public class StreamingAudioPlayerTest {
 
     player.stream(sine(QUIET, 480), 24_000, 100);
 
-    assertTrue(writtenPeak(line, 1) > unlevelledPeak() * 2);
+    assertTrue(writtenPeaks(line, 1).get(0) > UNLEVELLED_PEAK * 2);
   }
 
   @Test
@@ -235,15 +235,13 @@ public class StreamingAudioPlayerTest {
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
 
     AudioOutput.AudioStream stream = player.beginStream(100);
-    stream.write(sine(QUIET, leadIn().length), LOW_RATE);
+    stream.write(sine(QUIET, LEAD_IN_SAMPLES), LOW_RATE);
     stream.write(sine(QUIET, 20), LOW_RATE);
     stream.end();
 
-    ArgumentCaptor<byte[]> pcm = ArgumentCaptor.forClass(byte[].class);
-    verify(line, timeout(2_000).times(2)).write(pcm.capture(), anyInt(), anyInt());
-    int leadInPeak = TestPcm.peak16(pcm.getAllValues().get(0));
-    assertTrue(leadInPeak > unlevelledPeak() * 2);
-    assertEquals(leadInPeak, TestPcm.peak16(pcm.getAllValues().get(1)), 1);
+    List<Integer> peaks = writtenPeaks(line, 2);
+    assertTrue(peaks.get(0) > UNLEVELLED_PEAK * 2);
+    assertEquals(peaks.get(0), peaks.get(1), 1);
   }
 
   @Test
@@ -252,19 +250,16 @@ public class StreamingAudioPlayerTest {
     StreamingAudioPlayer player = new StreamingAudioPlayer(format -> line);
 
     AudioOutput.AudioStream stream = player.beginStream(100);
-    stream.write(sine(QUIET, leadIn().length), LOW_RATE);
+    stream.write(sine(QUIET, LEAD_IN_SAMPLES), LOW_RATE);
     stream.write(sine(QUIET * 20, 20), LOW_RATE);
     stream.write(sine(QUIET, 20), LOW_RATE);
     stream.end();
 
-    ArgumentCaptor<byte[]> pcm = ArgumentCaptor.forClass(byte[].class);
-    verify(line, timeout(2_000).times(3)).write(pcm.capture(), anyInt(), anyInt());
+    List<Integer> peaks = writtenPeaks(line, 3);
     int ceiling = Math.round((float) Math.pow(10, -1.0 / 20) * 32767f);
-    int swellPeak = TestPcm.peak16(pcm.getAllValues().get(1));
-    assertTrue(swellPeak <= ceiling + 1);
-    assertTrue(swellPeak > ceiling - 50);
-    assertTrue(
-        TestPcm.peak16(pcm.getAllValues().get(2)) < TestPcm.peak16(pcm.getAllValues().get(0)));
+    assertTrue(peaks.get(1) <= ceiling + 1);
+    assertTrue(peaks.get(1) > ceiling - 50);
+    assertTrue(peaks.get(2) < peaks.get(0));
   }
 
   @Test
@@ -308,7 +303,7 @@ public class StreamingAudioPlayerTest {
     stream.write(sine(QUIET, 40), LOW_RATE);
     stream.end();
 
-    assertTrue(writtenPeak(line, 1) > unlevelledPeak() * 2);
+    assertTrue(writtenPeaks(line, 1).get(0) > UNLEVELLED_PEAK * 2);
     verify(line, timeout(2_000)).drain();
   }
 }

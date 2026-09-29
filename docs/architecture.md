@@ -603,7 +603,8 @@ passes through it on its way to the audio line.
   shout keeps its shape and still reads as a shout next to the words around it.
 - **At playback.** The cache holds each clip as the model returned it, so every cached clip is
   levelled the same way, the cache format carries no level, and changing the target never re-bills a
-  line. Cave echo is added first, so the level is measured on what the player hears.
+  line. A line with cave echo is always played whole, and the echo is added before levelling, so the
+  level is measured on what the player hears.
 
 A streamed line is not complete when playback starts. The player waits for a 500 ms lead-in of
 audio, measures that, and plays the rest of the line at the same gain. Estimating from the first

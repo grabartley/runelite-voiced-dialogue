@@ -9,34 +9,34 @@ public class PcmAudioTest {
 
   @Test
   public void producesTwoBytesPerSample() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f, 0f, 0f});
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f, 0f, 0f}, 1f);
     assertEquals(6, pcm.length);
   }
 
   @Test
   public void encodesSilenceAsZero() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f});
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f}, 1f);
     assertEquals(0, pcm[0]);
     assertEquals(0, pcm[1]);
   }
 
   @Test
   public void usesLittleEndianByteOrder() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {1f});
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {1f}, 1f);
     assertEquals((byte) 0xFF, pcm[0]);
     assertEquals((byte) 0x7F, pcm[1]);
   }
 
   @Test
   public void clampsValuesAboveOne() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {2f});
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {2f}, 1f);
     assertEquals((byte) 0xFF, pcm[0]);
     assertEquals((byte) 0x7F, pcm[1]);
   }
 
   @Test
   public void clampsValuesBelowNegativeOne() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {-5f});
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {-5f}, 1f);
     assertEquals((byte) 0x01, pcm[0]);
     assertEquals((byte) 0x80, pcm[1]);
   }

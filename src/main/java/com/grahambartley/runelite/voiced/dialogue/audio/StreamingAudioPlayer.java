@@ -145,11 +145,8 @@ public class StreamingAudioPlayer implements AudioOutput {
         float[] leadIn = awaitLeadIn();
         float gain = LoudnessLeveller.gainFor(leadIn, sampleRate);
         writeChunked(sdl, PcmAudio.toPcm16LE(leadIn, gain), gen);
-        while (generation.get() == gen) {
-          float[] chunk = nextChunk();
-          if (chunk == null) {
-            break;
-          }
+        float[] chunk;
+        while ((chunk = nextChunk()) != null) {
           gain = LoudnessLeveller.withinCeiling(chunk, gain);
           writeChunked(sdl, PcmAudio.toPcm16LE(chunk, gain), gen);
         }
