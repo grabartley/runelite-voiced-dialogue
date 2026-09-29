@@ -95,11 +95,22 @@ public class AiStudioQuotaFailureTest {
 
     assertTrue("the model is named: " + notice, notice.contains("gemini-3.8-flash-tts"));
     assertTrue("as is the cap it hit: " + notice, notice.contains("daily request cap of 100"));
-    assertTrue(
-        "billing is already on, so the notice says so rather than asking for it",
-        notice.contains("Enabling billing does not lift this cap"));
+    assertFalse("billing is already on, so it is never asked for", notice.contains("billing"));
     assertFalse("the free tier is not the cause here", notice.contains("free tier"));
     assertTrue("the working alternative is still offered", notice.contains("OpenRouter"));
+  }
+
+  @Test
+  public void aPaidDailyCapOffersWaitingUpgradingTheTierAndSwitchingProvider() {
+    String notice = noticeFor(PAID_DAILY_CAP);
+
+    assertTrue("waiting is an option: " + notice, notice.contains("Wait for it to reset"));
+    assertTrue(
+        "a higher usage tier raises the cap: " + notice,
+        notice.contains("upgrade your project's usage tier at aistudio.google.com"));
+    assertTrue(
+        "switching provider is an option: " + notice,
+        notice.contains("switch Voice Provider to OpenRouter"));
   }
 
   @Test
