@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1828,
+    "overrides_applied": 1830,
     "symbols": 4436,
     "race_counts": {
       "Aranei": 24,
@@ -38,10 +38,10 @@
       "fremennik": 663,
       "kandarin": 1120,
       "karamja": 160,
-      "kharidian": 547,
+      "kharidian": 545,
       "kourend": 790,
       "menaphite": 132,
-      "misthalin": 1058,
+      "misthalin": 1060,
       "morytania": 1033,
       "tirannwn": 328,
       "varlamore": 1020,
@@ -56960,12 +56960,12 @@
     "4640": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "kharidian"
+      "ethnicity": "misthalin"
     },
     "4641": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "kharidian"
+      "ethnicity": "misthalin"
     },
     "4642": {
       "race": "Human",

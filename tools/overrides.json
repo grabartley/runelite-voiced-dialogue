@@ -620,6 +620,8 @@
     "4287": {"name": "Border Guard", "race": "Human", "gender": "Male", "ethnicity": "kharidian"},
     "4288": {"name": "Border Guard", "race": "Human", "gender": "Male", "ethnicity": "kharidian"},
     "4629": {"name": "Ana", "race": "Human", "gender": "Female", "ethnicity": "misthalin"},
+    "4640": {"name": "Irena", "race": "Human", "gender": "Female", "ethnicity": "misthalin"},
+    "4641": {"name": "Irena", "race": "Human", "gender": "Female", "ethnicity": "misthalin"},
     "5786": {"name": "Simon Templeton", "race": "Human", "gender": "Male", "ethnicity": "misthalin"},
     "6589": {"name": "Dr Ford", "race": "Human", "gender": "Male", "ethnicity": null},
     "7369": {"name": "Wesley", "race": "Human", "gender": "Male", "ethnicity": "kharidian"},
