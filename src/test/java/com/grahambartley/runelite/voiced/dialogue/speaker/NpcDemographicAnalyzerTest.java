@@ -403,6 +403,45 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void wikiChildrenCarryTheChildLifeStage() {
+    for (int npcId :
+        new int[] {
+          8402, 8403, 8404, 8405, 1472, 7969, 4455, 4456, 4457, 4458, 2576, 4182, 2037, 1562, 13308
+        }) {
+      assertTrue("id " + npcId + " is a child", analyze(npcId, null).isChild());
+    }
+  }
+
+  @Test
+  public void wikiChildrenKeepTheirRaceAndGender() {
+    assertAttributes(1472, "Troll", "Male");
+    assertAttributes(2576, "Gnome", "Male");
+    assertAttributes(2037, "Gnome", "Male");
+    assertAttributes(4455, "Human", "Female");
+    assertAttributes(13308, "Human", "Female");
+  }
+
+  @Test
+  public void smiddiRyakIsAGirlFromBurghDeRott() {
+    assertAttributes(1562, "Human", "Female");
+    assertEquals("morytania", analyze(1562, null).getEthnicity());
+  }
+
+  @Test
+  public void moxiIsFemaleInEveryForm() {
+    for (int npcId : new int[] {14034, 14046, 30154}) {
+      assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void youngLookingPetsAndCreaturesStayAdults() {
+    for (int npcId : new int[] {5381, 8485, 14519, 14033, 14487, 8183, 9398, 14034, 8025, 759}) {
+      assertFalse("id " + npcId + " is not a child", analyze(npcId, null).isChild());
+    }
+  }
+
+  @Test
   public void unmarkedNpcsAreAdults() {
     assertFalse("Hans is an adult", analyze(3105, null).isChild());
   }

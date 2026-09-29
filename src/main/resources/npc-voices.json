@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1805,
+    "overrides_applied": 1821,
     "symbols": 4436,
     "race_counts": {
       "Aranei": 24,
@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2140,
-      "Male": 11963
+      "Female": 2144,
+      "Male": 11959
     },
     "ethnicity_counts": {
       "asgarnia": 716,
@@ -41,15 +41,15 @@
       "kharidian": 547,
       "kourend": 788,
       "menaphite": 132,
-      "misthalin": 1059,
-      "morytania": 1032,
+      "misthalin": 1058,
+      "morytania": 1033,
       "tirannwn": 328,
       "varlamore": 1019,
       "wilderness": 126,
       "wyrmscraig": 11
     },
     "life_stage_counts": {
-      "child": 45
+      "child": 60
     },
     "profiles_bespoke": 6451
   },
@@ -6639,7 +6639,7 @@
       },
       "4182": {
         "name": "Hudon",
-        "style": "Gravelly and practical, with the terse confidence of a seasoned river guide.",
+        "style": "Adventurous young boy by the river; eager, practical and a little boastful.",
         "age": 12
       },
       "2561": {
@@ -6730,7 +6730,7 @@
       },
       "2576": {
         "name": "Froono",
-        "style": "Fussy and particular, with brisk customer-service polish.",
+        "style": "Fussy, particular gnome child, trying hard to sound grown-up and polite.",
         "age": 10
       },
       "2153": {
@@ -11076,7 +11076,7 @@
       },
       "4455": {
         "name": "Catalina",
-        "style": "Hardy, plain-spoken village woman; practical and brisk, no frills.",
+        "style": "Hardy, plain-spoken village girl; practical and brisk for her age, no frills.",
         "age": 10
       },
       "1052": {
@@ -11261,7 +11261,7 @@
       },
       "4458": {
         "name": "Helena",
-        "style": "Quiet, careworn village woman; soft and plain, gently spoken.",
+        "style": "Quiet, careworn village girl; soft and plain, gently spoken.",
         "age": 9
       },
       "1579": {
@@ -11281,7 +11281,7 @@
       },
       "4456": {
         "name": "Ivan",
-        "style": "Ordinary townsman; plain and steady, unremarkable everyday speech.",
+        "style": "Ordinary village boy; plain and steady, unremarkable everyday chatter.",
         "age": 10
       },
       "4440": {
@@ -12096,7 +12096,7 @@
       },
       "1562": {
         "name": "Smiddi Ryak (hard)",
-        "style": "Wary, watchful villager's voice; tense and hushed, clipped and on guard.",
+        "style": "Small, lonely village girl; wary and watchful, tense and hushed.",
         "age": 9
       },
       "4018": {
@@ -12196,7 +12196,7 @@
       },
       "4457": {
         "name": "Victor",
-        "style": "Plain villager's voice; weary and even, slow and low.",
+        "style": "Plain village boy; weary and even, older than his years.",
         "age": 10
       },
       "4462": {
@@ -28234,7 +28234,7 @@
       },
       "1472": {
         "name": "Bugs",
-        "style": "A dim, brutish ogre; slow, simple and gruff.",
+        "style": "A young ogre boy; slow, simple and gruff, a little brute in the making.",
         "pace": "slow",
         "age": 12
       },
@@ -31218,7 +31218,7 @@
       },
       "7969": {
         "name": "Bugs",
-        "style": "A dim, brutish ogre; slow, simple and gruff.",
+        "style": "A young ogre boy; slow, simple and gruff, a little brute in the making.",
         "pace": "slow",
         "age": 12
       },
@@ -43692,7 +43692,8 @@
     "1472": {
       "race": "Troll",
       "gender": "Male",
-      "ethnicity": "kandarin"
+      "ethnicity": "kandarin",
+      "lifeStage": "child"
     },
     "1473": {
       "race": "Human",
@@ -44081,8 +44082,9 @@
     },
     "1562": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "gender": "Female",
+      "ethnicity": "morytania",
+      "lifeStage": "child"
     },
     "1563": {
       "race": "Human",
@@ -45935,7 +45937,8 @@
     "2037": {
       "race": "Gnome",
       "gender": "Male",
-      "ethnicity": "tirannwn"
+      "ethnicity": "tirannwn",
+      "lifeStage": "child"
     },
     "2038": {
       "race": "Human",
@@ -48325,7 +48328,8 @@
     "2576": {
       "race": "Gnome",
       "gender": "Male",
-      "ethnicity": "kandarin"
+      "ethnicity": "kandarin",
+      "lifeStage": "child"
     },
     "2577": {
       "race": "Human",
@@ -55108,7 +55112,8 @@
     "4182": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kandarin"
+      "ethnicity": "kandarin",
+      "lifeStage": "child"
     },
     "4183": {
       "race": "Gnome",
@@ -56248,22 +56253,26 @@
     "4455": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "morytania"
+      "ethnicity": "morytania",
+      "lifeStage": "child"
     },
     "4456": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "morytania"
+      "ethnicity": "morytania",
+      "lifeStage": "child"
     },
     "4457": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "morytania"
+      "ethnicity": "morytania",
+      "lifeStage": "child"
     },
     "4458": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "morytania"
+      "ethnicity": "morytania",
+      "lifeStage": "child"
     },
     "4459": {
       "race": "Human",
@@ -69544,7 +69553,8 @@
     "7969": {
       "race": "Troll",
       "gender": "Male",
-      "ethnicity": "kandarin"
+      "ethnicity": "kandarin",
+      "lifeStage": "child"
     },
     "7970": {
       "race": "Human",
@@ -71251,22 +71261,26 @@
     "8402": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "fremennik"
+      "ethnicity": "fremennik",
+      "lifeStage": "child"
     },
     "8403": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "fremennik"
+      "ethnicity": "fremennik",
+      "lifeStage": "child"
     },
     "8404": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "fremennik"
+      "ethnicity": "fremennik",
+      "lifeStage": "child"
     },
     "8405": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "fremennik"
+      "ethnicity": "fremennik",
+      "lifeStage": "child"
     },
     "8407": {
       "race": "Human",
@@ -90809,7 +90823,8 @@
     "13308": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "varlamore"
+      "ethnicity": "varlamore",
+      "lifeStage": "child"
     },
     "13309": {
       "race": "Human",
@@ -93678,7 +93693,7 @@
     },
     "14034": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "14036": {
@@ -93724,7 +93739,7 @@
     },
     "14046": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "14047": {
@@ -101230,7 +101245,7 @@
     },
     "30154": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "30338": {
