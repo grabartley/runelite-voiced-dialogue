@@ -125,7 +125,9 @@ def voice_region(result):
 
 def accent_owner(result, profiles):
     source = next((t.split("source=")[1].split(",")[0] for t in result.get("trace", [])
-                   if "[TTS profile]" in t and "source=" in t), "")
+                   if "[TTS profile]" in t and "source=" in t), None)
+    if source is None:
+        raise SystemExit(f"no [TTS profile] source in the resolved trace for {result.get('key')}")
     categories = {c.get("id"): c for c in profiles.get("byCategory", [])}
     owner = None
     for layer in source.split("+"):
@@ -138,11 +140,13 @@ def accent_owner(result, profiles):
             entry = categories.get(key)
         elif kind == "id":
             entry = profiles["byId"].get(key)
+        elif kind == "override":
+            entry = {"accent": "override"}
         else:
             entry = None
         if isinstance(entry, dict) and entry.get("accent"):
             owner = layer
-    if owner and owner.split(":")[0] in ("keyword", "lifeStage", "id"):
+    if owner and owner.split(":")[0] in ("keyword", "lifeStage", "id", "override"):
         return owner
     return None
 
@@ -191,10 +195,11 @@ def build(args):
             picker = (f'<label>Origin <select data-ids="{",".join(ids)}" '
                       f'data-name="{html.escape(profile["name"])}" data-current="{current}">'
                       f'{options}</select></label>')
-            owner = accent_owner(result, profiles)
-            if owner:
-                picker += (f'<p class="warn">The accent comes from the <code>{html.escape(owner)}</code> '
-                           'layer, which beats origin, so a new origin does not change how they sound.</p>')
+            owners = sorted({o for o in (accent_owner(resolved["k" + i], profiles) for i in ids) if o})
+            if owners:
+                named = ", ".join(f"<code>{html.escape(o)}</code>" for o in owners)
+                picker += (f'<p class="warn">The accent comes from {named}, which beats origin, so a '
+                           'new origin does not change how they sound.</p>')
         else:
             picker = (f'<p class="note">{html.escape(npc.get("race"))} race: its racial accent '
                       'always wins, so origin has no effect.</p>')
