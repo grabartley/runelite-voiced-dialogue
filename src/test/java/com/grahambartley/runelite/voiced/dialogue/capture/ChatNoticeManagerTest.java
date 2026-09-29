@@ -96,7 +96,7 @@ public class ChatNoticeManagerTest {
         posted.getValue().contains("caps fresh lines a day"));
     assertTrue(
         "and that a higher usage tier raises it",
-        posted.getValue().contains("raises that cap on higher usage tiers"));
+        posted.getValue().contains("raises that cap as your usage tier rises"));
     assertFalse(
         "rather than implying the cap can never be lifted",
         posted.getValue().contains("does not lift"));

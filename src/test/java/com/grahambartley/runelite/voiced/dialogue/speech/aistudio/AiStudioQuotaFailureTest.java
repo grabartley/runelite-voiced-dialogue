@@ -100,13 +100,13 @@ public class AiStudioQuotaFailureTest {
   }
 
   @Test
-  public void aPaidDailyCapOffersWaitingUpgradingTheTierAndSwitchingProvider() {
+  public void aPaidDailyCapOffersWaitingOrSwitchingAndNamesTheTierRaise() {
     String notice = noticeFor(PAID_DAILY_CAP);
 
     assertTrue("waiting is an option: " + notice, notice.contains("Wait for it to reset"));
     assertTrue(
         "a higher usage tier raises the cap: " + notice,
-        notice.contains("raises this cap as your project moves up AI Studio usage tiers"));
+        notice.contains("raises this cap as your AI Studio usage tier rises"));
     assertTrue(
         "switching provider is an option: " + notice,
         notice.contains("switch Voice Provider to OpenRouter"));
