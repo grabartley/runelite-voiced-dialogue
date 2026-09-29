@@ -46,7 +46,7 @@ a{color:var(--accent)}
 </header>
 <main>{{CARDS}}</main>
 <script>
-const KEY = 'origins:' + document.title;
+const KEY = 'origins:{{STORE}}';
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
 const selects = [...document.querySelectorAll('select')];

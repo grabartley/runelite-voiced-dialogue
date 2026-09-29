@@ -28,9 +28,9 @@ def cache_symbols(path):
     if not path:
         found = glob.glob(os.path.expanduser(
             "~/.npm/_npx/*/node_modules/@jayarrowz/mcp-osrs/dist/data/npctypes.txt"))
-        path = found[0] if found else None
+        path = max(found, key=os.path.getmtime) if found else None
     if not path:
-        return {}
+        return None
     symbols = {}
     with open(path, encoding="utf-8") as fh:
         for line in fh:
@@ -42,8 +42,10 @@ def cache_symbols(path):
 def collect(args):
     table = load(TABLE)
     npcs, by_id = table["npcs"], table["profiles"]["byId"]
-    symbols = cache_symbols(args.npctypes)
     pattern = re.compile(args.symbols, re.I) if args.symbols else None
+    symbols = cache_symbols(args.npctypes) if pattern else {}
+    if symbols is None:
+        raise SystemExit("no npctypes.txt found for the cache symbol pattern; pass --npctypes")
     exclude = set(args.exclude or [])
     ids = {k for k, v in npcs.items() if v.get("ethnicity") == args.ethnicity}
     if pattern:
@@ -52,9 +54,11 @@ def collect(args):
     for npc_id in ids:
         profile = by_id.get(npc_id)
         if isinstance(profile, dict) and profile["name"] not in exclude:
-            groups[(profile["name"], profile.get("style"))].append(npc_id)
+            npc = npcs[npc_id]
+            key = (profile["name"], profile.get("style"), npc.get("ethnicity") or "", npc.get("race") or "")
+            groups[key].append(npc_id)
     cases = []
-    for index, ((name, _), members) in enumerate(sorted(groups.items())):
+    for index, ((name, *_), members) in enumerate(sorted(groups.items())):
         for npc_id in sorted(members, key=int):
             cases.append({"key": f"k{npc_id}", "group": f"{name}|{index}", "kind": "npc",
                           "id": int(npc_id), "name": name, "line": "x"})
@@ -129,7 +133,7 @@ def build(args):
     wiki = load(wiki_path) if os.path.exists(wiki_path) else {}
     for case in cases:
         npc_id = str(case["id"])
-        if npc_id not in wiki:
+        if npc_id not in wiki or "error" in wiki[npc_id]:
             try:
                 wiki[npc_id] = wiki_entry(npc_id)
             except Exception as error:
@@ -188,6 +192,7 @@ def build(args):
     template = open(os.path.join(os.path.dirname(__file__), "sheet.html"), encoding="utf-8").read()
     page = (template.replace("{{AREA}}", html.escape(args.area))
             .replace("{{COUNT}}", str(len(groups)))
+            .replace("{{STORE}}", f"{args.area}:{len(cases)}")
             .replace("{{LEGEND}}", legend)
             .replace("{{CARDS}}", "".join(cards)))
     os.makedirs(os.path.join(args.out, "site"), exist_ok=True)
@@ -204,13 +209,16 @@ def apply(args):
     wiki_path = os.path.join(args.out, "wiki.json")
     if os.path.exists(wiki_path):
         names.update({k: v["title"] for k, v in load(wiki_path).items() if v.get("title")})
-    origins = set(table["profiles"]["byEthnicity"])
+    origins = {k for k, v in table["profiles"]["byEthnicity"].items() if isinstance(v, dict)}
     picks = {}
     with open(args.picks, encoding="utf-8") as fh:
         for raw in fh:
-            match = PICK_LINE.match(raw.strip())
-            if not match:
+            line = raw.strip()
+            if not line:
                 continue
+            match = PICK_LINE.match(line)
+            if not match:
+                raise SystemExit(f"not a pick line: {line}")
             origin = None if match.group(4) == "none" else match.group(4)
             if origin is not None and origin not in origins:
                 raise SystemExit(f"unknown origin {origin!r} in: {raw.strip()}")

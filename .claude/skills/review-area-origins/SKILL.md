@@ -20,6 +20,8 @@ into overrides. The developer decides every origin; the sheet only gives them wh
   area whose origin is already something else. Grep the osrs MCP `npctypes.txt` dump (see
   `resolve-npc-ids`) for the area's place names to build it.
 - **Exclusions**: names the pattern catches by accident (Shilop in Varrock matches `shilo`).
+  With a pattern set, the script stops if it cannot find `npctypes.txt`; pass `--npctypes` to
+  `area.py collect` or fix the dump rather than dropping the visitors.
 
 The sheet lists every NPC with the area's origin plus every NPC whose cache name matches, keeping
 only those with a bespoke `byId` profile, which is the set that talks.
@@ -32,7 +34,10 @@ only those with a bespoke `byId` profile, which is the set that talks.
 
 It resolves every NPC through `VoiceManager` with the compare-voices harness in resolve-only mode,
 so the accent, voice and region shown are exactly what the client picks, and no audio is rendered
-and nothing is billed. It then looks each id up on the wiki (`Special:Lookup`) for its model picture,
+and nothing is billed. The harness still reads an OpenRouter key file to start, from
+`VOICE_QA_KEY_FILE` or else the first RuneLite profile in `~/.runelite/profiles2/` holding one. A
+card groups ids that share a name, style, origin and race, so one pick never overwrites an id
+whose origin already differed. It then looks each id up on the wiki (`Special:Lookup`) for its model picture,
 location and examine text, and writes `<out-dir>/site/origins.html`. Put `<out-dir>` in scratch,
 never in the repo. Use a Java 17 shell.
 
@@ -41,7 +46,7 @@ current origin, accent, voice and region, style and a wiki link. Every human get
 selector with the current origin preselected, including "None: British default". Non-humans get
 no selector, because their racial accent always wins over origin; list any that look wrong in the
 reply instead. Changed cards turn yellow, **Show changed only** filters to them, picks survive a
-reload, and **Copy results** copies one line per change:
+reload of the same build, and **Copy results** copies one line per change:
 
 ```text
 Zembo [13655]: karamja -> kandarin
