@@ -9,34 +9,34 @@ public class PcmAudioTest {
 
   @Test
   public void producesTwoBytesPerSample() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f, 0f, 0f}, 1f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f, 0f, 0f}, 0, 3, 1f);
     assertEquals(6, pcm.length);
   }
 
   @Test
   public void encodesSilenceAsZero() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f}, 1f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0f}, 0, 1, 1f);
     assertEquals(0, pcm[0]);
     assertEquals(0, pcm[1]);
   }
 
   @Test
   public void usesLittleEndianByteOrder() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {1f}, 1f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {1f}, 0, 1, 1f);
     assertEquals((byte) 0xFF, pcm[0]);
     assertEquals((byte) 0x7F, pcm[1]);
   }
 
   @Test
   public void clampsValuesAboveOne() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {2f}, 1f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {2f}, 0, 1, 1f);
     assertEquals((byte) 0xFF, pcm[0]);
     assertEquals((byte) 0x7F, pcm[1]);
   }
 
   @Test
   public void clampsValuesBelowNegativeOne() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {-5f}, 1f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {-5f}, 0, 1, 1f);
     assertEquals((byte) 0x01, pcm[0]);
     assertEquals((byte) 0x80, pcm[1]);
   }
@@ -53,14 +53,21 @@ public class PcmAudioTest {
 
   @Test
   public void appliesTheGainBeforeConverting() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0.25f}, 2f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0.25f}, 0, 1, 2f);
     assertEquals(16384, (pcm[0] & 0xff) | (pcm[1] << 8));
   }
 
   @Test
   public void clampsSamplesTheGainPushesPastFullScale() {
-    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0.75f}, 2f);
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {0.75f}, 0, 1, 2f);
     assertEquals((byte) 0xFF, pcm[0]);
     assertEquals((byte) 0x7F, pcm[1]);
+  }
+
+  @Test
+  public void convertsOnlyTheRequestedRange() {
+    byte[] pcm = PcmAudio.toPcm16LE(new float[] {1f, 0.5f, 1f}, 1, 2, 1f);
+    assertEquals(2, pcm.length);
+    assertEquals(16384, (pcm[0] & 0xff) | (pcm[1] << 8));
   }
 }

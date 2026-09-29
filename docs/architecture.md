@@ -129,9 +129,9 @@ for its speaker's current distance and pushes the new gain onto that bark's audi
 away from a crier fades them out mid-sentence and rounding a corner towards one brings them up. A
 speaker that has left earshot entirely, whether because you walked off or it did, is cut there and
 then rather than faded, since it has stopped being rendered and a voice from an empty tile is worse
-than silence. `SourceDataLine` exposes its master gain as a live control, which is what makes the
-fade possible; on a mixer that does not offer the control the line plays at the volume it opened
-with, and the cut still lands. The distance is read on the game thread, where NPC positions are safe
+than silence. The gain is applied to the samples as they are written, so the fade works on every
+mixer; a change reaches the speaker once the audio line's half-second buffer has played through,
+well inside the 600 ms tick the distance is read on. The distance is read on the game thread, where NPC positions are safe
 to read, and the only work done there is one coordinate subtraction per bark still playing.
 
 One speaker is never voiced twice at once. A person cannot say two things at the same time, so a
@@ -585,33 +585,41 @@ maintainers accept this `javax.sound` use for the plugin's streaming and interru
 ### Loudness levelling
 
 Gemini does not return every line at the same level, and emotional deliveries swing the most, so
-consecutive lines from one NPC on one voice would otherwise jump in volume. `LoudnessLeveller`
-scales each line toward a single speech level before **Dialogue Volume** is applied on top by the
-line's master gain. `StreamingAudioPlayer` is the one owner: every line, dialogue and ambient alike,
-passes through it on its way to the audio line.
+consecutive lines from one NPC on one voice would otherwise jump in volume. `LoudnessLeveller` sets
+every line to one speech level, and **Dialogue Volume** chooses that level. `StreamingAudioPlayer` is
+the one owner: every line, dialogue and ambient alike, passes through it on its way to the audio
+line, and the gain is applied to the samples themselves rather than to the line's gain control.
 
 - **What is measured.** The line is cut into 20 ms windows, windows quieter than -50 dBFS are
   treated as pauses and ignored, and the RMS of the rest is the line's speech level. Ignoring pauses
   keeps a line with long gaps from being boosted as though it were a quiet one.
-- **The target.** -18 dBFS, the median speech level across a real cache of about 2,900 lines, where
-  most lines sat between -23 and -14 dBFS. A typical line therefore plays exactly as loud as the
-  model made it, and **Dialogue Volume** keeps its meaning.
+- **The volume sets the level.** At 100 the speech level is -18 dBFS, the median across a real cache
+  of about 2,900 lines, and the setting scales that level in proportion below it, the same curve the
+  setting has always used: 50 is -24 dBFS, the default 20 is -32 dBFS, and 0 is silent. A typical
+  line therefore plays exactly as loud at every setting as the model made it.
 - **The limits.** The gain never pushes the loudest sample past -1 dBFS, so levelling cannot clip,
   and never boosts by more than 12 dB, so a whispered line is brought up without amplifying its
-  noise floor. A line that is silent throughout plays untouched.
-- **Whole lines only.** One gain covers the whole line. Nothing is compressed within a line, so a
-  shout keeps its shape and still reads as a shout next to the words around it.
+  noise floor. Gemini speech peaks 15 to 19 dB above its level, so the ceiling only holds a line
+  below its level near full volume; at everyday settings every line reaches it.
+- **Whole lines.** One gain covers a whole line. Nothing is compressed within a line, so a shout
+  keeps its shape and still reads as a shout next to the words around it.
 - **At playback.** The cache holds each clip as the model returned it, so every cached clip is
-  levelled the same way, the cache format carries no level, and changing the target never re-bills a
+  levelled the same way, the cache format carries no level, and changing the level never re-bills a
   line. A line with cave echo is always played whole, and the echo is added before levelling, so the
   level is measured on what the player hears.
+- **Live volume.** The gain is worked out for each 2048-sample block as it is written, so a volume
+  change mid-line reaches the rest of that line.
 
-A streamed line is not complete when playback starts. The player waits for a 500 ms lead-in of
-audio, measures that, and plays the rest of the line at the same gain. Estimating from the first
-chunk alone was rejected because a chunk can be a few milliseconds of breath or silence, which would
-set the gain for the whole line from noise. The cost is the time the provider takes to deliver that
-half second of audio after its first chunk, and it applies only to AI Studio, the provider that
-actually streams. A line shorter than the lead-in is levelled whole once it ends. The streamed gain
-can only fall: when a later chunk would push past the -1 dBFS ceiling at the held gain, the gain
-drops to fit that chunk and stays there for the rest of the line, so a line that opens softly and
-then swells is turned down rather than clipped.
+A streamed line starts playing on its first chunk with no added wait, which means its level is not
+known yet. It starts at the level the model produced, and as chunks arrive the gain slides toward
+the level of everything heard so far, at no more than 3 dB per second, then locks once 3 seconds of
+speech have been heard. The slow slide keeps the correction from being heard as a jump, and locking
+keeps the rest of the line whole. The volume setting scales the sliding gain at every moment. The
+cost is accuracy: across real AI Studio lines at the default volume, streamed lines land within
+about 2 dB of each other, where the same lines levelled whole land within 1.5 dB. A replay from the
+cache is levelled whole. Waiting for a lead-in before playing was measured and rejected: the first
+quarter second of a line is usually silence, so a lead-in short enough to go unnoticed holds too
+little speech to measure, and one long enough to measure adds half a second or more before the
+line speaks. The streamed gain also respects the ceiling: when a later chunk would push past -1
+dBFS, the gain drops to fit it for the rest of the line, so a line that swells is turned down rather
+than clipped.

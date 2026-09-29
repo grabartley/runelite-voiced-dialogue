@@ -1,14 +1,11 @@
 package com.grahambartley.runelite.voiced.dialogue.audio;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import lombok.extern.slf4j.Slf4j;
@@ -20,15 +17,14 @@ public class StreamingAudioPlayer implements AudioOutput {
     SourceDataLine getLine(AudioFormat format) throws LineUnavailableException;
   }
 
-  private static final int CHUNK_BYTES = 4096;
+  private static final int WRITE_BLOCK_SAMPLES = 2048;
 
   private static final int QUEUE_POLL_MS = 20;
-
-  static final int LEVELLING_LEAD_IN_MS = 500;
 
   private final LineFactory lineFactory;
   private final AtomicLong generation = new AtomicLong();
   private volatile SourceDataLine line;
+  private volatile int volumePercent;
 
   public StreamingAudioPlayer() {
     this(AudioSystem::getSourceDataLine);
@@ -44,11 +40,12 @@ public class StreamingAudioPlayer implements AudioOutput {
       return;
     }
     long gen = generation.incrementAndGet();
-    byte[] pcm = PcmAudio.toPcm16LE(samples, LoudnessLeveller.gainFor(samples, sampleRate));
+    this.volumePercent = volumePercent;
+    LoudnessLeveller leveller = LoudnessLeveller.measure(samples, sampleRate);
     SourceDataLine sdl = null;
     try {
-      sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
-      writeChunked(sdl, pcm, gen);
+      sdl = openLine(PcmAudio.format(sampleRate));
+      writeLevelled(sdl, samples, leveller, gen);
       if (generation.get() == gen) {
         sdl.drain();
       }
@@ -64,19 +61,13 @@ public class StreamingAudioPlayer implements AudioOutput {
   @Override
   public AudioStream beginStream(int volumePercent) {
     long gen = generation.incrementAndGet();
-    return new BufferedLineStream(gen, volumePercent);
+    this.volumePercent = volumePercent;
+    return new BufferedLineStream(gen);
   }
 
   @Override
   public void setVolume(int volumePercent) {
-    SourceDataLine current = this.line;
-    if (current == null) {
-      return;
-    }
-    try {
-      applyVolume(current, volumePercent);
-    } catch (Exception ignored) {
-    }
+    this.volumePercent = volumePercent;
   }
 
   @Override
@@ -99,15 +90,13 @@ public class StreamingAudioPlayer implements AudioOutput {
 
   private final class BufferedLineStream implements AudioStream {
     private final long gen;
-    private final int volumePercent;
     private final BlockingQueue<float[]> queue = new LinkedBlockingQueue<>();
     private volatile int sampleRate = -1;
     private volatile boolean ended;
     private boolean playerStarted;
 
-    private BufferedLineStream(long gen, int volumePercent) {
+    private BufferedLineStream(long gen) {
       this.gen = gen;
-      this.volumePercent = volumePercent;
     }
 
     @Override
@@ -141,14 +130,12 @@ public class StreamingAudioPlayer implements AudioOutput {
     private void playLoop() {
       SourceDataLine sdl = null;
       try {
-        sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
-        float[] leadIn = awaitLeadIn();
-        float gain = LoudnessLeveller.gainFor(leadIn, sampleRate);
-        writeChunked(sdl, PcmAudio.toPcm16LE(leadIn, gain), gen);
+        sdl = openLine(PcmAudio.format(sampleRate));
+        LoudnessLeveller leveller = LoudnessLeveller.streaming(sampleRate);
         float[] chunk;
         while ((chunk = nextChunk()) != null) {
-          gain = LoudnessLeveller.withinCeiling(chunk, gain);
-          writeChunked(sdl, PcmAudio.toPcm16LE(chunk, gain), gen);
+          leveller.include(chunk);
+          writeLevelled(sdl, chunk, leveller, gen);
         }
         if (generation.get() == gen) {
           sdl.drain();
@@ -160,27 +147,6 @@ public class StreamingAudioPlayer implements AudioOutput {
           releaseLine(sdl);
         }
       }
-    }
-
-    private float[] awaitLeadIn() throws InterruptedException {
-      int wanted = sampleRate * LEVELLING_LEAD_IN_MS / 1000;
-      List<float[]> chunks = new ArrayList<>();
-      int gathered = 0;
-      while (gathered < wanted) {
-        float[] chunk = nextChunk();
-        if (chunk == null) {
-          break;
-        }
-        chunks.add(chunk);
-        gathered += chunk.length;
-      }
-      float[] leadIn = new float[gathered];
-      int offset = 0;
-      for (float[] chunk : chunks) {
-        System.arraycopy(chunk, 0, leadIn, offset, chunk.length);
-        offset += chunk.length;
-      }
-      return leadIn;
     }
 
     private float[] nextChunk() throws InterruptedException {
@@ -197,13 +163,11 @@ public class StreamingAudioPlayer implements AudioOutput {
     }
   }
 
-  private SourceDataLine openLine(AudioFormat format, int volumePercent)
-      throws LineUnavailableException {
+  private SourceDataLine openLine(AudioFormat format) throws LineUnavailableException {
     SourceDataLine sdl = lineFactory.getLine(format);
     boolean opened = false;
     try {
       sdl.open(format);
-      applyVolume(sdl, volumePercent);
       sdl.start();
       this.line = sdl;
       opened = true;
@@ -215,10 +179,17 @@ public class StreamingAudioPlayer implements AudioOutput {
     }
   }
 
-  private void writeChunked(SourceDataLine sdl, byte[] pcm, long gen) {
-    int offset = 0;
-    while (offset < pcm.length && generation.get() == gen) {
-      offset += sdl.write(pcm, offset, Math.min(CHUNK_BYTES, pcm.length - offset));
+  private void writeLevelled(
+      SourceDataLine sdl, float[] samples, LoudnessLeveller leveller, long gen) {
+    for (int from = 0;
+        from < samples.length && generation.get() == gen;
+        from += WRITE_BLOCK_SAMPLES) {
+      int to = Math.min(samples.length, from + WRITE_BLOCK_SAMPLES);
+      byte[] pcm = PcmAudio.toPcm16LE(samples, from, to, leveller.gainAt(volumePercent));
+      int offset = 0;
+      while (offset < pcm.length && generation.get() == gen) {
+        offset += sdl.write(pcm, offset, pcm.length - offset);
+      }
     }
   }
 
@@ -231,19 +202,5 @@ public class StreamingAudioPlayer implements AudioOutput {
     if (this.line == sdl) {
       this.line = null;
     }
-  }
-
-  private static void applyVolume(SourceDataLine line, int volumePercent) {
-    if (!line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
-      return;
-    }
-    FloatControl gain = (FloatControl) line.getControl(FloatControl.Type.MASTER_GAIN);
-    int volume = Math.max(0, Math.min(100, volumePercent));
-    if (volume == 0) {
-      gain.setValue(gain.getMinimum());
-      return;
-    }
-    float db = (float) (20.0 * Math.log10(volume / 100.0));
-    gain.setValue(Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), db)));
   }
 }
