@@ -32,8 +32,8 @@ public final class VoiceTraceFormatter {
       String backendId, VoiceSpec voice, String npcName, String emotion, CharacterProfile profile) {
     boolean character = !voice.narrator();
     return String.format(
-        "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s lifeStage=%s seed=%s"
-            + " profile=%s accent=%s",
+        "[TTS line] backend=%s kind=%s name=%s emotion=%s race=%s gender=%s lifeStage=%s age=%s"
+            + " seed=%s profile=%s accent=%s",
         backendId,
         kindOf(voice),
         voice.player() || voice.narrator() ? "-" : "'" + npcName + "'",
@@ -41,6 +41,7 @@ public final class VoiceTraceFormatter {
         character ? voice.race() : NOT_APPLICABLE,
         character ? voice.gender() : NOT_APPLICABLE,
         character ? (voice.child() ? "child" : "adult") : NOT_APPLICABLE,
+        profile.age() == null ? NOT_APPLICABLE : Integer.toString(profile.age()),
         voice.hasVoiceSeed() ? Integer.toString(voice.voiceSeed()) : NOT_APPLICABLE,
         "'" + profile.name() + "'",
         "'" + profile.accent() + "'");

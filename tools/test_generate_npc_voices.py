@@ -501,6 +501,19 @@ class ValidateProfilesTest(unittest.TestCase):
         profiles = profiles_with(byId={"_comment": "[notes] about ids"})
         gen.validate_profiles(profiles)
 
+    def test_a_whole_number_age_passes(self):
+        gen.validate_profiles(profiles_with(byId={"3480": {"age": 65}}))
+
+    def test_an_age_that_is_not_a_whole_number_of_years_is_rejected(self):
+        for age in (0, 121, 6.5, "old", True, None):
+            with self.subTest(age=age), self.assertRaisesRegex(ValueError, "byId.5.age"):
+                gen.validate_profiles(profiles_with(byId={"5": {"age": age}}))
+
+    def test_an_age_on_a_layer_that_never_reads_it_is_rejected(self):
+        for layer in ("player", "narrator"):
+            with self.subTest(layer=layer), self.assertRaisesRegex(ValueError, f"{layer}.age"):
+                gen.validate_profiles(profiles_with(**{layer: {"age": 40}}))
+
 
 
 LIBRARY = {"voices": [
@@ -523,6 +536,16 @@ def regions_source(**overrides):
 
 
 class VoiceRegionsTest(unittest.TestCase):
+
+    def test_voice_ages_cover_every_adult_voice_the_library_ages(self):
+        regions = gen.build_voice_regions(regions_source(), LIBRARY)
+        self.assertEqual(gen.voice_ages(regions, LIBRARY),
+                         {"ie-1": 22, "ie-2": 60, "ie-3": 31, "ie-4": 25})
+
+    def test_voice_ages_leave_out_voices_in_no_pool(self):
+        regions = gen.build_voice_regions(regions_source(exclude=["ie-2"]), LIBRARY)
+        self.assertNotIn("ie-2", gen.voice_ages(regions, LIBRARY))
+        self.assertNotIn("narrator-1", gen.voice_ages(regions, LIBRARY))
 
     def test_pools_split_by_gender_and_sort_by_id(self):
         regions = gen.build_voice_regions(regions_source(), LIBRARY)

@@ -21,7 +21,9 @@ native speakers in Google's Extended Voice Library is voiced from that accent's 
 profile layer that supplies the winning accent names its `voiceRegion`, and the region travels on
 the `CharacterProfile`. Every other NPC is voiced from its race pool. Within a pool, a per-NPC seed
 taken from the NPC's base composition id spreads same-pool NPCs apart and keeps each on the same
-voice across sessions and across a mid-quest transform.
+voice across sessions and across a mid-quest transform. A profile `age` narrows a region pool to the
+voices whose library age is closest before the seed picks, so an old character sounds old (see
+[voice-casting.md](voice-casting.md#age)).
 Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the bundled
 table, or a child keyword like "Child" or "Schoolboy" in the display name) resolves to its
 region's youngest native voices of its gender, or to the prebuilt child pool when its accent has

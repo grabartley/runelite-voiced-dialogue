@@ -645,7 +645,9 @@
       "3480": {
         "name": "Dr Harlow",
         "style": "A washed-up, perpetually sozzled vampire-hunter; gruff and rambling, far more interested in his next drink than the conversation.",
-        "pace": "Slow, slurred, and meandering."
+        "pace": "Slow, slurred, and meandering.",
+        "pitch": "Low, rough, gravelly voice",
+        "age": 65
       },
       "4771": {
         "name": "Sir Amik Varze",

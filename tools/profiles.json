@@ -422,7 +422,7 @@
     "11868": {"name": "Gypsy Aris", "style": "A theatrical, knowing fortune-teller; mysterious and dramatic, speaking in cryptic, leading prophecy.", "accent": "Strong Romani Eastern European accent, Eastern European-accented English pronunciation", "accentDetail": "Romani Eastern European fortune-teller's lilt.", "voiceRegion": "POLISH"},
     "5037": {"name": "Romeo", "style": "A naive, lovestruck young romantic; gushing, dim-witted, and overdramatic, with his head in the clouds."},
     "5035": {"name": "Juliet", "style": "A gentle, earnest young noblewoman; soft-spoken, sincere, and romantic, a touch melodramatic."},
-    "3480": {"name": "Dr Harlow", "style": "A washed-up, perpetually sozzled vampire-hunter; gruff and rambling, far more interested in his next drink than the conversation.", "pace": "Slow, slurred, and meandering."},
+    "3480": {"name": "Dr Harlow", "style": "A washed-up, perpetually sozzled vampire-hunter; gruff and rambling, far more interested in his next drink than the conversation.", "pace": "Slow, slurred, and meandering.", "pitch": "Low, rough, gravelly voice", "age": 65},
     "4771": {"name": "Sir Amik Varze", "style": "The stately commander of the White Knights; authoritative, formal, and dignified, measured and noble in tone."},
     "4687": {"name": "Sir Tiffy Cashien", "style": "A genteel, chipper old Temple Knight recruiter; warmly polite and grandfatherly, all mild upper-class charm and good humour."},
     "2108": {"name": "Wise Old Man", "style": "A venerable, world-weary retired adventurer; calm, sage, and dryly self-assured, speaking with patient gravitas."},

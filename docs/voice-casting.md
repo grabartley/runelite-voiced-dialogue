@@ -27,7 +27,8 @@ overrides" below). `GeminiVoiceMap` then resolves a speaker in this order:
    or the player pool when it names none.
 3. A child with a voice region takes that region's child pool: the three youngest native voices
    of its gender. A child with no region takes the prebuilt child pool.
-4. An NPC with a voice region takes a voice from that region's pool for its gender.
+4. An NPC with a voice region takes a voice from that region's pool for its gender, narrowed to
+   the voices closest to its profile `age` when it has one (see "Age" below).
 5. Anything else, including a region with no voices for the NPC's gender, takes its race pool.
 
 The counts are the adult pools, after any child voices a region can spare have moved to its child
@@ -81,6 +82,21 @@ English boys share the other two young voices.
 The pools are bundled in `src/main/resources/voice-regions.json`, built from a committed snapshot
 of the library, so a voice never changes because Google's list changed; it changes only when the
 pools are regenerated and shipped.
+
+## Age
+
+A profile's `age` is the number of years the character's voice should sound. The voice library
+states an age for every native voice, and the generator bundles those ages beside the pools in
+`src/main/resources/voice-regions.json` as `voiceAges`. An NPC with an age is voiced from the
+region voices within ten years of it, or from the three nearest when fewer than three are that
+close, and its seed picks among them, so it still keeps one voice for life. The library's native
+voices run from their early twenties to their sixties, so a very old character takes the region's
+oldest voices and its `pitch` and style carry the rest.
+
+An NPC with no age keeps its seeded pick from the whole pool, so adding ages moves only the NPCs
+that get one. Children ignore their age and keep the child pool. The prebuilt voices carry no age,
+so an NPC voiced from a race pool (monkeys, gorillas, dogs, penguins, Tortugans, and accents with
+no native voices) keeps its seeded pick whatever its age.
 
 ## The catalog adjectives are not the casting
 

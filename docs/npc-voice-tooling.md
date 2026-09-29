@@ -14,7 +14,7 @@ are no network calls or large downloads when choosing a voice.
   gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
   rare NPC the wiki gets wrong or does not cover, and for marking named children.
 - `tools/profiles.json` - curated **character voice profiles** for the cloud
-  (Gemini) backend (name, accent, accentDetail, style, replaceStyle, pace, pitch, voiceRegion).
+  (Gemini) backend (name, accent, accentDetail, style, replaceStyle, pace, pitch, voiceRegion, age).
   Embedded verbatim into the output under
   a top-level `profiles` key. See [Character voice profiles](#character-voice-profiles-cloud).
 - `tools/voice-regions.json` - curated **voice regions**: each names one Gemini Extended
@@ -259,6 +259,13 @@ different people, where a short style string flattens them together.
   gender before it matters: by ear a bare "very deep" turns a female troll or dwarf into a man, a
   bare "very high" turns a boy into a girl, and a few library voices drift toward the other
   gender unless it is named.
+- `age` is optional: the whole number of years the character's voice should sound (1 to 120).
+  It is never sent to the model; it picks the voice. An NPC with an age takes its voice from the
+  region voices closest to that age (see [voice-casting.md](voice-casting.md#age)), so a gruff
+  old drinker sounds old rather than young. The most specific layer that sets it wins. The
+  `default`, `player` and `narrator` layers reject it: a default age would narrow every NPC to
+  the same few voices, and the player's and narrator's voices are fixed. An NPC with no age keeps
+  its seeded voice from the whole pool.
 - `voiceRegion` sits next to an `accent` whose accent has native speakers in the voice library
   (`"voiceRegion": "SCOTTISH"`), and the NPC is voiced from that region's pool. The region always
   comes from the same layer as the winning accent, so an accent with no region (Welsh, Nigerian)
@@ -303,8 +310,8 @@ use posh Received Pronunciation.
 
 An NPC can be several things at once (a Fremennik human, a ghost pirate), so
 **every** matching layer contributes. `style` accumulates across all contributing
-layers so the persona blends, unless a layer sets `replaceStyle`; `name`, `accent`, `pace`, and
-`pitch` are single-valued, so the most specific layer that sets each one wins, and `voiceRegion`
+layers so the persona blends, unless a layer sets `replaceStyle`; `name`, `accent`, `pace`,
+`pitch` and `age` are single-valued, so the most specific layer that sets each one wins, and `voiceRegion`
 and `accentDetail` always follow the layer that set the winning `accent`. A child marked by the table's `lifeStage` rather than by a child
 keyword takes the `child` category layer after the keyword categories and before `byId`.
 

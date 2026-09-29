@@ -373,6 +373,17 @@
       "source": "Transcript:Troll Romance"
     },
     {
+      "key": "age_old_male",
+      "group": "Age: an old man narrowed to the oldest voices",
+      "kind": "npc",
+      "id": 3480,
+      "name": "Dr Harlow",
+      "gender": "Male",
+      "line": "Yesh, Count Draynor! The evil nashty vampyre that no one's ever sheen! Every nowsh and then, some adventurer... theysh go and try to kill him, but none of 'em ever comesh back.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Vampyre Slayer"
+    },
+    {
       "key": "child_misthalin_boy",
       "group": "Children",
       "kind": "npc",

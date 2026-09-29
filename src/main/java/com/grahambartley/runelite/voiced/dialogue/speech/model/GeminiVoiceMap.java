@@ -95,7 +95,8 @@ public final class GeminiVoiceMap {
       String[] pool = childVoices.get(gender);
       return (pool == null || pool.length == 0) ? DEFAULT_CHILD_VOICE : pick(pool, spec);
     }
-    String regional = regions.voiceFor(region, gender, spec.voiceSeed());
+    String regional =
+        regions.voiceFor(region, gender, spec.voiceSeed(), profile == null ? null : profile.age());
     if (regional != null) {
       return regional;
     }

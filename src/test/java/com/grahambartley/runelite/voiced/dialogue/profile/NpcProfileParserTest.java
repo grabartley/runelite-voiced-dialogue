@@ -207,4 +207,29 @@ public class NpcProfileParserTest {
           idsPerName.get(layer.name().toLowerCase(Locale.ROOT)) > 1);
     }
   }
+
+  @Test
+  public void aLayerCarriesItsAge() {
+    NpcProfileLayers layers = parse("{\"byId\":{\"3480\":{\"name\":\"Dr Harlow\",\"age\":65}}}");
+    assertEquals(Integer.valueOf(65), layers.byId().get(3480).age());
+  }
+
+  @Test
+  public void aLayerWithoutAnAgeHasNone() {
+    NpcProfileLayers layers = parse("{\"byId\":{\"1\":{\"name\":\"Hans\"}}}");
+    assertNull(layers.byId().get(1).age());
+  }
+
+  @Test
+  public void anAgeOutsideTheHumanRangeOrNotANumberIsIgnored() {
+    NpcProfileLayers layers =
+        parse(
+            "{\"byId\":{\"1\":{\"age\":0},\"2\":{\"age\":121},\"3\":{\"age\":\"old\"},"
+                + "\"4\":{\"age\":1},\"5\":{\"age\":120}}}");
+    assertNull(layers.byId().get(1).age());
+    assertNull(layers.byId().get(2).age());
+    assertNull(layers.byId().get(3).age());
+    assertEquals(Integer.valueOf(1), layers.byId().get(4).age());
+    assertEquals(Integer.valueOf(120), layers.byId().get(5).age());
+  }
 }

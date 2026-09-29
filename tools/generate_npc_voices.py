@@ -97,6 +97,8 @@ VALID_RACES = set(MAPPING["races"])
 VALID_GENDERS = {"Male", "Female"}
 VALID_LIFE_STAGES = {"child"}
 PROFILE_FIELDS = {"name", "accent", "style", "pace"}
+MIN_AGE, MAX_AGE = 1, 120
+AGELESS_LAYERS = ("default", "player", "narrator")
 
 MAX_DIRECTION_LENGTH = {"accent": 100}
 ACCENT_LEADS = ("Strong ", "Very strong, ")
@@ -595,6 +597,13 @@ def build_voice_regions(regions_source, library):
     return regions
 
 
+def voice_ages(regions, library):
+    ages = {voice["id"]: voice["age"] for voice in library["voices"] if "age" in voice}
+    pooled = {voice_id for entry in regions.values() for gender in VOICE_GENDERS.values()
+              for voice_id in entry[gender]}
+    return {voice_id: ages[voice_id] for voice_id in sorted(pooled) if voice_id in ages}
+
+
 FIXED_VOICE_LAYERS = ("player", "narrator")
 
 
@@ -638,7 +647,20 @@ def validate_profiles(profiles):
             raise ValueError(f"byId key '{key}' is not a numeric NPC id")
     for where, layer in profile_layers(profiles):
         validate_directions(where, layer)
+        validate_age(where, layer)
     return profiles
+
+
+def validate_age(where, layer):
+    if "age" not in layer:
+        return
+    if where in AGELESS_LAYERS:
+        raise ValueError(f"{where}.age is not read: an age only steers an NPC's voice, and a "
+                         "default age would narrow every NPC to the same few voices")
+    age = layer["age"]
+    if isinstance(age, bool) or not isinstance(age, int) or not MIN_AGE <= age <= MAX_AGE:
+        raise ValueError(f"{where}.age must be a whole number of years from {MIN_AGE} to "
+                         f"{MAX_AGE}: {age!r}")
 
 
 def profile_layers(profiles):
@@ -702,7 +724,8 @@ def main():
 
     profiles = validate_profiles(load_json(args.profiles))
     voice_regions_source = load_json(args.voice_regions)
-    voice_regions = build_voice_regions(voice_regions_source, load_json(args.voice_library))
+    voice_library = load_json(args.voice_library)
+    voice_regions = build_voice_regions(voice_regions_source, voice_library)
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 
@@ -792,6 +815,7 @@ def main():
             },
             "narratorVoice": voice_regions_source["narratorVoice"],
             "regions": voice_regions,
+            "voiceAges": voice_ages(voice_regions, voice_library),
         }, fh, indent=1, ensure_ascii=False)
         fh.write("\n")
 

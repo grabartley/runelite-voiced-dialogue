@@ -166,6 +166,7 @@ public final class NpcProfileTable {
     String voiceRegion = defaultProfile.voiceRegion();
     String pace = defaultProfile.pace();
     String pitch = defaultProfile.pitch();
+    Integer age = defaultProfile.age();
     List<String> styleParts = new ArrayList<>();
     boolean accentOverridden = false;
     List<String> sources = new ArrayList<>();
@@ -184,6 +185,9 @@ public final class NpcProfileTable {
       }
       if (layer.pitch() != null) {
         pitch = layer.pitch();
+      }
+      if (layer.age() != null) {
+        age = layer.age();
       }
       if (layer.style() != null) {
         if (layer.replaceStyle()) {
@@ -216,7 +220,7 @@ public final class NpcProfileTable {
 
     return new Resolution(
         new CharacterProfile(
-            name, accent, accentDetail, style, pace, pitch, voiceRegion, accentOverridden),
+            name, accent, accentDetail, style, pace, pitch, voiceRegion, accentOverridden, age),
         source);
   }
 
