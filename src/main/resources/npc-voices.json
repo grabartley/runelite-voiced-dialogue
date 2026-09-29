@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1760,
+    "overrides_applied": 1805,
     "symbols": 4436,
     "race_counts": {
       "Aranei": 24,
@@ -33,19 +33,19 @@
       "Male": 11963
     },
     "ethnicity_counts": {
-      "asgarnia": 684,
+      "asgarnia": 716,
       "easternlands": 2,
       "fremennik": 663,
-      "kandarin": 1120,
-      "karamja": 184,
+      "kandarin": 1121,
+      "karamja": 160,
       "kharidian": 547,
-      "kourend": 785,
+      "kourend": 788,
       "menaphite": 132,
-      "misthalin": 1056,
+      "misthalin": 1059,
       "morytania": 1032,
       "tirannwn": 328,
       "varlamore": 1019,
-      "wilderness": 120,
+      "wilderness": 126,
       "wyrmscraig": 11
     },
     "life_stage_counts": {
@@ -43058,7 +43058,7 @@
     "1314": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "wilderness"
     },
     "1315": {
       "race": "Human",
@@ -43534,7 +43534,7 @@
     "1430": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "1431": {
       "race": "Gnome",
@@ -44046,7 +44046,8 @@
     },
     "1555": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "1556": {
       "race": "Wizard",
@@ -48742,7 +48743,7 @@
     "2669": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "kourend"
     },
     "2670": {
       "race": "Human",
@@ -50506,7 +50507,8 @@
     },
     "3110": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "3111": {
       "race": "Human",
@@ -52754,7 +52756,8 @@
     },
     "3652": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "karamja"
     },
     "3653": {
       "race": "Human",
@@ -53880,11 +53883,13 @@
     },
     "3904": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "3905": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "3906": {
       "race": "Human",
@@ -54109,12 +54114,12 @@
     "3954": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "kourend"
     },
     "3955": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "karamja"
+      "ethnicity": "kourend"
     },
     "3956": {
       "race": "Human",
@@ -57256,7 +57261,7 @@
     "4707": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "4708": {
       "race": "Human",
@@ -58145,12 +58150,12 @@
     "4915": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "wilderness"
     },
     "4916": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "wilderness"
     },
     "4917": {
       "race": "Human",
@@ -58168,12 +58173,12 @@
     "4920": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "misthalin"
     },
     "4921": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "wilderness"
     },
     "4922": {
       "race": "Dwarf",
@@ -59763,7 +59768,7 @@
     "5356": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "misthalin"
     },
     "5357": {
       "race": "Human",
@@ -59803,7 +59808,7 @@
     "5364": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "5365": {
       "race": "Human",
@@ -60194,7 +60199,7 @@
     "5457": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "5458": {
       "race": "Human",
@@ -60524,7 +60529,8 @@
     "5544": {
       "race": "Human",
       "gender": "Male",
-      "lifeStage": "child"
+      "lifeStage": "child",
+      "ethnicity": "karamja"
     },
     "5545": {
       "race": "Human",
@@ -61371,7 +61377,7 @@
     "5729": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "5730": {
       "race": "Human",
@@ -61620,7 +61626,7 @@
     "5789": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "5790": {
       "race": "Undead",
@@ -68385,12 +68391,12 @@
     "7650": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "karamja"
+      "ethnicity": "wilderness"
     },
     "7651": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "karamja"
+      "ethnicity": "wilderness"
     },
     "7652": {
       "race": "Demon",
@@ -68462,7 +68468,7 @@
     "7667": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "7668": {
       "race": "Demon",
@@ -72221,7 +72227,7 @@
     "8680": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "8681": {
       "race": "Human",
@@ -72573,7 +72579,8 @@
     },
     "8764": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "8765": {
       "race": "Human",
@@ -91948,7 +91955,7 @@
     "13655": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "kandarin"
     },
     "13656": {
       "race": "Human",
@@ -97435,37 +97442,37 @@
     "15282": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15283": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15285": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15286": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15287": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15288": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15289": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15292": {
       "race": "Human",
@@ -97680,47 +97687,58 @@
     },
     "15352": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15353": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15354": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15355": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15356": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15357": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15358": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15359": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15360": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15361": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15362": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "asgarnia"
     },
     "15363": {
       "race": "Human",
@@ -97730,7 +97748,7 @@
     "15364": {
       "race": "Human",
       "gender": "Female",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15365": {
       "race": "Human",
@@ -97740,7 +97758,7 @@
     "15366": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "asgarnia"
     },
     "15367": {
       "race": "Human",
@@ -98111,7 +98129,8 @@
     },
     "15460": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Female",
+      "ethnicity": "karamja"
     },
     "15461": {
       "race": "Human",
@@ -98131,7 +98150,8 @@
     },
     "15465": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Female",
+      "ethnicity": "karamja"
     },
     "15466": {
       "race": "Human",
@@ -98167,7 +98187,8 @@
     },
     "15474": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Female",
+      "ethnicity": "karamja"
     },
     "15475": {
       "race": "Human",

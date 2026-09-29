@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{AREA}} Origins</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1f1d1a;--muted:#6b665d;--line:#e3ddd2;--accent:#2f6f4e;--changed:#fff4d6;--warn:#c98a1b}
+@media (prefers-color-scheme:dark){:root{--bg:#16150f;--card:#211f19;--ink:#ece8df;--muted:#a39d90;--line:#37332a;--accent:#7cc39c;--changed:#3a3214;--warn:#e0a84a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+header{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px}
+h1{margin:0 0 4px;font-size:20px}
+header p{margin:0 0 8px;color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+#count{color:var(--muted)}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;grid-template-columns:minmax(0,200px) 1fr;gap:14px}
+.card.changed{background:var(--changed)}
+.card.other{opacity:.8}
+@media (max-width:640px){.card{grid-template-columns:1fr}}
+.pics{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+figure{margin:0;max-width:100%}
+img{max-width:100%;max-height:200px;display:block}
+figcaption{font-size:12px;color:var(--muted)}
+h2{margin:0;font-size:18px}
+.meta{margin:2px 0;color:var(--muted);font-size:13px}
+.examine{margin:6px 0;font-style:italic}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 10px;margin:6px 0;font-size:14px}
+dt{color:var(--muted)}
+dd{margin:0;min-width:0;overflow-wrap:anywhere}
+select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);max-width:100%;margin-left:6px}
+.note{color:var(--muted);font-size:13px}
+.warn{margin:6px 0 0;padding:6px 8px;border-radius:8px;border:1px solid var(--warn);font-size:13px}
+details{margin-top:6px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+<h1>{{AREA}} NPC origins</h1>
+<p>{{COUNT}} voiced characters. Pick each human's origin; the accent and native voice follow it. Changed cards turn yellow.</p>
+<div class="bar"><button class="primary" id="copy">Copy results</button><button id="only">Show changed only</button><span id="count">0 changed</span></div>
+<details><summary>What each origin sounds like</summary><ul>{{LEGEND}}</ul></details>
+</header>
+<main>{{CARDS}}</main>
+<script>
+const KEY = 'origins:{{STORE}}';
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+const selects = [...document.querySelectorAll('select')];
+function refresh() {
+  const store = {};
+  let changed = 0;
+  selects.forEach(s => {
+    const moved = s.value !== s.dataset.current;
+    s.closest('.card').classList.toggle('changed', moved);
+    if (moved) { changed++; store[s.dataset.ids] = s.value; }
+  });
+  document.getElementById('count').textContent = changed + ' changed';
+  try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+}
+selects.forEach(s => {
+  if (saved[s.dataset.ids]) s.value = saved[s.dataset.ids];
+  s.addEventListener('change', refresh);
+});
+refresh();
+let only = false;
+document.getElementById('only').onclick = e => {
+  only = !only;
+  e.target.textContent = only ? 'Show all' : 'Show changed only';
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.display = only && !c.classList.contains('changed') ? 'none' : '';
+  });
+};
+document.getElementById('copy').onclick = async e => {
+  const lines = selects.filter(s => s.value !== s.dataset.current)
+    .map(s => `${s.dataset.name} [${s.dataset.ids}]: ${s.dataset.current} -> ${s.value}`);
+  const text = lines.length ? lines.join('\n') : 'No changes';
+  try { await navigator.clipboard.writeText(text); e.target.textContent = 'Copied'; }
+  catch (err) { prompt('Copy these results', text); }
+  setTimeout(() => { e.target.textContent = 'Copy results'; }, 1500);
+};
+</script>
+</body>
+</html>
