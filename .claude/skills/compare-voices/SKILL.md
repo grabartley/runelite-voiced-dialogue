@@ -72,8 +72,9 @@ accepts it.
 
 Always host the sheet so the developer can review it from a phone or any device on their network.
 
-1. Start a static server over the output directory as a background task (the Bash tool's
-   `run_in_background`), so it stays up while you wait:
+1. Check the port is free (`lsof -nP -iTCP:8765 -sTCP:LISTEN` prints nothing; otherwise pick
+   another port and use it throughout), then start a static server over the output directory as a
+   background task (the Bash tool's `run_in_background`), so it stays up while you wait:
 
    ```bash
    python3 -m http.server 8765 --bind 0.0.0.0 --directory <out-dir>
@@ -85,8 +86,8 @@ Always host the sheet so the developer can review it from a phone or any device 
    allows Python through the macOS firewall prompt.
 
 The output directory holds only the sheet, its clips and the harness results, never a key. Serve
-nothing else. To host a second sheet in the same review, serve their shared parent directory rather
-than starting another server.
+nothing else. To host a second sheet in the same review, give both output directories a parent
+that holds nothing but them, and serve that parent rather than starting another server.
 
 **Mandatory: take it down.** As soon as the developer is done (their verdicts arrive, or they say
 so), stop the server's background task, then prove nothing is left:

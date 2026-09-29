@@ -416,7 +416,7 @@ Because synthesis is billed per character, several guards keep cost bounded and 
   backend's `cacheVariant`. The variant holds only what defines a character's audio: the resolved
   voice id, a speaker token (the gender, marked for a child, or the narrator) that stands for the
   voice line opening the style, a truncated SHA-256 of the profile fields exactly as they are sent
-  (name, accent, style, pace, and pitch, accent detail and age when sent, after the same trimming the
+  (name, accent, style, pace, pitch and accent detail when sent, and the age when the profile has one, after the same trimming the
   style string applies), and, only when not at their defaults, the speaking pace and a language
   token built from the `SpokenLanguage` and `SpeakingStyle` enum names. `docs/cache-files.md`
   spells out the exact recipe. Every speaker resolves to a
