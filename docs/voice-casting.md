@@ -89,9 +89,8 @@ A profile's `age` is the number of years the character's voice should sound. The
 states an age for every native voice, and the generator bundles those ages beside the pools in
 `src/main/resources/voice-regions.json` as `voiceAges`. An NPC with an age is voiced from the
 region voices within ten years of it, or from the three nearest when fewer than three are that
-close, and its seed picks among them, so it still keeps one voice for life. The library's native
-voices run from their early twenties to their sixties, so a very old character takes the region's
-oldest voices and its `pitch` and style carry the rest.
+close, and its seed picks among them, so it still keeps one voice for life. A character older than
+every voice in its region takes the region's oldest voices, and its `pitch` and style carry the rest.
 
 An NPC with no age keeps its seeded pick from the whole pool, so adding ages moves only the NPCs
 that get one. Children ignore their age and keep the child pool. The prebuilt voices carry no age,

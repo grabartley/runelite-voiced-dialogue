@@ -117,7 +117,7 @@ final class GeminiVoiceRegions {
     return pick(age == null ? pool : closestInAge(pool, age), seed);
   }
 
-  List<String> closestInAge(List<String> pool, int age) {
+  private List<String> closestInAge(List<String> pool, int age) {
     if (pool == null) {
       return null;
     }
@@ -218,7 +218,10 @@ final class GeminiVoiceRegions {
     }
     Map<String, Integer> ages = new HashMap<>();
     for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject(VOICE_AGES_KEY).entrySet()) {
-      ages.put(entry.getKey(), entry.getValue().getAsInt());
+      JsonElement value = entry.getValue();
+      if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()) {
+        ages.put(entry.getKey(), value.getAsInt());
+      }
     }
     return Collections.unmodifiableMap(ages);
   }

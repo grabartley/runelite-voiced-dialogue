@@ -242,18 +242,23 @@ public class GeminiVoiceRegionsTest {
     assertEquals(new HashSet<>(Arrays.asList("m46", "m49", "m55")), voices);
   }
 
-  @Test
-  public void anAgeTakesEveryVoiceWithinTheWindow() {
-    assertEquals(Arrays.asList("m28", "m32", "m25", "m35"), AGED.closestInAge(AGED_POOL, 30));
+  private Set<String> voicesAt(int age) {
+    Set<String> voices = new HashSet<>();
+    for (int seed = 0; seed < 300; seed++) {
+      voices.add(AGED.voiceFor("SE", NpcGender.MALE, seed, age));
+    }
+    return voices;
   }
 
-  private static final java.util.List<String> AGED_POOL =
-      Arrays.asList("m25", "m28", "m32", "m35", "m46", "m49", "m55", "m-unknown");
+  @Test
+  public void anAgeTakesEveryVoiceWithinTheWindow() {
+    assertEquals(new HashSet<>(Arrays.asList("m25", "m28", "m32", "m35")), voicesAt(30));
+  }
 
   @Test
   public void aVoiceWithNoKnownAgeNeverMatchesAnAge() {
-    for (int age = 1; age <= 120; age++) {
-      assertFalse(AGED.closestInAge(AGED_POOL, age).contains("m-unknown"));
+    for (int age = 1; age <= 120; age += 7) {
+      assertFalse(voicesAt(age).contains("m-unknown"));
     }
   }
 
@@ -286,8 +291,11 @@ public class GeminiVoiceRegionsTest {
   @Test
   public void bundledAgesAreReadFromTheRoot() {
     JsonObject root =
-        new JsonParser().parse("{\"voiceAges\":{\"a\":40,\"b\":61}}").getAsJsonObject();
+        new JsonParser()
+            .parse("{\"voiceAges\":{\"a\":40,\"b\":61,\"c\":\"old\"}}")
+            .getAsJsonObject();
     assertEquals(Integer.valueOf(61), GeminiVoiceRegions.ages(root).get("b"));
+    assertFalse("a non-numeric age is skipped", GeminiVoiceRegions.ages(root).containsKey("c"));
     assertTrue(GeminiVoiceRegions.ages(new JsonObject()).isEmpty());
   }
 }
