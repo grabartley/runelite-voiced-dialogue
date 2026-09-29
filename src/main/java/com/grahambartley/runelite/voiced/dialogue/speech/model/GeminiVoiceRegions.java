@@ -41,10 +41,13 @@ final class GeminiVoiceRegions {
 
   static final String CHILD_POOL_PREFIX = "CHILD_";
 
+  static final String PLAYER_VOICE_PREFIX = "PLAYER_";
+
   private static final NpcGender[] VOICED_GENDERS = {NpcGender.MALE, NpcGender.FEMALE};
 
   private final Map<String, Map<NpcGender, List<String>>> pools = new LinkedHashMap<>();
   private final Map<String, Map<NpcGender, List<String>>> childPools = new LinkedHashMap<>();
+  private final Map<String, Map<NpcGender, String>> playerVoices = new LinkedHashMap<>();
   private final Map<String, List<Pattern>> playerKeywords = new LinkedHashMap<>();
   private final String narratorVoice;
 
@@ -61,12 +64,18 @@ final class GeminiVoiceRegions {
       JsonObject region = entry.getValue().getAsJsonObject();
       Map<NpcGender, List<String>> byGender = new EnumMap<>(NpcGender.class);
       Map<NpcGender, List<String>> childByGender = new EnumMap<>(NpcGender.class);
+      Map<NpcGender, String> playerByGender = new EnumMap<>(NpcGender.class);
       for (NpcGender gender : VOICED_GENDERS) {
         byGender.put(gender, strings(region, gender.name()));
         childByGender.put(gender, strings(region, CHILD_POOL_PREFIX + gender.name()));
+        String playerKey = PLAYER_VOICE_PREFIX + gender.name();
+        if (region.has(playerKey)) {
+          playerByGender.put(gender, region.get(playerKey).getAsString());
+        }
       }
       pools.put(entry.getKey(), byGender);
       childPools.put(entry.getKey(), childByGender);
+      playerVoices.put(entry.getKey(), playerByGender);
       List<Pattern> keywords = new ArrayList<>();
       for (String keyword : strings(region, PLAYER_KEYWORDS_KEY)) {
         keywords.add(
@@ -86,6 +95,12 @@ final class GeminiVoiceRegions {
 
   String voiceFor(String region, NpcGender gender, int seed) {
     return pick(pool(pools, region, gender), seed);
+  }
+
+  String playerVoiceFor(String region, NpcGender gender, int seed) {
+    Map<NpcGender, String> pinned = region == null ? null : playerVoices.get(region);
+    String voice = pinned == null ? null : pinned.get(gender);
+    return voice != null ? voice : voiceFor(region, gender, seed);
   }
 
   String childVoiceFor(String region, NpcGender gender, int seed) {

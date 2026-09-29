@@ -595,6 +595,19 @@ class VoiceRegionsTest(unittest.TestCase):
         regions = gen.build_voice_regions(regions_source(exclude=["ie-1"]), LIBRARY)
         self.assertEqual(regions["IRISH"]["MALE"], ["ie-2", "ie-3", "ie-4", "ie-5"])
 
+    def test_player_voices_pin_the_player_per_gender(self):
+        regions = gen.build_voice_regions(regions_source(playerVoices={"male": "ie-2"}), LIBRARY)
+        self.assertEqual(regions["IRISH"]["PLAYER_MALE"], "ie-2")
+        self.assertNotIn("PLAYER_FEMALE", regions["IRISH"])
+
+    def test_player_voices_reject_a_voice_outside_the_adult_pool(self):
+        with self.assertRaises(ValueError):
+            gen.build_voice_regions(regions_source(playerVoices={"male": "ie-f"}), LIBRARY)
+
+    def test_player_voices_reject_an_unknown_gender(self):
+        with self.assertRaises(ValueError):
+            gen.build_voice_regions(regions_source(playerVoices={"boys": "ie-2"}), LIBRARY)
+
     def test_a_region_matching_no_voices_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "IRISH has no male library voices"):
             gen.build_voice_regions(regions_source(libraryAccent="Cork English"), LIBRARY)

@@ -436,6 +436,18 @@ public class GeminiVoiceMapTest {
   }
 
   @Test
+  public void theDefaultPlayerAccentTakesThePinnedSouthernEnglishVoices() {
+    CharacterProfile southern =
+        new CharacterProfile(
+            "Adventurer",
+            "Strong friendly, down-to-earth southern English accent, British English pronunciation",
+            "Plain.",
+            "Steady.");
+    assertEquals("en-gb-podcaster-1", map.voiceFor(VoiceSpec.player(NpcGender.MALE), southern));
+    assertEquals("en-gb-commercial-6", map.voiceFor(VoiceSpec.player(NpcGender.FEMALE), southern));
+  }
+
+  @Test
   public void aPlayerAccentNamingNoRegionKeepsThePlayerVoice() {
     CharacterProfile welsh =
         new CharacterProfile("Adventurer", "Strong Welsh accent", "Plain.", "Steady.");

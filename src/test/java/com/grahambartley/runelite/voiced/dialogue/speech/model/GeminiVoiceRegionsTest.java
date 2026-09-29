@@ -31,6 +31,37 @@ public class GeminiVoiceRegionsTest {
   private static final GeminiVoiceRegions REGIONS = regions(JSON);
 
   @Test
+  public void aPinnedPlayerVoiceWinsOverTheSeededPick() {
+    GeminiVoiceRegions pinned =
+        regions(
+            JSON.replace(
+                "\"FEMALE\":[\"ie-f-1\"]", "\"FEMALE\":[\"ie-f-1\"],\"PLAYER_MALE\":\"ie-m-2\""));
+    assertEquals("ie-m-2", pinned.playerVoiceFor("IRISH", NpcGender.MALE, 0));
+    assertEquals("ie-f-1", pinned.playerVoiceFor("IRISH", NpcGender.FEMALE, 0));
+  }
+
+  @Test
+  public void anUnpinnedPlayerTakesTheSeededPick() {
+    assertEquals(
+        REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, 0),
+        REGIONS.playerVoiceFor("SCOTTISH", NpcGender.MALE, 0));
+    assertNull(REGIONS.playerVoiceFor(null, NpcGender.MALE, 0));
+  }
+
+  @Test
+  public void aPinnedPlayerVoiceLeavesNpcPicksAlone() {
+    GeminiVoiceRegions pinned =
+        regions(
+            JSON.replace(
+                "\"FEMALE\":[\"ie-f-1\"]", "\"FEMALE\":[\"ie-f-1\"],\"PLAYER_MALE\":\"ie-m-2\""));
+    for (int seed = 0; seed < 50; seed++) {
+      assertEquals(
+          REGIONS.voiceFor("IRISH", NpcGender.MALE, seed),
+          pinned.voiceFor("IRISH", NpcGender.MALE, seed));
+    }
+  }
+
+  @Test
   public void anNpcAlwaysGetsTheSameVoice() {
     String first = REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, 4242);
     for (int i = 0; i < 20; i++) {
@@ -105,7 +136,7 @@ public class GeminiVoiceRegionsTest {
     assertEquals(
         "SOUTHERN_ENGLISH",
         bundled.regionForAccent(
-            "Strong educated southern English accent, British English pronunciation"));
+            "Strong friendly, down-to-earth southern English accent, British English pronunciation"));
     assertEquals(
         "NORSE",
         bundled.regionForAccent(

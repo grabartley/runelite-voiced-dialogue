@@ -220,7 +220,10 @@ that merely reads high is worse than the repetition. The female pool holds two.
 The **Player Voice** setting picks a gender. When the typed **Your Accent** names a region's
 keyword ("Irish", "Glasgow", "London", and so on, listed in `tools/voice-regions.json`), the
 player takes a fixed native voice from that region for the gender; regions are tried in file order
-and the broad southern English region comes last, so a more specific accent always wins. Otherwise
+and the broad southern English region comes last, so a more specific accent always wins. A region's
+optional `playerVoices` pins that voice per gender, chosen by ear; southern English pins
+`en-gb-podcaster-1` for Type A and `en-gb-commercial-6` for Type B, so the default player sounds
+friendly and relaxed rather than posh. A region without a pin takes its seeded pick. Otherwise
 the player takes index 0 of the player pool: there is one player, so nothing needs spreading on a
 seed. The two options are
 labelled Type A and Type B rather than by gender: the voices are

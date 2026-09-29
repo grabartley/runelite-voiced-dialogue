@@ -265,7 +265,7 @@ public interface VoicedDialogueConfig extends Config {
       position = 1,
       section = voicesSection)
   default String playerAccent() {
-    return "Strong educated southern English accent, British English pronunciation";
+    return "Strong friendly, down-to-earth southern English accent, British English pronunciation";
   }
 
   @ConfigItem(

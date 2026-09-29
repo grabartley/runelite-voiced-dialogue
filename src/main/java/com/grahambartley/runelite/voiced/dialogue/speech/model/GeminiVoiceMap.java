@@ -84,7 +84,7 @@ public final class GeminiVoiceMap {
     NpcGender gender = normalizeGender(spec.gender());
     String region = regionFor(spec, profile);
     if (spec.player()) {
-      String regional = regions.voiceFor(region, gender, PLAYER_SEED);
+      String regional = regions.playerVoiceFor(region, gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
     }
     if (spec.child()) {

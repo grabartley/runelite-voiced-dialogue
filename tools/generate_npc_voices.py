@@ -86,6 +86,7 @@ CHILD_POOL_SIZE = 3
 # regions share one pool between children and adults.
 MIN_ADULT_VOICES = 3
 CHILD_POOL_PREFIX = "CHILD_"
+PLAYER_VOICE_PREFIX = "PLAYER_"
 # Full NPC id -> name dump, used only to cross-reference ids the wiki pages do not
 # list (variants) onto wiki data by name. The wiki remains the source of truth.
 DEFAULT_SUMMARY_URL = (
@@ -581,6 +582,15 @@ def build_voice_regions(regions_source, library):
                 adults -= youngest
             entry[gender] = sorted(adults)
             entry[CHILD_POOL_PREFIX + gender] = sorted(youngest - adult_only)
+        for library_gender, voice_id in (region.get("playerVoices") or {}).items():
+            gender = VOICE_GENDERS.get(library_gender)
+            if gender is None:
+                raise ValueError(f"voice region {key} playerVoices names unknown gender "
+                                 f"'{library_gender}'")
+            if voice_id not in entry[gender]:
+                raise ValueError(f"voice region {key} playerVoices '{voice_id}' is not in its "
+                                 f"{library_gender} adult pool")
+            entry[PLAYER_VOICE_PREFIX + gender] = voice_id
         regions[key] = entry
     return regions
 

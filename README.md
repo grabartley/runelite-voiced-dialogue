@@ -103,7 +103,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | **Player Voice** | `Type A` | The voice for your character's dialogue and public chat. |
-| **Your Accent** | Strong educated southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, Indian, and more) voices you with a native speaker from it. |
+| **Your Accent** | Strong friendly, down-to-earth southern English | Accent for your character's voice. Name it strongly, with its pronunciation, e.g. "Strong Dublin Irish accent, Irish English pronunciation". Naming a region with native voices (Irish, Scottish, southern English, West Country, Scouse, Geordie, Italian, Indian, and more) voices you with a native speaker from it. |
 | **Your Persona** | Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm. | Persona and delivery style for your character. |
 | **Your Delivery Pace** | Lively and bouncy, with an upbeat, energetic rhythm. | How your character paces their words. |
 | **Voice Narration** | `Off` | Reads message and item boxes in the narrator voice. The game uses these boxes for interface prompts too, so a world switch warning gets narrated. |
