@@ -412,12 +412,12 @@ class ValidateProfilesTest(unittest.TestCase):
             "accent": "Very strong, broad Bajan Caribbean accent, thick island Bajan English pronunciation"}}))
 
     def test_accent_detail_needs_an_accent_beside_it(self):
-        profiles = profiles_with(byId={"1": {"accentDetail": "A rough, harsh burr."}})
+        profiles = profiles_with(byId={"1": {"age": 40, "accentDetail": "A rough, harsh burr."}})
         with self.assertRaisesRegex(ValueError, "byId.1.accentDetail"):
             gen.validate_profiles(profiles)
 
     def test_accent_detail_is_checked_for_markers(self):
-        profiles = profiles_with(byId={"1": {
+        profiles = profiles_with(byId={"1": {"age": 40,
             "accent": "Strong Glasgow Scottish accent, Scottish English pronunciation",
             "accentDetail": "[gruff] Glaswegian"}})
         with self.assertRaisesRegex(ValueError, "byId.1.accentDetail"):
@@ -429,7 +429,7 @@ class ValidateProfilesTest(unittest.TestCase):
             gen.validate_profiles(profiles)
 
     def test_square_bracket_tag_is_rejected(self):
-        profiles = profiles_with(byId={"1": {"style": "[angry] Gruff"}})
+        profiles = profiles_with(byId={"1": {"age": 40, "style": "[angry] Gruff"}})
         with self.assertRaisesRegex(ValueError, "byId.1.style"):
             gen.validate_profiles(profiles)
 
@@ -445,16 +445,16 @@ class ValidateProfilesTest(unittest.TestCase):
             gen.validate_profiles(profiles)
 
     def test_transcript_divider_is_rejected(self):
-        profiles = profiles_with(byId={"2": {"style": "Calm #### TRANSCRIPT"}})
+        profiles = profiles_with(byId={"2": {"age": 40, "style": "Calm #### TRANSCRIPT"}})
         with self.assertRaisesRegex(ValueError, "byId.2.style"):
             gen.validate_profiles(profiles)
 
     def test_the_plain_word_transcript_passes(self):
-        profiles = profiles_with(byId={"3": {"style": "Dry, like reading a court transcript"}})
+        profiles = profiles_with(byId={"3": {"age": 40, "style": "Dry, like reading a court transcript"}})
         gen.validate_profiles(profiles)
 
     def test_tag_in_a_name_is_rejected(self):
-        profiles = profiles_with(byId={"4": {"name": "Guard <laugh>"}})
+        profiles = profiles_with(byId={"4": {"age": 40, "name": "Guard <laugh>"}})
         with self.assertRaisesRegex(ValueError, "byId.4.name"):
             gen.validate_profiles(profiles)
 
@@ -500,6 +500,10 @@ class ValidateProfilesTest(unittest.TestCase):
     def test_comment_keys_are_skipped(self):
         profiles = profiles_with(byId={"_comment": "[notes] about ids"})
         gen.validate_profiles(profiles)
+
+    def test_a_bespoke_profile_without_an_age_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "byId.7 has no age"):
+            gen.validate_profiles(profiles_with(byId={"7": {"name": "Hans", "style": "Doddery"}}))
 
     def test_a_whole_number_age_passes(self):
         gen.validate_profiles(profiles_with(byId={"3480": {"age": 65}}))
@@ -669,7 +673,7 @@ class VoiceRegionsTest(unittest.TestCase):
             gen.validate_voice_regions(profiles, {"IRISH": {}})
 
     def test_a_region_must_sit_next_to_an_accent(self):
-        profiles = profiles_with(byId={"5": {"style": "Gruff", "voiceRegion": "IRISH"}})
+        profiles = profiles_with(byId={"5": {"age": 40, "style": "Gruff", "voiceRegion": "IRISH"}})
         with self.assertRaisesRegex(ValueError, "byId.5.voiceRegion must sit next to"):
             gen.validate_voice_regions(profiles, {"IRISH": {}})
 
