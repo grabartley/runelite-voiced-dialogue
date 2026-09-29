@@ -1,5 +1,9 @@
 package com.grahambartley.runelite.voiced.dialogue.profile;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.regex.Pattern;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -10,6 +14,10 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode
 @ToString
 public final class CharacterProfile {
+
+  private static final int CACHE_KEY_BYTES = 8;
+
+  private static final Pattern TRAILING_SEPARATORS = Pattern.compile("[\\s.;,:]+$");
 
   private final String name;
   private final String accent;
@@ -58,17 +66,46 @@ public final class CharacterProfile {
     return field == null ? null : field.stripTrailing();
   }
 
+  public static String spoken(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = TRAILING_SEPARATORS.matcher(value.trim()).replaceAll("");
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  public String spokenAccentDetail() {
+    return spoken(accent) == null ? null : spoken(accentDetail);
+  }
+
   public String cacheKey() {
-    String joined = name + '' + accent + '' + style + '' + pace;
-    if (pitch != null) {
-      joined += '\u0001' + pitch;
+    String joined =
+        spoken(name)
+            + '\u0001'
+            + spoken(accent)
+            + '\u0001'
+            + spoken(style)
+            + '\u0001'
+            + spoken(pace);
+    String spokenPitch = spoken(pitch);
+    if (spokenPitch != null) {
+      joined += '\u0001' + spokenPitch;
     }
-    if (accentDetail != null) {
-      joined += '\u0002' + accentDetail;
+    String detail = spokenAccentDetail();
+    if (detail != null) {
+      joined += '\u0002' + detail;
     }
-    if (accentOverridden) {
-      joined += '\u0003';
+    try {
+      byte[] digest =
+          MessageDigest.getInstance("SHA-256").digest(joined.getBytes(StandardCharsets.UTF_8));
+      StringBuilder hex = new StringBuilder(CACHE_KEY_BYTES * 2);
+      for (int i = 0; i < CACHE_KEY_BYTES; i++) {
+        hex.append(Character.forDigit((digest[i] >> 4) & 0xF, 16));
+        hex.append(Character.forDigit(digest[i] & 0xF, 16));
+      }
+      return hex.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 unavailable", e);
     }
-    return Integer.toHexString(joined.hashCode());
   }
 }

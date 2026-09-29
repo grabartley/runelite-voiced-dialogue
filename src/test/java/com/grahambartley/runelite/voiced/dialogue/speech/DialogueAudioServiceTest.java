@@ -17,6 +17,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speech.spend.SpendTracker;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,6 +97,20 @@ public class DialogueAudioServiceTest {
     public Pcm synthesize(SynthesisRequest request) {
       requests.add(request.voice().key() + "|" + request.emotion() + "|" + request.text());
       return new Pcm(new float[] {0.1f, -0.1f}, 24_000);
+    }
+  }
+
+  private static class NamespacedBackend extends FakeBackend {
+    private final String namespace;
+
+    NamespacedBackend(String id, String namespace) {
+      super(id, EnumSet.allOf(Emotion.class));
+      this.namespace = namespace;
+    }
+
+    @Override
+    public String cacheNamespace() {
+      return namespace;
     }
   }
 
@@ -849,9 +864,9 @@ public class DialogueAudioServiceTest {
     }
 
     @Override
-    public Pcm get(String backendId, String voiceKey, Emotion emotion, String text) {
+    public Pcm get(String namespace, String voiceKey, Emotion emotion, String text) {
       gets.incrementAndGet();
-      return super.get(backendId, voiceKey, emotion, text);
+      return super.get(namespace, voiceKey, emotion, text);
     }
   }
 
@@ -935,6 +950,64 @@ public class DialogueAudioServiceTest {
     assertTrue("the echoed buffer was longer than the dry one", echoedLength > 2);
     assertArrayEquals(
         "the cached audio stayed dry", new float[] {0.1f, -0.1f}, output.lastSamples, 0f);
+  }
+
+  @Test
+  public void aLineVoicedOnOneProviderReplaysFromDiskOnAnotherSharingItsNamespace() {
+    Path cacheDir = tmp.getRoot().toPath().resolve("cache");
+    NamespacedBackend first = new NamespacedBackend("cloud-google-ai-studio", "shared");
+    NamespacedBackend second = new NamespacedBackend("cloud-openrouter", "shared");
+    SynthesisRequest line = req("What can I do yer for?", NpcRace.HUMAN, NpcGender.MALE);
+
+    DeferredExecutor exec1 = new DeferredExecutor();
+    diskService(provider(first), new FakeOutput(), new DiskAudioCache(cacheDir), exec1).speak(line);
+    exec1.runAll();
+    DeferredExecutor exec2 = new DeferredExecutor();
+    diskService(provider(second), new FakeOutput(), new DiskAudioCache(cacheDir), exec2)
+        .speak(line);
+    exec2.runAll();
+
+    assertEquals(1, first.requests.size());
+    assertEquals("the switched-to provider replays the cached clip", 0, second.requests.size());
+  }
+
+  @Test
+  public void aCloudLineLandsOnDiskUnderTheDocumentedFileName() {
+    Path cacheDir = tmp.getRoot().toPath().resolve("cache");
+    NamespacedBackend cloud =
+        new NamespacedBackend("cloud-openrouter", CloudSpeechExecutor.CACHE_NAMESPACE) {
+          @Override
+          public String cacheVariant(SynthesisRequest request) {
+            return "en-gb-tutor-9";
+          }
+        };
+    DeferredExecutor exec = new DeferredExecutor();
+    diskService(provider(cloud), new FakeOutput(), new DiskAudioCache(cacheDir), exec)
+        .speak(req("What can I do yer for?", NpcRace.HUMAN, NpcGender.MALE));
+    exec.runAll();
+
+    assertTrue(
+        Files.exists(
+            cacheDir.resolve(
+                "f0135745b1888237ffd10143f3c367b164a3bc62a4216486b639cd10af97c85e.tdc")));
+  }
+
+  @Test
+  public void providersInDifferentNamespacesNeverShareACachedLine() {
+    Path cacheDir = tmp.getRoot().toPath().resolve("cache");
+    NamespacedBackend first = new NamespacedBackend("one", "one");
+    NamespacedBackend second = new NamespacedBackend("two", "two");
+    SynthesisRequest line = req("What can I do yer for?", NpcRace.HUMAN, NpcGender.MALE);
+
+    DeferredExecutor exec1 = new DeferredExecutor();
+    diskService(provider(first), new FakeOutput(), new DiskAudioCache(cacheDir), exec1).speak(line);
+    exec1.runAll();
+    DeferredExecutor exec2 = new DeferredExecutor();
+    diskService(provider(second), new FakeOutput(), new DiskAudioCache(cacheDir), exec2)
+        .speak(line);
+    exec2.runAll();
+
+    assertEquals(1, second.requests.size());
   }
 
   @Test

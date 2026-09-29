@@ -114,68 +114,66 @@ public interface VoicedDialogueConfig extends Config {
   }
 
   enum SpokenLanguage {
-    ENGLISH("English", "en-GB"),
-    SPANISH("Spanish", "es-ES"),
-    LATIN_AMERICAN_SPANISH("Latin American Spanish", "es-419", "Spanish (LatAm)"),
-    MEXICAN_SPANISH("Mexican Spanish", "es-MX", "Spanish (MX)"),
-    FRENCH("French", "fr-FR"),
-    CANADIAN_FRENCH("Canadian French", "fr-CA", "French (CA)"),
-    GERMAN("German", "de-DE"),
-    ITALIAN("Italian", "it-IT"),
-    PORTUGUESE("Portuguese", "pt-PT"),
-    BRAZILIAN_PORTUGUESE("Brazilian Portuguese", "pt-BR", "Portuguese (BR)"),
-    DUTCH("Dutch", "nl-NL"),
-    POLISH("Polish", "pl-PL"),
-    RUSSIAN("Russian", "ru-RU"),
-    UKRAINIAN("Ukrainian", "uk-UA"),
-    JAPANESE("Japanese", "ja-JP"),
-    KOREAN("Korean", "ko-KR"),
-    CHINESE("Chinese", "zh-CN"),
-    TRADITIONAL_CHINESE("Traditional Chinese", "zh-TW", "Chinese (Trad.)"),
-    CANTONESE("Cantonese", "yue-HK"),
-    ARABIC("Arabic", "ar-XA"),
-    HINDI("Hindi", "hi-IN"),
-    BENGALI("Bengali", "bn-IN"),
-    TAMIL("Tamil", "ta-IN"),
-    TURKISH("Turkish", "tr-TR"),
-    SWEDISH("Swedish", "sv-SE"),
-    NORWEGIAN("Norwegian", "nb-NO"),
-    DANISH("Danish", "da-DK"),
-    FINNISH("Finnish", "fi-FI"),
-    ICELANDIC("Icelandic", "is-IS"),
-    GREEK("Greek", "el-GR"),
-    CZECH("Czech", "cs-CZ"),
-    SLOVAK("Slovak", "sk-SK"),
-    ROMANIAN("Romanian", "ro-RO"),
-    HUNGARIAN("Hungarian", "hu-HU"),
-    BULGARIAN("Bulgarian", "bg-BG"),
-    CROATIAN("Croatian", "hr-HR"),
-    SERBIAN("Serbian", "sr-RS"),
-    CATALAN("Catalan", "ca-ES"),
-    HEBREW("Hebrew", "he-IL"),
-    PERSIAN("Persian", "fa-IR"),
-    VIETNAMESE("Vietnamese", "vi-VN"),
-    THAI("Thai", "th-TH"),
-    INDONESIAN("Indonesian", "id-ID"),
-    MALAY("Malay", "ms-MY"),
-    FILIPINO("Filipino", "fil-PH"),
-    WELSH("Welsh", "cy-GB"),
-    IRISH("Irish", "ga-IE"),
-    LATIN("Latin", "la"),
-    AFRIKAANS("Afrikaans", "af-ZA"),
-    SWAHILI("Swahili", "sw-KE");
+    ENGLISH("English"),
+    SPANISH("Spanish"),
+    LATIN_AMERICAN_SPANISH("Latin American Spanish", "Spanish (LatAm)"),
+    MEXICAN_SPANISH("Mexican Spanish", "Spanish (MX)"),
+    FRENCH("French"),
+    CANADIAN_FRENCH("Canadian French", "French (CA)"),
+    GERMAN("German"),
+    ITALIAN("Italian"),
+    PORTUGUESE("Portuguese"),
+    BRAZILIAN_PORTUGUESE("Brazilian Portuguese", "Portuguese (BR)"),
+    DUTCH("Dutch"),
+    POLISH("Polish"),
+    RUSSIAN("Russian"),
+    UKRAINIAN("Ukrainian"),
+    JAPANESE("Japanese"),
+    KOREAN("Korean"),
+    CHINESE("Chinese"),
+    TRADITIONAL_CHINESE("Traditional Chinese", "Chinese (Trad.)"),
+    CANTONESE("Cantonese"),
+    ARABIC("Arabic"),
+    HINDI("Hindi"),
+    BENGALI("Bengali"),
+    TAMIL("Tamil"),
+    TURKISH("Turkish"),
+    SWEDISH("Swedish"),
+    NORWEGIAN("Norwegian"),
+    DANISH("Danish"),
+    FINNISH("Finnish"),
+    ICELANDIC("Icelandic"),
+    GREEK("Greek"),
+    CZECH("Czech"),
+    SLOVAK("Slovak"),
+    ROMANIAN("Romanian"),
+    HUNGARIAN("Hungarian"),
+    BULGARIAN("Bulgarian"),
+    CROATIAN("Croatian"),
+    SERBIAN("Serbian"),
+    CATALAN("Catalan"),
+    HEBREW("Hebrew"),
+    PERSIAN("Persian"),
+    VIETNAMESE("Vietnamese"),
+    THAI("Thai"),
+    INDONESIAN("Indonesian"),
+    MALAY("Malay"),
+    FILIPINO("Filipino"),
+    WELSH("Welsh"),
+    IRISH("Irish"),
+    LATIN("Latin"),
+    AFRIKAANS("Afrikaans"),
+    SWAHILI("Swahili");
 
     private final String label;
-    private final String code;
     private final String displayName;
 
-    SpokenLanguage(String label, String code) {
-      this(label, code, label);
+    SpokenLanguage(String label) {
+      this(label, label);
     }
 
-    SpokenLanguage(String label, String code, String displayName) {
+    SpokenLanguage(String label, String displayName) {
       this.label = label;
-      this.code = code;
       this.displayName = displayName;
     }
 
@@ -185,10 +183,6 @@ public interface VoicedDialogueConfig extends Config {
 
     public String label() {
       return label;
-    }
-
-    public String code() {
-      return code;
     }
 
     @Override

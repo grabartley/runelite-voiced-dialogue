@@ -10,8 +10,6 @@ import java.util.regex.Pattern;
 
 final class GeminiSpeechStyle {
 
-  private static final Pattern TRAILING_SEPARATORS = Pattern.compile("[\\s.;,:]+$");
-
   private static final Pattern TERMINAL_PUNCTUATION = Pattern.compile("[!?]$");
 
   private static final String FULL_STOP = ".";
@@ -38,14 +36,12 @@ final class GeminiSpeechStyle {
     addDirection(directions, "Speaking " + language);
     addDirection(directions, voiceAnchor(voice));
     addDirection(directions, profile.pitch());
-    String name = clean(profile.name());
+    String name = CharacterProfile.spoken(profile.name());
     if (name != null) {
       directions.add(sentence("Audio profile: " + name + CHARACTER_FRAME));
     }
     addLabelled(directions, "Accent", profile.accent());
-    if (clean(profile.accent()) != null) {
-      addDirection(directions, profile.accentDetail());
-    }
+    addDirection(directions, profile.spokenAccentDetail());
     addLabelled(directions, "Style", profile.style());
     addLabelled(directions, "Pace", profile.pace());
     addDirection(directions, GeminiEmotionStyle.directionFor(emotion));
@@ -69,25 +65,17 @@ final class GeminiSpeechStyle {
   }
 
   private static void addLabelled(List<String> directions, String label, String value) {
-    String cleaned = clean(value);
+    String cleaned = CharacterProfile.spoken(value);
     if (cleaned != null) {
       directions.add(sentence(label + ": " + cleaned));
     }
   }
 
   private static void addDirection(List<String> directions, String direction) {
-    String cleaned = clean(direction);
+    String cleaned = CharacterProfile.spoken(direction);
     if (cleaned != null) {
       directions.add(sentence(Character.toUpperCase(cleaned.charAt(0)) + cleaned.substring(1)));
     }
-  }
-
-  private static String clean(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = TRAILING_SEPARATORS.matcher(value.trim()).replaceAll("");
-    return trimmed.isEmpty() ? null : trimmed;
   }
 
   private static String sentence(String text) {

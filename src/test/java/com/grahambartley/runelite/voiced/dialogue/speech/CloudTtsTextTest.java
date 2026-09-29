@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.speech;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
@@ -108,6 +109,51 @@ public class CloudTtsTextTest {
         player ? VoiceSpec.player(NpcGender.MALE) : VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE);
     return new SynthesisRequest(
         "Hello.", voice, Emotion.NEUTRAL, TestFixtures.TROLL_PROFILE, false, player);
+  }
+
+  @Test
+  public void plainEnglishHasNoLanguageCacheToken() {
+    assertNull(CloudTtsText.languageCacheToken(new MutableTestConfig(), characterRequest(false)));
+  }
+
+  @Test
+  public void theLanguageCacheTokenIsTheSettingsEnumNamesNotTheirWording() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    assertEquals("FRENCH", CloudTtsText.languageCacheToken(config, characterRequest(false)));
+
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
+    assertEquals("FRENCH+PIRATE", CloudTtsText.languageCacheToken(config, characterRequest(false)));
+  }
+
+  @Test
+  public void anEnglishSpeakingStyleStillGetsALanguageCacheToken() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.playerQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
+    assertEquals("ENGLISH+GEN_Z", CloudTtsText.languageCacheToken(config, characterRequest(true)));
+  }
+
+  @Test
+  public void aSkipTranslationLineHasNoLanguageCacheToken() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    SynthesisRequest untranslated =
+        new SynthesisRequest(
+            "Hello.",
+            VoiceSpec.npc(NpcRace.HUMAN, NpcGender.FEMALE),
+            Emotion.NEUTRAL,
+            TestFixtures.TROLL_PROFILE,
+            true,
+            false);
+    assertNull(CloudTtsText.languageCacheToken(config, untranslated));
+  }
+
+  @Test
+  public void narrationsLanguageCacheTokenIgnoresTheSpeakingStyles() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.GEN_Z;
+    assertEquals("FRENCH", CloudTtsText.languageCacheToken(config, narrationRequest()));
   }
 
   @Test

@@ -18,6 +18,15 @@ public final class CloudTtsText {
     return combineLanguage(config.cloudLanguage().label(), styleFor(config, request));
   }
 
+  static String languageCacheToken(VoicedDialogueConfig config, SynthesisRequest request) {
+    if (request.skipTranslation() || !needsTranslation(effectiveSpokenLanguage(config, request))) {
+      return null;
+    }
+    VoicedDialogueConfig.SpeakingStyle style = styleFor(config, request);
+    String language = config.cloudLanguage().name();
+    return style.isNone() ? language : language + "+" + style.name();
+  }
+
   private static VoicedDialogueConfig.SpeakingStyle styleFor(
       VoicedDialogueConfig config, SynthesisRequest request) {
     if (request.voice().narrator()) {

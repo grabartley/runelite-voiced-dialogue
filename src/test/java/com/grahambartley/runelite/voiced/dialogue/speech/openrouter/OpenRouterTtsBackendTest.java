@@ -41,6 +41,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudSpeechExecutor;
 import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
 import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
@@ -101,6 +102,11 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
+  public void itSharesTheCloudCacheNamespaceSoSwitchingProviderReplaysCachedLines() {
+    assertEquals(CloudSpeechExecutor.CACHE_NAMESPACE, backend(keyedConfig()).cacheNamespace());
+  }
+
+  @Test
   public void availabilityRequiresKey() {
     MutableTestConfig config = new MutableTestConfig();
     assertFalse("blank key -> unavailable", backend(config).isAvailable());
@@ -152,7 +158,7 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void nonDefaultSpeedUsesTheSpeedFieldAndLeavesTheStyleAlone() throws Exception {
+  public void nonDefaultSpeedIsSentAsAStyleDirectionLikeAiStudio() throws Exception {
     MutableTestConfig config = keyedConfig();
     config.speedPercent = 150;
     enqueuePcm(server, (short) 1);
@@ -160,8 +166,8 @@ public class OpenRouterTtsBackendTest {
     backend(config).synthesize(req());
 
     JsonObject body = sentBody(server);
-    assertEquals(1.5, body.get("speed").getAsDouble(), 1e-9);
-    assertEquals(TestFixtures.TROLL_STYLE, style(body));
+    assertFalse("pace never rides as a speed field", body.has("speed"));
+    assertEquals(TestFixtures.TROLL_STYLE + " Speaking at 150% of normal speed.", style(body));
   }
 
   @Test
@@ -248,24 +254,6 @@ public class OpenRouterTtsBackendTest {
   }
 
   @Test
-  public void speedParamIsSentOnlyWhenNonDefault() throws Exception {
-    MutableTestConfig config = keyedConfig();
-
-    enqueuePcm(server, (short) 1);
-    backend(config).synthesize(req());
-    assertFalse("normal pace sends no speed param", sentBody(server).has("speed"));
-
-    config.speedPercent = 150;
-    enqueuePcm(server, (short) 1);
-    backend(config).synthesize(req());
-    assertEquals(
-        "a non-default pace is sent as a fractional speed",
-        1.5,
-        sentBody(server).get("speed").getAsDouble(),
-        0.0001);
-  }
-
-  @Test
   public void englishWithNoQuirkBypassesTheTranslationModel() throws Exception {
     enqueuePcm(server, (short) 1);
 
@@ -300,10 +288,9 @@ public class OpenRouterTtsBackendTest {
         "the rewritten line is what is voiced",
         "no cap, well met",
         speech.get("input").getAsString());
-    assertEquals(
-        "the language_code stays the base language, not the quirk",
-        "en-GB",
-        speech.get("language_code").getAsString());
+    assertFalse(
+        "the request matches AI Studio's, so no language_code is sent",
+        speech.has("language_code"));
   }
 
   @Test
@@ -352,10 +339,8 @@ public class OpenRouterTtsBackendTest {
         "the spoken transcript is the translation, not the source",
         "Bonjour",
         body.get("input").getAsString());
-    assertEquals(
-        "the BCP-47 language_code matches the target",
-        "fr-FR",
-        body.get("language_code").getAsString());
+    assertFalse(
+        "the request matches AI Studio's, so no language_code is sent", body.has("language_code"));
   }
 
   @Test

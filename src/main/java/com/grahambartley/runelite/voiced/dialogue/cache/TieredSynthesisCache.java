@@ -17,7 +17,7 @@ public final class TieredSynthesisCache {
   @Value
   @Accessors(fluent = true)
   public static class CacheKey {
-    String backendId;
+    String namespace;
     String voiceKey;
     Emotion emotion;
     String text;
@@ -50,19 +50,19 @@ public final class TieredSynthesisCache {
       log.debug(
           "[TTS cache] hit tier=memory lookupMs={} ({}/{}) \"{}\"",
           elapsedMs(start),
-          key.backendId(),
+          key.namespace(),
           key.voiceKey(),
           key.textPreview());
       return pcm;
     }
     if (disk != null) {
-      pcm = disk.get(key.backendId(), key.voiceKey(), key.emotion(), key.text());
+      pcm = disk.get(key.namespace(), key.voiceKey(), key.emotion(), key.text());
       if (pcm != null) {
         memory.put(key, pcm);
         log.debug(
             "[TTS cache] hit tier=disk lookupMs={} ({}/{}) \"{}\"",
             elapsedMs(start),
-            key.backendId(),
+            key.namespace(),
             key.voiceKey(),
             key.textPreview());
       }
@@ -93,7 +93,7 @@ public final class TieredSynthesisCache {
   private void writeThrough(CacheKey key, Pcm pcm) {
     memory.put(key, pcm);
     if (disk != null) {
-      disk.put(key.backendId(), key.voiceKey(), key.emotion(), key.text(), pcm);
+      disk.put(key.namespace(), key.voiceKey(), key.emotion(), key.text(), pcm);
     }
   }
 

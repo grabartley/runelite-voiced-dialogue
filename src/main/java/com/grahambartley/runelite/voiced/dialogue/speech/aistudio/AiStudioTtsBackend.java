@@ -112,6 +112,11 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
   }
 
   @Override
+  public String cacheNamespace() {
+    return CloudSpeechExecutor.CACHE_NAMESPACE;
+  }
+
+  @Override
   public boolean isAvailable() {
     return CloudHttp.isNonBlank(config.googleAiStudioApiKey());
   }
@@ -217,11 +222,6 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
       support.recordTranslationSpend(
           text.length(), translation.usage.promptTokens, translation.usage.textTokens);
       return translation.text;
-    }
-
-    @Override
-    public boolean speedInStyle() {
-      return true;
     }
 
     @Override

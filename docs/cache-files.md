@@ -15,10 +15,21 @@ There is one file per voiced line, with a `.tdc` extension.
 
 ## File names
 
-A file's name is the lowercase hex SHA-256 of four fields: the backend id, the voice key, the
-emotion's upper-case name (such as `HAPPY`), and the line's text. Each field is fed to the hash as
+A file's name is the lowercase hex SHA-256 of four fields: the cache namespace (`cloud-speech` for
+both providers), the voice key, the emotion's upper-case name (such as `HAPPY`), and the line's
+text. Each field is fed to the hash as
 its UTF-8 byte length (4-byte little-endian int) followed by its UTF-8 bytes; when there is no
 emotion, that field is the text `null`.
+
+For both cloud providers the voice key is the resolved voice id, then `|a` and the speaker token
+(`MALE`, `FEMALE`, `CHILD_MALE`, `CHILD_FEMALE`, or `NARRATOR`), then `|s` and the speaking pace
+percent when it is not 100, then `|p` and the profile hash, then `|l` and the language token when
+the line is translated (the `SpokenLanguage` enum name, plus `+` and the `SpeakingStyle` enum name
+when a speaking style applies). The profile hash is the first 16 lowercase hex characters of the
+SHA-256 of a UTF-8 string: the name, accent, style, and pace joined by `U+0001`, then `U+0001` and
+the pitch when one is sent, then `U+0002` and the accent detail when one is sent. Each field is taken
+as sent: surrounding whitespace and trailing `.`, `;`, `,`, and `:` removed, a field left empty
+counts as absent and is written as `null`, and the accent detail is sent only with an accent.
 
 The name therefore says nothing a person can read. Finding one particular line means listening,
 though sorting by modified time helps: the newest file is the most recent line that had to be

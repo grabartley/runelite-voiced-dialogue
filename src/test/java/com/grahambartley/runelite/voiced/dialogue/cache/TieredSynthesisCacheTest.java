@@ -36,9 +36,9 @@ public class TieredSynthesisCacheTest {
     }
 
     @Override
-    public Pcm get(String backendId, String voiceKey, Emotion emotion, String text) {
+    public Pcm get(String namespace, String voiceKey, Emotion emotion, String text) {
       gets.incrementAndGet();
-      return super.get(backendId, voiceKey, emotion, text);
+      return super.get(namespace, voiceKey, emotion, text);
     }
   }
 
