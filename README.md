@@ -13,7 +13,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.001 
 
 ## What it does
 
-- **14,103 NPCs already voiced by nearly 600 unique voices**, most of them native speakers from Google's library of over 2,000, matched by race, gender and accent, and each NPC keeps its voice for life. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
+- **14,103 NPCs already voiced by about 700 unique voices**, most of them native speakers from Google's library of over 2,000, matched by race, gender, age and accent. Kids sound like kids, old-timers sound their age, and each NPC keeps its voice for life. For anyone a game update adds later, turn on **Auto-learn New NPCs** and the plugin works them out from the wiki.
 - **Accents with lore behind them, voiced by native speakers where they exist.** 18 races and 14 regional origins each get their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, the gothic dread of Morytania.
 - **6,451 individual character profiles**, so the names you know sound like themselves rather than like their species.
 - **Emotion off the chat-head.** The plugin reads the speaker's expression and delivers the line happy, sad, angry, scared, or neutral.
@@ -23,7 +23,7 @@ Bring your own API key. You pay only for the audio you generate, about **$0.001 
 - **The world talking around you.** Turn on **Voice Ambient Chatter** and the lines NPCs say over their heads, market criers, farm animals, cutscene asides, come through in their own voices, overlapping the way a crowd actually does and fading away as you walk off.
 - **Any language, any register.** Speak the whole game in Spanish, or run Gielinor as a pirate crew, Gen Z roadmen, or Shakespearean nobles.
 - **Cave echo underground**, so dungeons and sewers sound enclosed.
-- **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, and repeats replay from disk.
+- **Fast and out of the way.** Synthesis is off the game thread, skipping a line cuts its audio instantly, repeats replay from disk, and every line is levelled to the same loudness, so nobody booms or mumbles next to the last speaker.
 
 Offline profanity filtering is always on. What leaves your client is the line being spoken and the character direction steering it, over HTTPS to your chosen provider; a line you have heard before replays from your local cache without going anywhere. **Auto-learn New NPCs**, off unless you turn it on, also looks up an unrecognised NPC's name on the OSRS Wiki. The **NPC Voices** panel loads each listed NPC's chat-head picture from the OSRS Wiki by name.
 
@@ -48,7 +48,7 @@ Both providers run the same Gemini TTS model, so **the voices, accents, and emot
 
 **OpenRouter** has no daily cap, so a long questing binge keeps talking, but it sends nothing until the whole clip is finished. A long quest speech can leave you waiting over ten seconds.
 
-Switch any time with **Voice Provider**. Cached lines are instant and free on both.
+Switch any time with **Voice Provider**. Both share one cache, so a line you have heard on either replays instantly and free on the other.
 
 ### Google AI Studio
 
@@ -91,7 +91,7 @@ On OpenRouter the figure is the real billed amount read from your key. On Google
 | **Voice Provider** | `Google AI Studio` | Which cloud service voices dialogue and bills the calls. See [Pick a provider](#pick-a-provider). |
 | **OpenRouter API Key** | empty | Your OpenRouter key; stored locally, never bundled with the plugin. |
 | **Google AI Studio API Key** | empty | Your Gemini key; stored locally, never bundled with the plugin. |
-| **Dialogue Volume** | `20` | Loudness of spoken dialogue, `0` (muted) to `100`. |
+| **Dialogue Volume** | `20` | Loudness of spoken dialogue, `0` (muted) to `100`. Every line is levelled to this, whoever speaks. |
 | **Voice My Public Chat** | `Off` | Speaks your public chat aloud in your player voice, exactly as typed. |
 | **Prefetch Dialogue** | `On` | Pre-voices the dialogue options on screen so your pick plays instantly; can spend credit on branches you never choose. |
 
