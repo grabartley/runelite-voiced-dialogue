@@ -210,4 +210,92 @@ public class GeminiVoiceRegionsTest {
     }
     assertFalse(bundled.voiceFor("IRISH", NpcGender.MALE, 1).isEmpty());
   }
+
+  private static final GeminiVoiceRegions AGED =
+      new GeminiVoiceRegions(
+          new JsonParser()
+              .parse(
+                  "{\"SE\":{\"MALE\":[\"m25\",\"m28\",\"m32\",\"m35\",\"m46\",\"m49\",\"m55\","
+                      + "\"m-unknown\"]}}")
+              .getAsJsonObject(),
+          null,
+          ages());
+
+  private static java.util.Map<String, Integer> ages() {
+    java.util.Map<String, Integer> ages = new java.util.HashMap<>();
+    ages.put("m25", 25);
+    ages.put("m28", 28);
+    ages.put("m32", 32);
+    ages.put("m35", 35);
+    ages.put("m46", 46);
+    ages.put("m49", 49);
+    ages.put("m55", 55);
+    return ages;
+  }
+
+  @Test
+  public void anOldNpcTakesTheOldestVoicesWhenNoneAreWithinTheWindow() {
+    Set<String> voices = new HashSet<>();
+    for (int seed = 0; seed < 200; seed++) {
+      voices.add(AGED.voiceFor("SE", NpcGender.MALE, seed, 70));
+    }
+    assertEquals(new HashSet<>(Arrays.asList("m46", "m49", "m55")), voices);
+  }
+
+  private Set<String> voicesAt(int age) {
+    Set<String> voices = new HashSet<>();
+    for (int seed = 0; seed < 300; seed++) {
+      voices.add(AGED.voiceFor("SE", NpcGender.MALE, seed, age));
+    }
+    return voices;
+  }
+
+  @Test
+  public void anAgeTakesEveryVoiceWithinTheWindow() {
+    assertEquals(new HashSet<>(Arrays.asList("m25", "m28", "m32", "m35")), voicesAt(30));
+  }
+
+  @Test
+  public void aVoiceWithNoKnownAgeNeverMatchesAnAge() {
+    for (int age = 1; age <= 120; age += 7) {
+      assertFalse(voicesAt(age).contains("m-unknown"));
+    }
+  }
+
+  @Test
+  public void noAgeKeepsTheSeededPickFromTheWholePool() {
+    for (int seed = 0; seed < 50; seed++) {
+      assertEquals(
+          AGED.voiceFor("SE", NpcGender.MALE, seed),
+          AGED.voiceFor("SE", NpcGender.MALE, seed, null));
+    }
+  }
+
+  @Test
+  public void aPoolWithNoKnownAgesIgnoresTheAge() {
+    for (int seed = 0; seed < 50; seed++) {
+      assertEquals(
+          REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, seed),
+          REGIONS.voiceFor("SCOTTISH", NpcGender.MALE, seed, 70));
+    }
+  }
+
+  @Test
+  public void anAgedNpcStillKeepsOneVoiceForLife() {
+    String first = AGED.voiceFor("SE", NpcGender.MALE, 3480, 65);
+    for (int i = 0; i < 10; i++) {
+      assertEquals(first, AGED.voiceFor("SE", NpcGender.MALE, 3480, 65));
+    }
+  }
+
+  @Test
+  public void bundledAgesAreReadFromTheRoot() {
+    JsonObject root =
+        new JsonParser()
+            .parse("{\"voiceAges\":{\"a\":40,\"b\":61,\"c\":\"old\"}}")
+            .getAsJsonObject();
+    assertEquals(Integer.valueOf(61), GeminiVoiceRegions.ages(root).get("b"));
+    assertFalse("a non-numeric age is skipped", GeminiVoiceRegions.ages(root).containsKey("c"));
+    assertTrue(GeminiVoiceRegions.ages(new JsonObject()).isEmpty());
+  }
 }

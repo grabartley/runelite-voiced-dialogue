@@ -111,7 +111,9 @@ Agent tool, `general-purpose`), ~15 NPCs each, run concurrently
 (`run_in_background: true`). Key results by **exact NPC title (name)**, never by
 id, so you control id mapping locally (one NPC can have many cache ids). Write a
 shared instructions file and point each agent at its chunk file + an output file.
-Per NPC the agent returns: `name`, `style` (<=200 chars, delivery only),
+Per NPC the agent returns: `name`, `style` (<=200 chars, delivery only), `age`
+(the years the voice should sound, judged from who the character is, never the lore age of an
+ageless being),
 `race`, `gender`, `race_corrected`/`gender_corrected` flags, `ethnicity_origin`,
 optional `accent`/`pace`, and a confidence.
 
@@ -131,7 +133,7 @@ Merge the result files locally, then write into the two source files. **Never
 hand-edit `src/main/resources/npc-voices.json`** (it is generated).
 
 - **Bespoke personality** -> `tools/profiles.json` `byId`: sparse, `name` +
-  `style` (delivery/temperament, no quest lore, no emotion words). Set
+  `style` (delivery/temperament, no quest lore, no emotion words) + `age`. Set
   `accent`/`pace` only for a real per-character quirk. **Attach the profile to
   every one of the NPC's cache ids** so variants resolve identically.
 - **Origin / accent** -> `tools/overrides.json` `ethnicity`, NOT a repeated

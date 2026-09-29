@@ -39,6 +39,7 @@ class NpcProfileLayers {
     String pace;
     String pitch;
     String voiceRegion;
+    Integer age;
   }
 
   @Value

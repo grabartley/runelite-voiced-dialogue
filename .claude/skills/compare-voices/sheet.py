@@ -20,8 +20,9 @@ def fields(b, key):
     if not r:
         return None
     region = next((t.split('voiceRegion=')[1].rstrip(')') for t in r['trace'] if 'voiceRegion=' in t), None)
+    age = next((t.split(' age=')[1].split()[0].rstrip(',)') for t in r['trace'] if ' age=' in t), None)
     return [('as', r.get('spec')), ('profile', r.get('profileName')), ('voice', r.get('voice')),
-            ('region', region), ('accent', r.get('accent'))]
+            ('region', region), ('age', None if age == '-' else age), ('accent', r.get('accent'))]
 
 def meta(b, key):
     mine, other = fields(b, key), fields('after' if b == 'before' else 'before', key)

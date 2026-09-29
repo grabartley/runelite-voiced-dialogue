@@ -373,6 +373,28 @@
       "source": "Transcript:Troll Romance"
     },
     {
+      "key": "age_old_male",
+      "group": "Age: old speakers narrowed to the oldest voices",
+      "kind": "npc",
+      "id": 3480,
+      "name": "Dr Harlow",
+      "gender": "Male",
+      "line": "Yesh, Count Draynor! The evil nashty vampyre that no one's ever sheen! Every nowsh and then, some adventurer... theysh go and try to kill him, but none of 'em ever comesh back.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Vampyre Slayer"
+    },
+    {
+      "key": "age_old_female",
+      "group": "Age: old speakers narrowed to the oldest voices",
+      "kind": "npc",
+      "id": 120,
+      "name": "Aggie",
+      "gender": "Female",
+      "line": "Black dye can be made by grinding up black mushrooms. That's dead easy. The mushrooms grow in some old caves and ruins.",
+      "emotion": "NEUTRAL",
+      "source": "Transcript:Land of the Goblins"
+    },
+    {
       "key": "child_misthalin_boy",
       "group": "Children",
       "kind": "npc",

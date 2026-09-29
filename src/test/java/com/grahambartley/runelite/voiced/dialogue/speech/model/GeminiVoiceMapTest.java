@@ -567,4 +567,60 @@ public class GeminiVoiceMapTest {
   private static Set<String> pool(String... voices) {
     return new HashSet<>(Arrays.asList(voices));
   }
+
+  @Test
+  public void anAgedNpcIsVoicedByTheRegionVoicesClosestToItsAge() {
+    java.util.Map<String, Integer> ages = new java.util.HashMap<>();
+    ages.put("se-young-1", 25);
+    ages.put("se-young-2", 27);
+    ages.put("se-young-3", 29);
+    ages.put("se-old", 62);
+    GeminiVoiceMap aged =
+        new GeminiVoiceMap(
+            new GeminiVoiceRegions(
+                new JsonParser()
+                    .parse(
+                        "{\"SE\":{\"MALE\":[\"se-young-1\",\"se-young-2\",\"se-young-3\",\"se-old\"]}}")
+                    .getAsJsonObject(),
+                null,
+                ages));
+    CharacterProfile old =
+        new CharacterProfile(
+            "Npc", "Strong accent", null, "Gruff.", "Slow.", null, "SE", false, 70);
+    for (int seed = 0; seed < 50; seed++) {
+      String voice = aged.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, seed), old);
+      assertTrue(voice, !voice.equals("se-young-1"));
+    }
+  }
+
+  @Test
+  public void aChildIgnoresItsAgeAndKeepsTheChildPool() {
+    CharacterProfile agedChild =
+        new CharacterProfile(
+            "Npc", "Strong accent", null, "Bright.", "Quick.", null, "IRISH", false, 70);
+    assertEquals(
+        "ie-young",
+        TWO_REGIONS.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, 5, true), agedChild));
+  }
+
+  @Test
+  public void anOldSouthernEnglishManIsVoicedByTheOldestSouthernEnglishMen() {
+    Set<String> oldest =
+        new HashSet<>(Arrays.asList("en-gb-training-1", "en-gb-tutor-8", "en-gb-tutor-9"));
+    CharacterProfile old =
+        new CharacterProfile(
+            "Dr Harlow",
+            "Strong accent",
+            null,
+            "Gruff.",
+            "Slow.",
+            null,
+            "SOUTHERN_ENGLISH",
+            false,
+            65);
+    for (int seed = 0; seed < 100; seed++) {
+      String voice = map.voiceFor(VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE, seed), old);
+      assertTrue(voice, oldest.contains(voice));
+    }
+  }
 }
