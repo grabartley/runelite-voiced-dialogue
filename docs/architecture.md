@@ -130,8 +130,8 @@ away from a crier fades them out mid-sentence and rounding a corner towards one 
 speaker that has left earshot entirely, whether because you walked off or it did, is cut there and
 then rather than faded, since it has stopped being rendered and a voice from an empty tile is worse
 than silence. The gain is applied to the samples as they are written, so the fade works on every
-mixer; a change reaches the speaker once the audio line's half-second buffer has played through,
-well inside the 600 ms tick the distance is read on. The distance is read on the game thread, where NPC positions are safe
+mixer; a change reaches the speaker once the audio line's buffer has played through, within about
+one tick. The distance is read on the game thread, where NPC positions are safe
 to read, and the only work done there is one coordinate subtraction per bark still playing.
 
 One speaker is never voiced twice at once. A person cannot say two things at the same time, so a
@@ -594,9 +594,9 @@ line, and the gain is applied to the samples themselves rather than to the line'
   treated as pauses and ignored, and the RMS of the rest is the line's speech level. Ignoring pauses
   keeps a line with long gaps from being boosted as though it were a quiet one.
 - **The volume sets the level.** At 100 the speech level is -18 dBFS, the median across a real cache
-  of about 2,900 lines, and the setting scales that level in proportion below it, the same curve the
-  setting has always used: 50 is -24 dBFS, the default 20 is -32 dBFS, and 0 is silent. A typical
-  line therefore plays exactly as loud at every setting as the model made it.
+  of about 2,900 lines, and lower settings scale it in proportion, a gain of volume / 100: 50 is
+  -24 dBFS, the default 20 is -32 dBFS, and 0 is silent. A typical line plays as loud at each
+  setting as it would with no levelling at all.
 - **The limits.** The gain never pushes the loudest sample past -1 dBFS, so levelling cannot clip,
   and never boosts by more than 12 dB, so a whispered line is brought up without amplifying its
   noise floor. Gemini speech peaks 15 to 19 dB above its level, so the ceiling only holds a line
@@ -607,16 +607,17 @@ line, and the gain is applied to the samples themselves rather than to the line'
   levelled the same way, the cache format carries no level, and changing the level never re-bills a
   line. A line with cave echo is always played whole, and the echo is added before levelling, so the
   level is measured on what the player hears.
-- **Live volume.** The gain is worked out for each 2048-sample block as it is written, so a volume
-  change mid-line reaches the rest of that line.
+- **Live volume.** The gain is worked out for each 2048-sample block as it is written, so the
+  ambient distance fade reaches the rest of a bark as it plays. A dialogue line takes the volume it
+  starts with.
 
 A streamed line starts playing on its first chunk with no added wait, which means its level is not
 known yet. It starts at the level the model produced, and as chunks arrive the gain slides toward
 the level of everything heard so far, at no more than 3 dB per second, then locks once 3 seconds of
 speech have been heard. The slow slide keeps the correction from being heard as a jump, and locking
 keeps the rest of the line whole. The volume setting scales the sliding gain at every moment. The
-cost is accuracy: across real AI Studio lines at the default volume, streamed lines land within
-about 2 dB of each other, where the same lines levelled whole land within 1.5 dB. A replay from the
+cost is accuracy: across eleven real AI Studio lines at the default volume, streamed lines spread
+over 2.3 dB, where the same lines levelled whole spread over 1.5 dB. A replay from the
 cache is levelled whole. Waiting for a lead-in before playing was measured and rejected: the first
 quarter second of a line is usually silence, so a lead-in short enough to go unnoticed holds too
 little speech to measure, and one long enough to measure adds half a second or more before the
