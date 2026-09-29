@@ -430,6 +430,13 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void moxiIsFemaleInEveryForm() {
+    for (int npcId : new int[] {14034, 14046, 30154}) {
+      assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
   public void youngLookingPetsAndCreaturesStayAdults() {
     for (int npcId : new int[] {5381, 8485, 14519, 14033, 14487, 8183, 9398, 14034, 8025}) {
       assertFalse("id " + npcId + " is not a child", analyze(npcId, null).isChild());

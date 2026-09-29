@@ -6,7 +6,7 @@
     "npc_pages": 6009,
     "count": 14103,
     "name_matched_ids": 707,
-    "overrides_applied": 1821,
+    "overrides_applied": 1824,
     "symbols": 4436,
     "race_counts": {
       "Aranei": 24,
@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2141,
-      "Male": 11962
+      "Female": 2144,
+      "Male": 11959
     },
     "ethnicity_counts": {
       "asgarnia": 716,
@@ -93696,7 +93696,7 @@
     },
     "14034": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "14036": {
@@ -93742,7 +93742,7 @@
     },
     "14046": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "14047": {
@@ -101248,7 +101248,7 @@
     },
     "30154": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "30338": {
