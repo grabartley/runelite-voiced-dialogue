@@ -62,7 +62,7 @@ public class NpcDemographicAnalyzerTest {
     assertAttributes(5035, "Human", "Female");
     assertAttributes(4284, "Human", "Female");
     assertAttributes(3561, "Human", "Female");
-    assertAttributes(1305, "Human", "Female");
+    assertAttributes(1305, "Human", "Male");
     assertAttributes(11868, "Human", "Female");
     assertAttributes(3481, "Undead", "Male");
     assertAttributes(3893, "Dwarf", "Male");
@@ -431,6 +431,48 @@ public class NpcDemographicAnalyzerTest {
   public void moxiIsFemaleInEveryForm() {
     for (int npcId : new int[] {14034, 14046, 30154}) {
       assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void wikiConfirmedWomenResolveFemale() {
+    for (int npcId : new int[] {12703, 13097, 14195, 6908, 6909, 6912, 6913}) {
+      assertEquals("gender for id " + npcId, "Female", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void elnesIsAKourendDwarfLikeTheOtherMinecartConductors() {
+    assertAttributes(12703, "Dwarf", "Female");
+    assertEquals("kourend", analyze(12703, null).getEthnicity());
+  }
+
+  @Test
+  public void cuicaIsACamTorumDwarf() {
+    assertAttributes(13097, "Dwarf", "Female");
+    assertEquals("varlamore", analyze(13097, null).getEthnicity());
+  }
+
+  @Test
+  public void shayzienTierFourSoldierStaysMale() {
+    for (int npcId : new int[] {6910, 6911}) {
+      assertEquals("gender for id " + npcId, "Male", analyze(npcId, null).getGender());
+    }
+  }
+
+  @Test
+  public void pyreCoveZombiePirateIsAMaleWildernessUndeadInBothForms() {
+    for (int npcId : new int[] {14177, 14178}) {
+      assertAttributes(npcId, "Undead", "Male");
+      assertEquals("wilderness", analyze(npcId, null).getEthnicity());
+    }
+  }
+
+  @Test
+  public void warhammerChasmSoldierIsAKourendManLikeItsSquad() {
+    for (int npcId : new int[] {14189, 14191, 14193}) {
+      assertAttributes(npcId, "Human", "Male");
+      assertEquals("kourend", analyze(npcId, null).getEthnicity());
     }
   }
 
