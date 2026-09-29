@@ -1,5 +1,6 @@
 package com.grahambartley.runelite.voiced.dialogue.audio;
 
+import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +23,8 @@ public class StreamingAudioPlayer implements AudioOutput {
 
   private static final int QUEUE_POLL_MS = 20;
 
+  static final int LEVELLING_LEAD_IN_MS = 500;
+
   private final LineFactory lineFactory;
   private final AtomicLong generation = new AtomicLong();
   private volatile SourceDataLine line;
@@ -40,7 +43,7 @@ public class StreamingAudioPlayer implements AudioOutput {
       return;
     }
     long gen = generation.incrementAndGet();
-    byte[] pcm = PcmAudio.toPcm16LE(samples);
+    byte[] pcm = PcmAudio.toPcm16LE(LoudnessLeveller.levelled(samples, sampleRate));
     SourceDataLine sdl = null;
     try {
       sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
@@ -138,15 +141,15 @@ public class StreamingAudioPlayer implements AudioOutput {
       SourceDataLine sdl = null;
       try {
         sdl = openLine(PcmAudio.format(sampleRate), volumePercent);
+        float[] leadIn = awaitLeadIn();
+        float gain = LoudnessLeveller.gainFor(leadIn, sampleRate);
+        writeChunked(sdl, PcmAudio.toPcm16LE(LoudnessLeveller.scaled(leadIn, gain)), gen);
         while (generation.get() == gen) {
-          float[] chunk = queue.poll(QUEUE_POLL_MS, TimeUnit.MILLISECONDS);
+          float[] chunk = nextChunk();
           if (chunk == null) {
-            if (ended && queue.isEmpty()) {
-              break;
-            }
-            continue;
+            break;
           }
-          writeChunked(sdl, PcmAudio.toPcm16LE(chunk), gen);
+          writeChunked(sdl, PcmAudio.toPcm16LE(LoudnessLeveller.scaled(chunk, gain)), gen);
         }
         if (generation.get() == gen) {
           sdl.drain();
@@ -158,6 +161,34 @@ public class StreamingAudioPlayer implements AudioOutput {
           releaseLine(sdl);
         }
       }
+    }
+
+    private float[] awaitLeadIn() throws InterruptedException {
+      int wanted = sampleRate * LEVELLING_LEAD_IN_MS / 1000;
+      float[] leadIn = new float[0];
+      while (leadIn.length < wanted) {
+        float[] chunk = nextChunk();
+        if (chunk == null) {
+          break;
+        }
+        float[] joined = Arrays.copyOf(leadIn, leadIn.length + chunk.length);
+        System.arraycopy(chunk, 0, joined, leadIn.length, chunk.length);
+        leadIn = joined;
+      }
+      return leadIn;
+    }
+
+    private float[] nextChunk() throws InterruptedException {
+      while (generation.get() == gen) {
+        float[] chunk = queue.poll(QUEUE_POLL_MS, TimeUnit.MILLISECONDS);
+        if (chunk != null) {
+          return chunk;
+        }
+        if (ended && queue.isEmpty()) {
+          return null;
+        }
+      }
+      return null;
     }
   }
 

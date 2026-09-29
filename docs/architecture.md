@@ -581,3 +581,34 @@ Synthesized audio (a `Pcm` of mono float samples) is played through `javax.sound
 by `StreamingAudioPlayer`, converting to signed 16-bit LE PCM via `PcmAudio`. Nothing is staged to a
 temp file, and a generation counter lets a new line interrupt the one currently playing. The Plugin Hub
 maintainers accept this `javax.sound` use for the plugin's streaming and interruption needs.
+
+### Loudness levelling
+
+Gemini does not return every line at the same level, and emotional deliveries swing the most, so
+consecutive lines from one NPC on one voice would otherwise jump in volume. `LoudnessLeveller`
+scales each line toward a single speech level before **Dialogue Volume** is applied on top by the
+line's master gain. `StreamingAudioPlayer` is the one owner: every line, dialogue and ambient alike,
+passes through it on its way to the audio line.
+
+- **What is measured.** The line is cut into 20 ms windows, windows quieter than -50 dBFS are
+  treated as pauses and ignored, and the RMS of the rest is the line's speech level. Ignoring pauses
+  keeps a line with long gaps from being boosted as though it were a quiet one.
+- **The target.** -18 dBFS, the median speech level across a real cache of about 2,900 lines, where
+  most lines sat between -23 and -14 dBFS. A typical line therefore plays exactly as loud as the
+  model made it, and **Dialogue Volume** keeps its meaning.
+- **The limits.** The gain never pushes the loudest sample past -1 dBFS, so levelling cannot clip,
+  and never boosts by more than 12 dB, so a whispered line is brought up without amplifying its
+  noise floor. A line that is silent throughout plays untouched.
+- **Whole lines only.** One gain covers the whole line. Nothing is compressed within a line, so a
+  shout keeps its shape and still reads as a shout next to the words around it.
+- **At playback.** The cache holds each clip as the model returned it, so every cached clip is
+  levelled the same way, the cache format carries no level, and changing the target never re-bills a
+  line. Cave echo is added first, so the level is measured on what the player hears.
+
+A streamed line is not complete when playback starts. The player waits for a 500 ms lead-in of
+audio, measures that, and holds the resulting gain for the rest of the line. Estimating from the
+first chunk alone was rejected because a chunk can be a few milliseconds of breath or silence,
+which would set the gain for the whole line from noise. The lead-in costs little: AI Studio, the
+provider that actually streams, generates audio faster than it plays, so half a second of audio
+arrives well before half a second has passed. A line shorter than the lead-in is levelled whole once
+it ends. Later chunks louder than the lead-in are held at full scale by the 16-bit conversion.
