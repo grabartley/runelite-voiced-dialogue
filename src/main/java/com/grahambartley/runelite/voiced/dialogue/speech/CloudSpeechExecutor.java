@@ -22,6 +22,8 @@ public final class CloudSpeechExecutor {
 
   public static final int MAX_SPEECH_ATTEMPTS = 2;
 
+  public static final String CACHE_NAMESPACE = "cloud-speech";
+
   public interface Ops {
 
     public String apiKey();
@@ -169,8 +171,7 @@ public final class CloudSpeechExecutor {
         model.voiceFor(request.voice(), request.profile()),
         support.speedPercent(),
         request.profile(),
-        CloudTtsText.effectiveSpokenLanguage(config, request),
-        request.skipTranslation());
+        CloudTtsText.languageCacheToken(config, request));
   }
 
   public Pcm synthesize(SynthesisRequest request) {

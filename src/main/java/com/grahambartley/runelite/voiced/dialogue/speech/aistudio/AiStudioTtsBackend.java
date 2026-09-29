@@ -112,6 +112,11 @@ public final class AiStudioTtsBackend implements SynthesisBackend {
   }
 
   @Override
+  public String cacheNamespace() {
+    return CloudSpeechExecutor.CACHE_NAMESPACE;
+  }
+
+  @Override
   public boolean isAvailable() {
     return CloudHttp.isNonBlank(config.googleAiStudioApiKey());
   }

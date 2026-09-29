@@ -66,4 +66,31 @@ public class SynthesisBackendTest {
     assertArrayEquals(whole.getSamples(), fed.get(0), 0f);
     assertEquals("at the line's own sample rate", 24_000, rate[0]);
   }
+
+  @Test
+  public void theCacheNamespaceDefaultsToTheBackendId() {
+    SynthesisBackend backend =
+        new SynthesisBackend() {
+          @Override
+          public String id() {
+            return "some-backend";
+          }
+
+          @Override
+          public boolean isAvailable() {
+            return true;
+          }
+
+          @Override
+          public EnumSet<Emotion> supportedEmotions() {
+            return EnumSet.of(Emotion.NEUTRAL);
+          }
+
+          @Override
+          public Pcm synthesize(SynthesisRequest request) {
+            return null;
+          }
+        };
+    assertEquals("some-backend", backend.cacheNamespace());
+  }
 }

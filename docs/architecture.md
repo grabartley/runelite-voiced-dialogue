@@ -370,8 +370,8 @@ normal speed"). The
 `streamGenerateContent` variant (`?alt=sse`) backs the streaming path below, delivering audio as
 server-sent events whose chunks are decoded and handed to playback as they arrive. Failure handling
 mirrors OpenRouter: one retry for a transient empty or truncated line, a backed-off retry for a
-network timeout, a rate-limit back-off on 429, and a `cacheVariant` built from the same fields under
-the distinct `cloud-google-ai-studio` backend id, so the two providers' cache entries never collide.
+network timeout, a rate-limit back-off on 429, and the same `cacheVariant`. Both providers run the same model with the same voice and style, so they
+share the `cloud-speech` cache namespace: a line voiced on one replays from the cache on the other.
 
 On the Gemini API a 429 means quota, so the notice is worded from the `google.rpc.QuotaFailure`
 violation the rejection carries: a free-tier ceiling, a paid per-model cap, and a per-minute limit
@@ -408,16 +408,19 @@ speaking style works without an OpenRouter key.
 
 Because synthesis is billed per character, several guards keep cost bounded and latency low:
 
-- **Cache key.** `cacheVariant` folds in the resolved Gemini voice and the character profile,
-  plus (only when not at their defaults) the speaking pace and a non-English spoken language, on
-  top of the shared `(backendId, voiceKey, emotion, text)` identity. Every speaker resolves to a
-  profile, so every key carries a hash of the profile fields that are sent (name, accent, style,
-  pace, and pitch and accent detail when set). A voice, pace, profile, or language change therefore never
-  replays the wrong audio, while a plain English line stays on a stable key so changing a setting
-  that cannot affect it does not force a needless re-bill. The model is not part of the key: a
-  model swap keeps every cached clip, since a line voiced once should not be billed again for a
-  model change the player never asked for. Line length is not part of the key: every line is sent
-  whole.
+- **Cache key.** A line is keyed by `(namespace, voiceKey, emotion, text)`, where the namespace is
+  the backend's `cacheNamespace` (`cloud-speech` for both cloud providers) and the voice key is the
+  backend's `cacheVariant`. The variant holds only what defines a character's audio: the resolved
+  voice id, a hash of the profile fields that are sent (name, accent, style, pace, and pitch and
+  accent detail when set), and, only when not at their defaults, the speaking pace and a language
+  token built from the `SpokenLanguage` and `SpeakingStyle` enum names. Every speaker resolves to a
+  profile, so a voice, profile, pace, or language change never replays the wrong audio, and only
+  the characters whose own voice or profile changed are re-voiced. Nothing that can change without
+  changing the audio is in the key: not the provider, the model, the race or gender taxonomy, how an
+  accent was chosen, the style prompt's template wording, or the settings' display labels. Line
+  length is not part of the key either: every line is sent whole. Golden-value tests in
+  `CloudCacheKeyBuilderTest`, `CharacterProfileTest`, and `DiskAudioCacheTest` pin the key format,
+  so an accidental change that would re-bill every cached line fails the build.
 - **In-flight de-duplication.** If two tasks reach the synth step for the same cache key at once, only
   the first issues a cloud call; the second waits on and reuses its result (`synthesizeDeduped`).
 - **Session spend readout.** `SpendTracker` counts billable work per provider, recorded inside each
@@ -520,8 +523,9 @@ Beyond per-line guards, two larger levers cut perceived latency and broaden reac
   class is appended
   to the spoken language, so the translation hop rewrites that line in that style. It routes through
   the hop even for English, and composes with any language. Each class is selected from the
-  `player` flag on `SynthesisRequest`, so the cache key already differs between a player and an NPC
-  line of identical text under different styles. Either class can be `None` independently (e.g. a
+  `player` flag on `SynthesisRequest`, and the chosen style's enum name is part of the language
+  token in the cache key, so a player and an NPC line of identical text under different styles never
+  share a clip. Either class can be `None` independently (e.g. a
   roadman player among posh NPCs).
 
 The translation model is invoked only when there is something for it to do. For a given line, with

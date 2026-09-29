@@ -15,7 +15,7 @@ There is one file per voiced line, with a `.tdc` extension.
 
 ## File names
 
-A file's name is the lowercase hex SHA-256 of four fields: the backend id, the voice key, the
+A file's name is the lowercase hex SHA-256 of four fields: the cache namespace (`cloud-speech` for both providers), the voice key, the
 emotion's upper-case name (such as `HAPPY`), and the line's text. Each field is fed to the hash as
 its UTF-8 byte length (4-byte little-endian int) followed by its UTF-8 bytes; when there is no
 emotion, that field is the text `null`.

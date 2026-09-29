@@ -68,14 +68,20 @@ public class CharacterProfileTest {
   }
 
   @Test
-  public void anOverriddenAccentChangesTheCacheKeySinceItCanMoveTheVoice() {
+  public void anOverriddenAccentLeavesTheCacheKeyToTheVoiceItResolvesTo() {
     CharacterProfile bundled =
         new CharacterProfile("Wizard", "Irish accent", null, "Warm", "Measured", null, "SCOTTISH");
     CharacterProfile overridden =
         new CharacterProfile(
             "Wizard", "Irish accent", null, "Warm", "Measured", null, "SCOTTISH", true);
-    assertNotEquals(bundled.cacheKey(), overridden.cacheKey());
+    assertEquals(bundled.cacheKey(), overridden.cacheKey());
     assertNotEquals(bundled, overridden);
+  }
+
+  @Test
+  public void theCacheKeyForAFixedProfileNeverChangesAcrossReleases() {
+    assertEquals(
+        "changing this re-bills every cached line for every user", "1e3f531e", WIZARD.cacheKey());
   }
 
   @Test

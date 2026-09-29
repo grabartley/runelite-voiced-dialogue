@@ -27,6 +27,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudSpeechExecutor;
 import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
 import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
@@ -90,6 +91,12 @@ public class AiStudioTtsBackendTest {
     AiStudioTtsBackend backend = backend(config);
     backend.setSpendTracker(spend);
     return backend;
+  }
+
+  @Test
+  public void itSharesTheCloudCacheNamespaceSoSwitchingProviderReplaysCachedLines() {
+    assertEquals(
+        CloudSpeechExecutor.CACHE_NAMESPACE, backend(new MutableTestConfig()).cacheNamespace());
   }
 
   @Test
@@ -596,7 +603,7 @@ public class AiStudioTtsBackendTest {
 
     assertTrue(
         "a translated line folds the target language into the cache variant",
-        backend.cacheVariant(req()).contains("french"));
+        backend.cacheVariant(req()).contains("FRENCH"));
 
     config.language = VoicedDialogueConfig.SpokenLanguage.ENGLISH;
     assertFalse(

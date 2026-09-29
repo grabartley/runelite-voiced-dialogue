@@ -66,9 +66,6 @@ public final class CharacterProfile {
     if (accentDetail != null) {
       joined += '\u0002' + accentDetail;
     }
-    if (accentOverridden) {
-      joined += '\u0003';
-    }
     return Integer.toHexString(joined.hashCode());
   }
 }

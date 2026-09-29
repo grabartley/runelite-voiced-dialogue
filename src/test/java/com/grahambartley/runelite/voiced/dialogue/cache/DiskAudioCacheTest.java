@@ -46,6 +46,22 @@ public class DiskAudioCacheTest {
   }
 
   @Test
+  public void aLinesFileNameIsTheDocumentedHashAndNeverChangesAcrossReleases() {
+    new DiskAudioCache(cacheDir())
+        .put(
+            "cloud-speech",
+            "en-gb-tutor-9",
+            Emotion.NEUTRAL,
+            "What can I do yer for?",
+            pcm(24_000, 0.1f));
+
+    assertTrue(
+        Files.exists(
+            cacheDir()
+                .resolve("f0135745b1888237ffd10143f3c367b164a3bc62a4216486b639cd10af97c85e.tdc")));
+  }
+
+  @Test
   public void roundTripsPcmAndPreservesSampleRate() {
     DiskAudioCache cache = new DiskAudioCache(cacheDir());
     Pcm stored = pcm(48_000, 0.5f, -0.25f, 1.0f, -1.0f, 0.0f);

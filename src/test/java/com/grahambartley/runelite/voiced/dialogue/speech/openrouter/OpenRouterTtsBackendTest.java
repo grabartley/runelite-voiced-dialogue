@@ -41,6 +41,7 @@ import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
 import com.grahambartley.runelite.voiced.dialogue.profile.VoiceSpec;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
+import com.grahambartley.runelite.voiced.dialogue.speech.CloudSpeechExecutor;
 import com.grahambartley.runelite.voiced.dialogue.speech.MutableTestConfig;
 import com.grahambartley.runelite.voiced.dialogue.speech.RetryTuning;
 import com.grahambartley.runelite.voiced.dialogue.speech.SynthesisRequest;
@@ -98,6 +99,11 @@ public class OpenRouterTtsBackendTest {
     OpenRouterTtsBackend backend = backend(config);
     backend.setSpendTracker(spend);
     return backend;
+  }
+
+  @Test
+  public void itSharesTheCloudCacheNamespaceSoSwitchingProviderReplaysCachedLines() {
+    assertEquals(CloudSpeechExecutor.CACHE_NAMESPACE, backend(keyedConfig()).cacheNamespace());
   }
 
   @Test

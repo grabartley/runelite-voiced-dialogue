@@ -9,6 +9,10 @@ public interface SynthesisBackend {
 
   String id();
 
+  default String cacheNamespace() {
+    return id();
+  }
+
   boolean isAvailable();
 
   default String missingKeyNotice() {

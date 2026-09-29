@@ -331,7 +331,7 @@ public class CloudSpeechExecutorTest {
     String french = executor.cacheVariant(line);
     assertNotEquals(
         "the same line in another language must not share a cache key", english, french);
-    assertTrue("the language is folded in", french.contains("|lfrench"));
+    assertTrue("the language is folded in", french.contains("|lFRENCH"));
   }
 
   @Test
@@ -344,7 +344,7 @@ public class CloudSpeechExecutorTest {
 
     assertTrue(
         "a translated dialogue line still folds the language in",
-        executor.cacheVariant(dialogue).contains("|lfrench"));
+        executor.cacheVariant(dialogue).contains("|lFRENCH"));
     assertFalse(
         "a skip-translation line keeps the plain pre-translation key",
         executor.cacheVariant(publicChat).contains("|l"));
