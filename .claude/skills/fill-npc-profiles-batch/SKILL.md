@@ -112,7 +112,8 @@ Agent tool, `general-purpose`), ~15 NPCs each, run concurrently
 id, so you control id mapping locally (one NPC can have many cache ids). Write a
 shared instructions file and point each agent at its chunk file + an output file.
 Per NPC the agent returns: `name`, `style` (<=200 chars, delivery only), `age`
-(the years the voice should sound, judged from who the character is),
+(the years the voice should sound, judged from who the character is, never the lore age of an
+ageless being),
 `race`, `gender`, `race_corrected`/`gender_corrected` flags, `ethnicity_origin`,
 optional `accent`/`pace`, and a confidence.
 

@@ -85,7 +85,10 @@ pools are regenerated and shipped.
 
 ## Age
 
-A profile's `age` is the number of years the character's voice should sound. The voice library
+A profile's `age` is the number of years the character's voice should sound, not the character's
+age in lore. A being thousands of years old, such as a Mahjarrat, gets the age its voice should
+sound (Azzanadra 70, Lucien 55), since the number is spoken to the model and picks among voices
+whose real ages run from their twenties to their seventies. The voice library
 states an age for every native voice, and the generator bundles those ages beside the pools in
 `src/main/resources/voice-regions.json` as `voiceAges`. An NPC with an age is voiced from the
 region voices within ten years of it, or from the three nearest when fewer than three are that

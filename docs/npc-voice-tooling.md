@@ -260,7 +260,8 @@ different people, where a short style string flattens them together.
   gender before it matters: by ear a bare "very deep" turns a female troll or dwarf into a man, a
   bare "very high" turns a boy into a girl, and a few library voices drift toward the other
   gender unless it is named.
-- `age` is the whole number of years the character's voice should sound (1 to 120). Every `byId`
+- `age` is the whole number of years the character's voice should sound (1 to 120), not the
+  character's age in lore: a Mahjarrat thousands of years old sounds 45 to 75. Every `byId`
   profile sets one, and the generator rejects a bespoke profile without it; other layers may set it.
   It does two things. An NPC with an age takes its voice from the region voices closest to that
   age (see [voice-casting.md](voice-casting.md#age)), and the gender that leads the profile names
