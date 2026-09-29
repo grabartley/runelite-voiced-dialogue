@@ -1,10 +1,31 @@
-import json, base64, subprocess, os, html, sys
+import json, base64, subprocess, os, html, sys, time
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'review-area-origins'))
+from area import wiki_entry
 # Usage: sheet.py <cases.json> <out-dir> <before-label> <after-label> <provider>
 CASES, D, BEFORE, AFTER, PROVIDER = sys.argv[1:]
 cases = json.load(open(CASES))['cases']
 rendered = {r['key'] for r in json.load(open(f'{D}/after/results.json'))}
 cases = [c for c in cases if c['key'] in rendered or (c.get('missing') and any(k.startswith(c['key'].rsplit('_', 1)[0]) for k in rendered))]
 res = {b: {r['key']: r for r in json.load(open(f'{D}/{b}/results.json'))} for b in ('before', 'after')}
+
+wiki_path = f'{D}/wiki.json'
+wiki = json.load(open(wiki_path)) if os.path.exists(wiki_path) else {}
+for c in cases:
+    npc_id = str(c.get('id')) if c.get('id') is not None and not c.get('missing') else None
+    if npc_id and (npc_id not in wiki or 'error' in wiki[npc_id]):
+        try:
+            wiki[npc_id] = wiki_entry(npc_id)
+        except Exception as error:
+            wiki[npc_id] = {'error': str(error)}
+        time.sleep(0.2)
+json.dump(wiki, open(wiki_path, 'w'), indent=1)
+
+def picture(c):
+    page = wiki.get(str(c.get('id')), {})
+    if not page.get('image'):
+        return ''
+    alt = html.escape(page.get('title') or c.get('name') or '')
+    return f'<img class="npc" src="{html.escape(page["image"])}" alt="{alt}" loading="lazy">'
 
 def audio(b, key):
     wav = f'{D}/{b}/{key}.wav'
@@ -52,7 +73,7 @@ for title in groups:
             continue
         n += 1
         who = c.get('name') or c['kind'].title()
-        rows.append(f'''<div class="card" data-key="{k}">
+        rows.append(f'''<div class="card" data-key="{k}">{picture(c)}
 <h3>{n}. {html.escape(who)} <small>{html.escape(k)}{" #" + str(c["id"]) if c.get("id") is not None else ""}</small></h3>
 {'<p class="why">' + html.escape(c["why"]) + '</p>' if c.get("why") else ""}
 <p class="line">"{html.escape(c["line"])}"</p>
@@ -70,7 +91,8 @@ page = f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport
 body{{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;margin:0;padding:16px;max-width:980px;margin:auto}}
 .card{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}}
 h3{{margin:0 0 4px;font-size:16px}} small{{color:var(--mut);font-weight:normal}}
-.line{{font-style:italic;margin:4px 0 10px}} .pair{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+.line{{font-style:italic;margin:4px 0 10px}} .npc{{float:right;max-width:110px;max-height:140px;margin:0 0 8px 12px}}
+.pair{{clear:both;display:grid;grid-template-columns:1fr 1fr;gap:12px}}
 @media (max-width:640px){{.pair{{grid-template-columns:1fr}}}}
 audio{{width:100%;margin:4px 0}} .meta{{font-size:12px;color:var(--mut)}} .changed{{color:var(--fg);font-weight:600}}
 .why{{margin:6px 0;padding:6px 10px;border-left:3px solid var(--line)}} .miss{{color:var(--mut)}}
