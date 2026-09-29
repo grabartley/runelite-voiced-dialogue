@@ -25,7 +25,8 @@ are no network calls or large downloads when choosing a voice.
   rejects it, and it is baked as `PLAYER_MALE` / `PLAYER_FEMALE`.
 - `tools/voice-library.json` - a committed snapshot of the Extended Voice Library, refreshed with
   `GEMINI_API_KEY=... python3 tools/fetch_voice_library.py`. The generator builds each region's
-  male and female pools from it into `src/main/resources/voice-regions.json`, so a voice only
+  male and female pools from it into `src/main/resources/voice-regions.json`, along with each pooled
+  voice's library age (`voiceAges`) for casting by profile `age`, so a voice only
   changes when the snapshot or the regions change and are shipped.
 
 ## Data source
@@ -300,7 +301,8 @@ The generator enforces the mechanical part: `validate_profiles` rejects a tag
 bracket, a prompt-block marker, or "word for word" in any field, an `accent` that
 does not start with "Strong" or "Very strong," and end with its pronunciation, an `accent` over 100
 characters, a `voiceRegion` that is not in `tools/voice-regions.json`, a `voiceRegion` or `accentDetail` on a
-layer with no `accent`, and a `replaceStyle` with no `style` beside it.
+layer with no `accent`, a `replaceStyle` with no `style` beside it, an `age` that is not a whole
+number from 1 to 120 or sits on `default`, `player` or `narrator`, and a `byId` profile with no `age`.
 
 The source of truth is `tools/profiles.json`; the generator embeds it under the
 output's `profiles` key. This is a **British** medieval fantasy world: commoners
