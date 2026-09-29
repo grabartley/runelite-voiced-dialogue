@@ -123,6 +123,30 @@ def voice_region(result):
     return "-"
 
 
+def accent_owner(result, profiles):
+    source = next((t.split("source=")[1].split(",")[0] for t in result.get("trace", [])
+                   if "[TTS profile]" in t and "source=" in t), "")
+    categories = {c.get("id"): c for c in profiles.get("byCategory", [])}
+    owner = None
+    for layer in source.split("+"):
+        kind, _, key = layer.partition(":")
+        if kind == "race":
+            entry = profiles["byRace"].get(key)
+        elif kind == "ethnicity":
+            entry = profiles["byEthnicity"].get(key)
+        elif kind in ("keyword", "lifeStage"):
+            entry = categories.get(key)
+        elif kind == "id":
+            entry = profiles["byId"].get(key)
+        else:
+            entry = None
+        if isinstance(entry, dict) and entry.get("accent"):
+            owner = layer
+    if owner and owner.split(":")[0] in ("keyword", "lifeStage", "id"):
+        return owner
+    return None
+
+
 def build(args):
     table = load(TABLE)
     npcs, profiles = table["npcs"], table["profiles"]
@@ -167,6 +191,10 @@ def build(args):
             picker = (f'<label>Origin <select data-ids="{",".join(ids)}" '
                       f'data-name="{html.escape(profile["name"])}" data-current="{current}">'
                       f'{options}</select></label>')
+            owner = accent_owner(result, profiles)
+            if owner:
+                picker += (f'<p class="warn">The accent comes from the <code>{html.escape(owner)}</code> '
+                           'layer, which beats origin, so a new origin does not change how they sound.</p>')
         else:
             picker = (f'<p class="note">{html.escape(npc.get("race"))} race: its racial accent '
                       'always wins, so origin has no effect.</p>')

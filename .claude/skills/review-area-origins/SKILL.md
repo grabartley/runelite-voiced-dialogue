@@ -45,7 +45,9 @@ Each card shows the model picture per version, ids, race, gender, age, location,
 current origin, accent, voice and region, style and a wiki link. Every human gets an **Origin**
 selector with the current origin preselected, including "None: British default". Non-humans get
 no selector, because their racial accent always wins over origin; list any that look wrong in the
-reply instead. Changed cards turn yellow, **Show changed only** filters to them, picks survive a
+reply instead. A human whose accent is set by a name keyword layer (a pirate, a vampyre) or
+by its own `byId` profile keeps the selector but carries a warning: origin still records where they
+are from, but that layer's accent beats it, so their sound only changes by editing that layer. Changed cards turn yellow, **Show changed only** filters to them, picks survive a
 reload of the same build, and **Copy results** copies one line per change:
 
 ```text
