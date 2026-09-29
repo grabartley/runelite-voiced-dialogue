@@ -273,6 +273,18 @@
       "missing": "byId 1325 (Hari) is the only New Zealand NPC and is male"
     },
     {
+      "key": "indian_english_male",
+      "group": "Regional accents",
+      "kind": "npc",
+      "missing": "no bundled NPC is Indian; the region is reached only by a typed Your Accent or an NPC accent override naming India"
+    },
+    {
+      "key": "indian_english_female",
+      "group": "Regional accents",
+      "kind": "npc",
+      "missing": "no bundled NPC is Indian; the region is reached only by a typed Your Accent or an NPC accent override naming India"
+    },
+    {
       "key": "fremennik_male",
       "group": "Regional accents",
       "kind": "npc",
