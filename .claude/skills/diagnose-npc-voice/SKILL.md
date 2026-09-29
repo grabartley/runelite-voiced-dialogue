@@ -17,7 +17,7 @@ trace lines the plugin emits per line:
 
 ```
 [TTS voice]   npc='X' world=HIT(id=<activeId>) race=R gender=G source=table-hit -> seed=<n>
-[TTS profile] npc='X' id=<id> race=R ethnicity=E -> '<profile name>' (source=..., accent='...', voiceRegion=REGION)
+[TTS profile] npc='X' id=<id> race=R ethnicity=E -> '<profile name>' (source=..., accent='...', voiceRegion=REGION, age=N)
 ```
 
 - `[TTS voice]` = the **timbre** pick: a `voiceRegion` on the profile selects that region's native voice pool, otherwise race/gender select a Gemini voice sub-pool, and `seed` spreads same-race/gender NPCs across it. The `[TTS line]` `age=` field is the profile age; when set, the region pool is narrowed to the voices closest to it, so a voice that sounds too young or old usually means a missing or wrong `age`. `[TTS cloud] ...` lines show the actual request/response.
