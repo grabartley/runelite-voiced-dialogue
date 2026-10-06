@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class PronunciationGuide {
+final class PronunciationGuide {
 
   static final String RESOURCE = "/pronunciations.json";
 
@@ -43,7 +43,7 @@ public final class PronunciationGuide {
     this.names = entries.isEmpty() ? null : namePattern(entries.values());
   }
 
-  public static PronunciationGuide load() {
+  static PronunciationGuide load() {
     try (InputStream stream = PronunciationGuide.class.getResourceAsStream(RESOURCE)) {
       if (stream == null) {
         log.warn("Pronunciation table {} not found - names are spoken as written", RESOURCE);
@@ -78,16 +78,16 @@ public final class PronunciationGuide {
     return new PronunciationGuide(Collections.unmodifiableMap(parsed));
   }
 
-  public int size() {
+  int size() {
     return entries.size();
   }
 
-  public String respell(String text) {
+  String respell(String text) {
     if (names == null || text == null) {
       return text;
     }
     Matcher matcher = names.matcher(text);
-    StringBuffer spoken = new StringBuffer();
+    StringBuilder spoken = new StringBuilder();
     while (matcher.find()) {
       String said = entries.get(key(matcher.group())).respelling(matcher.group());
       matcher.appendReplacement(spoken, Matcher.quoteReplacement(said));
@@ -136,19 +136,18 @@ public final class PronunciationGuide {
 
   private static final class Entry {
     final String word;
-    final String say;
+    final String lowerSay;
 
     Entry(String word, String say) {
       this.word = word;
-      this.say = say;
+      this.lowerSay = say.toLowerCase(Locale.ROOT);
     }
 
     String respelling(String written) {
-      String lower = say.toLowerCase(Locale.ROOT);
       if (!Character.isUpperCase(written.charAt(0))) {
-        return lower;
+        return lowerSay;
       }
-      return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+      return Character.toUpperCase(lowerSay.charAt(0)) + lowerSay.substring(1);
     }
   }
 }

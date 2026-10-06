@@ -15,10 +15,9 @@ syllable in capitals:
 ```
 
 The capitals are for the person reading the table. The plugin sends the respelling in lower case,
-with a capital first letter when the name was capitalised in the line. By ear, a hyphenated lower
-case respelling in the line itself is said more reliably than a pronunciation note added to the
-style direction. Both were auditioned against the same lines for
-[#379](https://github.com/grabartley/runelite-voiced-dialogue/issues/379).
+with a capital first letter when the name was capitalised in the line. A hyphenated lower case
+respelling in the line itself is said more reliably than a pronunciation note in the style
+direction.
 
 Matching ignores case, treats a curly apostrophe as a straight one, allows any run of spaces inside
 a multi-word name, and never matches inside a longer word, so "Seren" leaves "Serenity" alone. A

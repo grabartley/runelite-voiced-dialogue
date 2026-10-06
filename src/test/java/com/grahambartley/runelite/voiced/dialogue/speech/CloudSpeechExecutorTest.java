@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
@@ -26,6 +27,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class CloudSpeechExecutorTest {
+
+  private static final PronunciationGuide PRONUNCIATIONS =
+      PronunciationGuide.parse(
+          new JsonParser()
+              .parse(
+                  "{\"words\": [{\"word\": \"Neitiznot\", \"say\": \"NAY-tiz-not\"},"
+                      + " {\"word\": \"Ardougne\", \"say\": \"ar-DOYN\"}]}")
+              .getAsJsonObject());
 
   private MockWebServer server;
   private OkHttpClient client;
@@ -156,6 +165,17 @@ public class CloudSpeechExecutorTest {
     executor(config).synthesize(request("My wife is from Neitiznot."));
 
     assertEquals("My wife is from Neitiznot.", spoken.input);
+  }
+
+  @Test
+  public void aLineRewrittenIntoAnEnglishSpeakingStyleIsStillRespelled() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request("My wife is from Neitiznot."));
+
+    assertEquals("My wife is from Nay-tiz-not.", spoken.input);
   }
 
   @Test
@@ -391,7 +411,7 @@ public class CloudSpeechExecutorTest {
             CloudSpeechExecutor.MAX_SPEECH_ATTEMPTS,
             RetryTuning.openRouter());
     return new CloudSpeechExecutor(
-        config, support, new GeminiTtsModel(), "Test provider", new StubOps());
+        config, support, new GeminiTtsModel(), "Test provider", new StubOps(), PRONUNCIATIONS);
   }
 
   private MockResponse rejection() {
