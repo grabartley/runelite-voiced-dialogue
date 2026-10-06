@@ -16,6 +16,7 @@ You bring your own API key and pay only for the audio you generate, about **$0.0
 - **14,103 NPCs have voices already**, using about 700 different voices. Most are native speakers from Google's library of over 2,000. Each NPC's voice is picked to fit its race, gender, age and accent, children get child voices, and an NPC keeps the same voice every time you talk to it. For NPCs added in future game updates, turn on **Auto-learn New NPCs** and the plugin looks them up on the wiki.
 - **Accents that fit the lore**, using native speakers where Google has them. 18 races and 14 regions each have their own: Scottish dwarves, South London trolls, Norse Fremennik, Kharidian desert nomads, Varlamoran nobles, and a gothic Morytania.
 - **6,451 named characters have their own voice profile**, so well-known characters sound like themselves and not just like the rest of their race.
+- **Names said the Jagex way.** Neitiznot, Ardougne, Saradomin and over 100 other names follow Jagex's own pronunciation guide.
 - **Emotion from the chat-head.** The line is spoken happy, sad, angry, scared or neutral, based on the speaker's face.
 - **Change anyone's voice.** In the **NPC Voices** side panel you can search for any NPC and set its accent, style, pace or voice type. The change can apply to one NPC, one character, or everyone with that name.
 - **Your character speaks too.** Set your own accent, personality and pace. You can also have your public chat read out.

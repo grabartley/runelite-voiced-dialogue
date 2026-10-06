@@ -24,6 +24,8 @@ public final class CloudSpeechExecutor {
 
   public static final String CACHE_NAMESPACE = "cloud-speech";
 
+  private static final PronunciationGuide PRONUNCIATIONS = PronunciationGuide.load();
+
   public interface Ops {
 
     public String apiKey();
@@ -203,6 +205,8 @@ public final class CloudSpeechExecutor {
         return null;
       }
       spokenText = translated;
+    } else {
+      spokenText = PRONUNCIATIONS.respell(spokenText);
     }
     CharacterProfile profile = request.profile();
     int speed = support.speedPercent();

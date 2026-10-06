@@ -138,6 +138,46 @@ public class CloudSpeechExecutorTest {
   }
 
   @Test
+  public void aListedNameIsRespelledInTheSpokenLineOnly() {
+    server.enqueue(rejection());
+
+    executor().synthesize(request("My wife is from Neitiznot."));
+
+    assertEquals("My wife is from Nay-tiz-not.", spoken.input);
+    assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
+  }
+
+  @Test
+  public void aTranslatedLineKeepsItsNamesAsWritten() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request("My wife is from Neitiznot."));
+
+    assertEquals("My wife is from Neitiznot.", spoken.input);
+  }
+
+  @Test
+  public void anUntranslatedLineIsRespelledWhateverTheSpokenLanguage() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(rejection());
+
+    executor(config)
+        .synthesize(
+            new SynthesisRequest(
+                "Off to Ardougne",
+                VoiceSpec.player(NpcGender.MALE),
+                Emotion.NEUTRAL,
+                TestFixtures.TROLL_PROFILE,
+                true,
+                true));
+
+    assertEquals("Off to Ar-doyn", spoken.input);
+  }
+
+  @Test
   public void theStyleNamesTheSpokenLanguageFromTheSettings() {
     MutableTestConfig config = new MutableTestConfig();
     config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
@@ -359,8 +399,12 @@ public class CloudSpeechExecutorTest {
   }
 
   private static SynthesisRequest request() {
+    return request("Hello");
+  }
+
+  private static SynthesisRequest request(String text) {
     return new SynthesisRequest(
-        "Hello",
+        text,
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
         TestFixtures.TROLL_PROFILE,
