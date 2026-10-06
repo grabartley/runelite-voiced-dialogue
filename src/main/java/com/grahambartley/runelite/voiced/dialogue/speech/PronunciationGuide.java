@@ -89,7 +89,8 @@ final class PronunciationGuide {
     Matcher matcher = names.matcher(text);
     StringBuilder spoken = new StringBuilder();
     while (matcher.find()) {
-      String said = entries.get(key(matcher.group())).respelling(matcher.group());
+      Entry entry = entries.get(key(matcher.group()));
+      String said = entry == null ? matcher.group() : entry.respelling(matcher.group());
       matcher.appendReplacement(spoken, Matcher.quoteReplacement(said));
     }
     matcher.appendTail(spoken);
@@ -106,7 +107,7 @@ final class PronunciationGuide {
     }
     return Pattern.compile(
         NOT_AFTER_WORD + "(?:" + String.join("|", alternatives) + ")" + NOT_BEFORE_WORD,
-        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        Pattern.CASE_INSENSITIVE);
   }
 
   private static String wordRegex(String word) {

@@ -185,10 +185,11 @@ tag to lean on. `PronunciationGuide` respells listed names in the text that is s
 "Neitiznot" goes out as "Nay-tiz-not". `CloudSpeechExecutor` applies it once per line for both
 providers, after the translation step and only when the line is spoken in English, since an
 English respelling would be misread inside another language. A line rewritten into a Speaking
-Style such as pirate speak is still English, so it is respelled too. With **Debug Logging** on, each
-respelled line is logged as `[TTS cloud] respelled '<line>' -> '<sent>'`. The subtitle, the logs and the cache key all
-keep the line as written, so a clip already on disk keeps its key and is never billed again. The
-table, its sources and how to add a name are in [pronunciation.md](pronunciation.md).
+Style such as pirate speak is still English, so it is respelled too. The subtitle, the cache key
+and every other log keep the line as written, so a clip already on disk keeps its key and is never
+billed again. With **Debug Logging** on, each respelled line is logged as
+`[TTS cloud] respelled '<line>' -> '<sent>'`. The table, its sources and how to add a name are in
+[pronunciation.md](pronunciation.md).
 
 ### Player voice overrides
 

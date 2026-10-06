@@ -21,8 +21,12 @@ direction.
 
 Matching ignores case, treats a curly apostrophe as a straight one, allows any run of spaces inside
 a multi-word name, and never matches inside a longer word, so "Seren" leaves "Serenity" alone. A
-possessive keeps its ending: "Saradomin's" becomes "Sa-ra-dome-in's". When two listed names
-overlap, the longer one wins.
+possessive keeps its ending: "Saradomin's" becomes "Sa-ra-dome-in's". A plural or other longer
+form, like "Kalphites", is not matched, so it needs its own row. When two listed names overlap, the
+longer one wins.
+
+Only lines spoken in English are respelled. With **Spoken Language** set to another language,
+names are sent as written.
 
 ## Sources
 

@@ -223,7 +223,8 @@ public final class CloudSpeechExecutor {
     double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
     String spokenLanguage =
         translating ? CloudTtsText.spokenLanguage(config) : CloudTtsText.DEFAULT_LANGUAGE;
-    if (!CloudTtsText.needsTranslation(spokenLanguage)) {
+    boolean spokenInEnglish = !CloudTtsText.needsTranslation(spokenLanguage);
+    if (spokenInEnglish) {
       spokenText = respell(spokenText);
     }
     String style =
