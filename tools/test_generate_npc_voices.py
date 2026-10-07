@@ -110,6 +110,25 @@ class ApplyOverridesTest(unittest.TestCase):
         self.assertEqual(count, 2)
 
 
+class GroupGenderTest(unittest.TestCase):
+    def test_one_gender_per_group_pairs_them(self):
+        self.assertEqual(gen.group_gender(1, ["Female", "Male"], [[1], [2]]), ("Male", False))
+
+    def test_misaligned_genders_that_disagree_are_a_guess(self):
+        self.assertEqual(gen.group_gender(2, ["Female", "Male"], [[1], [2], [3]]), ("Female", True))
+
+    def test_one_gender_for_every_group_is_not_a_guess(self):
+        self.assertEqual(gen.group_gender(2, ["Male"], [[1], [2], [3]]), ("Male", False))
+
+    def test_a_page_with_no_gender_uses_the_default(self):
+        self.assertEqual(gen.group_gender(0, [], [[1]]), (gen.MAPPING["defaultGender"], False))
+
+    def test_a_symbol_or_override_gender_settles_a_guess(self):
+        symbols = {1: "STAN_CREW_MAN1_BASE", 2: "STAN_CREW_HAND", 3: "STAN_CREW_HAND_2"}
+        overrides = {"npcs": {"2": {"gender": "Male"}, "3": {"ethnicity": "karamja"}}}
+        self.assertEqual(gen.unsettled_guesses({1, 2, 3}, symbols, overrides), [3])
+
+
 class SymbolGenderTest(unittest.TestCase):
     def test_parse_npc_symbols_reads_javap_constants(self):
         javap = (
@@ -131,9 +150,19 @@ class SymbolGenderTest(unittest.TestCase):
             self.assertEqual(gen.symbol_gender(symbol), "Male", symbol)
 
     def test_symbol_without_a_whole_gender_token_names_none(self):
-        for symbol in ("FAI_VARROCK_GUARD02", "FAI_FALADOR_GUARD1", "FEMALE2", "MAGE_OF_ZAMORAK",
-                       "FARMER", "HAM_MEMBER"):
+        for symbol in ("FAI_VARROCK_GUARD02", "FAI_FALADOR_GUARD1", "DUEL_CROWDFEMALE2",
+                       "MAGE_OF_ZAMORAK", "FARMER", "HAM_MEMBER", "SAILING_CREW_MANAGER_1OP"):
             self.assertIsNone(gen.symbol_gender(symbol), symbol)
+
+    def test_a_numbered_gender_token_still_names_a_gender(self):
+        self.assertEqual(gen.symbol_gender("SAILING_TRANSPORT_TRADER_STAN_CREW_MAN1_BASE"), "Male")
+        self.assertEqual(gen.symbol_gender("VC_GAMBLER_WOMAN3"), "Female")
+        self.assertEqual(gen.symbol_gender("MDAUGHTER_CAMP_FEMALE2"), "Female")
+        self.assertEqual(gen.symbol_gender("QIP_SOA_THIEF_FEMALE01"), "Female")
+
+    def test_a_kinship_token_names_a_gender(self):
+        self.assertEqual(gen.symbol_gender("FARMER_WIFE"), "Female")
+        self.assertIsNone(gen.symbol_gender("BURGH_BED_MAN_WIFE"))
 
     def test_symbol_naming_both_genders_names_none(self):
         self.assertIsNone(gen.symbol_gender("COUPLE_M_F"))

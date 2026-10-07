@@ -4,54 +4,54 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14103,
+    "count": 14131,
     "name_matched_ids": 707,
-    "overrides_applied": 1830,
-    "symbols": 4436,
+    "overrides_applied": 1968,
+    "symbols": 4438,
     "race_counts": {
       "Aranei": 24,
-      "Arceuus": 66,
+      "Arceuus": 65,
       "Crab": 24,
-      "Demon": 790,
-      "Dog": 318,
-      "Dwarf": 519,
-      "Elf": 354,
+      "Demon": 792,
+      "Dog": 333,
+      "Dwarf": 516,
+      "Elf": 353,
       "Gnome": 261,
-      "Goblin": 371,
+      "Goblin": 374,
       "Gorilla": 11,
-      "Human": 9808,
+      "Human": 9817,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
       "Tortugan": 65,
       "Troll": 473,
-      "Undead": 896,
-      "Wizard": 24
+      "Undead": 899,
+      "Wizard": 25
     },
     "gender_counts": {
-      "Female": 2148,
-      "Male": 11955
+      "Female": 2122,
+      "Male": 12009
     },
     "ethnicity_counts": {
-      "asgarnia": 716,
+      "asgarnia": 711,
       "easternlands": 2,
-      "fremennik": 663,
-      "kandarin": 1120,
-      "karamja": 160,
-      "kharidian": 545,
-      "kourend": 790,
-      "menaphite": 132,
-      "misthalin": 1060,
-      "morytania": 1033,
+      "fremennik": 661,
+      "kandarin": 1121,
+      "karamja": 166,
+      "kharidian": 546,
+      "kourend": 786,
+      "menaphite": 134,
+      "misthalin": 1072,
+      "morytania": 1032,
       "tirannwn": 328,
-      "varlamore": 1020,
+      "varlamore": 1028,
       "wilderness": 127,
       "wyrmscraig": 11
     },
     "life_stage_counts": {
-      "child": 60
+      "child": 58
     },
-    "profiles_bespoke": 6451
+    "profiles_bespoke": 6444
   },
   "profiles": {
     "_comment": "Authoritative, curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. Repetition across layers (depth in pitch and style, an accentDetail restating its accent, the generic human style under a bespoke one) is deliberate emphasis tuned by ear; do not tidy it (see docs/npc-voice-tooling.md, 'Repetition is deliberate'). This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own; 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -617,7 +617,7 @@
       },
       "2147": {
         "name": "Veos",
-        "style": "An earnest, purposeful seafarer with a calm, faintly devout streak; steady and measured.",
+        "style": "A pragmatic, weathered seafarer and treasure hunter; affable, plain-spoken, with a mysterious undercurrent.",
         "age": 52
       },
       "3308": {
@@ -632,12 +632,12 @@
       },
       "2886": {
         "name": "Aubury",
-        "style": "An eccentric, slightly distracted rune-shop wizard; affable but absent-minded, with an offhand scholarly oddness.",
+        "style": "A learned, slightly eccentric runecrafting mage; brisk, scholarly, and helpful.",
         "age": 58
       },
       "5005": {
         "name": "Wizard Mizgog",
-        "style": "A cranky, irritable old wizard; gruff, impatient, and blunt, forever grumbling about younger folk.",
+        "style": "Crotchety, irritable old mage; testy and impatient, grumbling about imps and stolen beads.",
         "age": 72
       },
       "11868": {
@@ -687,7 +687,7 @@
       },
       "5215": {
         "name": "King Roald",
-        "style": "A formal, regal monarch; measured and slightly aloof, speaking with stately, bureaucratic authority.",
+        "style": "A weary, self-important monarch; formal and a touch pompous, used to being obeyed.",
         "age": 58
       },
       "923": {
@@ -697,7 +697,7 @@
       },
       "3500": {
         "name": "Gertrude",
-        "style": "A busy, fussy working mother; brisk and talkative, brusque but ultimately warm-hearted.",
+        "style": "A warm, busy housewife and devoted mother who fusses over her cats and children with motherly, talkative concern.",
         "age": 40
       },
       "4619": {
@@ -4980,19 +4980,19 @@
         "age": 65
       },
       "12649": {
-        "name": "Pet kree'arra",
-        "style": "Non-speaking miniature aviansie follower; screeches and squawks rather than words.",
-        "age": 30
+        "name": "Sergeant Tobyn",
+        "style": "A firm, authoritative city guardsman; commanding, dutiful tone used to keeping order.",
+        "age": 42
       },
       "12650": {
-        "name": "Pet general graardor",
-        "style": "Non-speaking miniature ourg follower; grunts and growls rather than words.",
-        "age": 35
+        "name": "Prince Itzla Arkan",
+        "style": "Regal and dignified; poised, measured delivery carrying princely authority and self-assurance.",
+        "age": 24
       },
       "12651": {
-        "name": "Pet zilyana",
-        "style": "Non-speaking miniature icyene follower; minimal vocalisation.",
-        "age": 22
+        "name": "Prince Itzla Arkan",
+        "style": "Regal and dignified; poised, measured delivery carrying princely authority and self-assurance.",
+        "age": 24
       },
       "12652": {
         "name": "Pet k'ril tsutsaroth",
@@ -5312,9 +5312,9 @@
         "age": 40
       },
       "1219": {
-        "name": "Lady Servil",
-        "style": "An upper-class woman used to being listened to, now pushed into fear for her family. Clipped and urgent, proud and trying not to unravel in public.",
-        "age": 42
+        "name": "Evelot",
+        "style": "Cold and controlled, with the clipped menace of a trained Khazard operative who keeps emotion out of her voice.",
+        "age": 32
       },
       "12029": {
         "name": "Lady Servil",
@@ -5430,15 +5430,10 @@
         "style": "A quick, lively gnome with a curious edge, engaged and alert, noticing more than first let on.",
         "age": 30
       },
-      "1220": {
-        "name": "Sammy Servil",
-        "style": "A sheltered child trying to stay brave, with a frightened but spirited voice, young, anxious, and eager to trust a rescuer.",
-        "age": 9
-      },
       "1221": {
-        "name": "Sammy Servil",
-        "style": "A sheltered child trying to stay brave, with a frightened but spirited voice, young, anxious, and eager to trust a rescuer.",
-        "age": 9
+        "name": "Clivet",
+        "style": "A persuasive, manipulative cult recruiter; smooth, cunning, and quick to flee when cornered.",
+        "age": 35
       },
       "12030": {
         "name": "Sammy Servil",
@@ -9320,9 +9315,9 @@
         "age": 55
       },
       "1213": {
-        "name": "General Khazard",
-        "style": "Cold, imperious war-general's address; a booming, commanding cadence that brooks no defiance, each word a barked, menacing order.",
-        "age": 55
+        "name": "Evelot",
+        "style": "Cold and controlled, with the clipped menace of a trained Khazard operative who keeps emotion out of her voice.",
+        "age": 32
       },
       "3510": {
         "name": "General Khazard",
@@ -12200,9 +12195,13 @@
         "age": 10
       },
       "4462": {
-        "name": "Vladimir",
-        "style": "Plain villager's voice; subdued and flat, low and unhurried.",
-        "age": 40
+        "name": "Mortimer",
+        "style": "A skeletal Slayer master who deals only in superior monsters; dry, gruff and hard-bitten, every word rasping out of a fleshless jaw. Dry and graveyard-cold.",
+        "accent": "Strong rural Irish accent, Irish English pronunciation",
+        "accentDetail": "A country Irish accent, the warm rural lilt of the Irish countryside, worn down to something dry and graveyard-cold.",
+        "pace": "Brisk and matter-of-fact, clipped rather than drawn out; a master with tasks to hand out.",
+        "voiceRegion": "IRISH",
+        "age": 65
       },
       "5928": {
         "name": "Werewolf (Werewolf Agility Course)",
@@ -22608,9 +22607,9 @@
         "age": 45
       },
       "6770": {
-        "name": "Arcis",
-        "style": "A precise, knowledgeable architect; methodical and a little proud, holds forth on stonework and construction.",
-        "age": 45
+        "name": "Alina",
+        "style": "Bright, breathless and eager, words tumbling out with youthful enthusiasm and wide-eyed curiosity.",
+        "age": 19
       },
       "6775": {
         "name": "Gallow",
@@ -22623,9 +22622,9 @@
         "age": 45
       },
       "6780": {
-        "name": "Piliar",
-        "style": "A knowledgeable, methodical architect; speaks deliberately and earnestly about stone and craft.",
-        "age": 45
+        "name": "Sergeant Tobyn",
+        "style": "A firm, authoritative city guardsman; commanding, dutiful tone used to keeping order.",
+        "age": 42
       },
       "6781": {
         "name": "Shayda",
@@ -22816,11 +22815,6 @@
         "name": "Konoo",
         "style": "A plain, earnest labourer; straightforward and unpolished, happy to explain his work.",
         "age": 40
-      },
-      "6923": {
-        "name": "Clerk (Hosidius)",
-        "style": "A brisk, businesslike clerk; matter-of-fact and efficient, explains procedures in a clipped administrative tone.",
-        "age": 38
       },
       "6926": {
         "name": "Ewesey",
@@ -23233,31 +23227,6 @@
         "name": "Banker (Lovakengj)",
         "style": "A gruff, soot-flecked teller; blunt and matter-of-fact, counting coins with industrial impatience.",
         "age": 45
-      },
-      "7083": {
-        "name": "Armourer (tier 1)",
-        "style": "A brisk, no-nonsense military quartermaster; clipped and businesslike about supplies and deliveries.",
-        "age": 42
-      },
-      "7084": {
-        "name": "Armourer (tier 2)",
-        "style": "A gruff, efficient military quartermaster; curt and practical, all business about armour deliveries.",
-        "age": 45
-      },
-      "7085": {
-        "name": "Armourer (tier 3)",
-        "style": "A brisk, no-nonsense military quartermaster; clipped and exacting about armour deliveries.",
-        "age": 42
-      },
-      "7086": {
-        "name": "Armourer (tier 4)",
-        "style": "A gruff, businesslike military quartermaster; terse and practical, focused on getting supplies moved.",
-        "age": 45
-      },
-      "7087": {
-        "name": "Armourer (tier 5)",
-        "style": "A brisk, hardened military quartermaster; clipped and authoritative about the finest supply sets.",
-        "age": 48
       },
       "7088": {
         "name": "Munty",
@@ -26720,7 +26689,10 @@
       },
       "5864": {
         "name": "Ned",
-        "style": "A weathered old sailor with a folksy, rambling manner and a shifty streak; cheerfully evasive when his secrets come up.",
+        "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.",
+        "accent": "Strong Irish accent, Irish English pronunciation",
+        "accentDetail": "Irish English.",
+        "voiceRegion": "IRISH",
         "age": 68
       },
       "7965": {
@@ -33580,7 +33552,6 @@
     "1216": "FIGHTSLAVE_JOE",
     "1217": "FIGHTSLAVE",
     "1219": "SOTN_EVELOT",
-    "1220": "SOTN_HAZEEL_CULTIST_ENTRY",
     "1221": "SOTN_CLIVET",
     "1223": "ARENA_SPECTATOR",
     "1238": "EYEGLO_ANTIQUES_DEALER",
@@ -34564,6 +34535,7 @@
     "4446": "BURGH_VILLAGER_0",
     "4457": "BURGH_VILLAGER_CHILD3",
     "4458": "BURGH_VILLAGER_CHILD4",
+    "4462": "SLAYER_MASTER_MORTIMER",
     "4470": "BURGH_POTENTIAL_BANK_TELLER",
     "4471": "BURGH_BANK_TELLER",
     "4472": "BURGH_TURNED_VAMPYRE_MALE_BEN",
@@ -35041,10 +35013,12 @@
     "6753": "MACRO_MIME_INVITATION",
     "6754": "MACRO_EVIL_BOB_PRISON",
     "6755": "MACRO_MAGNESON_INVITATION",
+    "6770": "VMQ1_ALINA",
     "6773": "DOOMSAYER_NORMAL",
     "6774": "DOOMSAYER_DEADMAN",
     "6777": "MAGICTRAINING_GUARD_MAZE_INCOMPLETE",
     "6779": "MAGICTRAINING_GUARD_MAZE_COMPLETE",
+    "6780": "VMQ1_GUARD_SERGEANT",
     "6785": "VMQ1_KNIGHT_2_CASTLE",
     "6797": "SLAYER_MASTER_NIEVE",
     "6798": "SLAYER_MASTER_STEVE",
@@ -36557,7 +36531,6 @@
     "12026": "GENERAL_KHAZARD_VIS",
     "12027": "GENERAL_KHAZARD_CUTSCENE",
     "12028": "FIGHTSLAVE_2",
-    "12029": "LADY_SERVIL_VIS",
     "12030": "SAMMY_SERVIL_VIS",
     "12031": "SAMMY_SERVIL_VIS_NOOP",
     "12032": "SAMMY_SERVIL_CUTSCENE",
@@ -36698,6 +36671,7 @@
     "12645": "VMQ1_ALINA_CUTSCENE",
     "12646": "VMQ1_NOAH_VIS",
     "12647": "VMQ1_NOAH_CUTSCENE",
+    "12648": "VMQ1_GUARD_SERGEANT_VIS",
     "12649": "VMQ1_GUARD_SERGEANT_CUTSCENE",
     "12650": "VMQ1_ITZLA_VIS",
     "12651": "VMQ1_ITZLA_CUTSCENE",
@@ -38209,7 +38183,8 @@
     },
     "122": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "123": {
       "race": "Human",
@@ -41055,8 +41030,7 @@
     },
     "833": {
       "race": "Penguin",
-      "gender": "Male",
-      "ethnicity": "fremennik"
+      "gender": "Male"
     },
     "834": {
       "race": "Penguin",
@@ -41842,15 +41816,15 @@
     },
     "1015": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "1016": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "1017": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "1018": {
       "race": "Human",
@@ -42638,7 +42612,7 @@
     },
     "1213": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "kandarin"
     },
     "1214": {
@@ -42674,14 +42648,12 @@
     "1220": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kandarin",
-      "lifeStage": "child"
+      "ethnicity": "kandarin"
     },
     "1221": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kandarin",
-      "lifeStage": "child"
+      "ethnicity": "kandarin"
     },
     "1223": {
       "race": "Human",
@@ -43328,17 +43300,17 @@
     },
     "1381": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "fremennik"
     },
     "1382": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "fremennik"
     },
     "1383": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "fremennik"
     },
     "1384": {
@@ -46406,6 +46378,10 @@
       "race": "Human",
       "gender": "Male"
     },
+    "2147": {
+      "race": "Human",
+      "gender": "Male"
+    },
     "2148": {
       "race": "Human",
       "gender": "Male",
@@ -47078,12 +47054,12 @@
     },
     "2306": {
       "race": "Goblin",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "2307": {
       "race": "Goblin",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "2308": {
@@ -52029,6 +52005,11 @@
       "gender": "Male",
       "ethnicity": "misthalin"
     },
+    "3500": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
     "3501": {
       "race": "Human",
       "gender": "Male",
@@ -52956,8 +52937,7 @@
     },
     "3695": {
       "race": "Undead",
-      "gender": "Female",
-      "ethnicity": "fremennik"
+      "gender": "Female"
     },
     "3696": {
       "race": "Undead",
@@ -56290,9 +56270,8 @@
       "ethnicity": "morytania"
     },
     "4462": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "morytania"
+      "race": "Undead",
+      "gender": "Male"
     },
     "4463": {
       "race": "Human",
@@ -56558,23 +56537,28 @@
     },
     "4522": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "4523": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "4524": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "4525": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "4526": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "4527": {
       "race": "Human",
@@ -58387,6 +58371,11 @@
       "race": "Demon",
       "gender": "Male"
     },
+    "5005": {
+      "race": "Wizard",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
     "5006": {
       "race": "Human",
       "gender": "Male",
@@ -59228,11 +59217,11 @@
     },
     "5219": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "5220": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "5221": {
       "race": "Human",
@@ -61604,8 +61593,7 @@
     },
     "5783": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "gender": "Male"
     },
     "5784": {
       "race": "Human",
@@ -64000,53 +63988,58 @@
     },
     "6549": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "gender": "Female",
+      "ethnicity": "karamja"
     },
     "6550": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "gender": "Female",
+      "ethnicity": "karamja"
     },
     "6551": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "karamja"
     },
     "6552": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "kharidian"
     },
     "6553": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "kharidian"
     },
     "6554": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "kharidian"
     },
     "6555": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kharidian"
     },
     "6556": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "karamja"
     },
     "6557": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "karamja"
     },
     "6558": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "karamja"
     },
     "6559": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "karamja"
     },
     "6560": {
       "race": "Human",
@@ -64863,9 +64856,9 @@
       "ethnicity": "kourend"
     },
     "6770": {
-      "race": "Arceuus",
+      "race": "Human",
       "gender": "Female",
-      "ethnicity": "kourend"
+      "ethnicity": "misthalin"
     },
     "6771": {
       "race": "Human",
@@ -64905,7 +64898,7 @@
     "6780": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kourend"
+      "ethnicity": "misthalin"
     },
     "6781": {
       "race": "Human",
@@ -65491,8 +65484,8 @@
     },
     "6923": {
       "race": "Human",
-      "gender": "Female",
-      "ethnicity": "kourend"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "6926": {
       "race": "Human",
@@ -65920,7 +65913,8 @@
     },
     "7016": {
       "race": "Arceuus",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "7018": {
       "race": "Demon",
@@ -66227,29 +66221,29 @@
       "ethnicity": "kourend"
     },
     "7083": {
-      "race": "Dwarf",
-      "gender": "Female",
-      "ethnicity": "kourend"
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "7084": {
-      "race": "Dwarf",
+      "race": "Human",
       "gender": "Male",
-      "ethnicity": "kourend"
+      "ethnicity": "misthalin"
     },
     "7085": {
-      "race": "Dwarf",
-      "gender": "Female",
-      "ethnicity": "kourend"
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "7086": {
-      "race": "Dwarf",
+      "race": "Human",
       "gender": "Male",
-      "ethnicity": "kourend"
+      "ethnicity": "misthalin"
     },
     "7087": {
-      "race": "Dwarf",
+      "race": "Human",
       "gender": "Female",
-      "ethnicity": "kourend"
+      "ethnicity": "misthalin"
     },
     "7088": {
       "race": "Dwarf",
@@ -70145,8 +70139,7 @@
     },
     "8114": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "asgarnia"
+      "gender": "Male"
     },
     "8115": {
       "race": "Human",
@@ -70480,7 +70473,8 @@
     },
     "8190": {
       "race": "Arceuus",
-      "gender": "Female"
+      "gender": "Female",
+      "ethnicity": "kourend"
     },
     "8193": {
       "race": "Human",
@@ -72144,11 +72138,13 @@
     },
     "8624": {
       "race": "Arceuus",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "8625": {
       "race": "Arceuus",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "8629": {
       "race": "Human",
@@ -72972,8 +72968,9 @@
       "gender": "Male"
     },
     "8854": {
-      "race": "Elf",
-      "gender": "Male"
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kandarin"
     },
     "8855": {
       "race": "Human",
@@ -74846,147 +74843,147 @@
     },
     "9312": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9313": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9314": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9315": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9316": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9317": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9318": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9319": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9320": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9321": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9322": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9323": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9324": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9325": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9326": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9327": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9328": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9329": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9330": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9331": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9332": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9333": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9334": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9335": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9336": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9337": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9338": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9339": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9340": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9341": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9342": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9343": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9344": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9345": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9346": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9347": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "9348": {
       "race": "Human",
@@ -79747,13 +79744,11 @@
     },
     "10546": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "gender": "Male"
     },
     "10547": {
       "race": "Human",
-      "gender": "Female",
-      "ethnicity": "misthalin"
+      "gender": "Female"
     },
     "10556": {
       "race": "Human",
@@ -81941,8 +81936,7 @@
     },
     "11070": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "kourend"
+      "gender": "Male"
     },
     "11071": {
       "race": "Human",
@@ -81982,35 +81976,35 @@
     },
     "11080": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11081": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11082": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11083": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11084": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11085": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11086": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11087": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11088": {
       "race": "Human",
@@ -82065,35 +82059,35 @@
     },
     "11100": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11101": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11102": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11103": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11104": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11105": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11106": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11107": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "11109": {
       "race": "Human",
@@ -82119,11 +82113,13 @@
     },
     "11132": {
       "race": "Arceuus",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "11138": {
       "race": "Arceuus",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "11152": {
       "race": "Human",
@@ -82510,7 +82506,7 @@
       "ethnicity": "asgarnia"
     },
     "11260": {
-      "race": "Human",
+      "race": "Goblin",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
@@ -83435,17 +83431,18 @@
       "ethnicity": "kharidian"
     },
     "11490": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "race": "Undead",
+      "gender": "Female",
+      "ethnicity": "menaphite"
     },
     "11491": {
       "race": "Human",
       "gender": "Male"
     },
     "11492": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Undead",
+      "gender": "Female",
+      "ethnicity": "menaphite"
     },
     "11493": {
       "race": "Human",
@@ -85459,11 +85456,11 @@
       "ethnicity": "kandarin"
     },
     "12037": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male"
     },
     "12038": {
-      "race": "Human",
+      "race": "Demon",
       "gender": "Male"
     },
     "12040": {
@@ -85879,12 +85876,11 @@
     "12137": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "karamja"
+      "ethnicity": "misthalin"
     },
     "12138": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
+      "gender": "Male"
     },
     "12139": {
       "race": "Demon",
@@ -86122,7 +86118,7 @@
     },
     "12204": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "12205": {
       "race": "Human",
@@ -86130,7 +86126,7 @@
     },
     "12206": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "12207": {
       "race": "Human",
@@ -86163,8 +86159,7 @@
     },
     "12213": {
       "race": "Human",
-      "gender": "Female",
-      "ethnicity": "asgarnia"
+      "gender": "Female"
     },
     "12214": {
       "race": "Human",
@@ -87685,7 +87680,7 @@
     "12611": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kharidian"
+      "ethnicity": "misthalin"
     },
     "12612": {
       "race": "Undead",
@@ -87779,27 +87774,27 @@
     },
     "12632": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12633": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12634": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12635": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12636": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12637": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12638": {
       "race": "Human",
@@ -87823,7 +87818,7 @@
     },
     "12643": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "fremennik"
     },
     "12644": {
@@ -87839,12 +87834,12 @@
     "12646": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "asgarnia"
+      "ethnicity": "misthalin"
     },
     "12647": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kharidian"
+      "ethnicity": "misthalin"
     },
     "12648": {
       "race": "Human",
@@ -87944,7 +87939,7 @@
     "12667": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kharidian"
+      "ethnicity": "misthalin"
     },
     "12668": {
       "race": "Human",
@@ -88049,11 +88044,11 @@
     "12688": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kandarin"
+      "ethnicity": "misthalin"
     },
     "12689": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "12690": {
@@ -88452,51 +88447,51 @@
     },
     "12783": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12784": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12785": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12786": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12787": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12788": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12789": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12790": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12791": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12792": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12793": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12794": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "12795": {
       "race": "Human",
@@ -88808,14 +88803,14 @@
       "ethnicity": "varlamore"
     },
     "12882": {
-      "race": "Human",
+      "race": "Dwarf",
       "gender": "Male",
       "ethnicity": "varlamore"
     },
     "12883": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "varlamore"
     },
     "12884": {
       "race": "Human",
@@ -88954,8 +88949,8 @@
     },
     "12911": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "kourend"
+      "gender": "Female",
+      "ethnicity": "varlamore"
     },
     "12912": {
       "race": "Human",
@@ -88970,21 +88965,22 @@
     "12914": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kourend"
+      "ethnicity": "varlamore"
     },
     "12915": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kourend"
+      "ethnicity": "varlamore"
     },
     "12916": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "varlamore"
     },
     "12917": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "kourend"
+      "ethnicity": "varlamore"
     },
     "12918": {
       "race": "Human",
@@ -89165,8 +89161,7 @@
     },
     "12956": {
       "race": "Human",
-      "gender": "Male",
-      "ethnicity": "varlamore"
+      "gender": "Male"
     },
     "12957": {
       "race": "Human",
@@ -91044,8 +91039,9 @@
       "ethnicity": "varlamore"
     },
     "13366": {
-      "race": "Human",
-      "gender": "Male"
+      "race": "Dwarf",
+      "gender": "Female",
+      "ethnicity": "varlamore"
     },
     "13367": {
       "race": "Human",
@@ -92111,7 +92107,7 @@
     },
     "13687": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "13688": {
@@ -92121,7 +92117,7 @@
     },
     "13689": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "varlamore"
     },
     "13690": {
@@ -92965,7 +92961,7 @@
     "13877": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "varlamore"
     },
     "13878": {
       "race": "Human",
@@ -92985,7 +92981,7 @@
     "13881": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "misthalin"
+      "ethnicity": "varlamore"
     },
     "13882": {
       "race": "Human",
@@ -94079,8 +94075,8 @@
     },
     "14188": {
       "race": "Human",
-      "gender": "Female",
-      "ethnicity": "misthalin"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "14189": {
       "race": "Human",
@@ -94090,7 +94086,7 @@
     "14190": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "asgarnia"
+      "ethnicity": "kourend"
     },
     "14191": {
       "race": "Human",
@@ -94100,7 +94096,7 @@
     "14192": {
       "race": "Human",
       "gender": "Male",
-      "ethnicity": "asgarnia"
+      "ethnicity": "kourend"
     },
     "14193": {
       "race": "Human",
@@ -96124,11 +96120,11 @@
     },
     "14889": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "14890": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "14891": {
       "race": "Human",
@@ -96144,11 +96140,11 @@
     },
     "14894": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "14895": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "14896": {
       "race": "Human",
@@ -96160,11 +96156,11 @@
     },
     "14898": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "14899": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "14900": {
       "race": "Tortugan",
@@ -97021,27 +97017,27 @@
     },
     "15141": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "15142": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "15143": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "15144": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "15145": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "15146": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Female"
     },
     "15147": {
       "race": "Human",
@@ -98147,12 +98143,12 @@
     },
     "15460": {
       "race": "Human",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "karamja"
     },
     "15461": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15462": {
       "race": "Human",
@@ -98160,11 +98156,11 @@
     },
     "15463": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15464": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15465": {
       "race": "Human",
@@ -98173,7 +98169,7 @@
     },
     "15466": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15467": {
       "race": "Human",
@@ -98181,7 +98177,7 @@
     },
     "15468": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15469": {
       "race": "Human",
@@ -98189,11 +98185,11 @@
     },
     "15470": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15471": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15472": {
       "race": "Human",
@@ -98205,20 +98201,20 @@
     },
     "15474": {
       "race": "Human",
-      "gender": "Female",
+      "gender": "Male",
       "ethnicity": "karamja"
     },
     "15475": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15476": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15477": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15478": {
       "race": "Human",
@@ -98234,7 +98230,7 @@
     },
     "15481": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15482": {
       "race": "Human",
@@ -98242,15 +98238,15 @@
     },
     "15483": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15484": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15485": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15486": {
       "race": "Human",
@@ -98262,11 +98258,11 @@
     },
     "15488": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15489": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15490": {
       "race": "Human",
@@ -98316,15 +98312,15 @@
     },
     "15506": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15507": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15508": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15509": {
       "race": "Human",
@@ -98345,15 +98341,15 @@
     },
     "15513": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15514": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15515": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15516": {
       "race": "Human",
@@ -98374,15 +98370,15 @@
     },
     "15520": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15521": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15522": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15523": {
       "race": "Human",
@@ -98403,15 +98399,15 @@
     },
     "15527": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15528": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15529": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15530": {
       "race": "Human",
@@ -98432,15 +98428,15 @@
     },
     "15534": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15535": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15536": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15537": {
       "race": "Human",
@@ -98461,15 +98457,15 @@
     },
     "15541": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15542": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15543": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Male"
     },
     "15544": {
       "race": "Human",
@@ -100077,16 +100073,72 @@
       "gender": "Male",
       "ethnicity": "misthalin"
     },
+    "16488": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16489": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
     "16490": {
       "race": "Dog",
       "gender": "Female"
+    },
+    "16491": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "16492": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
     },
     "16493": {
       "race": "Human",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
+    "16494": {
+      "race": "Dog",
+      "gender": "Female"
+    },
     "16495": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16496": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16497": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16498": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16499": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16500": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16501": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16502": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16503": {
       "race": "Dog",
       "gender": "Female"
     },
@@ -100095,6 +100147,30 @@
       "gender": "Female"
     },
     "16505": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16506": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16507": {
+      "race": "Dog",
+      "gender": "Male"
+    },
+    "16508": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16509": {
+      "race": "Dog",
+      "gender": "Female"
+    },
+    "16510": {
+      "race": "Dog",
+      "gender": "Male"
+    },
+    "16511": {
       "race": "Dog",
       "gender": "Female"
     },
@@ -100133,6 +100209,14 @@
     "16520": {
       "race": "Dog",
       "gender": "Female"
+    },
+    "16521": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16522": {
+      "race": "Goblin",
+      "gender": "Male"
     },
     "16523": {
       "race": "Goblin",
@@ -100173,6 +100257,24 @@
     "16534": {
       "race": "Goblin",
       "gender": "Male"
+    },
+    "16535": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16536": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16537": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "16538": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "16539": {
       "race": "Human",

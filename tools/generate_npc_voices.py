@@ -72,7 +72,9 @@ CATEGORY_RACE_RULES = [(r["keyword"], r["race"]) for r in MAPPING["categoryRaceR
 REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 NPC_ID_CLASS = "net.runelite.api.gameval.NpcID"
 NPC_ID_CONSTANT_RE = re.compile(r"static final int (\w+) = (\d+);")
-SYMBOL_GENDER_TOKENS = {"F": "Female", "FEMALE": "Female", "M": "Male", "MALE": "Male"}
+TRAILING_DIGITS = re.compile(r"(?<=[A-Z])\d+$")
+SYMBOL_GENDER_TOKENS = {"F": "Female", "FEMALE": "Female", "M": "Male", "MALE": "Male",
+                        "MAN": "Male", "WOMAN": "Female", "HUSBAND": "Male", "WIFE": "Female"}
 
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
@@ -375,12 +377,30 @@ def fetch_json_url(url):
         return json.loads(resp.read().decode("utf-8"))
 
 
+def group_gender(index, genders, groups):
+    """The gender for the id group at ``index`` and whether it is a guess. A page that lists one
+    gender per id group pairs them; otherwise every group takes the first gender, which is a guess
+    whenever the page names more than one gender."""
+    if groups and len(genders) == len(groups):
+        return genders[index], False
+    gender = genders[0] if genders else MAPPING["defaultGender"]
+    return gender, len(set(genders)) > 1
+
+
+def unsettled_guesses(guessed_ids, symbols, overrides):
+    """Guessed ids that neither a gendered cache symbol nor an override gender settles."""
+    pinned = {int(k) for k, entry in overrides.get("npcs", {}).items() if "gender" in entry}
+    return sorted(i for i in guessed_ids
+                  if i not in pinned and not symbol_gender(symbols.get(i, "")))
+
+
 def build_table_from_wiki(limit=None):
     """Build the id -> {race, gender, ethnicity} table and a name -> entry map from the wiki."""
     titles = enumerate_npc_pages(limit=limit)
     print(f"Enumerated {len(titles)} NPC pages from the wiki", file=sys.stderr)
     table = {}
     name_map = {}
+    guessed_ids = set()
     pages_with_ids = 0
     for title, wikitext, categories in fetch_infoboxes(titles):
         groups = parse_id_groups(wikitext)
@@ -399,9 +419,6 @@ def build_table_from_wiki(limit=None):
                 entry["ethnicity"] = ethnicity
             return entry
 
-        # Gender can vary per version (e.g. male/female guard variants). When the page lists one
-        # gender per id group, pair them; otherwise fall back to the first gender for every id.
-        aligned = len(genders) == len(groups) and groups
         default_gender = genders[0] if genders else MAPPING["defaultGender"]
 
         # First page to claim a name wins, so the canonical NPC page beats a stray transclusion.
@@ -412,10 +429,14 @@ def build_table_from_wiki(limit=None):
         if groups:
             pages_with_ids += 1
             for index, group in enumerate(groups):
-                entry = build_entry(genders[index] if aligned else default_gender)
+                gender, guessed = group_gender(index, genders, groups)
+                entry = build_entry(gender)
                 for npc_id in group:
-                    table.setdefault(npc_id, entry)
-    return table, len(titles), pages_with_ids, name_map
+                    if npc_id not in table:
+                        table[npc_id] = entry
+                        if guessed:
+                            guessed_ids.add(npc_id)
+    return table, len(titles), pages_with_ids, name_map, guessed_ids
 
 
 def resolve_runelite_api_jar():
@@ -441,7 +462,8 @@ def parse_npc_symbols(javap_output):
 
 
 def symbol_gender(symbol):
-    genders = {SYMBOL_GENDER_TOKENS[t] for t in symbol.split("_") if t in SYMBOL_GENDER_TOKENS}
+    tokens = [TRAILING_DIGITS.sub("", t) for t in symbol.split("_")]
+    genders = {SYMBOL_GENDER_TOKENS[t] for t in tokens if t in SYMBOL_GENDER_TOKENS}
     return genders.pop() if len(genders) == 1 else None
 
 
@@ -734,6 +756,7 @@ def main():
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 
+    guessed_ids = set()
     if args.base:
         base = load_json(args.base)
         table = {int(npc_id): entry for npc_id, entry in base["npcs"].items()}
@@ -744,7 +767,8 @@ def main():
         print(f"Seeded {len(table)} entries from {args.base} (offline; no wiki fetch)",
               file=sys.stderr)
     else:
-        table, page_count, pages_with_ids, name_map = build_table_from_wiki(limit=args.limit)
+        table, page_count, pages_with_ids, name_map, guessed_ids = build_table_from_wiki(
+            limit=args.limit)
         name_matched = 0
         if args.summary:
             try:
@@ -761,6 +785,10 @@ def main():
         print(f"  WARNING: override gender contradicts its cache symbol: {conflict}", file=sys.stderr)
     print(f"  cache symbols corrected {symbol_gendered} genders from {api_jar}", file=sys.stderr)
     override_count = apply_overrides(table, overrides)
+    unsettled = unsettled_guesses(guessed_ids, symbols, overrides)
+    if unsettled:
+        print(f"  WARNING: {len(unsettled)} ids took their page's first gender because the page lists "
+              f"more id groups than genders; pin them in overrides.json: {unsettled}", file=sys.stderr)
     npc_symbols = ambiguous_name_symbols(profiles, symbols)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
