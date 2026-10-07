@@ -4,9 +4,9 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14131,
+    "count": 14135,
     "name_matched_ids": 707,
-    "overrides_applied": 1968,
+    "overrides_applied": 1969,
     "symbols": 4438,
     "race_counts": {
       "Aranei": 24,
@@ -17,9 +17,9 @@
       "Dwarf": 516,
       "Elf": 353,
       "Gnome": 261,
-      "Goblin": 374,
+      "Goblin": 381,
       "Gorilla": 11,
-      "Human": 9817,
+      "Human": 9814,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
@@ -29,7 +29,7 @@
       "Wizard": 25
     },
     "gender_counts": {
-      "Female": 2122,
+      "Female": 2126,
       "Male": 12009
     },
     "ethnicity_counts": {
@@ -39,9 +39,9 @@
       "kandarin": 1121,
       "karamja": 166,
       "kharidian": 546,
-      "kourend": 786,
+      "kourend": 787,
       "menaphite": 134,
-      "misthalin": 1072,
+      "misthalin": 1078,
       "morytania": 1032,
       "tirannwn": 328,
       "varlamore": 1028,
@@ -26684,7 +26684,10 @@
       },
       "824": {
         "name": "Ned",
-        "style": "A weathered old sailor with a folksy, rambling manner and a shifty streak; cheerfully evasive when his secrets come up.",
+        "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.",
+        "accent": "Strong Irish accent, Irish English pronunciation",
+        "accentDetail": "Irish English.",
+        "voiceRegion": "IRISH",
         "age": 68
       },
       "5864": {
@@ -79744,11 +79747,13 @@
     },
     "10546": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "10547": {
       "race": "Human",
-      "gender": "Female"
+      "gender": "Female",
+      "ethnicity": "misthalin"
     },
     "10556": {
       "race": "Human",
@@ -81936,7 +81941,8 @@
     },
     "11070": {
       "race": "Human",
-      "gender": "Male"
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "11071": {
       "race": "Human",
@@ -82511,7 +82517,7 @@
       "ethnicity": "misthalin"
     },
     "11261": {
-      "race": "Human",
+      "race": "Goblin",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
@@ -82521,12 +82527,12 @@
       "ethnicity": "misthalin"
     },
     "11263": {
-      "race": "Human",
+      "race": "Goblin",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
     "11264": {
-      "race": "Human",
+      "race": "Goblin",
       "gender": "Female",
       "ethnicity": "misthalin"
     },
@@ -83055,6 +83061,26 @@
     "11385": {
       "race": "Goblin",
       "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "11386": {
+      "race": "Goblin",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "11387": {
+      "race": "Goblin",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "11388": {
+      "race": "Goblin",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "11389": {
+      "race": "Goblin",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "11399": {

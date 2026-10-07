@@ -5561,7 +5561,7 @@
     "11815": {"name": "Messenger", "style": "A brisk, businesslike courier delivering official news; crisp, efficient, matter-of-fact.", "age": 30},
     "11816": {"name": "Messenger", "style": "A brisk, businesslike courier delivering official news; crisp, efficient, matter-of-fact.", "age": 30},
     "11817": {"name": "Messenger", "style": "A brisk, businesslike courier delivering official news; crisp, efficient, matter-of-fact.", "age": 30},
-    "824": {"name": "Ned", "style": "A weathered old sailor with a folksy, rambling manner and a shifty streak; cheerfully evasive when his secrets come up.", "age": 68},
+    "824": {"name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish English.", "voiceRegion": "IRISH", "age": 68},
     "5864": {"name": "Ned", "style": "An old salt-of-the-earth Draynor villager and rope-maker; folksy, rough-edged, and chatty.", "accent": "Strong Irish accent, Irish English pronunciation", "accentDetail": "Irish English.", "voiceRegion": "IRISH", "age": 68},
     "7965": {"name": "Cabin Boy Colin", "style": "A young, eager corsair cabin boy; dreamy, excitable and a touch naive, given to lovestruck flights of fancy.", "age": 16},
     "7966": {"name": "Cabin Boy Colin", "style": "A young, eager corsair cabin boy; dreamy, excitable and a touch naive, given to lovestruck flights of fancy.", "age": 16},

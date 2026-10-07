@@ -788,7 +788,8 @@ def main():
     unsettled = unsettled_guesses(guessed_ids, symbols, overrides)
     if unsettled:
         print(f"  WARNING: {len(unsettled)} ids took their page's first gender because the page lists "
-              f"more id groups than genders; pin them in overrides.json: {unsettled}", file=sys.stderr)
+              f"a different number of genders than id groups; pin them in overrides.json: "
+              f"{unsettled}", file=sys.stderr)
     npc_symbols = ambiguous_name_symbols(profiles, symbols)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}

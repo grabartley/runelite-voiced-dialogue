@@ -130,9 +130,10 @@ reason written up below. Re-sorting the list would change what thousands of NPCs
 - **Gender.** Taken verbatim (`Male`/`Female`); defaults to `Male` only when the
   wiki has none. A switch infobox pairs its i-th id group with its i-th gender, but
   a page that lists more id groups than genders gives every id the page's first
-  gender. When that page names more than one gender, the first gender is a guess, and a
-  full regeneration lists every guessed id that no symbol or override settles, to be pinned
-  in `overrides.json`. The cache symbol then decides: RuneLite's `net.runelite.api.gameval.NpcID`
+  gender. When a page's genders and id groups do not pair up and it names more than one
+  gender, the first gender is a guess, and a full regeneration lists every guessed id the page
+  itself lists that no symbol or override settles, to be pinned in `overrides.json`. Ids filled
+  in by the name cross-reference are not on that list. The cache symbol then decides: RuneLite's `net.runelite.api.gameval.NpcID`
   names each id after Jagex's own symbol, and a whole `F`, `FEMALE`, `M`, `MALE`, `MAN`,
   `WOMAN`, `HUSBAND` or `WIFE` token in it, numbered or not (`FAI_VARROCK_GUARD02_F`,
   `VARLAMORE_FISHER_M_1`, `SAILING_TRANSPORT_TRADER_STAN_CREW_MAN1_BASE`), sets that id's
