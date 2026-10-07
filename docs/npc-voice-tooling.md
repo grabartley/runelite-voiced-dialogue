@@ -95,20 +95,21 @@ It groups ids by their RuneLite `NpcID` symbol with trailing state tokens stripp
 (`STATE_TOKENS` in `tools/generate_npc_voices.py`). Numbers, `_F`/`_M` and `_VARIANTnn` are never
 stripped, because `GUARD1` and `GUARD2` are two different guards. Within a group the main id is:
 
-1. the multiloc parent (`_MULTI`, `_MULTINPC`), because the plugin already seeds every state's
-   voice from that base id, so the character keeps the voice and cached clips it has today,
-2. else the id with a bespoke `byId` profile,
-3. else the id whose symbol is the bare root,
-4. else the lowest id with data.
+1. the main id the earlier table already gives the group, so regenerating never moves it,
+2. else the multiloc parent (`_MULTI`, `_MULTINPC`), because the plugin seeds every state's voice
+   from that base composition id, so every state shares that voice,
+3. else the id with a bespoke `byId` profile,
+4. else the id whose symbol is the bare root,
+5. else the lowest id with data.
 
 The table keeps only the main id's entry and emits `aliases[variant] = main`. The plugin maps every
 id through `aliases` before looking anything up, and seeds the voice from the main id of the base
 composition id. An id with no alias resolves under its own id and its own seed.
 
-The main id is stable across regenerations: a main an earlier table chose stays the main, because
-moving it would re-seed the character's voice and re-bill its cached clips. With `--base`, the
-earlier table's aliases are expanded back into the table first, so an override keyed by a variant
-id still has an entry to patch.
+Keeping the main id stable matters because moving it would re-seed the character's voice and re-bill
+its cached clips. The earlier table is the `--base` file, else the output file, else the bundled
+table. With `--base`, the earlier table's aliases are expanded back into the table first, so an
+override keyed by a variant id still has an entry to patch.
 
 Grouping only sees symbols. A character whose ids carry a descriptor the state tokens do not cover
 (`MYQ6_VELIAF_FOLLOWER`, `MYQ6_VELIAF_INJURED_VIS`) stays a separate group from its bare id, and

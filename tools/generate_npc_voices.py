@@ -837,7 +837,8 @@ def main():
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 
-    previous_path = args.base or (args.out if os.path.exists(args.out) else None)
+    previous_path = args.base or next(
+        (path for path in (args.out, DEFAULT_OUT) if os.path.exists(path)), None)
     previous = load_json(previous_path) if previous_path else {}
     previous_aliases = {int(v): main_id for v, main_id in (previous.get("aliases") or {}).items()}
     if args.base:
