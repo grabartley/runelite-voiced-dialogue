@@ -64,7 +64,7 @@ you; do not rubber-stamp the diff.
 1. Enumerates every main-namespace page transcluding `Template:Infobox NPC` **or** `Template:Infobox Monster`.
 2. Per page: race from the infobox `race` field, or, for Monster pages that lack it, from the page **categories** (e.g. `Category:Trolls` -> Troll); gender paired **per version** (switch infoboxes list a gender per id group); ethnicity from `leagueRegion` (Desert splits into `kharidian`/`menaphite` via location or `Category:Menaphites`/`Sophanem`).
 3. Cross-references a full `id -> name` dump (`--summary`) by name to cover variant ids the wiki pages don't list.
-4. Corrects gender from each id's `NpcID` cache symbol (a whole `F`/`FEMALE`/`M`/`MALE` token, e.g. `FAI_VARROCK_GUARD02_F`), read with `javap` from the RuneLite api jar the Gradle build resolves, or from `--runelite-api <jar>`. This runs in `--base` mode too, so a regen needs a JDK and a working `./gradlew`.
+4. Corrects gender from each id's `NpcID` cache symbol (a whole `F`/`FEMALE`/`M`/`MALE`/`MAN`/`WOMAN`/`HUSBAND`/`WIFE` token, numbered or not, e.g. `FAI_VARROCK_GUARD02_F`, `STAN_CREW_MAN1`), read with `javap` from the RuneLite api jar the Gradle build resolves, or from `--runelite-api <jar>`. This runs in `--base` mode too, so a regen needs a JDK and a working `./gradlew`.
 5. Applies `tools/overrides.json` last (authoritative: race/gender/ethnicity). A gender pin must agree with a gendered symbol: the generator warns when one does not, and `NpcDemographicAnalyzerTest` fails the build.
 6. Embeds `tools/profiles.json` under `profiles`.
 

@@ -15,9 +15,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.gameval.NpcID;
@@ -519,14 +521,111 @@ public class NpcDemographicAnalyzerTest {
     assertTrue("ids resolving against their symbol: " + mismatches, mismatches.isEmpty());
   }
 
+  private static final Set<String> FEMALE_TOKENS =
+      new HashSet<>(Arrays.asList("F", "FEMALE", "WOMAN", "WIFE"));
+
+  private static final Set<String> MALE_TOKENS =
+      new HashSet<>(Arrays.asList("M", "MALE", "MAN", "HUSBAND"));
+
+  private static final Pattern TRAILING_DIGITS = Pattern.compile("(?<=[A-Z])\\d+$");
+
   private static String symbolGender(String symbol) {
-    Set<String> tokens = new HashSet<>(Arrays.asList(symbol.split("_")));
-    boolean female = tokens.contains("F") || tokens.contains("FEMALE");
-    boolean male = tokens.contains("M") || tokens.contains("MALE");
+    Set<String> tokens = new HashSet<>();
+    for (String token : symbol.split("_")) {
+      tokens.add(TRAILING_DIGITS.matcher(token).replaceAll(""));
+    }
+    boolean female = !Collections.disjoint(tokens, FEMALE_TOKENS);
+    boolean male = !Collections.disjoint(tokens, MALE_TOKENS);
     if (female == male) {
       return null;
     }
     return female ? "Female" : "Male";
+  }
+
+  @Test
+  public void eachPortMasterHasTheGenderOfTheirPort() {
+    assertAttributes(NpcID.PORT_TASK_MASTER_MUSA_POINT, "Human", "Male");
+    assertAttributes(NpcID.PORT_TASK_MASTER_RELLEKKA, "Human", "Male");
+    assertAttributes(NpcID.PORT_TASK_MASTER_SUNSET_COAST, "Human", "Male");
+    assertAttributes(NpcID.PORT_TASK_MASTER_PORT_SARIM, "Human", "Female");
+    assertAttributes(NpcID.PORT_TASK_MASTER_CATHERBY, "Human", "Female");
+  }
+
+  @Test
+  public void numberedAndKinshipSymbolTokensDecideGender() {
+    assertAttributes(NpcID.SAILING_TRANSPORT_TRADER_STAN_CREW_MAN1_BASE, "Human", "Male");
+    assertAttributes(NpcID.SAILING_TRANSPORT_TRADER_STAN_CREW_WOMAN1_BASE, "Human", "Female");
+    assertAttributes(NpcID.VC_GAMBLER_WOMAN1, "Human", "Female");
+    assertAttributes(NpcID.BURGH_BED_MAN_WIFE, "Human", "Female");
+  }
+
+  @Test
+  public void everyARuffSituationCutsceneIdMatchesItsCharacter()
+      throws ReflectiveOperationException {
+    List<String> mismatches = new ArrayList<>();
+    int checked = 0;
+    for (Field field : NpcID.class.getFields()) {
+      String name = field.getName();
+      if (!name.startsWith("DOGQ_") || !name.endsWith("_CUTSCENE")) {
+        continue;
+      }
+      checked++;
+      int cutsceneId = field.getInt(null);
+      if (!analyzer.isVoiced(cutsceneId)) {
+        mismatches.add(name + " has no entry");
+        continue;
+      }
+      Integer characterId = symbolId(name.substring(0, name.length() - "_CUTSCENE".length()));
+      if (characterId == null) {
+        continue;
+      }
+      NpcAttributes cutscene = analyze(cutsceneId, null);
+      NpcAttributes character = analyze(characterId, null);
+      if (!cutscene.getGender().equals(character.getGender())
+          || !cutscene.getRace().equals(character.getRace())) {
+        mismatches.add(name);
+      }
+    }
+    assertTrue("expected the quest's cutscene ids, checked " + checked, checked >= 10);
+    assertTrue("cutscene ids unlike their character: " + mismatches, mismatches.isEmpty());
+  }
+
+  private static Integer symbolId(String symbol) throws IllegalAccessException {
+    try {
+      return NpcID.class.getField(symbol).getInt(null);
+    } catch (NoSuchFieldException e) {
+      return null;
+    }
+  }
+
+  @Test
+  public void theQuestsMultilocIdsCarryTheirCharacter() {
+    assertAttributes(NpcID.DOGQ_CHASE, "Human", "Male");
+    assertAttributes(NpcID.DOGQ_GOBLIN_PICKLENOSE_MULTI, "Goblin", "Male");
+    assertAttributes(NpcID.DOGQ_GOBLIN_TOETALLER_MULTI, "Goblin", "Male");
+    assertAttributes(NpcID.DOGQ_VARROCK_GUARD_MULTI, "Human", "Female");
+  }
+
+  @Test
+  public void everyZanikIdIsACaveGoblin() {
+    for (int npcId :
+        new int[] {
+          NpcID.LOTG_ZANIK,
+          NpcID.LOTG_ZANIK_FOLLOWER,
+          NpcID.LOTG_ZANIK_CUTSCENE,
+          NpcID.LOTG_ZANIK_CUTSCENE_ALT,
+          NpcID.LOTG_ZANIK_IN_LAB,
+          NpcID.LOTG_ZANIK_FAIRYRING
+        }) {
+      assertAttributes(npcId, "Goblin", "Female");
+    }
+  }
+
+  @Test
+  public void reusedIdsCarryTheirCurrentNpc() {
+    assertAttributes(NpcID.SLAYER_MASTER_MORTIMER, "Undead", "Male");
+    assertAttributes(NpcID.VMQ1_GUARD_4, "Human", "Male");
+    assertAttributes(NpcID.SOTN_EVELOT_INITIAL, "Human", "Female");
   }
 
   private void assertAttributes(int npcId, String expectedRace, String expectedGender) {
