@@ -438,7 +438,7 @@ public class VoiceManagerTest {
   }
 
   @Test
-  public void anEditSavedAgainstAMultilocBaseIdStillApplies() {
+  public void anEditSavedAgainstTheBaseCompositionIdStillApplies() {
     VoiceManager manager = newManager(VoiceType.TYPE_A);
     overrideStore.set(CHASE_CUTSCENE_ID, new NpcVoiceOverride(null, "Cockney", null, null, null));
 

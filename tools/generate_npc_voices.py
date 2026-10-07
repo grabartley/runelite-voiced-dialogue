@@ -507,10 +507,15 @@ def variant_families(symbols):
     return {root: sorted(ids) for root, ids in families.items() if len(ids) > 1}
 
 
-def family_main(root, ids, symbols, table, by_id):
-    """The id every variant resolves to. A multiloc parent comes first, because the plugin already
-    seeds the voice of every state from that base id, so its voice and cached clips stay as they
-    are. Then a bespoke profile's id, the bare-root id, and finally the lowest id with data."""
+def family_main(root, ids, symbols, table, by_id, previous_mains=frozenset()):
+    """The id every variant resolves to. A main id an earlier table already chose stays the main,
+    because moving it re-seeds the character's voice and re-bills its cached clips. Otherwise a
+    multiloc parent comes first, because the plugin already seeds the voice of every state from
+    that base id. Then a bespoke profile's id, the bare-root id, and finally the lowest id with
+    data."""
+    kept = [i for i in ids if i in previous_mains]
+    if kept:
+        return kept[0]
     multiloc = [i for i in ids if MULTILOC_TOKENS & set(symbols[i].split("_"))]
     if multiloc:
         return multiloc[0]
@@ -527,7 +532,7 @@ def entry_key(entry):
     return tuple(entry.get(field) for field in ENTRY_FIELDS)
 
 
-def alias_variants(table, symbols, by_id, distinct):
+def alias_variants(table, symbols, by_id, distinct, previous_mains=frozenset()):
     """Fold each family's variant ids onto one main id. A family whose ids disagree on race,
     gender, ethnicity, life stage or bespoke profile is left alone and reported, as is any family
     listed in ``distinct`` (ids that share a root but are different people). Returns the variant
@@ -542,13 +547,21 @@ def alias_variants(table, symbols, by_id, distinct):
             conflicts.append(root)
             continue
         entry = next(table[i] for i in ids if i in table)
-        main_id = family_main(root, ids, symbols, table, by_id)
+        main_id = family_main(root, ids, symbols, table, by_id, previous_mains)
         table[main_id] = entry
         for npc_id in ids:
             if npc_id != main_id:
                 aliases[npc_id] = main_id
                 table.pop(npc_id, None)
     return aliases, conflicts
+
+
+def expand_aliases(table, aliases):
+    """Give every variant id of an earlier table its main id's entry again, so overrides keyed by a
+    variant id still have a base to patch when the table is regenerated from its own output."""
+    for variant, main_id in aliases.items():
+        if main_id in table and variant not in table:
+            table[variant] = table[main_id]
 
 
 def misplaced_profiles(by_id, aliases):
@@ -824,9 +837,13 @@ def main():
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
 
+    previous_path = args.base or (args.out if os.path.exists(args.out) else None)
+    previous = load_json(previous_path) if previous_path else {}
+    previous_aliases = {int(v): main_id for v, main_id in (previous.get("aliases") or {}).items()}
     if args.base:
-        base = load_json(args.base)
+        base = previous
         table = {int(npc_id): entry for npc_id, entry in base["npcs"].items()}
+        expand_aliases(table, previous_aliases)
         base_meta = base.get("_meta", {})
         page_count = base_meta.get("npc_pages", 0)
         pages_with_ids = page_count
@@ -853,7 +870,8 @@ def main():
     override_count = apply_overrides(table, overrides)
     by_id = profiles.get("byId") or {}
     aliases, conflicts = alias_variants(
-        table, symbols, by_id, overrides.get("distinctCharacters") or {})
+        table, symbols, by_id, overrides.get("distinctCharacters") or {},
+        frozenset(previous_aliases.values()))
     for root in conflicts:
         print(f"  WARNING: variant ids of {root} disagree, left unaliased", file=sys.stderr)
     misplaced = misplaced_profiles(by_id, aliases)

@@ -103,7 +103,16 @@ stripped, because `GUARD1` and `GUARD2` are two different guards. Within a group
 
 The table keeps only the main id's entry and emits `aliases[variant] = main`. The plugin maps every
 id through `aliases` before looking anything up, and seeds the voice from the main id of the base
-composition id. An id with no alias resolves exactly as before, so its cache key does not change.
+composition id. An id with no alias resolves under its own id and its own seed.
+
+The main id is stable across regenerations: a main an earlier table chose stays the main, because
+moving it would re-seed the character's voice and re-bill its cached clips. With `--base`, the
+earlier table's aliases are expanded back into the table first, so an override keyed by a variant
+id still has an entry to patch.
+
+Grouping only sees symbols. A character whose ids carry a descriptor the state tokens do not cover
+(`MYQ6_VELIAF_FOLLOWER`, `MYQ6_VELIAF_INJURED_VIS`) stays a separate group from its bare id, and
+needs its data kept in agreement by hand.
 
 A group whose ids disagree on race, gender, ethnicity, life stage or `byId` profile is not folded;
 the generator prints a `variant ids of <ROOT> disagree` warning. Fix the wrong id in

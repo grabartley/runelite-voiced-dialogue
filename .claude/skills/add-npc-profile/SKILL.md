@@ -43,8 +43,8 @@ Get the NPC's id from **Debug Mode** (it logs `id=` per line), the OSRS Wiki inf
 osrs MCP `search_npctypes`. One character's variant ids (cutscene clones, `_MULTI` parents,
 `_VIS`/`_1OP` variants, sailing `_DOCK`/`_SHIP` states) are folded onto one **main id**: look the id
 up in `aliases` of `src/main/resources/npc-voices.json`. Key `byId` profiles by the main id; the
-generator refuses a profile keyed by a variant id. An override on any one id of a character reaches
-all of them once regenerated, but keep the character's ids in agreement, or the generator leaves the
+generator refuses a profile keyed by a variant id. Key overrides by the main id too. An override on a
+variant id still patches that id, but the character's ids must agree, or the generator leaves the
 group unfolded and warns. See `docs/npc-voice-tooling.md#variant-ids`.
 
 To check whether an NPC even **speaks** (so it deserves a profile rather than being

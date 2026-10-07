@@ -1941,8 +1941,9 @@
     "12689": {"name": "Guard (Children of the Sun)", "race": "Human", "gender": "Female", "ethnicity": "misthalin"}
   },
   "distinctCharacters": {
-    "JAIL_MUGGER": "1461 is the Port Sarim jail mugger (wiki Mugger, location Port Sarim jail); 8732 is the separate jailed mugger in Shayzien Prison with its own wiki page.",
-    "VIKING_WOMAN": "3942 is Freygerd and 3946 is Inga, two different Rellekka citizens with their own wiki pages; data already agrees, profiles are correct per id.",
-    "KNIGHT_OF_ARDOUGNE_WEST": "8854 is the generic West Ardougne male knight; 8855 is the Watchtower knight (wiki Knight of Ardougne (NPC)). 8854 is wrongly Elf."
+    "JAIL_MUGGER": "1461 is the mugger in the Port Sarim jail and 8732 is the mugger in Shayzien Prison, two different NPCs with their own wiki pages.",
+    "VIKING_WOMAN": "3942 is Freygerd and 3946 is Inga, two different Rellekka citizens with their own wiki pages.",
+    "KNIGHT_OF_ARDOUGNE_WEST": "8854 is the generic West Ardougne knight and 8855 is the Watchtower knight, two different people with separate wiki pages.",
+    "FRISB_N_BRG_GRD": "Two Honour guards posted inside and outside the Burgher's hall; the wiki lists them as separate versions of a generic guard."
   }
 }

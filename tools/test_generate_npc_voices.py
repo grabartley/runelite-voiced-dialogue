@@ -184,6 +184,36 @@ class VariantAliasTest(unittest.TestCase):
         aliases, conflicts = gen.alias_variants({}, self.TALIA, {}, {})
         self.assertEqual((aliases, conflicts), ({}, []))
 
+    def test_a_main_id_an_earlier_table_chose_stays_the_main(self):
+        symbols = {10: "SHIRO_SHAYZIEN_VIS", 11: "SHIRO_SHAYZIEN"}
+        table = {10: self.MALE, 11: self.MALE}
+        aliases, _ = gen.alias_variants(table, symbols, {}, {}, frozenset({10}))
+        self.assertEqual(aliases, {11: 10})
+
+    def test_regenerating_from_folded_output_gives_the_same_aliases(self):
+        symbols = {1: "VELIAF_VIS", 2: "VELIAF_CUTSCENE", 3: "VELIAF_POST"}
+        first_table = {2: self.MALE, 3: self.MALE}
+        first, _ = gen.alias_variants(first_table, symbols, {}, {})
+
+        second_table = dict(first_table)
+        gen.expand_aliases(second_table, first)
+        second, _ = gen.alias_variants(
+            second_table, symbols, {}, {}, frozenset(first.values()))
+
+        self.assertEqual(first, second)
+        self.assertEqual(first_table, second_table)
+
+    def test_expanding_aliases_gives_a_variant_its_mains_entry(self):
+        table = {16486: self.FEMALE}
+        gen.expand_aliases(table, {16537: 16486, 99: 98})
+        self.assertEqual(table, {16486: self.FEMALE, 16537: self.FEMALE})
+
+    def test_a_partial_override_on_a_variant_id_patches_its_mains_entry(self):
+        table = {16486: self.FEMALE}
+        gen.expand_aliases(table, {16537: 16486})
+        gen.apply_overrides(table, wrap({"16537": {"ethnicity": "asgarnia"}}))
+        self.assertEqual(table[16537]["gender"], "Female")
+
     def test_a_profile_on_a_variant_id_is_misplaced(self):
         self.assertEqual(gen.misplaced_profiles(
             {"_comment": "x", "16537": {}, "16486": {}}, {16537: 16486}), [16537])

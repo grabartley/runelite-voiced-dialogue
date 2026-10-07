@@ -42,14 +42,19 @@ final class NpcEntriesReader {
     return entries;
   }
 
-  static Map<Integer, Integer> readAliases(JsonObject root) {
+  static Map<Integer, Integer> readAliases(
+      JsonObject root, BiConsumer<String, RuntimeException> onSkippedEntry) {
     Map<Integer, Integer> aliases = new HashMap<>();
     if (!root.has("aliases") || !root.get("aliases").isJsonObject()) {
       return aliases;
     }
     JsonObject entries = root.getAsJsonObject("aliases");
     for (String key : entries.keySet()) {
-      aliases.put(Integer.parseInt(key), entries.get(key).getAsInt());
+      try {
+        aliases.put(Integer.parseInt(key), entries.get(key).getAsInt());
+      } catch (RuntimeException e) {
+        onSkippedEntry.accept(key, e);
+      }
     }
     return aliases;
   }

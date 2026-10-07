@@ -4,11 +4,11 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; aliases[variant id] = main id of the same character; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 13358,
+    "count": 13359,
     "name_matched_ids": 707,
     "overrides_applied": 1938,
     "symbols": 3860,
-    "aliases": 1534,
+    "aliases": 1533,
     "race_counts": {
       "Aranei": 18,
       "Arceuus": 54,
@@ -20,7 +20,7 @@
       "Gnome": 252,
       "Goblin": 357,
       "Gorilla": 11,
-      "Human": 9276,
+      "Human": 9277,
       "Icyene": 9,
       "Monkey": 64,
       "Penguin": 22,
@@ -31,12 +31,12 @@
     },
     "gender_counts": {
       "Female": 1942,
-      "Male": 11416
+      "Male": 11417
     },
     "ethnicity_counts": {
       "asgarnia": 668,
       "easternlands": 2,
-      "fremennik": 637,
+      "fremennik": 638,
       "kandarin": 1037,
       "karamja": 147,
       "kharidian": 499,
@@ -34918,7 +34918,6 @@
     "1455": 7108,
     "1554": 288,
     "1860": 7332,
-    "1890": 1889,
     "1946": 6512,
     "1974": 733,
     "1977": 754,
@@ -44135,6 +44134,11 @@
       "ethnicity": "fremennik"
     },
     "1889": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "fremennik"
+    },
+    "1890": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "fremennik"

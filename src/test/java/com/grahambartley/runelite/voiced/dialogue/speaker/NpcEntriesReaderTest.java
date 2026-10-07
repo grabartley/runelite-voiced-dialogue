@@ -7,6 +7,8 @@ import static org.junit.Assert.assertTrue;
 import com.google.gson.JsonParser;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.junit.Test;
@@ -42,7 +44,8 @@ public class NpcEntriesReaderTest {
         NpcEntriesReader.readAliases(
             new JsonParser()
                 .parse("{\"aliases\":{\"16537\":16486,\"15255\":15253}}")
-                .getAsJsonObject());
+                .getAsJsonObject(),
+            (key, e) -> skipped.add(key));
 
     assertEquals(Integer.valueOf(16486), aliases.get(16537));
     assertEquals(Integer.valueOf(15253), aliases.get(15255));
@@ -52,8 +55,23 @@ public class NpcEntriesReaderTest {
   @Test
   public void aTableWithoutAliasesHasNone() {
     assertTrue(
-        NpcEntriesReader.readAliases(new JsonParser().parse("{\"npcs\":{}}").getAsJsonObject())
+        NpcEntriesReader.readAliases(
+                new JsonParser().parse("{\"npcs\":{}}").getAsJsonObject(),
+                (key, e) -> skipped.add(key))
             .isEmpty());
+  }
+
+  @Test
+  public void aMalformedAliasIsSkippedAndTheRestRead() {
+    Map<Integer, Integer> aliases =
+        NpcEntriesReader.readAliases(
+            new JsonParser()
+                .parse("{\"aliases\":{\"x\":1,\"16537\":\"y\",\"15255\":15253}}")
+                .getAsJsonObject(),
+            (key, e) -> skipped.add(key));
+
+    assertEquals(Collections.singletonMap(15255, 15253), aliases);
+    assertEquals(Arrays.asList("x", "16537"), skipped);
   }
 
   @Test

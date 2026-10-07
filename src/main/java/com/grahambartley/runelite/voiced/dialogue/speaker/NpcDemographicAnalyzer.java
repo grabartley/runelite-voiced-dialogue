@@ -38,7 +38,11 @@ public class NpcDemographicAnalyzer {
     aliases =
         root == null
             ? Collections.emptyMap()
-            : Collections.unmodifiableMap(NpcEntriesReader.readAliases(root));
+            : Collections.unmodifiableMap(
+                NpcEntriesReader.readAliases(
+                    root,
+                    (key, e) ->
+                        log.warn("Skipping malformed NPC alias {}: {}", key, e.getMessage())));
     log.info(
         "NPC voice table loaded with {} entries and {} variant aliases from {}",
         voiceTable.size(),
