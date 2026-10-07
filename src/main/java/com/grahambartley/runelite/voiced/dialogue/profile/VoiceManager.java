@@ -118,6 +118,17 @@ public class VoiceManager {
     return new ResolvedSpeaker(voice, npcProfile(npcName, identity, override));
   }
 
+  public ResolvedSpeaker resolveFollower(NpcGender gender) {
+    CharacterProfile profile =
+        profileTable.resolveFollower(
+            config.followerAccent(), config.followerPersona(), config.followerPace(), gender);
+    if (config.debugMode()) {
+      log.info(VoiceTraceFormatter.buildFollowerTrace(gender));
+      log.info("[TTS profile] follower -> '{}' accent='{}'", profile.name(), profile.accent());
+    }
+    return new ResolvedSpeaker(VoiceSpec.follower(gender), profile);
+  }
+
   private void rememberHeard(Integer npcId, String npcName) {
     if (npcId == null || npcName == null) {
       return;

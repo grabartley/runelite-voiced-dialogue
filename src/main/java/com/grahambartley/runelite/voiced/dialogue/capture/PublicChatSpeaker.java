@@ -31,7 +31,7 @@ public final class PublicChatSpeaker {
       return;
     }
     Player local = client.getLocalPlayer();
-    if (local == null || !PublicChatPolicy.isSelfPublicChat(event.getName(), local.getName())) {
+    if (local == null || !PublicChatPolicy.isFrom(event.getName(), local.getName())) {
       return;
     }
     String cleaned = textCleaner.clean(event.getMessage());

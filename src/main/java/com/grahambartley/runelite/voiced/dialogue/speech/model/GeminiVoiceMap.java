@@ -18,8 +18,11 @@ public final class GeminiVoiceMap {
 
   static final int PLAYER_SEED = 0;
 
+  static final int FOLLOWER_SEED = 1;
+
   private final Map<NpcRace, Map<NpcGender, String[]>> npcVoices;
   private final Map<NpcGender, String[]> playerVoices;
+  private final Map<NpcGender, String[]> followerVoices;
   private final Map<NpcGender, String[]> childVoices;
   private final GeminiVoiceRegions regions;
 
@@ -32,6 +35,10 @@ public final class GeminiVoiceMap {
     playerVoices = new EnumMap<>(NpcGender.class);
     playerVoices.put(NpcGender.MALE, new String[] {"Achird", "Iapetus"});
     playerVoices.put(NpcGender.FEMALE, new String[] {"Aoede", "Autonoe"});
+
+    followerVoices = new EnumMap<>(NpcGender.class);
+    followerVoices.put(NpcGender.MALE, new String[] {"Iapetus"});
+    followerVoices.put(NpcGender.FEMALE, new String[] {"Laomedeia"});
 
     childVoices = new EnumMap<>(NpcGender.class);
     childVoices.put(NpcGender.MALE, new String[] {"Puck"});
@@ -81,11 +88,16 @@ public final class GeminiVoiceMap {
       String narrator = regions.narratorVoice();
       return narrator != null ? narrator : FALLBACK_NARRATOR_VOICE;
     }
-    NpcGender gender = normalizeGender(spec.gender());
+    NpcGender gender = NpcGender.orDefault(spec.gender());
     String region = regionFor(spec, profile);
     if (spec.player()) {
       String regional = regions.playerVoiceFor(region, gender, PLAYER_SEED);
       return regional != null ? regional : anchor(playerVoices.get(gender));
+    }
+    if (spec.follower()) {
+      String ownersVoice = regions.playerVoiceFor(region, gender, PLAYER_SEED);
+      String regional = regions.voiceExcluding(region, gender, FOLLOWER_SEED, ownersVoice);
+      return regional != null ? regional : anchor(followerVoices.get(gender));
     }
     if (spec.child()) {
       String regional = regions.childVoiceFor(region, gender, spec.voiceSeed());
@@ -111,7 +123,7 @@ public final class GeminiVoiceMap {
     if (spec == null || spec.narrator()) {
       return null;
     }
-    if (spec.player()) {
+    if (spec.player() || spec.follower()) {
       return regions.regionForAccent(profile == null ? null : profile.accent());
     }
     return npcRegion(spec, profile);
@@ -142,9 +154,5 @@ public final class GeminiVoiceMap {
       return pool[0];
     }
     return GeminiVoiceRegions.pick(Arrays.asList(pool), spec.voiceSeed());
-  }
-
-  private static NpcGender normalizeGender(NpcGender gender) {
-    return gender == NpcGender.FEMALE ? NpcGender.FEMALE : NpcGender.MALE;
   }
 }

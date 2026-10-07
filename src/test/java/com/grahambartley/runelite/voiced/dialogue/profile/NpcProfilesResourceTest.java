@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
+import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Answers;
@@ -255,6 +256,14 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void aClearedFollowerAccentFallsBackToTheSettingDefault() {
+    VoicedDialogueConfig defaults = mock(VoicedDialogueConfig.class, Answers.CALLS_REAL_METHODS);
+    assertEquals(
+        defaults.followerAccent(),
+        table.resolveFollower(null, null, null, NpcGender.MALE).accent());
+  }
+
+  @Test
   public void theNarratorProfileResolvesFromTheBundledTable() {
     CharacterProfile narrator = table.resolveNarrator();
     assertTrue(
@@ -264,6 +273,22 @@ public class NpcProfilesResourceTest {
         "the narrator is not just the player wearing a different label",
         table.resolvePlayer(null, null, null).cacheKey(),
         narrator.cacheKey());
+  }
+
+  @Test
+  public void theFollowerProfileResolvesFromTheBundledTable() {
+    CharacterProfile follower = table.resolveFollower(null, null, null, NpcGender.MALE);
+    assertTrue(
+        "the follower has a name label", follower.name() != null && !follower.name().isEmpty());
+    assertTrue("the follower accent is British by default", follower.accent().contains("British"));
+    assertNotEquals(
+        "the follower is not just the player wearing a different label",
+        table.resolvePlayer(null, null, null).cacheKey(),
+        follower.cacheKey());
+    assertNotEquals(
+        "the follower is not just the narrator wearing a different label",
+        table.resolveNarrator().cacheKey(),
+        follower.cacheKey());
   }
 
   @Test

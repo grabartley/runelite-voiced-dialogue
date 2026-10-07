@@ -14,6 +14,12 @@
     "style": "Plucky, peppy and upbeat, a cheerful, eager adventurer brimming with warmth and enthusiasm.",
     "pace": "Lively and bouncy, with an upbeat, energetic rhythm."
   },
+  "follower": {
+    "name": "Companion",
+    "accent": "Strong working-class southern English accent, British English pronunciation",
+    "style": "A devoted adventuring companion: eager, warm and good-humoured, speaking up beside someone they follow everywhere.",
+    "pace": "Bright and easy, a little quicker than measured, with natural pauses at the punctuation."
+  },
   "narrator": {
     "name": "Narrator",
     "accent": "Strong clear Received Pronunciation accent, British English pronunciation",
