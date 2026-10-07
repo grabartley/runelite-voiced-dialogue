@@ -304,7 +304,7 @@ public class NpcProfilesResourceTest {
 
   @Test
   public void eoinKeepsABoyishPitchOverTheChildDefault() {
-    for (int id : new int[] {5302, 8930, 8931}) {
+    for (int id : new int[] {5302, 8930}) {
       NpcProfileTable.Resolution eoin =
           table.resolveNpc(id, table.matchName("Eoin"), "Elf", "tirannwn", true, null);
       assertEquals(

@@ -12,6 +12,8 @@ class NpcIdentity {
 
   Integer baseId;
 
+  Integer seedId;
+
   NpcAttributes attributes;
 
   NpcProfileTable.NameMatch nameMatch;

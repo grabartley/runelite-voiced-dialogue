@@ -2,6 +2,7 @@ package com.grahambartley.runelite.voiced.dialogue.profile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -43,11 +44,37 @@ public class NpcVoiceResolverTest {
     NpcAttributes after = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
 
     VoiceSpec original =
-        resolver.resolve("Juliet", new NpcIdentity(8000, 8000, before, nameMatch), null);
+        resolver.resolve("Juliet", new NpcIdentity(8000, 8000, 8000, before, nameMatch), null);
     VoiceSpec transformed =
-        resolver.resolve("Juliet", new NpcIdentity(8001, 8000, after, nameMatch), null);
+        resolver.resolve("Juliet", new NpcIdentity(8001, 8000, 8000, after, nameMatch), null);
 
     assertEquals(original.voiceSeed(), transformed.voiceSeed());
+  }
+
+  @Test
+  public void twoVariantIdsOfOneCharacterShareTheSeedOfTheirMainId() {
+    NpcProfileTable.NameMatch nameMatch = mock(NpcProfileTable.NameMatch.class);
+    NpcAttributes talia = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
+
+    VoiceSpec world =
+        resolver.resolve("Talia", new NpcIdentity(16486, 16486, 16486, talia, nameMatch), null);
+    VoiceSpec cutscene =
+        resolver.resolve("Talia", new NpcIdentity(16537, 16537, 16486, talia, nameMatch), null);
+
+    assertEquals(world.voiceSeed(), cutscene.voiceSeed());
+  }
+
+  @Test
+  public void theSeedFollowsTheSeedIdNotTheRawBaseId() {
+    NpcProfileTable.NameMatch nameMatch = mock(NpcProfileTable.NameMatch.class);
+    NpcAttributes talia = attributes("Human", "Female", AttributeSource.STATIC_TABLE);
+
+    VoiceSpec unaliased =
+        resolver.resolve("Talia", new NpcIdentity(16537, 16537, 16537, talia, nameMatch), null);
+    VoiceSpec aliased =
+        resolver.resolve("Talia", new NpcIdentity(16537, 16537, 16486, talia, nameMatch), null);
+
+    assertNotEquals(unaliased.voiceSeed(), aliased.voiceSeed());
   }
 
   @Test
@@ -204,7 +231,7 @@ public class NpcVoiceResolverTest {
     if (attributes != null && worldId != null) {
       attributes.setNpcId(worldId);
     }
-    return new NpcIdentity(worldId, worldId, attributes, nameMatch);
+    return new NpcIdentity(worldId, worldId, worldId, attributes, nameMatch);
   }
 
   private static NpcAttributes attributes(String race, String gender, String source) {

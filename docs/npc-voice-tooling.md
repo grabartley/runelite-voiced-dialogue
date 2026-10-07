@@ -76,12 +76,41 @@ versions). To close that gap the generator also cross-references a full
 name still resolves to a documented NPC is covered too.
 
 > **Coverage notes.** The live client reports a transformed/multiloc NPC's
-> *active* id, which can differ from its base composition id; the runtime resolves
-> by the active id first (then the base id) to match the wiki. Combat creatures use
+> *active* id, which can differ from its base composition id; the runtime maps each
+> to its character's main id (see [Variant ids](#variant-ids)) and resolves by the
+> active id first, then the base id. Combat creatures use
 > a separate `Infobox Monster` that carries **no race/gender/ethnicity**, so their
 > race is derived from the page's categories (e.g. TzHaar-Mej); `overrides.json`
 > covers only the cases the categories get wrong. Anything still unknown (a
 > brand-new NPC) is left to the runtime auto-learn fallback.
+
+## Variant ids
+
+One character often has several cache ids: a cutscene clone (`DOGQ_TALIA_CUTSCENE`), a multiloc
+parent (`DOGQ_CHASE_MULTI`), menu-option variants (`_1OP`, `_NOOP`), or one id per state (a sailing
+crewmate's `_WORLD`, `_DOCK`, `_SHIP` and `_CARGO` ids). Every one of them must sound like the same
+person, so the generator folds them onto one **main id** per character.
+
+It groups ids by their RuneLite `NpcID` symbol with trailing state tokens stripped
+(`STATE_TOKENS` in `tools/generate_npc_voices.py`). Numbers, `_F`/`_M` and `_VARIANTnn` are never
+stripped, because `GUARD1` and `GUARD2` are two different guards. Within a group the main id is:
+
+1. the multiloc parent (`_MULTI`, `_MULTINPC`), because the plugin already seeds every state's
+   voice from that base id, so the character keeps the voice and cached clips it has today,
+2. else the id with a bespoke `byId` profile,
+3. else the id whose symbol is the bare root,
+4. else the lowest id with data.
+
+The table keeps only the main id's entry and emits `aliases[variant] = main`. The plugin maps every
+id through `aliases` before looking anything up, and seeds the voice from the main id of the base
+composition id. An id with no alias resolves exactly as before, so its cache key does not change.
+
+A group whose ids disagree on race, gender, ethnicity, life stage or `byId` profile is not folded;
+the generator prints a `variant ids of <ROOT> disagree` warning. Fix the wrong id in
+`overrides.json` or `profiles.json`. When the ids really are different people sharing a symbol root,
+list the root under `distinctCharacters` in `overrides.json` with the reason, and the group is left
+alone. A `byId` profile keyed by a variant id is never read, so the generator refuses to run until
+it is keyed by the main id.
 
 ## Mapping rules
 
@@ -341,7 +370,8 @@ keyword takes the `child` category layer after the keyword categories and before
    as a child so the voice resolver picks from its region's youngest native voices, or
    the prebuilt child pool when it has no region (the `child` category keys on
    child/schoolboy/schoolgirl/urchin).
-5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the live NPC id. Sparse:
+5. `byId[npcId]` - per-NPC **bespoke** overrides keyed by the character's main id
+   (see [Variant ids](#variant-ids)). Sparse:
    carry only what is unique to the character (usually `name` + `style`); its
    style is added on top of the blend, and accent and pace inherit unless it sets
    them. This is the highest-precedence bundled layer, so it can pin any character's

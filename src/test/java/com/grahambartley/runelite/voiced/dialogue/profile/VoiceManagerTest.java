@@ -18,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcRace;
 import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
+import com.grahambartley.runelite.voiced.dialogue.speech.model.GeminiTtsModel;
 import java.util.Collections;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -45,6 +46,24 @@ public class VoiceManagerTest {
   private static final int HANS_ID = 3105;
 
   private static final int ABYSSAL_DEMON_ID = 415;
+
+  private static final int TALIA_ID = 16486;
+
+  private static final int TALIA_CUTSCENE_ID = 16537;
+
+  private static final int CHASE_MULTILOC_ID = 16487;
+
+  private static final int CHASE_ID = 16488;
+
+  private static final int CHASE_CUTSCENE_ID = 16538;
+
+  private static final int CREWMATE_WORLD_ID = 15253;
+
+  private static final int[] CREWMATE_STATE_IDS = {15251, 15252, 15254, 15255, 15256, 15257, 15258};
+
+  private static final int EOIN_ID = 8930;
+
+  private static final GeminiTtsModel MODEL = new GeminiTtsModel();
 
   private final NpcVoiceOverrideStore overrideStore =
       new NpcVoiceOverrideStore(mock(ConfigManager.class));
@@ -335,6 +354,117 @@ public class VoiceManagerTest {
 
     assertTrue(manager.speaks(999_000_004));
     assertFalse(manager.speaks(999_000_005));
+  }
+
+  @Test
+  public void npcsThatAlreadyResolvedKeepTheirVoiceAndProfileKey() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    assertEquals(
+        "en-gb-tutor-9 | npc:HUMAN:MALE | 2fef3936d2068740",
+        heard(manager, worldNpc(HANS_ID, "Hans")));
+    assertEquals(
+        "en-gb-tutor-9 | npc:HUMAN:MALE | 7952b0810010c8ea",
+        heard(manager, worldNpc(306, "Lumbridge Guide")));
+    assertEquals(
+        "en-gb-assistant-4 | npc:HUMAN:MALE | 180103658e740366",
+        heard(manager, worldNpc(5216, "Benny")));
+    assertEquals(
+        "en-gb-csagent-7 | npc:GOBLIN:MALE | 968267ee3b2e882b",
+        heard(manager, worldNpc(655, "General Bentnoze")));
+    assertEquals(
+        "en-gb-advisor-8 | npc:TROLL:MALE | 2d48746e80755387",
+        heard(manager, worldNpc(4130, "Dad")));
+    assertEquals(
+        "en-gb-concierge-4 | npc:HUMAN:FEMALE | bf7f583746097b0d",
+        heard(manager, worldNpc(TALIA_ID, "Talia")));
+    assertEquals(
+        "en-gb-tutor-14 | npc:HUMAN:MALE | bf7f583746097b0d",
+        heard(manager, transformedNpc(CHASE_ID, CHASE_MULTILOC_ID, "Chase")));
+    assertEquals(
+        "en-gb-tutor-8 | npc:HUMAN:MALE | 45548d78827b8e87",
+        heard(manager, worldNpc(CREWMATE_WORLD_ID, "Crewmate")));
+    assertEquals(
+        "en-gb-training-3 | npc:ELF:MALE | 00d431e01ce409f1",
+        heard(manager, worldNpc(EOIN_ID, "Eoin")));
+    assertEquals(
+        "en-gb-tutor-8 | npc:WIZARD:MALE | d51bed41e7817959",
+        heard(manager, worldNpc(7746, "Wizard Mizgog")));
+    assertEquals(
+        "en-gb-training-8 | npc:DWARF:MALE | c71994413f139527",
+        heard(manager, worldNpc(DWARF_ID, "Dwarf")));
+  }
+
+  @Test
+  public void aCutsceneCloneSoundsLikeTheCharacterItClones() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    assertEquals(
+        heard(manager, worldNpc(TALIA_ID, "Talia")),
+        heard(manager, worldNpc(TALIA_CUTSCENE_ID, "Talia")));
+    assertEquals(
+        heard(manager, transformedNpc(CHASE_ID, CHASE_MULTILOC_ID, "Chase")),
+        heard(manager, worldNpc(CHASE_CUTSCENE_ID, "Chase")));
+  }
+
+  @Test
+  public void aSailingCrewmateSoundsTheSameOnTheDockAndTheShip() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    String world = heard(manager, worldNpc(CREWMATE_WORLD_ID, "Crewmate"));
+    for (int id : CREWMATE_STATE_IDS) {
+      assertEquals("crewmate state " + id, world, heard(manager, worldNpc(id, "Crewmate")));
+    }
+  }
+
+  @Test
+  public void aVariantIdIsRecordedUnderItsCharactersMainId() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+
+    manager.resolveNpc(worldNpc(TALIA_CUTSCENE_ID, "Talia"));
+
+    assertEquals(
+        Collections.singletonList(new HeardNpc(TALIA_ID, "Talia")),
+        manager.recentSpeakers().newestFirst());
+  }
+
+  @Test
+  public void anEditSavedAgainstAVariantIdStillApplies() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    overrideStore.set(
+        TALIA_CUTSCENE_ID, new NpcVoiceOverride(null, "Cockney", null, null, VoiceType.TYPE_A));
+
+    ResolvedSpeaker cutscene = manager.resolveNpc(worldNpc(TALIA_CUTSCENE_ID, "Talia"));
+
+    assertEquals("Cockney", cutscene.profile().accent());
+    assertEquals(NpcGender.MALE, cutscene.voice().gender());
+  }
+
+  @Test
+  public void anEditSavedAgainstAMultilocBaseIdStillApplies() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    overrideStore.set(CHASE_CUTSCENE_ID, new NpcVoiceOverride(null, "Cockney", null, null, null));
+
+    ResolvedSpeaker chase =
+        manager.resolveNpc(transformedNpc(CHASE_ID, CHASE_CUTSCENE_ID, "Chase"));
+
+    assertEquals("Cockney", chase.profile().accent());
+  }
+
+  @Test
+  public void anEditOnTheMainIdWinsOverOneOnTheVariant() {
+    VoiceManager manager = newManager(VoiceType.TYPE_A);
+    overrideStore.set(TALIA_ID, new NpcVoiceOverride(null, "Scouse", null, null, null));
+    overrideStore.set(TALIA_CUTSCENE_ID, new NpcVoiceOverride(null, "Cockney", null, null, null));
+
+    assertEquals(
+        "Scouse", manager.resolveNpc(worldNpc(TALIA_CUTSCENE_ID, "Talia")).profile().accent());
+  }
+
+  private static String heard(VoiceManager manager, NPC npc) {
+    ResolvedSpeaker speaker = manager.resolveNpc(npc);
+    return MODEL.voiceFor(speaker.voice(), speaker.profile())
+        + " | "
+        + speaker.voice().key()
+        + " | "
+        + speaker.profile().cacheKey();
   }
 
   private static NPC transformedNpc(int activeId, int baseId, String name) {

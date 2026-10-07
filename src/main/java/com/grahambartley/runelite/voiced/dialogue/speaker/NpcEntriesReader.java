@@ -42,6 +42,18 @@ final class NpcEntriesReader {
     return entries;
   }
 
+  static Map<Integer, Integer> readAliases(JsonObject root) {
+    Map<Integer, Integer> aliases = new HashMap<>();
+    if (!root.has("aliases") || !root.get("aliases").isJsonObject()) {
+      return aliases;
+    }
+    JsonObject entries = root.getAsJsonObject("aliases");
+    for (String key : entries.keySet()) {
+      aliases.put(Integer.parseInt(key), entries.get(key).getAsInt());
+    }
+    return aliases;
+  }
+
   private static String optString(JsonObject entry, String key) {
     return entry.has(key) && !entry.get(key).isJsonNull() ? entry.get(key).getAsString() : null;
   }

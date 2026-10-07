@@ -24,18 +24,23 @@ final class NpcIdentityResolver {
     NpcProfileTable.NameMatch nameMatch = profileTable.matchName(npcName);
     NPC npc = npcFinder.findByName(npcName);
     if (npc == null) {
-      return new NpcIdentity(null, null, null, nameMatch);
+      return new NpcIdentity(null, null, null, null, nameMatch);
     }
-    return new NpcIdentity(
-        npc.getId(), baseId(npc), demographicAnalyzer.analyzeNPC(npc), nameMatch);
+    return identityOf(npc, nameMatch);
   }
 
   NpcIdentity resolve(NPC npc) {
+    return identityOf(npc, profileTable.matchName(npc.getName()));
+  }
+
+  private NpcIdentity identityOf(NPC npc, NpcProfileTable.NameMatch nameMatch) {
+    int baseId = baseId(npc);
     return new NpcIdentity(
         npc.getId(),
-        baseId(npc),
+        baseId,
+        demographicAnalyzer.mainId(baseId),
         demographicAnalyzer.analyzeNPC(npc),
-        profileTable.matchName(npc.getName()));
+        nameMatch);
   }
 
   private static int baseId(NPC npc) {

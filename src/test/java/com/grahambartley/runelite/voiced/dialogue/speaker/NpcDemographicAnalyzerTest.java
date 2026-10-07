@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -527,6 +528,40 @@ public class NpcDemographicAnalyzerTest {
       return null;
     }
     return female ? "Female" : "Male";
+  }
+
+  @Test
+  public void aVariantIdResolvesToItsCharactersMainId() {
+    assertEquals(16486, analyzer.mainId(NpcID.DOGQ_TALIA_CUTSCENE));
+    assertEquals(15253, analyzer.mainId(NpcID.SAILING_CREW_GENERIC_1_SHIP));
+    assertEquals(3105, analyzer.mainId(3105));
+  }
+
+  @Test
+  public void aCutsceneCloneMissingFromTheTableTakesItsCharactersData() {
+    assertAttributes(NpcID.DOGQ_TALIA_CUTSCENE, "Human", "Female");
+    assertEquals(16486, analyze(NpcID.DOGQ_TALIA_CUTSCENE, "Talia").getNpcId());
+    assertTrue(analyzer.isVoiced(NpcID.DOGQ_TALIA_CUTSCENE));
+  }
+
+  @Test
+  public void everySailingCrewStateSharesOneEntry() {
+    NpcAttributes world = analyze(NpcID.SAILING_CREW_GENERIC_1_WORLD, null);
+    for (int npcId :
+        new int[] {
+          NpcID.SAILING_CREW_GENERIC_1_DOCK,
+          NpcID.SAILING_CREW_GENERIC_1_SHIP,
+          NpcID.SAILING_CREW_GENERIC_1_RECRUITED
+        }) {
+      assertSame("crew state " + npcId, world, analyze(npcId, null));
+    }
+  }
+
+  @Test
+  public void stanCrewMenAreMenAndABedMansWifeStaysAWoman() {
+    assertAttributes(NpcID.SAILING_TRANSPORT_TRADER_STAN_CREW_MAN1_BASE, "Human", "Male");
+    assertAttributes(NpcID.SAILING_TRANSPORT_TRADER_STAN_CREW_WOMAN1_BASE, "Human", "Female");
+    assertAttributes(NpcID.BURGH_BED_MAN_WIFE, "Human", "Female");
   }
 
   private void assertAttributes(int npcId, String expectedRace, String expectedGender) {

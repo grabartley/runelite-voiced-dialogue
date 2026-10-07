@@ -20,8 +20,11 @@ Each NPC gets one gender-correct Gemini voice for life (`GeminiVoiceMap`). An NP
 native speakers in Google's Extended Voice Library is voiced from that accent's region pool: the
 profile layer that supplies the winning accent names its `voiceRegion`, and the region travels on
 the `CharacterProfile`. Every other NPC is voiced from its race pool. Within a pool, a per-NPC seed
-taken from the NPC's base composition id spreads same-pool NPCs apart and keeps each on the same
-voice across sessions and across a mid-quest transform. A profile `age` narrows a region pool to the
+spreads same-pool NPCs apart and keeps each on the same voice across sessions and across a mid-quest
+transform. The seed is the main id of the NPC's base composition id: every variant id of one
+character (a cutscene clone, a sailing crewmate on the dock or the ship) maps to one main id in the
+bundled table's `aliases`, so all of them roll the same voice (see
+[npc-voice-tooling.md](npc-voice-tooling.md#variant-ids)). A profile `age` narrows a region pool to the
 voices whose library age is closest before the seed picks, so an old character sounds old (see
 [voice-casting.md](voice-casting.md#age)).
 Life stage is a third axis: an NPC marked as a child (a `child` life-stage marker in the bundled
@@ -206,9 +209,11 @@ outside the store, such as by a profile sync, is re-read on its `ConfigChanged` 
 updates the map and `ConfigManager` together. A malformed value is logged and skipped without
 failing the rest of the load.
 
-The id is the one the bundled profile resolves under (`NpcIdentity.profileId()`), so an override
-and a bundled `byId` entry for the same NPC line up. `VoiceManager` looks the override up once per
-line and hands it to both halves. Profile fields patch over every bundled layer field by field (the
+The id is the one the bundled profile resolves under (`NpcIdentity.profileId()`), which is the
+character's main id, so an override and a bundled `byId` entry for the same NPC line up.
+`VoiceManager` looks the override up once per line, under the main id, then the active id, then the
+base composition id, so an edit saved against a variant id still applies, and hands it to both
+halves. Profile fields patch over every bundled layer field by field (the
 resolution order is in [npc-voice-tooling](npc-voice-tooling.md)). The voice type is a separate
 merge point: it replaces the detected gender in `VoiceSpec` rather than living in the profile.
 Race and the child flag are not overridable, and neither is the voice pool directly: an

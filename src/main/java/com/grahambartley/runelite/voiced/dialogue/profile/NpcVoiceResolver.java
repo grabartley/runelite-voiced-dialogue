@@ -34,7 +34,7 @@ final class NpcVoiceResolver {
     }
     NpcAttributes attributes = identity.attributes();
     if (attributes == null) {
-      return defaultVoice(npcName, identity.baseId(), identity, voiceType, "analysis-failed");
+      return defaultVoice(npcName, identity.seedId(), identity, voiceType, "analysis-failed");
     }
 
     NpcRace race = NpcDemographicParser.toRace(attributes.getRace());
@@ -54,7 +54,7 @@ final class NpcVoiceResolver {
       source += "+voice-type-override";
     }
     boolean child = identity.child();
-    int seed = voiceSeed(identity.baseId(), npcName);
+    int seed = voiceSeed(identity.seedId(), npcName);
     if (config.debugMode()) {
       log.info(
           VoiceTraceFormatter.buildNpcTrace(

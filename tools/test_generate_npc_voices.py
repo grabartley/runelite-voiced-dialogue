@@ -110,6 +110,94 @@ class ApplyOverridesTest(unittest.TestCase):
         self.assertEqual(count, 2)
 
 
+class VariantAliasTest(unittest.TestCase):
+    TALIA = {16486: "DOGQ_TALIA", 16537: "DOGQ_TALIA_CUTSCENE"}
+    CHASE = {16487: "DOGQ_CHASE_MULTI", 16488: "DOGQ_CHASE", 16489: "DOGQ_CHASE_POST",
+             16538: "DOGQ_CHASE_CUTSCENE"}
+    FEMALE = {"race": "Human", "gender": "Female", "ethnicity": "misthalin"}
+    MALE = {"race": "Human", "gender": "Male", "ethnicity": "misthalin"}
+
+    def test_state_suffixes_are_stripped_from_the_root(self):
+        self.assertEqual(gen.symbol_root("DOGQ_TALIA_CUTSCENE"), "DOGQ_TALIA")
+        self.assertEqual(gen.symbol_root("SAILING_CREW_GENERIC_1_SHIP_NO_OP"), "SAILING_CREW_GENERIC_1")
+        self.assertEqual(gen.symbol_root("SAILING_CREW_GENERIC_1_CARGO_3"), "SAILING_CREW_GENERIC_1")
+        self.assertEqual(gen.symbol_root("DOGQ_VARROCK_GUARD_MULTI_POST"), "DOGQ_VARROCK_GUARD")
+        self.assertEqual(gen.symbol_root("KNIGHT_OF_ARDOUGNE_WEST_NOOP_VIS"), "KNIGHT_OF_ARDOUGNE_WEST")
+
+    def test_numbers_sex_and_variant_tokens_name_different_people(self):
+        self.assertEqual(gen.symbol_root("KOUREND_PROTESTER_2"), "KOUREND_PROTESTER_2")
+        self.assertEqual(gen.symbol_root("FAI_VARROCK_GUARD02_F"), "FAI_VARROCK_GUARD02_F")
+        self.assertEqual(gen.symbol_root("MAN_VARIANT01"), "MAN_VARIANT01")
+
+    def test_a_bare_state_token_is_not_stripped_to_nothing(self):
+        self.assertEqual(gen.symbol_root("SHIP"), "SHIP")
+
+    def test_only_roots_shared_by_more_than_one_id_form_families(self):
+        families = gen.variant_families({**self.TALIA, 1: "HANS"})
+        self.assertEqual(families, {"DOGQ_TALIA": [16486, 16537]})
+
+    def test_a_missing_cutscene_clone_takes_its_characters_entry(self):
+        table = {16486: self.FEMALE}
+        aliases, conflicts = gen.alias_variants(table, self.TALIA, {}, {})
+        self.assertEqual(aliases, {16537: 16486})
+        self.assertEqual(conflicts, [])
+        self.assertEqual(table, {16486: self.FEMALE})
+
+    def test_the_multiloc_parent_is_the_main_id(self):
+        table = {16488: self.MALE, 16489: self.MALE}
+        aliases, _ = gen.alias_variants(table, self.CHASE, {}, {})
+        self.assertEqual(aliases, {16488: 16487, 16489: 16487, 16538: 16487})
+        self.assertEqual(table, {16487: self.MALE})
+
+    def test_a_profiled_id_is_main_when_there_is_no_multiloc_parent(self):
+        symbols = {10: "SHIRO_SHAYZIEN_VIS", 11: "SHIRO_SHAYZIEN"}
+        table = {10: self.MALE, 11: self.MALE}
+        aliases, _ = gen.alias_variants(table, symbols, {"10": {"name": "Shiro"}}, {})
+        self.assertEqual(aliases, {11: 10})
+
+    def test_the_bare_root_is_main_without_a_parent_or_profile(self):
+        symbols = {10: "SHIRO_SHAYZIEN_VIS", 11: "SHIRO_SHAYZIEN"}
+        table = {10: self.MALE, 11: self.MALE}
+        aliases, _ = gen.alias_variants(table, symbols, {}, {})
+        self.assertEqual(aliases, {10: 11})
+
+    def test_disagreeing_ids_are_reported_and_left_alone(self):
+        table = {16486: self.FEMALE, 16537: self.MALE}
+        aliases, conflicts = gen.alias_variants(table, self.TALIA, {}, {})
+        self.assertEqual(aliases, {})
+        self.assertEqual(conflicts, ["DOGQ_TALIA"])
+        self.assertEqual(set(table), {16486, 16537})
+
+    def test_disagreeing_profiles_are_reported(self):
+        table = {16486: self.FEMALE, 16537: self.FEMALE}
+        by_id = {"16486": {"name": "Talia"}, "16537": {"name": "Someone else"}}
+        _, conflicts = gen.alias_variants(table, self.TALIA, by_id, {})
+        self.assertEqual(conflicts, ["DOGQ_TALIA"])
+
+    def test_a_family_marked_distinct_is_never_folded(self):
+        table = {16486: self.FEMALE}
+        aliases, conflicts = gen.alias_variants(
+            table, self.TALIA, {}, {"DOGQ_TALIA": "two different people"})
+        self.assertEqual((aliases, conflicts), ({}, []))
+
+    def test_a_family_with_no_data_is_skipped(self):
+        aliases, conflicts = gen.alias_variants({}, self.TALIA, {}, {})
+        self.assertEqual((aliases, conflicts), ({}, []))
+
+    def test_a_profile_on_a_variant_id_is_misplaced(self):
+        self.assertEqual(gen.misplaced_profiles(
+            {"_comment": "x", "16537": {}, "16486": {}}, {16537: 16486}), [16537])
+
+    def test_the_bundled_table_keeps_no_variant_entries(self):
+        tools = os.path.dirname(os.path.abspath(__file__))
+        bundled = gen.load_json(os.path.join(tools, os.pardir, "src", "main", "resources",
+                                             "npc-voices.json"))
+        variants = set(bundled["aliases"])
+        self.assertFalse(variants & set(bundled["npcs"]))
+        self.assertFalse(variants & set(bundled["profiles"]["byId"]))
+        self.assertTrue(all(str(main) in bundled["npcs"] for main in bundled["aliases"].values()))
+
+
 class SymbolGenderTest(unittest.TestCase):
     def test_parse_npc_symbols_reads_javap_constants(self):
         javap = (
@@ -131,9 +219,19 @@ class SymbolGenderTest(unittest.TestCase):
             self.assertEqual(gen.symbol_gender(symbol), "Male", symbol)
 
     def test_symbol_without_a_whole_gender_token_names_none(self):
-        for symbol in ("FAI_VARROCK_GUARD02", "FAI_FALADOR_GUARD1", "FEMALE2", "MAGE_OF_ZAMORAK",
-                       "FARMER", "HAM_MEMBER"):
+        for symbol in ("FAI_VARROCK_GUARD02", "FAI_FALADOR_GUARD1", "DUEL_CROWDFEMALE2",
+                       "MAGE_OF_ZAMORAK", "FARMER", "HAM_MEMBER", "SAILING_CREW_MANAGER_1OP"):
             self.assertIsNone(gen.symbol_gender(symbol), symbol)
+
+    def test_a_numbered_gender_token_still_names_a_gender(self):
+        self.assertEqual(gen.symbol_gender("SAILING_TRANSPORT_TRADER_STAN_CREW_MAN1_BASE"), "Male")
+        self.assertEqual(gen.symbol_gender("VC_GAMBLER_WOMAN3"), "Female")
+        self.assertEqual(gen.symbol_gender("MDAUGHTER_CAMP_FEMALE2"), "Female")
+        self.assertEqual(gen.symbol_gender("QIP_SOA_THIEF_FEMALE01"), "Female")
+
+    def test_a_kinship_token_names_a_gender(self):
+        self.assertEqual(gen.symbol_gender("FARMER_WIFE"), "Female")
+        self.assertIsNone(gen.symbol_gender("BURGH_BED_MAN_WIFE"))
 
     def test_symbol_naming_both_genders_names_none(self):
         self.assertIsNone(gen.symbol_gender("COUPLE_M_F"))

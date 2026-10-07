@@ -1,5 +1,7 @@
 package com.grahambartley.runelite.voiced.dialogue.speaker;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -26,11 +28,26 @@ public class NpcDemographicAnalyzer {
 
   private Map<Integer, NpcAttributes> voiceTable = Collections.emptyMap();
 
+  private Map<Integer, Integer> aliases = Collections.emptyMap();
+
   private LearnedNpcStore learnedStore;
 
   public void initialize() {
-    voiceTable = loadVoiceTable();
-    log.info("NPC voice table loaded with {} entries from {}", voiceTable.size(), TABLE_RESOURCE);
+    JsonObject root = loadTableRoot();
+    voiceTable = root == null ? Collections.emptyMap() : readVoiceTable(root);
+    aliases =
+        root == null
+            ? Collections.emptyMap()
+            : Collections.unmodifiableMap(NpcEntriesReader.readAliases(root));
+    log.info(
+        "NPC voice table loaded with {} entries and {} variant aliases from {}",
+        voiceTable.size(),
+        aliases.size(),
+        TABLE_RESOURCE);
+  }
+
+  public int mainId(int npcId) {
+    return aliases.getOrDefault(npcId, npcId);
   }
 
   public void setLearnedStore(LearnedNpcStore learnedStore) {
@@ -65,7 +82,7 @@ public class NpcDemographicAnalyzer {
   }
 
   private NpcAttributes lookupKnown(int npcId) {
-    NpcAttributes attributes = voiceTable.get(npcId);
+    NpcAttributes attributes = voiceTable.get(mainId(npcId));
     if (attributes != null) {
       return attributes;
     }
@@ -73,7 +90,8 @@ public class NpcDemographicAnalyzer {
   }
 
   public boolean isVoiced(int npcId) {
-    return voiceTable.containsKey(npcId) || (learnedStore != null && learnedStore.contains(npcId));
+    return voiceTable.containsKey(mainId(npcId))
+        || (learnedStore != null && learnedStore.contains(npcId));
   }
 
   public int getTableSize() {
@@ -88,28 +106,32 @@ public class NpcDemographicAnalyzer {
     return defaultData;
   }
 
-  private Map<Integer, NpcAttributes> loadVoiceTable() {
+  private JsonObject loadTableRoot() {
     try (InputStream stream = getClass().getResourceAsStream(TABLE_RESOURCE)) {
       if (stream == null) {
         log.warn(
             "NPC voice table {} not found - every NPC will use the default voice", TABLE_RESOURCE);
-        return Collections.emptyMap();
+        return null;
       }
-
-      Map<Integer, NpcAttributes> table =
-          NpcEntriesReader.read(
-              new InputStreamReader(stream, StandardCharsets.UTF_8),
-              AttributeSource.STATIC_TABLE,
-              (key, e) ->
-                  log.warn("Skipping malformed NPC voice entry {}: {}", key, e.getMessage()));
-      if (table == null) {
-        log.warn("NPC voice table {} has no 'npcs' object - using default voice", TABLE_RESOURCE);
-        return Collections.emptyMap();
-      }
-      return Collections.unmodifiableMap(table);
+      return new JsonParser()
+          .parse(new InputStreamReader(stream, StandardCharsets.UTF_8))
+          .getAsJsonObject();
     } catch (Exception e) {
       log.error("Failed to load NPC voice table {}: {}", TABLE_RESOURCE, e.getMessage());
+      return null;
+    }
+  }
+
+  private Map<Integer, NpcAttributes> readVoiceTable(JsonObject root) {
+    Map<Integer, NpcAttributes> table =
+        NpcEntriesReader.read(
+            root,
+            AttributeSource.STATIC_TABLE,
+            (key, e) -> log.warn("Skipping malformed NPC voice entry {}: {}", key, e.getMessage()));
+    if (table == null) {
+      log.warn("NPC voice table {} has no 'npcs' object - using default voice", TABLE_RESOURCE);
       return Collections.emptyMap();
     }
+    return Collections.unmodifiableMap(table);
   }
 }

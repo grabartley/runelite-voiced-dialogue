@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,6 +18,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
+import org.junit.Before;
 import org.junit.Test;
 
 public class NpcIdentityResolverTest {
@@ -27,6 +29,11 @@ public class NpcIdentityResolverTest {
   private final NpcDemographicAnalyzer analyzer = mock(NpcDemographicAnalyzer.class);
   private final NpcIdentityResolver resolver =
       new NpcIdentityResolver(finder, analyzer, PROFILE_TABLE);
+
+  @Before
+  public void eachIdIsItsOwnMainIdUnlessAliased() {
+    when(analyzer.mainId(anyInt())).thenAnswer(call -> call.getArgument(0));
+  }
 
   private static NpcProfileTable loadProfileTable() {
     NpcProfileTable table = new NpcProfileTable();
@@ -62,6 +69,34 @@ public class NpcIdentityResolverTest {
 
     assertEquals(Integer.valueOf(8001), identity.worldId());
     assertEquals(Integer.valueOf(8000), identity.baseId());
+  }
+
+  @Test
+  public void theVoiceSeedIdIsTheMainIdOfTheBaseId() {
+    NPC npc = mock(NPC.class);
+    NPCComposition base = mock(NPCComposition.class);
+    when(npc.getId()).thenReturn(16537);
+    when(base.getId()).thenReturn(16537);
+    when(npc.getComposition()).thenReturn(base);
+    when(finder.findByName("Talia")).thenReturn(npc);
+    when(analyzer.mainId(16537)).thenReturn(16486);
+
+    NpcIdentity identity = resolver.resolve("Talia");
+
+    assertEquals(Integer.valueOf(16537), identity.worldId());
+    assertEquals(Integer.valueOf(16537), identity.baseId());
+    assertEquals(Integer.valueOf(16486), identity.seedId());
+  }
+
+  @Test
+  public void anUnaliasedNpcSeedsFromItsBaseId() {
+    NPC npc = mock(NPC.class);
+    NPCComposition base = mock(NPCComposition.class);
+    when(npc.getId()).thenReturn(8001);
+    when(base.getId()).thenReturn(8000);
+    when(npc.getComposition()).thenReturn(base);
+
+    assertEquals(Integer.valueOf(8000), resolver.resolve(npc).seedId());
   }
 
   @Test

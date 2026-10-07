@@ -7,6 +7,7 @@ import com.grahambartley.runelite.voiced.dialogue.speaker.NpcDemographicAnalyzer
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcFinder;
 import com.grahambartley.runelite.voiced.dialogue.speaker.NpcGender;
 import com.grahambartley.runelite.voiced.dialogue.speaker.wiki.NpcLearningService;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -112,10 +113,21 @@ public class VoiceManager {
 
   private ResolvedSpeaker npcSpeaker(String npcName, NpcIdentity identity) {
     rememberHeard(identity.profileId(), npcName);
-    NpcVoiceOverride override = overrideStore.get(identity.profileId());
+    NpcVoiceOverride override = overrideFor(identity);
     VoiceSpec voice =
         npcVoiceResolver.resolve(npcName, identity, override == null ? null : override.voiceType());
     return new ResolvedSpeaker(voice, npcProfile(npcName, identity, override));
+  }
+
+  private NpcVoiceOverride overrideFor(NpcIdentity identity) {
+    for (Integer npcId :
+        Arrays.asList(identity.profileId(), identity.worldId(), identity.baseId())) {
+      NpcVoiceOverride override = npcId == null ? null : overrideStore.get(npcId);
+      if (override != null) {
+        return override;
+      }
+    }
+    return null;
   }
 
   private void rememberHeard(Integer npcId, String npcName) {

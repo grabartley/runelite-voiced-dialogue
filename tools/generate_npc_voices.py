@@ -30,9 +30,11 @@ Pipeline
      symbol names one (FAI_VARROCK_GUARD02_F), since a page whose genders do not pair with
      its id groups gives every id the page's first gender.
   7. Merge the curated overrides on top (authoritative, always win).
-  8. Emit under ``symbols`` the cache symbol of every id whose byId name another id shares,
+  8. Fold each character's variant ids (one NpcID symbol root once state suffixes such as
+     _CUTSCENE, _MULTI or _DOCK are stripped) onto one main id, emitted under ``aliases``.
+  9. Emit under ``symbols`` the cache symbol of every id whose byId name another id shares,
      ignoring case, so one character's ids can be told apart from others with that name.
-  9. Embed tools/profiles.json under the ``profiles`` key and emit
+  10. Embed tools/profiles.json under the ``profiles`` key and emit
      src/main/resources/npc-voices.json.
 
 Usage
@@ -72,7 +74,21 @@ CATEGORY_RACE_RULES = [(r["keyword"], r["race"]) for r in MAPPING["categoryRaceR
 REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 NPC_ID_CLASS = "net.runelite.api.gameval.NpcID"
 NPC_ID_CONSTANT_RE = re.compile(r"static final int (\w+) = (\d+);")
-SYMBOL_GENDER_TOKENS = {"F": "Female", "FEMALE": "Female", "M": "Male", "MALE": "Male"}
+TRAILING_DIGITS = re.compile(r"(?<=[A-Z])\d+$")
+SYMBOL_GENDER_TOKENS = {"F": "Female", "FEMALE": "Female", "M": "Male", "MALE": "Male",
+                        "MAN": "Male", "WOMAN": "Female", "HUSBAND": "Male", "WIFE": "Female"}
+# Trailing symbol tokens that name a state of one character (a cutscene clone, a multiloc parent,
+# a menu-option variant, a sailing crewmate on the dock or ship), never a different person. Numbers,
+# sex tokens and VARIANTnn are left alone: GUARD1 and GUARD2 are two guards.
+STATE_TOKENS = {
+    "VIS", "VISIBLE", "CUTSCENE", "CS", "MULTI", "MULTINPC", "NOOP", "OP", "1OP", "2OP", "2OPS",
+    "3OP", "STORY", "POST", "POSTQUEST", "QUEST", "PREQUEST", "INACTIVE", "COMBAT", "DONE",
+    "NORMAL", "INDOORS", "INSIDE", "OUTSIDE", "BACKGROUND", "HELD", "DOCK", "SHIP", "WORLD",
+    "CARGO", "RECRUITED", "UNRECRUITED",
+}
+STATE_TOKEN_PAIRS = {("NO", "OP"), ("SHIP", "OP"), ("FAKE", "COMBAT")}
+MULTILOC_TOKENS = {"MULTI", "MULTINPC"}
+ENTRY_FIELDS = ("race", "gender", "ethnicity", "lifeStage")
 
 DEFAULT_OUT = os.path.join("src", "main", "resources", "npc-voices.json")
 DEFAULT_OVERRIDES = os.path.join("tools", "overrides.json")
@@ -441,7 +457,8 @@ def parse_npc_symbols(javap_output):
 
 
 def symbol_gender(symbol):
-    genders = {SYMBOL_GENDER_TOKENS[t] for t in symbol.split("_") if t in SYMBOL_GENDER_TOKENS}
+    tokens = [TRAILING_DIGITS.sub("", t) for t in symbol.split("_")]
+    genders = {SYMBOL_GENDER_TOKENS[t] for t in tokens if t in SYMBOL_GENDER_TOKENS}
     return genders.pop() if len(genders) == 1 else None
 
 
@@ -464,6 +481,79 @@ def symbol_conflicting_pins(overrides, symbols):
         if wanted and entry.get("gender") and entry["gender"] != wanted:
             conflicts.append(f"{key} {symbol} pinned {entry['gender']}")
     return conflicts
+
+
+def symbol_root(symbol):
+    """The character a symbol belongs to, with its trailing state tokens stripped:
+    DOGQ_TALIA_CUTSCENE and SAILING_CREW_GENERIC_1_SHIP_NO_OP lose every state suffix."""
+    tokens = symbol.split("_")
+    while len(tokens) > 1:
+        if len(tokens) > 2 and (tokens[-2], tokens[-1]) in STATE_TOKEN_PAIRS:
+            tokens = tokens[:-2]
+        elif len(tokens) > 2 and tokens[-1].isdigit() and tokens[-2] == "CARGO":
+            tokens = tokens[:-2]
+        elif tokens[-1] in STATE_TOKENS:
+            tokens = tokens[:-1]
+        else:
+            break
+    return "_".join(tokens)
+
+
+def variant_families(symbols):
+    """Group every id by symbol root, keeping roots that more than one id shares."""
+    families = {}
+    for npc_id, symbol in symbols.items():
+        families.setdefault(symbol_root(symbol), []).append(npc_id)
+    return {root: sorted(ids) for root, ids in families.items() if len(ids) > 1}
+
+
+def family_main(root, ids, symbols, table, by_id):
+    """The id every variant resolves to. A multiloc parent comes first, because the plugin already
+    seeds the voice of every state from that base id, so its voice and cached clips stay as they
+    are. Then a bespoke profile's id, the bare-root id, and finally the lowest id with data."""
+    multiloc = [i for i in ids if MULTILOC_TOKENS & set(symbols[i].split("_"))]
+    if multiloc:
+        return multiloc[0]
+    profiled = [i for i in ids if str(i) in by_id]
+    if profiled:
+        return profiled[0]
+    bare = [i for i in ids if symbols[i] == root]
+    if bare:
+        return bare[0]
+    return next(i for i in ids if i in table)
+
+
+def entry_key(entry):
+    return tuple(entry.get(field) for field in ENTRY_FIELDS)
+
+
+def alias_variants(table, symbols, by_id, distinct):
+    """Fold each family's variant ids onto one main id. A family whose ids disagree on race,
+    gender, ethnicity, life stage or bespoke profile is left alone and reported, as is any family
+    listed in ``distinct`` (ids that share a root but are different people). Returns the variant
+    -> main map and the conflicting roots; the table keeps only the main id's entry."""
+    aliases, conflicts = {}, []
+    for root, ids in sorted(variant_families(symbols).items()):
+        entries = {entry_key(table[i]) for i in ids if i in table}
+        if not entries or root in distinct:
+            continue
+        profiles = {json.dumps(by_id[str(i)], sort_keys=True) for i in ids if str(i) in by_id}
+        if len(entries) > 1 or len(profiles) > 1:
+            conflicts.append(root)
+            continue
+        entry = next(table[i] for i in ids if i in table)
+        main_id = family_main(root, ids, symbols, table, by_id)
+        table[main_id] = entry
+        for npc_id in ids:
+            if npc_id != main_id:
+                aliases[npc_id] = main_id
+                table.pop(npc_id, None)
+    return aliases, conflicts
+
+
+def misplaced_profiles(by_id, aliases):
+    """byId profiles keyed by a variant id, which the plugin never reads once the id is aliased."""
+    return sorted(int(key) for key in by_id if not key.startswith("_") and int(key) in aliases)
 
 
 def ambiguous_name_symbols(profiles, symbols):
@@ -761,6 +851,15 @@ def main():
         print(f"  WARNING: override gender contradicts its cache symbol: {conflict}", file=sys.stderr)
     print(f"  cache symbols corrected {symbol_gendered} genders from {api_jar}", file=sys.stderr)
     override_count = apply_overrides(table, overrides)
+    by_id = profiles.get("byId") or {}
+    aliases, conflicts = alias_variants(
+        table, symbols, by_id, overrides.get("distinctCharacters") or {})
+    for root in conflicts:
+        print(f"  WARNING: variant ids of {root} disagree, left unaliased", file=sys.stderr)
+    misplaced = misplaced_profiles(by_id, aliases)
+    if misplaced:
+        raise ValueError(f"byId profiles keyed by a variant id; key them by the main id: {misplaced}")
+    print(f"  aliased {len(aliases)} variant ids onto their character's main id", file=sys.stderr)
     npc_symbols = ambiguous_name_symbols(profiles, symbols)
 
     npcs = {str(npc_id): table[npc_id] for npc_id in sorted(table)}
@@ -783,6 +882,7 @@ def main():
                            "page categories). Do not hand-edit; edit tools/overrides.json or "
                            "tools/profiles.json and regenerate.",
             "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; "
+                      "aliases[variant id] = main id of the same character; "
                       "symbols[id] = cache symbol, only for ids whose byId name another id shares",
             "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) "
                       "and Infobox Monster (race from page categories), "
@@ -794,6 +894,7 @@ def main():
             "name_matched_ids": name_matched,
             "overrides_applied": override_count,
             "symbols": len(npc_symbols),
+            "aliases": len(aliases),
             "race_counts": dict(sorted(race_counts.items())),
             "gender_counts": dict(sorted(gender_counts.items())),
             "ethnicity_counts": dict(sorted(ethnicity_counts.items())),
@@ -803,6 +904,7 @@ def main():
         },
         "profiles": profiles,
         "symbols": npc_symbols,
+        "aliases": {str(v): aliases[v] for v in sorted(aliases)},
         "npcs": npcs,
     }
 

@@ -17,16 +17,17 @@ public class NpcIdentityTest {
     NpcAttributes attributes = new NpcAttributes("Human", "Male", AttributeSource.STATIC_TABLE);
     attributes.setNpcId(8000);
     assertEquals(
-        Integer.valueOf(8000), new NpcIdentity(8001, 8000, attributes, nameMatch).profileId());
+        Integer.valueOf(8000),
+        new NpcIdentity(8001, 8000, 8000, attributes, nameMatch).profileId());
   }
 
   @Test
   public void withoutAttributesTheProfileIdIsTheWorldId() {
-    assertEquals(Integer.valueOf(42), new NpcIdentity(42, 40, null, nameMatch).profileId());
+    assertEquals(Integer.valueOf(42), new NpcIdentity(42, 40, 40, null, nameMatch).profileId());
   }
 
   @Test
   public void anNpcNotInTheWorldHasNoProfileId() {
-    assertNull(new NpcIdentity(null, null, null, nameMatch).profileId());
+    assertNull(new NpcIdentity(null, null, null, null, nameMatch).profileId());
   }
 }

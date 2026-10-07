@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonParser;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,26 @@ public class NpcEntriesReaderTest {
     assertEquals(AttributeSource.STATIC_TABLE, a.getSource());
     assertEquals(7, a.getNpcId());
     assertTrue("the life-stage marker rides along", a.isChild());
+  }
+
+  @Test
+  public void readsEachVariantIdsMainId() {
+    Map<Integer, Integer> aliases =
+        NpcEntriesReader.readAliases(
+            new JsonParser()
+                .parse("{\"aliases\":{\"16537\":16486,\"15255\":15253}}")
+                .getAsJsonObject());
+
+    assertEquals(Integer.valueOf(16486), aliases.get(16537));
+    assertEquals(Integer.valueOf(15253), aliases.get(15255));
+    assertEquals(2, aliases.size());
+  }
+
+  @Test
+  public void aTableWithoutAliasesHasNone() {
+    assertTrue(
+        NpcEntriesReader.readAliases(new JsonParser().parse("{\"npcs\":{}}").getAsJsonObject())
+            .isEmpty());
   }
 
   @Test

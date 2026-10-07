@@ -42,7 +42,7 @@ The generator/runtime keys on the live `NPCComposition#getId`, and a race's memb
    `/Users/gbartley/.npm/_npx/*/node_modules/@jayarrowz/mcp-osrs/dist/data/npctypes.txt`
    Format is `id<TAB>internal_name`; the id is the first column (NOT the grep line number, which is off by one). Use `awk -F'\t' '$2 ~ /prefix/ {print $1"\t"$2}'`.
 2. **Wiki verify.** Cross-check the race's wiki page ("Known <race>s"), the location navbox, and each NPC's Infobox `id`. **Gotcha:** cache internal names can be role-based and misleading (a Tortugan elder was named `slayer_gryphon_guardian`; a Tortugan gardener was `farming_gardener_calquat_3`). Trust the **wiki Infobox `Race` + `id`** as the source of truth, not the internal name. When the internal name and the wiki disagree, list the id and flag it for in-game Debug Mode verification in the QA checklist.
-3. **Include all variants.** Combat/`_vis`/`_locked`/`_1op` variant ids of the same NPC all get the entry. Off-location members count too (verify nothing is missed outside the home region).
+3. **Include all variants.** State variants of one character (`_vis`, `_1op`, `_cutscene`, `_multi`, ...) are folded onto its main id by the generator, so one entry covers them; variants the symbol rule does not fold (`_locked`, numbered copies) each need the entry. Off-location members count too (verify nothing is missed outside the home region).
 4. **Gender.** Take the wiki Infobox gender when stated; when genuinely indeterminate default to **Male** (unknown gender routes to the male sub-pool, so Male is the consistent safe default). Confirm ambiguous ones via dialogue pronouns in Debug Mode where it matters.
 5. **Exclude** non-members that share a prefix (creatures, humans, quest NPCs) explicitly.
 

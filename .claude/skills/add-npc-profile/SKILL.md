@@ -39,10 +39,13 @@ default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory keyword ma
 
 ## Find the NPC id
 
-The table is keyed by the NPC's **active id** (`NPC#getId`), which for transformed
-multiloc NPCs differs from the base composition id. Get it from **Debug Mode**
-(it logs `id=` per line), the OSRS Wiki infobox, or the osrs MCP `search_npctypes`.
-An NPC can have several variant ids, list them all in overrides.
+Get the NPC's id from **Debug Mode** (it logs `id=` per line), the OSRS Wiki infobox, or the
+osrs MCP `search_npctypes`. One character's variant ids (cutscene clones, `_MULTI` parents,
+`_VIS`/`_1OP` variants, sailing `_DOCK`/`_SHIP` states) are folded onto one **main id**: look the id
+up in `aliases` of `src/main/resources/npc-voices.json`. Key `byId` profiles by the main id; the
+generator refuses a profile keyed by a variant id. An override on any one id of a character reaches
+all of them once regenerated, but keep the character's ids in agreement, or the generator leaves the
+group unfolded and warns. See `docs/npc-voice-tooling.md#variant-ids`.
 
 To check whether an NPC even **speaks** (so it deserves a profile rather than being
 a silent mob/critter), the reliable signal is whether the wiki has a
