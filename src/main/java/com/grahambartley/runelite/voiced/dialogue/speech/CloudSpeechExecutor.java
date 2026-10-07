@@ -24,6 +24,8 @@ public final class CloudSpeechExecutor {
 
   public static final String CACHE_NAMESPACE = "cloud-speech";
 
+  private static final PronunciationGuide BUNDLED_PRONUNCIATIONS = PronunciationGuide.load();
+
   public interface Ops {
 
     public String apiKey();
@@ -128,6 +130,7 @@ public final class CloudSpeechExecutor {
   private final GeminiTtsModel model;
   private final String providerName;
   private final Ops ops;
+  private final PronunciationGuide pronunciations;
   private final RateLimitBackoff backoff = new RateLimitBackoff();
 
   public CloudSpeechExecutor(
@@ -136,11 +139,22 @@ public final class CloudSpeechExecutor {
       GeminiTtsModel model,
       String providerName,
       Ops ops) {
+    this(config, support, model, providerName, ops, BUNDLED_PRONUNCIATIONS);
+  }
+
+  CloudSpeechExecutor(
+      VoicedDialogueConfig config,
+      CloudBackendSupport support,
+      GeminiTtsModel model,
+      String providerName,
+      Ops ops,
+      PronunciationGuide pronunciations) {
     this.config = config;
     this.support = support;
     this.model = model;
     this.providerName = providerName;
     this.ops = ops;
+    this.pronunciations = pronunciations;
   }
 
   public boolean isThrottled() {
@@ -209,6 +223,10 @@ public final class CloudSpeechExecutor {
     double speedRatio = speed / (double) CloudBackendSupport.DEFAULT_SPEED_PERCENT;
     String spokenLanguage =
         translating ? CloudTtsText.spokenLanguage(config) : CloudTtsText.DEFAULT_LANGUAGE;
+    boolean spokenInEnglish = !CloudTtsText.needsTranslation(spokenLanguage);
+    if (spokenInEnglish) {
+      spokenText = respell(spokenText);
+    }
     String style =
         speed != CloudBackendSupport.DEFAULT_SPEED_PERCENT
             ? model.speechStyle(profile, request.voice(), request.emotion(), spokenLanguage, speed)
@@ -235,6 +253,14 @@ public final class CloudSpeechExecutor {
     }
 
     return ops.buildRequests(new SpokenLine(apiKey, spokenText, style, voice, speedRatio), request);
+  }
+
+  private String respell(String text) {
+    String respelled = pronunciations.respell(text);
+    if (config.debugMode() && !respelled.equals(text)) {
+      log.info("[TTS cloud] respelled '{}' -> '{}'", text, respelled);
+    }
+    return respelled;
   }
 
   private Pcm runBuffered(PreparedSpeech prepared) {

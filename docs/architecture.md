@@ -178,6 +178,19 @@ so with **Auto-learn New NPCs** on, ambient chatter offers unknown speakers to t
 dialogue does. Only an NPC the bundled table and the learned store both miss is looked up, once per
 id and off the game thread, so the cost stays bounded.
 
+### Pronunciation
+
+Gemini reads RuneScape names inconsistently, and Gemini TTS takes no SSML, so there is no phoneme
+tag to lean on. `PronunciationGuide` respells listed names in the text that is sent instead:
+"Neitiznot" goes out as "Nay-tiz-not". `CloudSpeechExecutor` applies it once per line for both
+providers, after the translation step and only when the line is spoken in English, since an
+English respelling would be misread inside another language. A line rewritten into a Speaking
+Style such as pirate speak is still English, so it is respelled too. The subtitle, the cache key
+and every other log keep the line as written, so a clip already on disk keeps its key and is never
+billed again. With **Debug Logging** on, each respelled line is logged as
+`[TTS cloud] respelled '<line>' -> '<sent>'`. The table, its sources and how to add a name are in
+[pronunciation.md](pronunciation.md).
+
 ### Player voice overrides
 
 A player can override any NPC's `name`, `accent`, `style`, `pace` and voice type. The voice type is

@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonParser;
 import com.grahambartley.runelite.voiced.dialogue.VoicedDialogueConfig;
 import com.grahambartley.runelite.voiced.dialogue.profile.CharacterProfile;
 import com.grahambartley.runelite.voiced.dialogue.profile.Emotion;
@@ -26,6 +27,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class CloudSpeechExecutorTest {
+
+  private static final PronunciationGuide PRONUNCIATIONS =
+      PronunciationGuide.parse(
+          new JsonParser()
+              .parse(
+                  "{\"words\": [{\"word\": \"Neitiznot\", \"say\": \"NAY-tiz-not\"},"
+                      + " {\"word\": \"Ardougne\", \"say\": \"ar-DOYN\"}]}")
+              .getAsJsonObject());
 
   private MockWebServer server;
   private OkHttpClient client;
@@ -135,6 +144,57 @@ public class CloudSpeechExecutorTest {
 
     assertEquals("Hello", spoken.input);
     assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
+  }
+
+  @Test
+  public void aListedNameIsRespelledInTheSpokenLineOnly() {
+    server.enqueue(rejection());
+
+    executor().synthesize(request("My wife is from Neitiznot."));
+
+    assertEquals("My wife is from Nay-tiz-not.", spoken.input);
+    assertEquals(TestFixtures.TROLL_STYLE, spoken.style);
+  }
+
+  @Test
+  public void aTranslatedLineKeepsItsNamesAsWritten() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request("My wife is from Neitiznot."));
+
+    assertEquals("My wife is from Neitiznot.", spoken.input);
+  }
+
+  @Test
+  public void aLineRewrittenIntoAnEnglishSpeakingStyleIsStillRespelled() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.npcQuirk = VoicedDialogueConfig.SpeakingStyle.PIRATE;
+    server.enqueue(rejection());
+
+    executor(config).synthesize(request("My wife is from Neitiznot."));
+
+    assertEquals("My wife is from Nay-tiz-not.", spoken.input);
+  }
+
+  @Test
+  public void anUntranslatedLineIsRespelledWhateverTheSpokenLanguage() {
+    MutableTestConfig config = new MutableTestConfig();
+    config.language = VoicedDialogueConfig.SpokenLanguage.FRENCH;
+    server.enqueue(rejection());
+
+    executor(config)
+        .synthesize(
+            new SynthesisRequest(
+                "Off to Ardougne",
+                VoiceSpec.player(NpcGender.MALE),
+                Emotion.NEUTRAL,
+                TestFixtures.TROLL_PROFILE,
+                true,
+                true));
+
+    assertEquals("Off to Ar-doyn", spoken.input);
   }
 
   @Test
@@ -351,7 +411,7 @@ public class CloudSpeechExecutorTest {
             CloudSpeechExecutor.MAX_SPEECH_ATTEMPTS,
             RetryTuning.openRouter());
     return new CloudSpeechExecutor(
-        config, support, new GeminiTtsModel(), "Test provider", new StubOps());
+        config, support, new GeminiTtsModel(), "Test provider", new StubOps(), PRONUNCIATIONS);
   }
 
   private MockResponse rejection() {
@@ -359,8 +419,12 @@ public class CloudSpeechExecutorTest {
   }
 
   private static SynthesisRequest request() {
+    return request("Hello");
+  }
+
+  private static SynthesisRequest request(String text) {
     return new SynthesisRequest(
-        "Hello",
+        text,
         VoiceSpec.npc(NpcRace.HUMAN, NpcGender.MALE),
         Emotion.NEUTRAL,
         TestFixtures.TROLL_PROFILE,
