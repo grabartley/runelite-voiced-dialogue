@@ -4,10 +4,10 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14138,
+    "count": 14147,
     "name_matched_ids": 707,
-    "overrides_applied": 1865,
-    "symbols": 4469,
+    "overrides_applied": 1874,
+    "symbols": 4478,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
@@ -19,7 +19,7 @@
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9843,
+      "Human": 9852,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2157,
-      "Male": 11981
+      "Female": 2160,
+      "Male": 11987
     },
     "ethnicity_counts": {
       "asgarnia": 724,
@@ -51,7 +51,7 @@
     "life_stage_counts": {
       "child": 60
     },
-    "profiles_bespoke": 6486
+    "profiles_bespoke": 6495
   },
   "profiles": {
     "_comment": "Authoritative, curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. Repetition across layers (depth in pitch and style, an accentDetail restating its accent, the generic human style under a bespoke one) is deliberate emphasis tuned by ear; do not tidy it (see docs/npc-voice-tooling.md, 'Repetition is deliberate'). This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own; 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -33346,7 +33346,8 @@
       "16693": {
         "name": "Wizard apprentice",
         "style": "A keen young wizard studying the Archive's crystals; bright, eager and breathless with excitement about his discoveries, tumbling into enthusiastic science talk.",
-        "age": 20
+        "age": 20,
+        "pace": "Quick and tumbling, rushing ahead in his excitement."
       },
       "16704": {
         "name": "Banker",
@@ -33355,7 +33356,7 @@
       },
       "16700": {
         "name": "Alliance Navigator",
-        "style": "A Guardian of Armadyl guide carrying word between the Alliance's chambers; steady, courteous and soldierly, delivering reports plainly.",
+        "style": "An Armadylean guide carrying word between the Alliance's chambers; steady, courteous and soldierly, delivering reports plainly.",
         "age": 40
       },
       "16761": {
@@ -33369,13 +33370,13 @@
         "age": 50
       },
       "16671": {
-        "name": "Ocellus",
+        "name": "Hooded Figure",
         "style": "An ancient Guardian of Guthix gone mad with the Archive's power; hollow, deep and haunted, speaking in broken, halting fragments full of long pauses, fervent and menacing as he resolves to ascend in Guthix's place.",
         "pace": "Very slow and halting, each phrase trailing off into a heavy pause.",
         "age": 60
       },
       "16672": {
-        "name": "Ocellus",
+        "name": "Hooded Figure",
         "style": "An ancient Guardian of Guthix gone mad with the Archive's power; hollow, deep and haunted, speaking in broken, halting fragments full of long pauses, fervent and menacing as he resolves to ascend in Guthix's place.",
         "pace": "Very slow and halting, each phrase trailing off into a heavy pause.",
         "age": 60
@@ -33388,25 +33389,25 @@
       },
       "16631": {
         "name": "Orion",
-        "style": "A tiny pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
+        "style": "A pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
         "pace": "Slow and halting, each phrase trailing off into a pause.",
         "age": 40
       },
       "16632": {
         "name": "Orion",
-        "style": "A tiny pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
+        "style": "A pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
         "pace": "Slow and halting, each phrase trailing off into a pause.",
         "age": 40
       },
       "16763": {
         "name": "Orion",
-        "style": "A tiny pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
+        "style": "A pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
         "pace": "Slow and halting, each phrase trailing off into a pause.",
         "age": 40
       },
       "16764": {
         "name": "Orion",
-        "style": "A tiny pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
+        "style": "A pet echo of the mad Guthixian guardian Ocellus; solemn, halting and comically doom-laden, muttering about balance through annihilation in broken fragments, then perking up at the thought of ascension juice.",
         "pace": "Slow and halting, each phrase trailing off into a pause.",
         "age": 40
       },
@@ -33454,6 +33455,54 @@
         "name": "King Arthur",
         "style": "A regal but accessible ruler with moral confidence rather than bombast, noble, steady, and accustomed to command.",
         "age": 50
+      },
+      "16674": {
+        "name": "Ocellus",
+        "style": "An ancient Guardian of Guthix gone mad with the Archive's power; hollow, deep and haunted, speaking in broken, halting fragments full of long pauses, fervent and menacing as he resolves to ascend in Guthix's place.",
+        "pace": "Very slow and halting, each phrase trailing off into a heavy pause.",
+        "age": 60
+      },
+      "16675": {
+        "name": "Ocellus",
+        "style": "An ancient Guardian of Guthix gone mad with the Archive's power; hollow, deep and haunted, speaking in broken, halting fragments full of long pauses, fervent and menacing as he resolves to ascend in Guthix's place.",
+        "pace": "Very slow and halting, each phrase trailing off into a heavy pause.",
+        "age": 60
+      },
+      "16677": {
+        "name": "Ocellus",
+        "style": "An ancient Guardian of Guthix gone mad with the Archive's power; hollow, deep and haunted, speaking in broken, halting fragments full of long pauses, fervent and menacing as he resolves to ascend in Guthix's place.",
+        "pace": "Very slow and halting, each phrase trailing off into a heavy pause.",
+        "age": 60
+      },
+      "16718": {
+        "name": "Guardian of Armadyl",
+        "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
+        "age": 40
+      },
+      "16719": {
+        "name": "Guardian of Armadyl",
+        "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
+        "age": 28
+      },
+      "16720": {
+        "name": "Guardian of Armadyl",
+        "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
+        "age": 65
+      },
+      "16721": {
+        "name": "Guardian of Armadyl",
+        "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
+        "age": 35
+      },
+      "16722": {
+        "name": "Guardian of Armadyl",
+        "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
+        "age": 35
+      },
+      "16723": {
+        "name": "Guardian of Armadyl",
+        "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
+        "age": 35
       }
     }
   },
@@ -37901,6 +37950,9 @@
     "16671": "TFA_OCELLUS_INTRO",
     "16672": "TFA_OCELLUS_INTRO_NOT_MET",
     "16673": "TFA_OCELLUS_INTRO_MET",
+    "16674": "TFA_OCELLUS_P1",
+    "16675": "TFA_OCELLUS_P2",
+    "16677": "TFA_OCELLUS_P3",
     "16696": "ARMACUS_SELLES",
     "16697": "EVA_CASHIEN",
     "16698": "TFA_IVY_SOPHISTA",
@@ -37908,6 +37960,12 @@
     "16702": "TFA_IVY_SOPHISTA_ENDING",
     "16703": "TFA_EVA_CASHIEN_ENDING",
     "16704": "TFA_LOBBY_BANKER",
+    "16718": "ALLIANCE_GUARDIAN_OF_ARMADYL_1",
+    "16719": "ALLIANCE_GUARDIAN_OF_ARMADYL_2",
+    "16720": "ALLIANCE_GUARDIAN_OF_ARMADYL_3",
+    "16721": "ALLIANCE_GUARDIAN_OF_ARMADYL_4",
+    "16722": "ALLIANCE_GUARDIAN_OF_ARMADYL_5",
+    "16723": "ALLIANCE_GUARDIAN_OF_ARMADYL_6",
     "16724": "ARMACUS_SELLES_POSTGUARDIAN",
     "16725": "EVA_CASHIEN_SWORD",
     "16726": "TFA_IVY_SOPHISTA_NOOP",
@@ -100558,6 +100616,18 @@
       "race": "Human",
       "gender": "Male"
     },
+    "16674": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16675": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16677": {
+      "race": "Human",
+      "gender": "Male"
+    },
     "16692": {
       "race": "Human",
       "gender": "Male"
@@ -100605,6 +100675,30 @@
     "16705": {
       "race": "Human",
       "gender": "Male"
+    },
+    "16718": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16719": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16720": {
+      "race": "Human",
+      "gender": "Male"
+    },
+    "16721": {
+      "race": "Human",
+      "gender": "Female"
+    },
+    "16722": {
+      "race": "Human",
+      "gender": "Female"
+    },
+    "16723": {
+      "race": "Human",
+      "gender": "Female"
     },
     "16724": {
       "race": "Human",

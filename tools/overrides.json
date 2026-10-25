@@ -1850,8 +1850,8 @@
     "16700": {"name": "Alliance Navigator", "race": "Human", "gender": "Male"},
     "16761": {"name": "Quartermaster", "race": "Human", "gender": "Male"},
     "16762": {"name": "Quartermaster", "race": "Human", "gender": "Male"},
-    "16671": {"name": "Ocellus", "race": "Human", "gender": "Male"},
-    "16672": {"name": "Ocellus", "race": "Human", "gender": "Male"},
+    "16671": {"name": "Hooded Figure", "race": "Human", "gender": "Male"},
+    "16672": {"name": "Hooded Figure", "race": "Human", "gender": "Male"},
     "16673": {"name": "Ocellus", "race": "Human", "gender": "Male"},
     "16631": {"name": "Orion", "race": "Human", "gender": "Male"},
     "16632": {"name": "Orion", "race": "Human", "gender": "Male"},
@@ -1865,6 +1865,15 @@
     "16757": {"name": "Sir Pelleas", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
     "16758": {"name": "Sir Lucan", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
     "16759": {"name": "Sir Palomedes", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
-    "16760": {"name": "King Arthur", "race": "Human", "gender": "Male", "ethnicity": "kandarin"}
+    "16760": {"name": "King Arthur", "race": "Human", "gender": "Male", "ethnicity": "kandarin"},
+    "16674": {"name": "Ocellus", "race": "Human", "gender": "Male"},
+    "16675": {"name": "Ocellus", "race": "Human", "gender": "Male"},
+    "16677": {"name": "Ocellus", "race": "Human", "gender": "Male"},
+    "16718": {"name": "Guardian of Armadyl", "race": "Human", "gender": "Male"},
+    "16719": {"name": "Guardian of Armadyl", "race": "Human", "gender": "Male"},
+    "16720": {"name": "Guardian of Armadyl", "race": "Human", "gender": "Male"},
+    "16721": {"name": "Guardian of Armadyl", "race": "Human", "gender": "Female"},
+    "16722": {"name": "Guardian of Armadyl", "race": "Human", "gender": "Female"},
+    "16723": {"name": "Guardian of Armadyl", "race": "Human", "gender": "Female"}
   }
 }
