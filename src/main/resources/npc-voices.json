@@ -4,10 +4,10 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14202,
+    "count": 14204,
     "name_matched_ids": 707,
-    "overrides_applied": 1930,
-    "symbols": 4533,
+    "overrides_applied": 1946,
+    "symbols": 4535,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
@@ -19,7 +19,7 @@
       "Gnome": 261,
       "Goblin": 381,
       "Gorilla": 11,
-      "Human": 9897,
+      "Human": 9899,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2181,
-      "Male": 12021
+      "Female": 2182,
+      "Male": 12022
     },
     "ethnicity_counts": {
       "asgarnia": 725,
@@ -41,7 +41,7 @@
       "kharidian": 545,
       "kourend": 822,
       "menaphite": 132,
-      "misthalin": 1073,
+      "misthalin": 1075,
       "morytania": 1033,
       "tirannwn": 328,
       "varlamore": 1020,
@@ -1288,65 +1288,34 @@
         "style": "Cheery, welcoming shopkeeper, warm and conversational.",
         "age": 32
       },
-      "3216": {
-        "name": "Melee combat tutor",
-        "style": "Hearty and direct, a no-nonsense drill instructor explaining swordplay plainly and encouragingly.",
-        "age": 40
-      },
       "3217": {
-        "name": "Ranged combat tutor",
-        "style": "Brisk and instructive, explaining bows and aim in a clear, encouraging teaching tone.",
-        "age": 33
-      },
-      "3218": {
-        "name": "Magic combat tutor",
-        "style": "Instructive and patient, walking newcomers through the basics in a clear, measured teaching tone.",
-        "age": 30
-      },
-      "3219": {
-        "name": "Cooking tutor",
-        "style": "Patient, plain-spoken instructor who walks newcomers through the basics step by step.",
-        "age": 40
-      },
-      "3220": {
-        "name": "Crafting tutor",
-        "style": "Patient, plain-spoken instructor who explains the fundamentals clearly to beginners.",
-        "age": 42
-      },
-      "3221": {
-        "name": "Fishing tutor",
-        "style": "Patient, plain-spoken instructor who guides beginners through the basics.",
-        "age": 50
-      },
-      "3222": {
-        "name": "Mining tutor",
-        "style": "Practical and grounded, an experienced workman explaining the trade in a steady, instructive manner.",
-        "age": 50
-      },
-      "3223": {
-        "name": "Prayer tutor",
-        "style": "Devout and gentle, instructing in faith with a warm, reverent, measured delivery.",
-        "age": 38
-      },
-      "3224": {
-        "name": "Smithing apprentice",
-        "style": "An eager, fiery young instructor who explains smithing with brisk, hands-on enthusiasm.",
-        "age": 22
-      },
-      "3225": {
-        "name": "Master smithing tutor",
-        "style": "Patient smithing instructor, welcoming and instructive, explains the craft plainly and encouragingly to learners.",
-        "age": 55
-      },
-      "3226": {
-        "name": "Woodsman tutor",
-        "style": "A friendly, easygoing woodcutting instructor with a light, playful manner.",
+        "name": "Farmer Bea",
+        "style": "A warm, chatty country farmer with big plans for a bee farm; hospitable and cheerful, flustered when things go wrong, and quick to make the best of a bad job.",
+        "accent": "Strong West Country English accent, British English pronunciation",
+        "accentDetail": "Broad rural West Country English, the warm farmyard burr of a country woman.",
+        "voiceRegion": "WEST_COUNTRY",
         "age": 45
       },
-      "3227": {
-        "name": "Banker tutor",
-        "style": "Patient instructor; clear, measured and helpful.",
-        "age": 38
+      "3218": {
+        "name": "Farmer Bea",
+        "style": "A warm, chatty country farmer with big plans for a bee farm; hospitable and cheerful, flustered when things go wrong, and quick to make the best of a bad job.",
+        "accent": "Strong West Country English accent, British English pronunciation",
+        "accentDetail": "Broad rural West Country English, the warm farmyard burr of a country woman.",
+        "voiceRegion": "WEST_COUNTRY",
+        "age": 45
+      },
+      "3220": {
+        "name": "Bee dealer",
+        "style": "A shady street dealer lurking by the Grand Exchange; terse, deadpan and furtive, pausing before he names his wares and shrugging off any trouble.",
+        "age": 40
+      },
+      "3221": {
+        "name": "Farmer Bea",
+        "style": "A warm, chatty country farmer with big plans for a bee farm; hospitable and cheerful, flustered when things go wrong, and quick to make the best of a bad job.",
+        "accent": "Strong West Country English accent, British English pronunciation",
+        "accentDetail": "Broad rural West Country English, the warm farmyard burr of a country woman.",
+        "voiceRegion": "WEST_COUNTRY",
+        "age": 45
       },
       "3255": {
         "name": "Tramp",
@@ -1844,11 +1813,6 @@
         "style": "A rough, rambling pirate, brash and gruff, who talks as if everyone's an old shipmate. Salty seafaring pirate drawl.",
         "age": 55
       },
-      "5523": {
-        "name": "Hatius Cosaintus",
-        "style": "Smug and self-satisfied, fishing for compliments and boasting about his rare finery.",
-        "age": 45
-      },
       "5524": {
         "name": "Sir Rebral",
         "style": "White Knight; speaks with a formal, measured knightly register and martial pride.",
@@ -2080,11 +2044,6 @@
         "name": "Jatix",
         "style": "Plain herblore shopkeeper; grounded and matter-of-fact in his trade.",
         "age": 50
-      },
-      "8665": {
-        "name": "Arthur the Clue Hunter",
-        "style": "Eager clue tutor who loves to talk; talkative and keen, rambling about puzzles.",
-        "age": 40
       },
       "8666": {
         "name": "Banker",
@@ -33783,6 +33742,56 @@
         "name": "Black Eye Bethel",
         "style": "A brawling pirate captain with a salty seafaring drawl who loves a fight; loud, cocky and gleeful, taunting her enemies as she swings.",
         "age": 40
+      },
+      "16804": {
+        "name": "Mikasi",
+        "style": "Instructive and patient, walking newcomers through the basics in a clear, measured teaching tone.",
+        "age": 30
+      },
+      "16806": {
+        "name": "Feoras",
+        "style": "An eager, fiery young instructor who explains smithing with brisk, hands-on enthusiasm.",
+        "age": 22
+      },
+      "16807": {
+        "name": "Cadmus",
+        "style": "Patient, plain-spoken instructor who explains the fundamentals clearly to beginners.",
+        "age": 42
+      },
+      "16808": {
+        "name": "Wilfred",
+        "style": "A friendly, easygoing woodcutting instructor with a light, playful manner.",
+        "age": 45
+      },
+      "16809": {
+        "name": "Monlum",
+        "style": "Practical and grounded, an experienced workman explaining the trade in a steady, instructive manner.",
+        "age": 50
+      },
+      "16810": {
+        "name": "Finlay",
+        "style": "Patient, plain-spoken instructor who guides beginners through the basics.",
+        "age": 50
+      },
+      "16811": {
+        "name": "Arthur",
+        "style": "Eager clue tutor who loves to talk; talkative and keen, rambling about puzzles.",
+        "age": 40
+      },
+      "16814": {
+        "name": "Ironman tutor",
+        "style": "Plain, matter-of-fact instructor who lays out the rules of self-sufficient play.",
+        "age": 35
+      },
+      "16815": {
+        "name": "Hatius Cosaintus",
+        "style": "Smug and self-satisfied, fishing for compliments and boasting about his rare finery.",
+        "age": 45
+      },
+      "16816": {
+        "name": "Sani",
+        "style": "Patient smithing instructor, welcoming and instructive, explains the craft plainly and encouragingly to learners.",
+        "age": 55
       }
     }
   },
@@ -33812,6 +33821,7 @@
     "306": "LUMBRIDGE_GUIDE",
     "307": "MACRO_JEKYLL",
     "308": "EMBLEM_TRADER",
+    "311": "IRONMAN_TUTOR_1",
     "314": "MACRO_JEKYLL_UNDERWATER",
     "322": "MACRO_DWARF",
     "326": "MACRO_GENI",
@@ -38268,6 +38278,7 @@
     "16763": "POH_OCELLUS_PET",
     "16764": "POH_OCELLUS_PET_VARIANT_1",
     "16805": "KW_BUTCHER_LAN_VIS",
+    "16814": "IRONMAN_TUTOR_1_VIS",
     "16821": "CAPTAIN_HARLAN",
     "16822": "CAPTAIN_HARLAN_CUTSCENE",
     "16823": "MBA_MUDFOOT_RUINED_BUILDING",
@@ -51563,7 +51574,7 @@
     },
     "3216": {
       "race": "Human",
-      "gender": "Male",
+      "gender": "Female",
       "ethnicity": "misthalin"
     },
     "3217": {
@@ -51587,36 +51598,6 @@
       "ethnicity": "misthalin"
     },
     "3221": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
-    },
-    "3222": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
-    },
-    "3223": {
-      "race": "Human",
-      "gender": "Female",
-      "ethnicity": "misthalin"
-    },
-    "3224": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
-    },
-    "3225": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
-    },
-    "3226": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
-    },
-    "3227": {
       "race": "Human",
       "gender": "Female",
       "ethnicity": "misthalin"
@@ -61051,11 +61032,6 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kandarin"
-    },
-    "5523": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
     },
     "5524": {
       "race": "Human",
@@ -72807,11 +72783,6 @@
       "ethnicity": "kharidian"
     },
     "8644": {
-      "race": "Human",
-      "gender": "Male",
-      "ethnicity": "misthalin"
-    },
-    "8665": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "misthalin"
@@ -101125,10 +101096,60 @@
       "race": "Human",
       "gender": "Male"
     },
+    "16804": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
     "16805": {
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kourend"
+    },
+    "16806": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16807": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16808": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16809": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16810": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16811": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16814": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16815": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16816": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "16821": {
       "race": "Human",

@@ -208,6 +208,19 @@ public class NpcProfilesResourceTest {
   }
 
   @Test
+  public void farmerBeaSpeaksWithHerWestCountryProfileOnEveryTalkingId() {
+    for (int npcId : new int[] {3217, 3218, 3221}) {
+      NpcProfileTable.Resolution bea = resolve(npcId, "Farmer Bea", "Human", "misthalin");
+      assertEquals("Farmer Bea", bea.profile().name());
+      assertEquals("WEST_COUNTRY", bea.profile().voiceRegion());
+      assertEquals(Integer.valueOf(45), bea.profile().age());
+    }
+    NpcProfileTable.Resolution dealer = resolve(3220, "Bee dealer", "Human", "misthalin");
+    assertEquals("Bee dealer", dealer.profile().name());
+    assertEquals(Integer.valueOf(40), dealer.profile().age());
+  }
+
+  @Test
   public void barrowsBrothersResolveGhostlyUndeadWithBespokeId() {
     NpcProfileTable.Resolution ahrim = resolve(1672, "Ahrim the Blighted", "Undead", "misthalin");
     assertTrue("Ahrim keeps his bespoke id layer", ahrim.source().contains("id:1672"));
