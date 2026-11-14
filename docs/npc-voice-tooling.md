@@ -12,7 +12,8 @@ are no network calls or large downloads when choosing a voice.
   overrides, embeds the voice profiles, and writes the bundled resource.
 - `tools/overrides.json` - curated, **authoritative** `npcId -> {race,
   gender, ethnicity?, lifeStage?}` entries. These always win over the wiki, for pinning the
-  rare NPC the wiki gets wrong or does not cover, and for marking named children.
+  rare NPC the wiki gets wrong or does not cover, and for marking named children. An entry
+  marked `excluded` leaves its id out of the table instead.
 - `tools/profiles.json` - curated **character voice profiles** for the cloud
   (Gemini) backend (name, accent, accentDetail, style, replaceStyle, pace, pitch, voiceRegion, age).
   Embedded verbatim into the output under
@@ -205,8 +206,15 @@ from its region's youngest native voices (or the prebuilt child pool when its ac
 region) and takes the `child` profile layer, with its style and child pitch, just as a
 keyword-named child does;
 generically named children (Child, Schoolboy, Street urchin, ...) are caught by
-the `child` keyword category in `profiles.json` instead and need no override. Find
-an NPC's id with the RuneLite developer tools, the wiki, or **Debug Logging** in the
+the `child` keyword category in `profiles.json` instead and need no override.
+
+When a game update gives a character's id to something that never speaks, such as the wasp
+swarms of The Birds and the Wasps, `"excluded": true` leaves that id out of the table
+altogether. `--base` seeds every existing entry, so this is how an offline run drops one. An
+excluded entry sets no other field, takes a boolean, and must have no `byId` profile, or the
+generator stops. Excluded entries do not count toward `overrides_applied`.
+
+Find an NPC's id with the RuneLite developer tools, the wiki, or **Debug Logging** in the
 plugin (it logs the id and chosen voice/profile per line).
 
 ## Character voice profiles (cloud)

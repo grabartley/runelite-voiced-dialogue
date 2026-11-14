@@ -497,11 +497,22 @@ def apply_overrides(table, overrides):
     (the common case), while ``"ethnicity": null`` drops a wrong one (a foreigner). The optional
     ``lifeStage`` marks a child ("child" is the only value). ``race`` and ``gender`` are optional too,
     but the post-merge entry must still carry both, else the wiki never supplied one and we raise
-    rather than emit a malformed entry.
+    rather than emit a malformed entry. ``"excluded": true`` leaves the id out of the table
+    altogether, for an id the game gave to something that never speaks; it sets no other field.
     """
     override_npcs = overrides.get("npcs", {})
+    excluded = 0
     for key, entry in override_npcs.items():
         npc_id = int(key)
+        if "excluded" in entry and not isinstance(entry["excluded"], bool):
+            raise ValueError(f"Override {key} has a non-boolean excluded value")
+        if entry.get("excluded") is True:
+            patched = set(entry) & {"race", "gender", "ethnicity", "lifeStage"}
+            if patched:
+                raise ValueError(f"Override {key} is excluded but also sets {sorted(patched)}")
+            table.pop(npc_id, None)
+            excluded += 1
+            continue
         merged = dict(table.get(npc_id, {}))  # copy: wiki entries are shared across sibling ids
         for field in ("race", "gender", "ethnicity", "lifeStage"):
             if field not in entry:
@@ -523,7 +534,15 @@ def apply_overrides(table, overrides):
                 f"Override {key} leaves {'/'.join(missing)} unset and no wiki base supplies "
                 f"{'them' if len(missing) > 1 else 'it'}")
         table[npc_id] = merged
-    return len(override_npcs)
+    return len(override_npcs) - excluded
+
+
+def validate_exclusions(overrides, profiles):
+    by_id = profiles.get("byId") or {}
+    profiled = sorted(key for key, entry in overrides.get("npcs", {}).items()
+                      if entry.get("excluded") is True and key in by_id)
+    if profiled:
+        raise ValueError(f"Excluded overrides still have byId profiles: {profiled}")
 
 
 def build_voice_regions(regions_source, library):
@@ -733,6 +752,7 @@ def main():
     voice_regions = build_voice_regions(voice_regions_source, voice_library)
     validate_voice_regions(profiles, voice_regions)
     overrides = load_json(args.overrides)
+    validate_exclusions(overrides, profiles)
 
     if args.base:
         base = load_json(args.base)

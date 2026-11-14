@@ -167,6 +167,29 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void theBirdsAndTheWaspsCastSpeaksFromTheTutorsFormerIds() {
+    assertCast("Human", "Female", "misthalin", 3216, 3218);
+    assertCast("Human", "Male", "misthalin", 3219, 3220);
+    assertCast("Human", "Female", "misthalin", 3221, 3221);
+  }
+
+  @Test
+  public void theWaspsAndBuzzardsHaveNoTableEntry() {
+    for (int npcId : new int[] {3222, 3223, 3224, 3225, 3226, 3227, 5523, 8665}) {
+      assertEquals(
+          "source for id " + npcId, AttributeSource.DEFAULT, analyze(npcId, null).getSource());
+    }
+  }
+
+  @Test
+  public void theLumbridgeTutorsSpeakFromTheirCurrentIds() {
+    assertCast("Human", "Female", "misthalin", 16804, 16804);
+    for (int npcId : new int[] {16806, 16807, 16808, 16809, 16810, 16811, 16814, 16815, 16816}) {
+      assertCast("Human", "Male", "misthalin", npcId, npcId);
+    }
+  }
+
+  @Test
   public void theDogShelterCanineCastResolvesAsDogsOfItsStatedGender() {
     for (int npcId : new int[] {16504, 16505, 16529, 16530, 16495, 16515, 16531, 16517, 16533}) {
       assertAttributes(npcId, "Dog", "Female");

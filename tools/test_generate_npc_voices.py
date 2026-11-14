@@ -56,6 +56,46 @@ class ApplyOverridesTest(unittest.TestCase):
         gen.apply_overrides(table, wrap({"201": {"ethnicity": None}}))
         self.assertEqual(table[201], {"race": "Human", "gender": "Male"})
 
+    def test_excluded_override_removes_the_id(self):
+        table = {3222: {"race": "Human", "gender": "Male", "ethnicity": "misthalin"}}
+        gen.apply_overrides(table, wrap({"3222": {"name": "Swarm of wasps", "excluded": True}}))
+        self.assertNotIn(3222, table)
+
+    def test_excluded_override_for_unknown_id_is_a_noop(self):
+        table = {}
+        gen.apply_overrides(table, wrap({"3222": {"excluded": True}}))
+        self.assertEqual(table, {})
+
+    def test_excluded_override_that_also_sets_a_field_raises(self):
+        table = {3222: {"race": "Human", "gender": "Male"}}
+        with self.assertRaises(ValueError):
+            gen.apply_overrides(table, wrap({"3222": {"excluded": True, "gender": "Female"}}))
+
+    def test_excluded_override_with_a_non_boolean_value_raises(self):
+        table = {3222: {"race": "Human", "gender": "Male"}}
+        with self.assertRaises(ValueError):
+            gen.apply_overrides(table, wrap({"3222": {"excluded": "true"}}))
+
+    def test_excluded_false_keeps_the_entry(self):
+        table = {3222: {"race": "Human", "gender": "Male"}}
+        gen.apply_overrides(table, wrap({"3222": {"excluded": False}}))
+        self.assertIn(3222, table)
+
+    def test_excluded_overrides_do_not_count_as_applied(self):
+        table = {3222: {"race": "Human", "gender": "Male"}}
+        applied = gen.apply_overrides(table, wrap({
+            "3222": {"excluded": True}, "9": {"race": "Goblin", "gender": "Male"}}))
+        self.assertEqual(applied, 1)
+
+    def test_excluded_id_with_a_profile_is_rejected(self):
+        with self.assertRaises(ValueError):
+            gen.validate_exclusions(wrap({"3222": {"excluded": True}}),
+                                    {"byId": {"3222": {"name": "Mining tutor", "age": 50}}})
+
+    def test_excluded_id_without_a_profile_passes(self):
+        gen.validate_exclusions(wrap({"3222": {"excluded": True}}),
+                                {"byId": {"16809": {"name": "Monlum", "age": 50}}})
+
     def test_override_for_unknown_id_supplies_full_entry(self):
         table = {}
         gen.apply_overrides(table, wrap({"9": {"race": "Goblin", "gender": "Male"}}))
