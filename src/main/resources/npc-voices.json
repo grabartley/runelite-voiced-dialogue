@@ -4,10 +4,10 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14179,
+    "count": 14202,
     "name_matched_ids": 707,
-    "overrides_applied": 1906,
-    "symbols": 4510,
+    "overrides_applied": 1929,
+    "symbols": 4533,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
@@ -17,9 +17,9 @@
       "Dwarf": 519,
       "Elf": 354,
       "Gnome": 261,
-      "Goblin": 371,
+      "Goblin": 381,
       "Gorilla": 11,
-      "Human": 9884,
+      "Human": 9897,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2177,
-      "Male": 12002
+      "Female": 2180,
+      "Male": 12022
     },
     "ethnicity_counts": {
       "asgarnia": 724,
@@ -41,7 +41,7 @@
       "kharidian": 545,
       "kourend": 822,
       "menaphite": 132,
-      "misthalin": 1060,
+      "misthalin": 1073,
       "morytania": 1033,
       "tirannwn": 328,
       "varlamore": 1020,
@@ -51,7 +51,7 @@
     "life_stage_counts": {
       "child": 60
     },
-    "profiles_bespoke": 6527
+    "profiles_bespoke": 6550
   },
   "profiles": {
     "_comment": "Authoritative, curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. Repetition across layers (depth in pitch and style, an accentDetail restating its accent, the generic human style under a bespoke one) is deliberate emphasis tuned by ear; do not tidy it (see docs/npc-voice-tooling.md, 'Repetition is deliberate'). This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own; 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -33663,6 +33663,121 @@
         "name": "Kyle",
         "style": "A forester of very few words; short, flat answers, never more than he has to say.",
         "age": 35
+      },
+      "16821": {
+        "name": "Captain Harlan",
+        "style": "The hearty, no-nonsense head of the Lumbridge Guard; direct and encouraging, a seasoned soldier who likes adventurers.",
+        "age": 45
+      },
+      "16822": {
+        "name": "Captain Harlan",
+        "style": "The hearty, no-nonsense head of the Lumbridge Guard; direct and encouraging, a seasoned soldier who likes adventurers.",
+        "age": 45
+      },
+      "16823": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16824": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16825": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16826": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16827": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16828": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16829": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16830": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16831": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16832": {
+        "name": "Mudfoot",
+        "style": "A boastful little goblin who has decided he is a great hero; speaks in broken, simple goblin English, proud, eager and easily distracted, sure of his own greatness.",
+        "age": 30
+      },
+      "16833": {
+        "name": "Outlaw",
+        "style": "A shifty thief caught out and trying to play it cool; awkward, bemused and dismissive.",
+        "age": 35
+      },
+      "16834": {
+        "name": "Outlaw",
+        "style": "A shifty thief caught out and trying to play it cool; awkward, bemused and dismissive.",
+        "age": 35
+      },
+      "16835": {
+        "name": "Outlaw",
+        "style": "A shifty thief caught out and trying to play it cool; awkward, bemused and dismissive.",
+        "age": 35
+      },
+      "16836": {
+        "name": "Outlaw",
+        "style": "A shifty thief caught out and trying to play it cool; awkward, bemused and dismissive.",
+        "age": 35
+      },
+      "16837": {
+        "name": "Outlaw",
+        "style": "A shifty thief caught out and trying to play it cool; awkward, bemused and dismissive.",
+        "age": 35
+      },
+      "16838": {
+        "name": "Outlaw",
+        "style": "A zealous H.A.M. mage who hates goblins and anyone who helps them; sneering and self-righteous.",
+        "age": 35
+      },
+      "16839": {
+        "name": "Outlaw",
+        "style": "A zealous H.A.M. mage who hates goblins and anyone who helps them; sneering and self-righteous.",
+        "age": 35
+      },
+      "16840": {
+        "name": "Outlaw",
+        "style": "A zealous H.A.M. mage who hates goblins and anyone who helps them; sneering and self-righteous.",
+        "age": 35
+      },
+      "16841": {
+        "name": "Outlaw",
+        "style": "A zealous H.A.M. warrior who trusts his faith to protect him; loud, proud and scornful of goblins.",
+        "age": 40
+      },
+      "16842": {
+        "name": "Outlaw",
+        "style": "A zealous H.A.M. warrior who trusts his faith to protect him; loud, proud and scornful of goblins.",
+        "age": 40
+      },
+      "16843": {
+        "name": "Outlaw",
+        "style": "A zealous H.A.M. warrior who trusts his faith to protect him; loud, proud and scornful of goblins.",
+        "age": 40
       }
     }
   },
@@ -38148,6 +38263,29 @@
     "16763": "POH_OCELLUS_PET",
     "16764": "POH_OCELLUS_PET_VARIANT_1",
     "16805": "KW_BUTCHER_LAN_VIS",
+    "16821": "CAPTAIN_HARLAN",
+    "16822": "CAPTAIN_HARLAN_CUTSCENE",
+    "16823": "MBA_MUDFOOT_RUINED_BUILDING",
+    "16824": "MBA_MUDFOOT_WINDMILL",
+    "16825": "MBA_MUDFOOT_WOODS",
+    "16826": "MBA_MUDFOOT_GRAVEYARD",
+    "16827": "MBA_MUDFOOT_FOLLOWER",
+    "16828": "MBA_MUDFOOT_FOLLOWER_SPEAR",
+    "16829": "MBA_MUDFOOT_VIS",
+    "16830": "MBA_MUDFOOT_SPEAR_VIS",
+    "16831": "MBA_MUDFOOT_SPEAR_COMBAT",
+    "16832": "MBA_MUDFOOT_ROCKS_COMBAT",
+    "16833": "MBA_OUTLAW_RANGED_GENERAL_STORE",
+    "16834": "MBA_OUTLAW_RANGED_WINDMILL",
+    "16835": "MBA_OUTLAW_RANGED_VIS",
+    "16836": "MBA_OUTLAW_RANGED_NOOP_VIS",
+    "16837": "MBA_OUTLAW_RANGED_COMBAT",
+    "16838": "MBA_OUTLAW_MAGIC_WOODS",
+    "16839": "MBA_OUTLAW_MAGIC_VIS",
+    "16840": "MBA_OUTLAW_MAGIC_COMBAT",
+    "16841": "MBA_OUTLAW_MELEE_GRAVEYARD",
+    "16842": "MBA_OUTLAW_MELEE_VIS",
+    "16843": "MBA_OUTLAW_MELEE_COMBAT",
     "16845": "WOTW_BETTY_LANDS_END",
     "16846": "WOTW_BETTY_HOSIDIUS",
     "16847": "WOTW_BETTY_HOSIDIUS_INSIDE",
@@ -100985,6 +101123,111 @@
       "race": "Human",
       "gender": "Male",
       "ethnicity": "kourend"
+    },
+    "16821": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16822": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16823": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16824": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16825": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16826": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16827": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16828": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16829": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16830": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16831": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16832": {
+      "race": "Goblin",
+      "gender": "Male"
+    },
+    "16833": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16834": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16835": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16836": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16837": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16838": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "16839": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "16840": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "misthalin"
+    },
+    "16841": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16842": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
+    },
+    "16843": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "misthalin"
     },
     "16845": {
       "race": "Human",
