@@ -149,6 +149,18 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void theMudfootsBigAdventureCastResolvesToItsRaceGenderAndOrigin() {
+    for (int npcId = 16823; npcId <= 16832; npcId++) {
+      assertAttributes(npcId, "Goblin", "Male");
+      assertNull("no origin for id " + npcId, analyze(npcId, null).getEthnicity());
+    }
+    assertCast("Human", "Male", "misthalin", 16821, 16822);
+    assertCast("Human", "Male", "misthalin", 16833, 16837);
+    assertCast("Human", "Female", "misthalin", 16838, 16840);
+    assertCast("Human", "Male", "misthalin", 16841, 16843);
+  }
+
+  @Test
   public void theDogShelterCanineCastResolvesAsDogsOfItsStatedGender() {
     for (int npcId : new int[] {16504, 16505, 16529, 16530, 16495, 16515, 16531, 16517, 16533}) {
       assertAttributes(npcId, "Dog", "Female");
