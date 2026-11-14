@@ -130,6 +130,25 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void theWritingsOnTheWallCastSpeaksAsKourendFolkOfItsWikiGenders() {
+    assertCast("Human", "Female", "kourend", 16845, 16855);
+    assertCast("Human", "Male", "kourend", 16856, 16867);
+    assertCast("Human", "Female", "kourend", 16868, 16872);
+    assertCast("Human", "Male", "kourend", 16873, 16873);
+    assertCast("Human", "Female", "kourend", 16874, 16874);
+    assertCast("Human", "Male", "kourend", 16875, 16875);
+  }
+
+  @Test
+  public void lanTheButchersQuestVariantResolvesAsLanHimself() {
+    NpcAttributes lan = analyze(7479, null);
+    NpcAttributes variant = analyze(16805, null);
+    assertEquals(lan.getRace(), variant.getRace());
+    assertEquals(lan.getGender(), variant.getGender());
+    assertEquals(lan.getEthnicity(), variant.getEthnicity());
+  }
+
+  @Test
   public void theDogShelterCanineCastResolvesAsDogsOfItsStatedGender() {
     for (int npcId : new int[] {16504, 16505, 16529, 16530, 16495, 16515, 16531, 16517, 16533}) {
       assertAttributes(npcId, "Dog", "Female");
@@ -534,6 +553,13 @@ public class NpcDemographicAnalyzerTest {
     assertNotNull("expected a table entry for id " + npcId, attributes);
     assertEquals("race for id " + npcId, expectedRace, attributes.getRace());
     assertEquals("gender for id " + npcId, expectedGender, attributes.getGender());
+  }
+
+  private void assertCast(String race, String gender, String origin, int firstId, int lastId) {
+    for (int npcId = firstId; npcId <= lastId; npcId++) {
+      assertAttributes(npcId, race, gender);
+      assertEquals("origin for id " + npcId, origin, analyze(npcId, null).getEthnicity());
+    }
   }
 
   @Test

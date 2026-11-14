@@ -4,10 +4,10 @@
     "schema": "npcs[id] = { race, gender, ethnicity?, lifeStage? }; symbols[id] = cache symbol, only for ids whose byId name another id shares",
     "source": "oldschool.runescape.wiki Infobox NPC (race/gender/leagueRegion/location) and Infobox Monster (race from page categories), cross-referenced by name against a full id dump for variant ids, gender corrected from RuneLite NpcID cache symbols, + curated tools/overrides.json; profiles from tools/profiles.json.",
     "npc_pages": 6009,
-    "count": 14147,
+    "count": 14179,
     "name_matched_ids": 707,
-    "overrides_applied": 1874,
-    "symbols": 4478,
+    "overrides_applied": 1906,
+    "symbols": 4510,
     "race_counts": {
       "Aranei": 24,
       "Arceuus": 66,
@@ -19,7 +19,7 @@
       "Gnome": 261,
       "Goblin": 371,
       "Gorilla": 11,
-      "Human": 9852,
+      "Human": 9884,
       "Icyene": 11,
       "Monkey": 64,
       "Penguin": 24,
@@ -29,8 +29,8 @@
       "Wizard": 24
     },
     "gender_counts": {
-      "Female": 2160,
-      "Male": 11987
+      "Female": 2177,
+      "Male": 12002
     },
     "ethnicity_counts": {
       "asgarnia": 724,
@@ -39,7 +39,7 @@
       "kandarin": 1129,
       "karamja": 160,
       "kharidian": 545,
-      "kourend": 790,
+      "kourend": 822,
       "menaphite": 132,
       "misthalin": 1060,
       "morytania": 1033,
@@ -51,7 +51,7 @@
     "life_stage_counts": {
       "child": 60
     },
-    "profiles_bespoke": 6495
+    "profiles_bespoke": 6527
   },
   "profiles": {
     "_comment": "Authoritative, curated character voice profiles for the cloud (Gemini 3.8) TTS backend. A profile is a delivery template (name, accent, accentDetail, style, pace, pitch, voiceRegion). The backend renders it, plus the line's chat-head emotion, into one style string sent in speech_metadata.style ('Speaking <language>. <gender>. [<pitch>.] Audio profile: <name>, a character in a medieval fantasy world. Accent: ... <accentDetail> Style: ... Pace: ... <emotion>.', plus a speed direction on Google AI Studio when Speaking Pace is not 100); the text sent to the model is the spoken line alone. accent must be a strong, explicit accent phrase naming its pronunciation ('Strong London English accent, British English pronunciation'), since Gemini 3.8 falls back to a generic default accent on a soft one; a delivery quirk (slurred, whispered) belongs in style, never in accent. style and pace are descriptive delivery prose. Optional 'pitch' leads the profile, right after the spoken language and the speaker's gender ('Very high-pitched, squeaky, thin little voice, far above a normal adult voice'); native library voices ignore pitch described later in the style, so pitch leads. Optional 'accentDetail' sits next to an accent and gives it its medieval colour in prose ('A rough, harsh British English, the hard edge of the outlaws of the Wilderness.'). Optional 'voiceRegion' sits next to an accent that has native speakers in tools/voice-regions.json. No meta-instructions ('word for word') and no square- or angle-bracket tags. This file is the SOURCE: tools/generate_npc_voices.py embeds it verbatim into src/main/resources/npc-voices.json under the top-level 'profiles' key. Edit here, then regenerate. Repetition across layers (depth in pitch and style, an accentDetail restating its accent, the generic human style under a bespoke one) is deliberate emphasis tuned by ear; do not tidy it (see docs/npc-voice-tooling.md, 'Repetition is deliberate'). This is a BRITISH medieval fantasy world: every character defaults to a British accent unless lore or trope says otherwise. Resolution combines every matching layer: default -> byRace[race] -> byEthnicity[ethnicity] -> every byCategory whose keyword matches the display name -> the child category for a child the table marks with lifeStage but whose name carries no child keyword -> byId[npcId]. 'style' accumulates across the matching layers, except that a layer with 'replaceStyle': true drops the less specific styles before its own; 'name', 'accent', 'pace', and 'pitch' take the most specific layer that sets them, and 'voiceRegion' and 'accentDetail' always come from the layer that set the winning accent. 'default' must be complete (all four fields); every other layer is sparse, contributing only the fields it sets. byId entries are per-NPC bespoke overrides keyed by the live NPC id (NPCComposition#getId), carrying only what is unique about that character.",
@@ -33503,6 +33503,166 @@
         "name": "Guardian of Armadyl",
         "style": "A solemn, duty-bound warrior of an ancient order; grave, formal, and resolute.",
         "age": 35
+      },
+      "16805": {
+        "name": "Lan the Butcher",
+        "style": "A gruff, evasive recluse playing it casual; clipped answers, shifty and unconvincing about his trade.",
+        "age": 45
+      },
+      "16845": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16846": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16847": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16848": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16849": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16850": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16851": {
+        "name": "Betty",
+        "style": "A young woman shaken by her father's murder; quiet, tearful and pleading, quick to insist that nobody in authority can be trusted.",
+        "age": 25
+      },
+      "16852": {
+        "name": "Betty",
+        "style": "A young woman unmasked as the killer; cold, flat and scornful, speaking with calm contempt.",
+        "age": 25
+      },
+      "16853": {
+        "name": "Betty",
+        "style": "A young woman unmasked as the killer; cold, flat and scornful, speaking with calm contempt.",
+        "age": 25
+      },
+      "16854": {
+        "name": "Betty",
+        "style": "A young woman unmasked as the killer; cold, flat and scornful, speaking with calm contempt.",
+        "age": 25
+      },
+      "16855": {
+        "name": "Betty",
+        "style": "A young woman unmasked as the killer; cold, flat and scornful, speaking with calm contempt.",
+        "age": 25
+      },
+      "16856": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16857": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16858": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16859": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16860": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16861": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16862": {
+        "name": "Sergeant Hudson",
+        "style": "A tired Shayzien sergeant who has seen too many murders; measured, sceptical and dry, laying out his deductions slowly and carefully.",
+        "age": 50
+      },
+      "16863": {
+        "name": "Corporal Breiman",
+        "style": "A Shayzien detective who likes to explain his work; chatty and earnest, walking through a case step by step.",
+        "age": 30
+      },
+      "16864": {
+        "name": "Corporal Breiman",
+        "style": "A Shayzien detective who likes to explain his work; chatty and earnest, walking through a case step by step.",
+        "age": 30
+      },
+      "16865": {
+        "name": "Corporal Breiman",
+        "style": "A Shayzien detective who likes to explain his work; chatty and earnest, walking through a case step by step.",
+        "age": 30
+      },
+      "16866": {
+        "name": "Corporal Breiman",
+        "style": "A Shayzien detective who likes to explain his work; chatty and earnest, walking through a case step by step.",
+        "age": 30
+      },
+      "16867": {
+        "name": "Corporal Breiman",
+        "style": "A Shayzien detective who likes to explain his work; chatty and earnest, walking through a case step by step.",
+        "age": 30
+      },
+      "16868": {
+        "name": "Corporal Campter",
+        "style": "A friendly Shayzien detective; warm, upbeat and reassuring with members of the public.",
+        "age": 30
+      },
+      "16869": {
+        "name": "Corporal Campter",
+        "style": "A friendly Shayzien detective; warm, upbeat and reassuring with members of the public.",
+        "age": 30
+      },
+      "16870": {
+        "name": "Corporal Campter",
+        "style": "A friendly Shayzien detective; warm, upbeat and reassuring with members of the public.",
+        "age": 30
+      },
+      "16871": {
+        "name": "Corporal Campter",
+        "style": "A friendly Shayzien detective; warm, upbeat and reassuring with members of the public.",
+        "age": 30
+      },
+      "16872": {
+        "name": "Corporal Campter",
+        "style": "A friendly Shayzien detective; warm, upbeat and reassuring with members of the public.",
+        "age": 30
+      },
+      "16873": {
+        "name": "Monk",
+        "style": "A devout travelling monk of Saradomin; gentle and pious, with a gossipy streak when talking about people he dislikes.",
+        "age": 60
+      },
+      "16874": {
+        "name": "Joyce",
+        "style": "A friendly Hosidius farmer; homely and talkative, happy to share what she has seen.",
+        "age": 50
+      },
+      "16875": {
+        "name": "Kyle",
+        "style": "A forester of very few words; short, flat answers, never more than he has to say.",
+        "age": 35
       }
     }
   },
@@ -35118,6 +35278,7 @@
     "5864": "NED_1OP",
     "5871": "KR_ARTHUR_RESTORATION",
     "5904": "DWARVEN_SHOPKEEPER",
+    "5905": "BETTY",
     "5926": "WEREWOLF_TRAINER_2",
     "5927": "WEREWOLF_TRAINER_STICK",
     "5929": "GODWARS_DYING_PALADIN",
@@ -35485,6 +35646,7 @@
     "7437": "FRIS_R_GUARD_NVN_1",
     "7438": "FRIS_R_GUARD_NVN_2",
     "7477": "VARLAMORE_SUN_KNIGHT",
+    "7479": "KW_BUTCHER_LAN",
     "7483": "TRIBES_BOATMAN",
     "7484": "TRIBES_BOATMAN_ISLAND",
     "7509": "DS2_BATTLE_JARDRIC_FINAL",
@@ -37984,7 +38146,37 @@
     "16761": "TFA_MIDRAID_SUPPLIES_NPC",
     "16762": "TFA_MIDRAID_SUPPLIES_NPC_INACTIVE",
     "16763": "POH_OCELLUS_PET",
-    "16764": "POH_OCELLUS_PET_VARIANT_1"
+    "16764": "POH_OCELLUS_PET_VARIANT_1",
+    "16805": "KW_BUTCHER_LAN_VIS",
+    "16845": "WOTW_BETTY_LANDS_END",
+    "16846": "WOTW_BETTY_HOSIDIUS",
+    "16847": "WOTW_BETTY_HOSIDIUS_INSIDE",
+    "16848": "WOTW_BETTY_PISCARILIUS",
+    "16849": "WOTW_BETTY_PISCARILIUS_JAIL",
+    "16850": "WOTW_BETTY_CHILD",
+    "16851": "WOTW_BETTY_CUTSCENE",
+    "16852": "WOTW_BETTY_CUTSCENE_HOODED",
+    "16853": "WOTW_BETTY_CUTSCENE_PRE_REVEAL",
+    "16854": "WOTW_BETTY_CUTSCENE_REVEALED",
+    "16855": "WOTW_BETTY_CUTSCENE_REVEALED_DEAD",
+    "16856": "WOTW_HUDSON_LANDS_END",
+    "16857": "WOTW_HUDSON_PISCARILIUS",
+    "16858": "WOTW_HUDSON_SHAYZIEN",
+    "16859": "WOTW_HUDSON_HIDEOUT",
+    "16860": "WOTW_HUDSON_POSTQUEST",
+    "16861": "WOTW_HUDSON_CHILD",
+    "16862": "WOTW_HUDSON_CUTSCENE",
+    "16863": "WOTW_SOLDIER_LANDS_END_1",
+    "16864": "WOTW_SOLDIER_PISCARILIUS_1",
+    "16865": "WOTW_SOLDIER_SHAYZIEN_1",
+    "16866": "WOTW_SOLDIER_CHILD_1",
+    "16867": "WOTW_SOLDIER_CUTSCENE_1",
+    "16868": "WOTW_SOLDIER_LANDS_END_2",
+    "16869": "WOTW_SOLDIER_PISCARILIUS_2",
+    "16870": "WOTW_SOLDIER_SHAYZIEN_2",
+    "16871": "WOTW_SOLDIER_CHILD_2",
+    "16872": "WOTW_SOLDIER_CUTSCENE_2",
+    "16873": "WOTW_MONK"
   },
   "npcs": {
     "0": {
@@ -100788,6 +100980,166 @@
     "16764": {
       "race": "Human",
       "gender": "Male"
+    },
+    "16805": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16845": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16846": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16847": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16848": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16849": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16850": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16851": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16852": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16853": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16854": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16855": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16856": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16857": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16858": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16859": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16860": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16861": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16862": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16863": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16864": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16865": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16866": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16867": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16868": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16869": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16870": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16871": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16872": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16873": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
+    },
+    "16874": {
+      "race": "Human",
+      "gender": "Female",
+      "ethnicity": "kourend"
+    },
+    "16875": {
+      "race": "Human",
+      "gender": "Male",
+      "ethnicity": "kourend"
     },
     "17009": {
       "race": "Human",
