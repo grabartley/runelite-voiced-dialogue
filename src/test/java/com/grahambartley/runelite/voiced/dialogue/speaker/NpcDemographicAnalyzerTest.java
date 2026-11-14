@@ -161,6 +161,12 @@ public class NpcDemographicAnalyzerTest {
   }
 
   @Test
+  public void blackEyeBethelSpeaksAsAWomanAmongThePirates() {
+    assertAttributes(15025, "Human", "Female");
+    assertEquals("asgarnia", analyze(15025, null).getEthnicity());
+  }
+
+  @Test
   public void theDogShelterCanineCastResolvesAsDogsOfItsStatedGender() {
     for (int npcId : new int[] {16504, 16505, 16529, 16530, 16495, 16515, 16531, 16517, 16533}) {
       assertAttributes(npcId, "Dog", "Female");
